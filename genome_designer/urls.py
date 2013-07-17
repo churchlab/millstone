@@ -1,17 +1,10 @@
-from django.conf.urls.defaults import patterns, include, url
-
-# Uncomment the next two lines to enable the admin:
-# from django.contrib import admin
-# admin.autodiscover()
+from django.conf.urls.defaults import patterns
+from django.conf.urls.defaults import url
 
 urlpatterns = patterns('',
-    # Examples:
-    # url(r'^$', 'genome_designer.views.home', name='home'),
-    # url(r'^genome_designer/', include('genome_designer.foo.urls')),
-
-    # Uncomment the admin/doc line below to enable admin documentation:
-    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-
-    # Uncomment the next line to enable the admin:
-    # url(r'^admin/', include(admin.site.urls)),
+    url(r'^$', 'genome_designer.main.views.home_view'),
+    url(r'^projects$', 'genome_designer.main.views.project_list_view'),
+    url(r'^refgenomes$', 'genome_designer.main.views.reference_genome_list_view'),
+    url(r'^alignments$', 'genome_designer.main.views.alignment_list_view'),
+    url(r'^samples$', 'genome_designer.main.views.sample_list_view'),
 )
