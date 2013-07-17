@@ -6,10 +6,18 @@
 
   <!-- css - Third party -->
   <link rel="stylesheet" href="{% static "vendor/bootstrap/css/bootstrap.css" %}" type="text/css" />
+
+  <!-- JavaScript - Third-party  -->
+  <script type="text/javascript" src="{% static "vendor/js/jquery-1.10.2.js" %}"></script>
+  <script type="text/javascript" src="{% static "vendor/bootstrap/js/bootstrap.js" %}"></script>
 </head>
 <body>
-  <div id="page-content" class="container">
-    {% block content%}{% endblock %}
+  <div class="row">
+    {% include "side_nav_bar.html" %}
+    <div class="span9">
+      {% block content%}{% endblock %}
+    </div>
   </div>
+  <script type="text/javascript" src="{% static "js/temp_inline.js" %}"></script>
 </body>
 </html>
