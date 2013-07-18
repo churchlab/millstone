@@ -50,3 +50,11 @@ be necessary to install specific packages first.
 
 
 2. Visit the url <http://localhost:8000/> to see the demo.
+
+
+## Tests
+
+We'll be adding more tests as we go and updating the following instructions. For
+now, as a starting point/placeholder, developers should be able to run the Django tests.
+
+    $ python manage.py test
