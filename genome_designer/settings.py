@@ -125,3 +125,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'main'
 )
+
+# We use a separate UserProfile from the build-in Django User model so that we
+# have the option of extending it.
+AUTH_PROFILE_MODULE = 'main.UserProfile'
