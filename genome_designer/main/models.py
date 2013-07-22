@@ -100,7 +100,7 @@ def create_user_profile(sender, instance, created, **kwargs):
         user_profile = UserProfile.objects.create(user=instance)
 
 post_save.connect(create_user_profile, sender=User,
-        dispatch_uid='gdportal.main.models')
+        dispatch_uid='user_profile_create')
 
 
 ###############################################################################
@@ -140,8 +140,7 @@ class Project(Model):
     def __unicode__(self):
         return self.title + '-' + str(self.owner)
 
-    @staticmethod
-    def get_model_data_root():
+    def get_model_data_root(self):
         """Get the root location where all user data is stores."""
         return os.path.join(settings.MEDIA_ROOT, 'projects')
 
@@ -150,7 +149,7 @@ class Project(Model):
 
         The data dir is the media root url combined with the user id.
         """
-        return os.path.join(Project.get_model_data_root(), str(self.uid))
+        return os.path.join(self.get_model_data_root(), str(self.uid))
 
     def ensure_model_data_dir_exists(self):
         """Ensure that a data directory exists for the user.
@@ -158,18 +157,17 @@ class Project(Model):
         The data directory is named according to the UserProfile.id.
         """
         # Make sure the root of projects exists
-        ensure_exists_0775_dir(Project.get_model_data_root())
+        ensure_exists_0775_dir(self.get_model_data_root())
 
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
-# When a new project is created, create the data directory.
+# When a new Project is created, create the data directory.
 def post_project_create(sender, instance, created, **kwargs):
     if created:
         instance.ensure_model_data_dir_exists()
-
 post_save.connect(post_project_create, sender=Project,
-        dispatch_uid='gdportal.main.models')
+        dispatch_uid='project_create')
 
 
 class ReferenceGenome(Model):
@@ -184,6 +182,35 @@ class ReferenceGenome(Model):
 
     # A human-readable label for this genome.
     label = models.CharField(max_length=256)
+
+    def get_model_data_root(self):
+        """Get the root location where all user data is stores."""
+        return os.path.join(self.project.get_model_data_dir(), 'ref_genomes')
+
+    def get_model_data_dir(self):
+        """Get the full path to where the user's data is stored.
+
+        The data dir is the media root url combined with the user id.
+        """
+        return os.path.join(self.get_model_data_root(), str(self.uid))
+
+    def ensure_model_data_dir_exists(self):
+        """Ensure that a data directory exists for the user.
+
+        The data directory is named according to the UserProfile.id.
+        """
+        # Make sure the root of projects exists
+        ensure_exists_0775_dir(self.get_model_data_root())
+
+        # Check whether the data dir exists, and create it if not.
+        return ensure_exists_0775_dir(self.get_model_data_dir())
+
+# When a new ReferenceGenome is created, create its data dir.
+def post_ref_genome_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
+        dispatch_uid='ref_genome_create')
 
 
 class ExperimentSample(Model):
