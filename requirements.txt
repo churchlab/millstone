@@ -1,3 +1,4 @@
 Django==1.5.1
 argparse==1.2.1
+ipython==0.13.2
 wsgiref==0.1.2
