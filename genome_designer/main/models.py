@@ -120,7 +120,14 @@ class ReferenceGenome(Model):
     """A reference genome relative to which alignments and analysis are
     performed.
     """
-    pass
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(ReferenceGenome)))
+
+    # A ReferenceGenome belongs to a single Project.
+    project = models.ForeignKey('Project')
+
+    # A human-readable label for this genome.
+    label = models.CharField(max_length=256)
 
 
 class ExperimentSample(Model):
@@ -129,7 +136,11 @@ class ExperimentSample(Model):
     Usually this corresponds to a pair of fastq reads for a particular colony,
     after de-multiplexing.
     """
-    pass
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(ExperimentSample)))
+
+    # Human-readable identifier.
+    label = models.CharField(max_length=256, blank=True)
 
 
 class Alignment(Model):

@@ -39,6 +39,22 @@ def bootstrap_fake_data():
     (test_project, project_created) = Project.objects.get_or_create(
             title=TEST_PROJECT_NAME, owner=user.get_profile())
 
+    ### Create some reference genomes
+    from main.models import ReferenceGenome
+    REF_GENOME_1_LABEL = 'mg1655'
+    (ref_genome_1, ref_genome_created) = ReferenceGenome.objects.get_or_create(
+            label=REF_GENOME_1_LABEL, project=test_project)
+    REF_GENOME_2_LABEL = 'c321D'
+    (ref_genome_2, ref_genome_created) = ReferenceGenome.objects.get_or_create(
+            label=REF_GENOME_2_LABEL, project=test_project)
+
+
+    ### Create some samples
+    from main.models import ExperimentSample
+    SAMPLE_1_LABEL = 'sample1'
+    (sample_1, created) = ExperimentSample.objects.get_or_create(
+            label=SAMPLE_1_LABEL)
+
 
 def reset_database():
     ### Delete the old database if it exists.
