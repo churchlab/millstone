@@ -9,20 +9,24 @@ Note on filesystem directory structure: (IN PROGRESS)
     is used when models can be properly nested.
 
     An example layout for a user's data might look like:
-        /users/1234abcd/projects/1324abcd/
-        /users/1234abcd/projects/1324abcd/alignments/
-        /users/1234abcd/projects/1324abcd/samples/
-        /users/1234abcd/projects/1324abcd/samples/1234abcd
-        /users/1234abcd/projects/1324abcd/samples/5678jklm
-        /users/1234abcd/projects/1324abcd/ref_genomes/
-        /users/1234abcd/projects/1324abcd/variant_calls/
+        ../projects/1324abcd/
+        ../projects/1324abcd/alignments/
+        ../projects/1324abcd/samples/
+        ../projects/1324abcd/samples/1234abcd
+        ../projects/1324abcd/samples/5678jklm
+        ../projects/1324abcd/ref_genomes/
+        ../projects/1324abcd/variant_calls/
 """
+import os
+import stat
 from uuid import uuid4
 
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Model
 from django.db.models.signals import post_save
+
+import settings
 
 
 ###############################################################################
@@ -55,6 +59,23 @@ def short_uuid(cls):
     raise RuntimeError, "Too many short_uuid attempts."
 
 
+def ensure_exists_0775_dir(destination):
+    """Creates a directory with 0775 permissions, and gets the group of the
+    parent directory rather than the effective group of the process.
+
+    The 0775 permissions are interpreted as all permissions for owner and
+    group, with read-only permissions for all others.
+
+    Does nothing if it already existed.  Errors if creation fails.
+    """
+    if not os.path.exists(destination):
+        os.mkdir(destination)
+        # User and group have all permissions | get group id from directory.
+        os.chmod(destination, stat.S_ISGID | 0775)
+
+    return True
+
+
 ###############################################################################
 # User-related models
 ###############################################################################
@@ -68,12 +89,16 @@ class UserProfile(Model):
     # A one-to-one mapping to the django User model.
     user = models.OneToOneField(User)
 
+    # A unique id, for urls or filesystem locations.
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(UserProfile)))
 
 # Since the registration flow creates a django User object, we want to make
 # sure that the corresponding UserProfile is also created
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         user_profile = UserProfile.objects.create(user=instance)
+
 post_save.connect(create_user_profile, sender=User,
         dispatch_uid='gdportal.main.models')
 
@@ -114,6 +139,37 @@ class Project(Model):
 
     def __unicode__(self):
         return self.title + '-' + str(self.owner)
+
+    @staticmethod
+    def get_model_data_root():
+        """Get the root location where all user data is stores."""
+        return os.path.join(settings.MEDIA_ROOT, 'projects')
+
+    def get_model_data_dir(self):
+        """Get the full path to where the user's data is stored.
+
+        The data dir is the media root url combined with the user id.
+        """
+        return os.path.join(Project.get_model_data_root(), str(self.uid))
+
+    def ensure_model_data_dir_exists(self):
+        """Ensure that a data directory exists for the user.
+
+        The data directory is named according to the UserProfile.id.
+        """
+        # Make sure the root of projects exists
+        ensure_exists_0775_dir(Project.get_model_data_root())
+
+        # Check whether the data dir exists, and create it if not.
+        return ensure_exists_0775_dir(self.get_model_data_dir())
+
+# When a new project is created, create the data directory.
+def post_project_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+
+post_save.connect(post_project_create, sender=Project,
+        dispatch_uid='gdportal.main.models')
 
 
 class ReferenceGenome(Model):

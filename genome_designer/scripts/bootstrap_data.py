@@ -8,6 +8,7 @@ and want to get some new data in quickly.
 """
 
 import os
+import shutil
 
 from util import setup_django_env
 
@@ -71,6 +72,12 @@ def reset_database():
     # a super user on sync.
     print 'Creating new database via syncdb ...'
     call_command('syncdb', interactive=False)
+
+    ### Recreate the media root.
+    import settings
+    if os.path.exists(settings.MEDIA_ROOT):
+        shutil.rmtree(settings.MEDIA_ROOT)
+    os.mkdir(settings.MEDIA_ROOT)
 
 
 if __name__ == '__main__':
