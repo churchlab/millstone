@@ -32,7 +32,9 @@
   <div id="gd-page-container" class="container-fluid">
     <div class="row-fluid">
       <div class="span3">
-        {% include "side_nav_bar.html" %}
+        {% if project %}
+          {% include "side_nav_bar.html" %}
+        {% endif %}
       </div><!--/.span3 -->
       <div class="span9">
         {% block content%}{% endblock %}

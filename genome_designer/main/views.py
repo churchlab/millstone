@@ -10,7 +10,10 @@ from scripts.import_util import import_reference_genome_from_local_file
 def home_view(request):
     """The main landing page.
     """
-    context = {}
+    project_list = Project.objects.all()
+    context = {
+        'project_list': project_list
+    }
     return render(request, 'home.html', context)
 
 
@@ -21,12 +24,21 @@ def project_list_view(request):
     return render(request, 'project_list.html', context)
 
 
-def reference_genome_list_view(request):
+def project_view(request, project_uid):
+    """Overview of a single project.
+    """
+    project = Project.objects.get(uid=project_uid)
+    context = {
+        'project': project,
+    }
+    return render(request, 'project.html', context)
+
+
+def reference_genome_list_view(request, project_uid):
     """Shows the ReferenceGenomes and handles creating new
     ReferenceGenomes when requested.
     """
-    # HACK: Hard-code the project for now.
-    project = Project.objects.all()[0]
+    project = Project.objects.get(uid=project_uid)
 
     error_string = None
 
@@ -77,28 +89,33 @@ def reference_genome_list_view(request):
 
     # (Re-)Render the page.
     context = {
+        'project': project,
         'ref_genome_list': fe_ref_genome_list,
         'error_string': error_string
     }
     return render(request, 'reference_genome_list.html', context)
 
 
-def sample_list_view(request):
-    context = {}
+def sample_list_view(request, project_uid):
+    project = Project.objects.get(uid=project_uid)
+    context = {
+        'project': project,
+    }
     return render(request, 'sample_list.html', context)
-    
+
+
 def sample_list_upload_template(request):
     """Let the user download a blank sample upload template as a tab
     separated values file (.tsv) and allow them to fill it in and upload
     it back to the server. 
     """
-    
     context = {}
     return render(request, 'sample_list_upload_template.tsv', context, 
             content_type='text/tab-separated-values')
 
 
-def alignment_list_view(request):
+def alignment_list_view(request, project_uid):
+    project = Project.objects.get(uid=project_uid)
     alignment_list = AlignmentGroup.objects.all()
 
     # Adapt the backend objects to the frontend format.
@@ -111,26 +128,39 @@ def alignment_list_view(request):
     } for alignment_group_obj in alignment_list]
 
     context = {
+        'project': project,
         'alignment_list': fe_alignment_list
     }
     return render(request, 'alignment_list.html', context)
 
 
-def variant_set_list_view(request):
-    context = {}
+def variant_set_list_view(request, project_uid):
+    project = Project.objects.get(uid=project_uid)
+    context = {
+        'project': project
+    }
     return render(request, 'variant_set_list.html', context)
 
 
-def variant_list_view(request):
-    context = {}
+def variant_list_view(request, project_uid):
+    project = Project.objects.get(uid=project_uid)
+    context = {
+        'project': project
+    }
     return render(request, 'variant_list.html', context)
 
 
-def gene_list_view(request):
-    context = {}
+def gene_list_view(request, project_uid):
+    project = Project.objects.get(uid=project_uid)
+    context = {
+        'project': project
+    }
     return render(request, 'gene_list.html', context)
 
 
-def goterm_list_view(request):
-    context = {}
+def goterm_list_view(request, project_uid):
+    project = Project.objects.get(uid=project_uid)
+    context = {
+        'project': project
+    }
     return render(request, 'goterm_list.html', context)
