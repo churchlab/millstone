@@ -14,6 +14,11 @@
     <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>
   </ul>
 </div>
+<span class="gd-error-text">
+  {% if error_string %}
+    {{ error_string }}
+  {% endif %}
+</span>
 <table class="table">
   <thead>
     <tr>
@@ -27,47 +32,42 @@
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td><a href="#">MG1655</a></td>
-      <td>1</td>
-      <td>3.6 Mbp</td>
-      <td><i class="icon-ok"></i></td>
-      <td>--</td>
-      <td><a href="#">C321D</a></td>
-      <td>
-        <div class="btn-group">
-          <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-            Actions
-            <span class="caret"></span>
-          </a>
-          <ul class="dropdown-menu">
-            <!-- dropdown menu links -->
-          </ul>
-        </div>
-      </td>
-    </tr>
-    <tr>
-      <td><a href="#">C321D</a></td>
-      <td>1</td>
-      <td>3.6 Mbp</td>
-      <td><i class="icon-ok"></i></td>
-      <td><a href="#">MG1655</a></td>
-      <td>--</td>
-      <td>
-        <div class="btn-group">
-          <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-            Actions
-            <span class="caret"></span>
-          </a>
-          <ul class="dropdown-menu">
-            <!-- dropdown menu links -->
-          </ul>
-        </div>
-      </td>
-    </tr>
+    {% for obj in ref_genome_list %}
+      <tr>
+        <td><a href="#">{{obj.label}}</a></td>
+        <td>{{obj.num_chromosomes}}</td>
+        <td>{{obj.total_size}}</td>
+        <td>
+          {% if obj.annotated %}
+            <i class="icon-ok"></i>
+          {% endif %}
+        </td>
+        <td>
+          {% for parent in obj.parents %}
+            <a href="#">{{parent}}</a>,
+          {% endfor %}
+        </td>
+        <td>
+          {% for child in obj.children %}
+            <a href="#">{{child}}</a>,
+          {% endfor %}
+        </td>
+        <td>
+          <div class="btn-group">
+            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+              Actions
+              <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+              <!-- dropdown menu links -->
+            </ul>
+          </div>
+        </td>
+      </tr>
+    {% endfor %}
   </tbody>
 </table>
- 
+
 <!-- Modal -->
 <div id="modalFromFile" class="modal hide fade" tabindex="-1" role="dialog">
   <div class="modal-header">
@@ -77,14 +77,14 @@
   <div class="modal-body">
     <form id="formFromFile" method="POST">
       {% csrf_token %}
-      <input type="text" placeholder="Reference Genome Name">
-      <input type="text" placeholder="File Location on Server">
+      <input type="text" name="refGenomeLabel" placeholder="Reference Genome Name">
+      <input type="text" name="refGenomeFileLocation" placeholder="File Location on Server">
       <label class="radio">
-        <input type="radio" name="optionsRadios" id="optionsRadios1" value="genbank" checked>
+        <input type="radio" name="importFileFormat" id="optionsRadios1" value="genbank" checked>
         Genbank File
       </label>
       <label class="radio">
-        <input type="radio" name="optionsRadios" id="optionsRadios2" value="fasta">
+        <input type="radio" name="importFileFormat" id="optionsRadios2" value="fasta">
         FASTA File <i>(No Gene/Effect Annotations)</i>
       </label>
     </div>

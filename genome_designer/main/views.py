@@ -1,6 +1,10 @@
 from django.shortcuts import render
 
 from main.models import AlignmentGroup
+from main.models import Project
+from main.models import ReferenceGenome
+
+from scripts.import_util import import_reference_genome_from_local_file
 
 
 def home_view(request):
@@ -18,7 +22,64 @@ def project_list_view(request):
 
 
 def reference_genome_list_view(request):
-    context = {}
+    """Shows the ReferenceGenomes and handles creating new
+    ReferenceGenomes when requested.
+    """
+    # HACK: Hard-code the project for now.
+    project = Project.objects.all()[0]
+
+    error_string = None
+
+    # If a POST, then we are creating a new genome.
+    if request.method == 'POST':
+        # TODO: Add more inforative error handling.
+        try:
+            import_reference_genome_from_local_file(
+                    project,
+                    request.POST['refGenomeLabel'],
+                    request.POST['refGenomeFileLocation'],
+                    request.POST['importFileFormat'])
+        except:
+            error_string = "Import error. Please try again."
+
+    # Grab all the ReferenceGenomes for this project.
+    ref_genome_list = ReferenceGenome.objects.filter(project=project)
+
+
+    # Adapt the backend objects to the frontend format.
+    fe_ref_genome_list = [{
+        'label': obj.label,
+        'num_chromosomes': -1,
+        'total_size': -1,
+        'annotated': False,
+        'parents': [],
+        'children': [],
+    } for obj in ref_genome_list]
+
+    # HACK: Add some fake data for now.
+    fe_ref_genome_list.append({
+        'label': 'MG1655-fake',
+        'num_chromosomes': '1',
+        'total_size': '3.6 Mbp',
+        'annotated': False,
+        'parents': [],
+        'children': ['C321D-fake', 'another'],
+    })
+
+    fe_ref_genome_list.append({
+        'label': 'C321D-fake',
+        'num_chromosomes': '1',
+        'total_size': '3.6 Mbp',
+        'annotated': True,
+        'parents': ['MG1655-fake'],
+        'children': [],
+    })
+
+    # (Re-)Render the page.
+    context = {
+        'ref_genome_list': fe_ref_genome_list,
+        'error_string': error_string
+    }
     return render(request, 'reference_genome_list.html', context)
 
 
