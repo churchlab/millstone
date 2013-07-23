@@ -6,5 +6,6 @@ urlpatterns = patterns('',
     url(r'^projects$', 'genome_designer.main.views.project_list_view'),
     url(r'^refgenomes$', 'genome_designer.main.views.reference_genome_list_view'),
     url(r'^alignments$', 'genome_designer.main.views.alignment_list_view'),
+    url(r'^sets$', 'genome_designer.main.views.variant_set_list_view'),
     url(r'^samples$', 'genome_designer.main.views.sample_list_view'),
 )

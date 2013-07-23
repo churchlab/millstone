@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content%}
+<div class="page-header">
+  <h1>Variant Sets</h1>
+</div>
+  <div class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
+      Create New from File...
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th># Variants</th>
+        <th>Reference Genome</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="#">C321 Designed Changes</a></td>
+        <td>321</td>
+        <td><a href="#">MG1655</a></td>
+        <td>
+          <div class="btn-group">
+            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+              Actions
+              <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+              <!-- dropdown menu links -->
+            </ul>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td><a href="#">C321D Confirmed</a></td>
+        <td>215</td>
+        <td><a href="#">C321D</a></td>
+        <td>
+          <div class="btn-group">
+            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+              Actions
+              <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+              <!-- dropdown menu links -->
+            </ul>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td><a href="#">C321D Changes to Revert</a></td>
+        <td>150</td>
+        <td><a href="#">C321D</a></td>
+        <td>
+          <div class="btn-group">
+            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+              Actions
+              <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+              <!-- dropdown menu links -->
+            </ul>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

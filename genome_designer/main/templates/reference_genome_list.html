@@ -1,5 +1,70 @@
 {% extends "base.html" %}
 
 {% block content%}
+<div class="page-header">
   <h1>Reference Genomes</h1>
+</div>
+<div class="btn-group">
+  <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
+    Create New
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu">
+    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From Variant Set...</a></li>
+    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From File...</a></li>
+  </ul>
+</div>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th># Chromosomes</th>
+      <th>Total Size</th>
+      <th>Annotated?</th>
+      <th>Parents</th>
+      <th>Children</th>
+      <th> <th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="#">MG1655</a></td>
+      <td>1</td>
+      <td>3.6 Mbp</td>
+      <td><i class="icon-ok"></i></td>
+      <td>--</td>
+      <td><a href="#">C321D</a></td>
+      <td>
+        <div class="btn-group">
+          <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+            Actions
+            <span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <!-- dropdown menu links -->
+          </ul>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td><a href="#">C321D</a></td>
+      <td>1</td>
+      <td>3.6 Mbp</td>
+      <td><i class="icon-ok"></i></td>
+      <td><a href="#">MG1655</a></td>
+      <td>--</td>
+      <td>
+        <div class="btn-group">
+          <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+            Actions
+            <span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <!-- dropdown menu links -->
+          </ul>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
 {% endblock %}
