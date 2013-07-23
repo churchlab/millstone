@@ -86,6 +86,16 @@ def reference_genome_list_view(request):
 def sample_list_view(request):
     context = {}
     return render(request, 'sample_list.html', context)
+    
+def sample_list_upload_template(request):
+    """Let the user download a blank sample upload template as a tab
+    separated values file (.tsv) and allow them to fill it in and upload
+    it back to the server. 
+    """
+    
+    context = {}
+    return render(request, 'sample_list_upload_template.tsv', context, 
+            content_type='text/tab-separated-values')
 
 
 def alignment_list_view(request):

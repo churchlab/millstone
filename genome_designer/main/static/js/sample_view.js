@@ -11,6 +11,15 @@ gd.SampleView = Backbone.View.extend({
   },
 
   render: function() {
-    $('#gd-sidenav-link-samples').addClass('active');
-  }
+    $('#gd-sidenav-link-samples').addClass('active');    
+  },
+  
+  events: {
+    'click #submitFormFromFile': 'handleFormSubmit',
+  },
+  
+  handleFormSubmit: function() {
+    $("#formFromFile").submit();
+  },
+  
 });

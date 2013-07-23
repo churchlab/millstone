@@ -12,7 +12,7 @@
     </a>
     <ul class="dropdown-menu">
       <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From URL...</a></li>
-      <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From Server Location...</a></li>
+      <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>
       <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From Basespace/Amazon...</a></li>
     </ul>
   </div>
@@ -117,6 +117,74 @@
     </tr>
   </tbody>
 </table>
+
+<!-- Modal -->
+<div id="modalFromFile" class="modal hide fade" tabindex="-1" role="dialog">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3 id="modalFromFile">Load Sample Group from Server Location</h3>
+  </div>
+  <div class="modal-body">
+    <ul id="modalFromFileTab" class="nav nav-tabs">
+      <li class="active"><a href="#modalFromFile_upload" data-toggle="tab">Upload</a></li>
+      <li><a href="#modalFromFile_help" data-toggle="tab">Help</a></li>
+    </ul>
+    <div id="modalFromFileTabContent" class="tab-content">
+      <div class="tab-pane fade in active" id="modalFromFile_upload">
+        <p>To load samples from a location on the server, <strong> first download <a href="samples/sample_list_upload_template.tsv">this template</a></strong>, open it in Excel or a text editor, and fill it in.
+        <form id="formFromFile" method="POST">
+          {% csrf_token %}
+          <input type="file" title="Upload Sample Form">
+        </form> 
+      </div>
+      <div class="tab-pane fade" id="modalFromFile_help">
+        <p>To load samples from a location on the server, <strong> first download <a href="samples/sample_list_upload_template.tsv">this template</a></strong>, open it in Excel or a text editor, and fill it in.
+        </p>
+        <i>Required Fields: </i>
+        <table class="table table-condensed">
+          <tr>
+            <td><small><strong>Sample_Name</strong></small></td>
+            <td><small>Name for sample. Must be unique, word characters only.</small></td>
+          </tr>
+            <td><small><strong>Plate_or_Group</strong></small></td>
+            <td><small>Name of group or plate from which sample comes. Must be unique. </small></td>
+          </tr>
+          <tr>
+            <td><small><strong>Well</strong></small></td>
+            <td><small>Well location on Plate, or short alphanumeric ID for the sample within a group/plate. </small></td>
+          </tr>
+          <tr>
+            <td><small><strong>Read_1_Path</strong></small></td>
+            <td><small>Path to FASTQ file for single end reads on the server, or first set of reads for paired end. </small></td>
+          </tr>
+        </table>
+        <i>Optional Fields: </i>
+        <table class="table table-condensed">
+          <tr>
+            <td><small><strong>Read_2_Path</strong></small></td>
+            <td><small>Path to FASTQ file for second set of reads for paired end. Blank if single end reads.</small></td>
+          </tr>
+          <tr>
+            <td><small><strong>Parent_Samples</strong></small></td>
+            <td><small>Names of sample(s) that are the parents of this sample, comma separated.</small></td>
+          </tr>
+          <tr>
+            <td><small><strong>Child_Samples</strong></small></td>
+            <td><small>Names of sample(s) that are the children of this sample, comma separated.</small></td>
+          </tr>
+          <tr>
+            <td><small><strong>Other_Fields</strong></small></td>
+            <td><small>Add additional fields as needed as additional columns. These can be other string identifiers or numeric metadata like growth rate, escape phenotype (i.e. 0/1), colony color intensity (1-10), etc. Remove this column if not adding metadata.</small></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal">Cancel</button>
+    <button class="btn btn-primary" type="submit" id="submitFormFromFile">Submit</button>
+  </div>
+</div>
 
 <script type="text/javascript">
   VIEW_TAG = 'SAMPLE';
