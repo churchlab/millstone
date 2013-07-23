@@ -44,11 +44,12 @@ def bootstrap_fake_data():
     from main.models import ReferenceGenome
     REF_GENOME_1_LABEL = 'mg1655'
     (ref_genome_1, ref_genome_created) = ReferenceGenome.objects.get_or_create(
-            label=REF_GENOME_1_LABEL, project=test_project)
+            label=REF_GENOME_1_LABEL, project=test_project, num_chromosomes=1,
+            num_bases=100)
     REF_GENOME_2_LABEL = 'c321D'
     (ref_genome_2, ref_genome_created) = ReferenceGenome.objects.get_or_create(
-            label=REF_GENOME_2_LABEL, project=test_project)
-
+            label=REF_GENOME_2_LABEL, project=test_project, num_chromosomes=1,
+            num_bases=200)
 
     ### Create some samples
     from main.models import ExperimentSample

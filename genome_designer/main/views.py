@@ -39,8 +39,8 @@ def reference_genome_list_view(request):
                     request.POST['refGenomeLabel'],
                     request.POST['refGenomeFileLocation'],
                     request.POST['importFileFormat'])
-        except:
-            error_string = "Import error. Please try again."
+        except Exception as e:
+            error_string = 'Import error: ' + str(e)
 
     # Grab all the ReferenceGenomes for this project.
     ref_genome_list = ReferenceGenome.objects.filter(project=project)
@@ -49,8 +49,8 @@ def reference_genome_list_view(request):
     # Adapt the backend objects to the frontend format.
     fe_ref_genome_list = [{
         'label': obj.label,
-        'num_chromosomes': -1,
-        'total_size': -1,
+        'num_chromosomes': obj.num_chromosomes,
+        'total_size': obj.num_bases,
         'annotated': False,
         'parents': [],
         'children': [],

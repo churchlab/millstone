@@ -153,7 +153,7 @@ class Dataset(Model):
         Limit to 40-chars as per Dataset.type field def.
         """
         REFERENCE_GENOME_FASTA = 'rgf' # fasta
-        REFERENCE_GENOME_GBK = 'rgg'
+        REFERENCE_GENOME_GENBANK = 'rgg'
         FASTQ1 = 'f1'
         FASTQ2 = 'f2'
     TYPE_CHOICES = make_choices_tuple(TYPE)
@@ -242,6 +242,18 @@ class ReferenceGenome(Model):
 
     # A human-readable label for this genome.
     label = models.CharField(max_length=256)
+
+    # Number of chromosomes.
+    num_chromosomes = models.IntegerField()
+
+    # Number of chromosomes.
+    num_bases = models.BigIntegerField()
+
+    # Datasets pointing to files on the system (e.g. .fasta files, etc.)
+    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
+
+    def __unicode__(self):
+        return self.label
 
     def get_model_data_root(self):
         """Get the root location where all user data is stores."""
