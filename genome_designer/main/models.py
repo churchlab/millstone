@@ -9,19 +9,25 @@ Note on filesystem directory structure: (IN PROGRESS)
     is used when models can be properly nested.
 
     An example layout for a user's data might look like:
-        /users/1234abcd/projects/1324abcd/
-        /users/1234abcd/projects/1324abcd/alignments/
-        /users/1234abcd/projects/1324abcd/samples/
-        /users/1234abcd/projects/1324abcd/samples/1234abcd
-        /users/1234abcd/projects/1324abcd/samples/5678jklm
-        /users/1234abcd/projects/1324abcd/ref_genomes/
-        /users/1234abcd/projects/1324abcd/variant_calls/
+        ../projects/1324abcd/
+        ../projects/1324abcd/alignments/
+        ../projects/1324abcd/samples/
+        ../projects/1324abcd/samples/1234abcd
+        ../projects/1324abcd/samples/5678jklm
+        ../projects/1324abcd/ref_genomes/
+        ../projects/1324abcd/variant_calls/
 """
+import os
+import re
+import stat
+from uuid import uuid4
 
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Model
 from django.db.models.signals import post_save
+
+import settings
 
 
 ###############################################################################
@@ -54,6 +60,44 @@ def short_uuid(cls):
     raise RuntimeError, "Too many short_uuid attempts."
 
 
+def ensure_exists_0775_dir(destination):
+    """Creates a directory with 0775 permissions, and gets the group of the
+    parent directory rather than the effective group of the process.
+
+    The 0775 permissions are interpreted as all permissions for owner and
+    group, with read-only permissions for all others.
+
+    Does nothing if it already existed.  Errors if creation fails.
+    """
+    if not os.path.exists(destination):
+        os.mkdir(destination)
+        # User and group have all permissions | get group id from directory.
+        os.chmod(destination, stat.S_ISGID | 0775)
+
+    return True
+
+
+def make_choices_tuple(type_class):
+    """Creates a tuple of tuples object used as the choices attribute for
+    a CharField that we want to limit choices.
+
+    Args:
+        type_class: A class with the attributes defining the types.
+    """
+    return tuple([
+            (type_name, type_name) for type_name in dir(type_class)
+            if not re.match(r'__*', type_name)
+    ])
+
+
+def assert_unique_types(type_class):
+    """Function called at runtime to make sure types are unique.
+    """
+    all_type_name_list = [type_name for type_name in dir(type_class)
+            if not re.match(r'__*', type_name)]
+    assert len(all_type_name_list) == len(set(all_type_name_list))
+
+
 ###############################################################################
 # User-related models
 ###############################################################################
@@ -67,14 +111,18 @@ class UserProfile(Model):
     # A one-to-one mapping to the django User model.
     user = models.OneToOneField(User)
 
+    # A unique id, for urls or filesystem locations.
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(UserProfile)))
 
 # Since the registration flow creates a django User object, we want to make
 # sure that the corresponding UserProfile is also created
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         user_profile = UserProfile.objects.create(user=instance)
+
 post_save.connect(create_user_profile, sender=User,
-        dispatch_uid='gdportal.main.models')
+        dispatch_uid='user_profile_create')
 
 
 ###############################################################################
@@ -82,13 +130,48 @@ post_save.connect(create_user_profile, sender=User,
 ###############################################################################
 
 class Dataset(Model):
-    """A specific dataset with a location on the filesystem.
+    """A specific data file with a location on the filesystem.
 
     Basically a wrapper for a file on the file system.
 
     This is similar to the Galaxy notion of a dataset.
     """
-    pass
+    # NOTE: I'm not sure whether we'll need uid for this, but keeping it
+    # just in case for now.
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(Dataset)))
+
+    # The type of data this represents (e.g. Dataset.Type.BWA_ALIGN).
+    # This is a semantic identifier for the kinds of operations
+    # that can be performed with this Dataset.
+    class TYPE:
+        """The type of this dataset.
+
+        Limit to 40-chars as per Dataset.type field def.
+        """
+        REFERENCE_GENOME_FASTA = 'rgf' # fasta
+        REFERENCE_GENOME_GBK = 'rgg'
+        FASTQ1 = 'f1'
+        FASTQ2 = 'f2'
+    TYPE_CHOICES = make_choices_tuple(TYPE)
+    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
+
+    # Human-readable identifier. Also used for JBrowse.
+    label = models.CharField(max_length=256)
+
+    # Location on the filesystem relative to settings.MEDIA_ROOT.
+    filesystem_location = models.CharField(max_length=512)
+
+    def __unicode__(self):
+        return self.label
+
+    def get_absolute_location(self):
+        """Returns the full path to the file on the filesystem.
+        """
+        return os.path.join(settings.MEDIA_ROOT, self.filesystem_location)
+
+# Make sure the Dataset types are unique. This runs once at startup.
+assert_unique_types(Dataset.TYPE)
 
 
 ###############################################################################
@@ -101,14 +184,90 @@ class Project(Model):
     A project groups together ReferenceGenomes, ExperimentSamples, and other
     data generated by tools during analysis.
     """
-    pass
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(Project)))
+
+    # The project owner.
+    # TODO: Implement permissions system so that projects can be shared.
+    owner = models.ForeignKey('UserProfile')
+
+    # The human-readable title of the project.
+    title = models.CharField(max_length=256)
+
+    def __unicode__(self):
+        return self.title + '-' + str(self.owner)
+
+    def get_model_data_root(self):
+        """Get the root location where all user data is stores."""
+        return os.path.join(settings.MEDIA_ROOT, 'projects')
+
+    def get_model_data_dir(self):
+        """Get the full path to where the user's data is stored.
+
+        The data dir is the media root url combined with the user id.
+        """
+        return os.path.join(self.get_model_data_root(), str(self.uid))
+
+    def ensure_model_data_dir_exists(self):
+        """Ensure that a data directory exists for the user.
+
+        The data directory is named according to the UserProfile.id.
+        """
+        # Make sure the root of projects exists
+        ensure_exists_0775_dir(self.get_model_data_root())
+
+        # Check whether the data dir exists, and create it if not.
+        return ensure_exists_0775_dir(self.get_model_data_dir())
+
+# When a new Project is created, create the data directory.
+def post_project_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_project_create, sender=Project,
+        dispatch_uid='project_create')
 
 
 class ReferenceGenome(Model):
     """A reference genome relative to which alignments and analysis are
     performed.
     """
-    pass
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(ReferenceGenome)))
+
+    # A ReferenceGenome belongs to a single Project.
+    project = models.ForeignKey('Project')
+
+    # A human-readable label for this genome.
+    label = models.CharField(max_length=256)
+
+    def get_model_data_root(self):
+        """Get the root location where all user data is stores."""
+        return os.path.join(self.project.get_model_data_dir(), 'ref_genomes')
+
+    def get_model_data_dir(self):
+        """Get the full path to where the user's data is stored.
+
+        The data dir is the media root url combined with the user id.
+        """
+        return os.path.join(self.get_model_data_root(), str(self.uid))
+
+    def ensure_model_data_dir_exists(self):
+        """Ensure that a data directory exists for the user.
+
+        The data directory is named according to the UserProfile.id.
+        """
+        # Make sure the root of projects exists
+        ensure_exists_0775_dir(self.get_model_data_root())
+
+        # Check whether the data dir exists, and create it if not.
+        return ensure_exists_0775_dir(self.get_model_data_dir())
+
+# When a new ReferenceGenome is created, create its data dir.
+def post_ref_genome_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
+        dispatch_uid='ref_genome_create')
 
 
 class ExperimentSample(Model):
@@ -117,7 +276,15 @@ class ExperimentSample(Model):
     Usually this corresponds to a pair of fastq reads for a particular colony,
     after de-multiplexing.
     """
-    pass
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(ExperimentSample)))
+
+    # Human-readable identifier.
+    label = models.CharField(max_length=256, blank=True)
+
+    # The datasets associated with this sample. The semantic sense of the
+    # dataset can be determined from the Dataset.type field.
+    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
 
 
 class Alignment(Model):

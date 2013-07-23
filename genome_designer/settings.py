@@ -55,7 +55,7 @@ USE_L10N = True
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
-MEDIA_ROOT = ''
+MEDIA_ROOT = 'temp_data'
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
@@ -125,3 +125,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'main'
 )
+
+# We use a separate UserProfile from the build-in Django User model so that we
+# have the option of extending it.
+AUTH_PROFILE_MODULE = 'main.UserProfile'
