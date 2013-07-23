@@ -287,10 +287,44 @@ class ExperimentSample(Model):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
 
 
-class Alignment(Model):
-    """Alignment of an ExperimentSample to a ReferenceGenome.
+class AlignmentGroup(Model):
+    """Collection of alignments of several related ExperimentSamples to the
+    same ReferenceGenome.
+
+    The reason for grouping alignments together is that our variant operations
+    are generally relative to a single reference genome, and further, variant
+    calling tools often take multiple alignments as input, thus it makes sense
+    to group these in the database.
+
+    For a one-to-one mapping of Alignment to Sample, see
+    ExperimentSampleToAlignment.
     """
-    pass
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(AlignmentGroup)))
+
+    # All alignments in this set are relative to this genome.
+    reference_genome = models.ForeignKey('ReferenceGenome')
+
+    # The aligner tool used for this alignment.
+    class ALIGNER:
+        """Constants for representing the aligner type.
+        """
+        BOWTIE2 = 'BOWTIE2'
+        BWA = 'BWA'
+    ALIGNER_CHOICES = make_choices_tuple(ALIGNER)
+    aligner = models.CharField(max_length=10, choices=ALIGNER_CHOICES)
+
+
+class ExperimentSampleToAlignment(Model):
+    """Model that describes the alignment of a single ExperimentSample
+    to an Alignment.
+    """
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(ExperimentSampleToAlignment)))
+
+    alignment_group = models.ForeignKey('AlignmentGroup')
+
+    experiment_sample = models.ForeignKey('ExperimentSample')
 
 
 ###############################################################################

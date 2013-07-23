@@ -71,6 +71,17 @@ def bootstrap_fake_data():
             filesystem_location='blah2')
     sample_1.dataset_set.add(dataset_2)
 
+    ### Create an alignment.
+    from main.models import AlignmentGroup
+    alignment_group_1 = AlignmentGroup.objects.create(
+            reference_genome=ref_genome_1,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
+    # Link it to a sample.
+    from main.models import ExperimentSampleToAlignment
+    ExperimentSampleToAlignment.objects.create(
+            alignment_group=alignment_group_1,
+            experiment_sample=sample_1)
 
 
 def reset_database():
