@@ -115,6 +115,9 @@ class UserProfile(Model):
     uid = models.CharField(max_length=36,
             default=(lambda: short_uuid(UserProfile)))
 
+    def __unicode__(self):
+        return self.user.username
+
 # Since the registration flow creates a django User object, we want to make
 # sure that the corresponding UserProfile is also created
 def create_user_profile(sender, instance, created, **kwargs):
