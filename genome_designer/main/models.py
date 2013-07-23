@@ -302,6 +302,9 @@ class AlignmentGroup(Model):
     uid = models.CharField(max_length=36,
             default=(lambda: short_uuid(AlignmentGroup)))
 
+    # Human-readable identifier.
+    label = models.CharField(max_length=256, blank=True)
+
     # All alignments in this set are relative to this genome.
     reference_genome = models.ForeignKey('ReferenceGenome')
 
@@ -313,6 +316,10 @@ class AlignmentGroup(Model):
         BWA = 'BWA'
     ALIGNER_CHOICES = make_choices_tuple(ALIGNER)
     aligner = models.CharField(max_length=10, choices=ALIGNER_CHOICES)
+
+    # Times for the alignment run.
+    start_time = models.DateTimeField(auto_now=True)
+    end_time = models.DateTimeField(auto_now=True)
 
 
 class ExperimentSampleToAlignment(Model):

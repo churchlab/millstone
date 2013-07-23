@@ -74,6 +74,7 @@ def bootstrap_fake_data():
     ### Create an alignment.
     from main.models import AlignmentGroup
     alignment_group_1 = AlignmentGroup.objects.create(
+            label='Alignment 1',
             reference_genome=ref_genome_1,
             aligner=AlignmentGroup.ALIGNER.BWA)
 

@@ -1,5 +1,7 @@
 from django.shortcuts import render
 
+from main.models import AlignmentGroup
+
 
 def home_view(request):
     """The main landing page.
@@ -26,7 +28,20 @@ def sample_list_view(request):
 
 
 def alignment_list_view(request):
-    context = {}
+    alignment_list = AlignmentGroup.objects.all()
+
+    # Adapt the backend objects to the frontend format.
+    fe_alignment_list = [{
+        'label': alignment_group_obj.label,
+        'reference_genome': alignment_group_obj.reference_genome,
+        'sample_desc': str(len(alignment_group_obj.experimentsampletoalignment_set.all())) + ' samples',
+        'start_time': alignment_group_obj.start_time,
+        'end_time': alignment_group_obj.end_time,
+    } for alignment_group_obj in alignment_list]
+
+    context = {
+        'alignment_list': fe_alignment_list
+    }
     return render(request, 'alignment_list.html', context)
 
 
