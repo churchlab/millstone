@@ -34,5 +34,6 @@ nosetests.xml
 .project
 .pydevproject
 
-# Sqlite database
+# Data from development
 *.db
+temp_data/
