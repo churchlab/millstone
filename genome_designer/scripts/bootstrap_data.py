@@ -56,6 +56,22 @@ def bootstrap_fake_data():
     (sample_1, created) = ExperimentSample.objects.get_or_create(
             label=SAMPLE_1_LABEL)
 
+    ### Add datasets to the samples.
+    from main.models import Dataset
+
+    dataset_1 = Dataset.objects.create(
+            type=Dataset.TYPE.FASTQ1,
+            label='sample1_fastq1',
+            filesystem_location='blah')
+    sample_1.dataset_set.add(dataset_1)
+
+    dataset_2 = Dataset.objects.create(
+            type=Dataset.TYPE.FASTQ2,
+            label='sample1_fastq2',
+            filesystem_location='blah2')
+    sample_1.dataset_set.add(dataset_2)
+
+
 
 def reset_database():
     ### Delete the old database if it exists.

@@ -18,6 +18,7 @@ Note on filesystem directory structure: (IN PROGRESS)
         ../projects/1324abcd/variant_calls/
 """
 import os
+import re
 import stat
 from uuid import uuid4
 
@@ -76,6 +77,27 @@ def ensure_exists_0775_dir(destination):
     return True
 
 
+def make_choices_tuple(type_class):
+    """Creates a tuple of tuples object used as the choices attribute for
+    a CharField that we want to limit choices.
+
+    Args:
+        type_class: A class with the attributes defining the types.
+    """
+    return tuple([
+            (type_name, type_name) for type_name in dir(type_class)
+            if not re.match(r'__*', type_name)
+    ])
+
+
+def assert_unique_types(type_class):
+    """Function called at runtime to make sure types are unique.
+    """
+    all_type_name_list = [type_name for type_name in dir(type_class)
+            if not re.match(r'__*', type_name)]
+    assert len(all_type_name_list) == len(set(all_type_name_list))
+
+
 ###############################################################################
 # User-related models
 ###############################################################################
@@ -108,13 +130,48 @@ post_save.connect(create_user_profile, sender=User,
 ###############################################################################
 
 class Dataset(Model):
-    """A specific dataset with a location on the filesystem.
+    """A specific data file with a location on the filesystem.
 
     Basically a wrapper for a file on the file system.
 
     This is similar to the Galaxy notion of a dataset.
     """
-    pass
+    # NOTE: I'm not sure whether we'll need uid for this, but keeping it
+    # just in case for now.
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(Dataset)))
+
+    # The type of data this represents (e.g. Dataset.Type.BWA_ALIGN).
+    # This is a semantic identifier for the kinds of operations
+    # that can be performed with this Dataset.
+    class TYPE:
+        """The type of this dataset.
+
+        Limit to 40-chars as per Dataset.type field def.
+        """
+        REFERENCE_GENOME_FASTA = 'rgf' # fasta
+        REFERENCE_GENOME_GBK = 'rgg'
+        FASTQ1 = 'f1'
+        FASTQ2 = 'f2'
+    TYPE_CHOICES = make_choices_tuple(TYPE)
+    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
+
+    # Human-readable identifier. Also used for JBrowse.
+    label = models.CharField(max_length=256)
+
+    # Location on the filesystem relative to settings.MEDIA_ROOT.
+    filesystem_location = models.CharField(max_length=512)
+
+    def __unicode__(self):
+        return self.label
+
+    def get_absolute_location(self):
+        """Returns the full path to the file on the filesystem.
+        """
+        return os.path.join(settings.MEDIA_ROOT, self.filesystem_location)
+
+# Make sure the Dataset types are unique. This runs once at startup.
+assert_unique_types(Dataset.TYPE)
 
 
 ###############################################################################
@@ -224,6 +281,10 @@ class ExperimentSample(Model):
 
     # Human-readable identifier.
     label = models.CharField(max_length=256, blank=True)
+
+    # The datasets associated with this sample. The semantic sense of the
+    # dataset can be determined from the Dataset.type field.
+    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
 
 
 class Alignment(Model):
