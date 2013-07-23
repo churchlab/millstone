@@ -1,4 +1,5 @@
 Django==1.5.1
 argparse==1.2.1
+biopython==1.62b
 ipython==0.13.2
 wsgiref==0.1.2
