@@ -35,6 +35,18 @@ gd.App.prototype.run = function() {
     case 'VARIANT_SET':
       var view = new gd.VariantSetView();
       break;
+
+    case 'VARIANT':
+      var view = new gd.VariantView();
+      break;
+
+    case 'GENE':
+      var view = new gd.GeneView();
+      break;
+
+    case 'GOTERM':
+      var view = new gd.GotermView();
+      break;
   }
 };
 

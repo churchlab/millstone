@@ -29,6 +29,22 @@ def alignment_list_view(request):
     context = {}
     return render(request, 'alignment_list.html', context)
 
+
 def variant_set_list_view(request):
     context = {}
     return render(request, 'variant_set_list.html', context)
+
+
+def variant_list_view(request):
+    context = {}
+    return render(request, 'variant_list.html', context)
+
+
+def gene_list_view(request):
+    context = {}
+    return render(request, 'gene_list.html', context)
+
+
+def goterm_list_view(request):
+    context = {}
+    return render(request, 'goterm_list.html', context)
