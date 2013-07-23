@@ -1,3 +1,8 @@
 body {
   padding-top: 50px;
 }
+
+.gd-error-text {
+  color: red;
+  font-weight: bold;
+}

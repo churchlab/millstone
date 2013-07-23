@@ -57,4 +57,14 @@ be necessary to install specific packages first.
 We'll be adding more tests as we go and updating the following instructions. For
 now, as a starting point/placeholder, developers should be able to run the Django tests.
 
-    $ python manage.py test
+    (venv)$ python manage.py test
+
+
+## Bootstrapping Test Data
+
+From the `genome_designer` directory, run:
+
+    (venv)$ python scripts/bootstrap_data.py
+
+NOTE: This will delete the entire dev database and re-create it with the
+hard-coded test models only.

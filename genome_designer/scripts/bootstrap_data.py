@@ -86,9 +86,18 @@ def bootstrap_fake_data():
 
 
 def reset_database():
+    """Deletes the old database and sets up a new one.
+
+    For now, only works with the temp.db database to prevent
+    accidentally deleting data down the line.
+    """
+    import settings
+
     ### Delete the old database if it exists.
     print 'Deleting old database ...'
     TEMP_DB_NAME = 'temp.db'
+    temp_db_name = settings.DATABASES['default']['NAME']
+    assert temp_db_name == TEMP_DB_NAME
     tempdb_dir = os.path.split(PWD)[0]
     tempdb_abs_path = os.path.join(tempdb_dir, TEMP_DB_NAME)
     if os.path.exists(tempdb_abs_path):
@@ -102,7 +111,6 @@ def reset_database():
     call_command('syncdb', interactive=False)
 
     ### Recreate the media root.
-    import settings
     if os.path.exists(settings.MEDIA_ROOT):
         shutil.rmtree(settings.MEDIA_ROOT)
     os.mkdir(settings.MEDIA_ROOT)
