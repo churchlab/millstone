@@ -10,11 +10,22 @@
 
   <!-- JavaScript - Third-party  -->
   <script type="text/javascript" src="{% static "vendor/js/jquery-1.10.2.js" %}"></script>
+  <script type="text/javascript" src="{% static "vendor/js/underscore.js" %}"></script>
+  <script type="text/javascript" src="{% static "vendor/js/json2.js" %}"></script>
+  <script type="text/javascript" src="{% static "vendor/js/backbone.js" %}"></script>
   <script type="text/javascript" src="{% static "vendor/bootstrap/js/bootstrap.js" %}"></script>
+
+  <!-- JavaScript - Local -->
+  <script type="text/javascript" src="{% static "js/namespace.js" %}"></script>
+  <script type="text/javascript" src="{% static "js/ref_genome_view.js" %}"></script>
+  <script type="text/javascript" src="{% static "js/sample_view.js" %}"></script>
+  <script type="text/javascript" src="{% static "js/alignment_view.js" %}"></script>
+  <script type="text/javascript" src="{% static "js/variant_set_view.js" %}"></script>
+  <script type="text/javascript" src="{% static "js/app.js" %}"></script>
 </head>
 <body>
   {% include "top_nav_bar.html" %}
-  <div class="container-fluid">
+  <div id="gd-page-container" class="container-fluid">
     <div class="row-fluid">
       <div class="span3">
         {% include "side_nav_bar.html" %}
