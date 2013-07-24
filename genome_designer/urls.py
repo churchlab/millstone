@@ -25,6 +25,6 @@ urlpatterns = patterns('',
             'genome_designer.main.views.goterm_list_view'),
 
     # Templates
-    url(r'^templates/sample_list_upload_template.tsv$',
+    url(r'^templates/sample_list_targets_template.tsv$',
             'genome_designer.main.views.sample_list_upload_template'),
 )

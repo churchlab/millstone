@@ -98,19 +98,34 @@ def reference_genome_list_view(request, project_uid):
 
 def sample_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
+    
+    error_string = None
+
+    # If a POST, then we are creating a new genome.
+    if request.method == 'POST':
+        # TODO: Add more inforative error handling.
+        try:
+            import_samples_from_local_targets(
+                    project,
+                    request.POST['refGenomeLabel'],
+                    request.POST['refGenomeFileLocation'],
+                    request.POST['importFileFormat'])
+        except Exception as e:
+            error_string = 'Import error: ' + str(e)
+    
     context = {
         'project': project,
     }
     return render(request, 'sample_list.html', context)
 
 
-def sample_list_upload_template(request):
-    """Let the user download a blank sample upload template as a tab
-    separated values file (.tsv) and allow them to fill it in and upload
+def sample_list_targets_template(request):
+    """Let the user download a blank sample targets template as a tab
+    separated values file (.tsv) so they can fill it in and upload
     it back to the server. 
     """
     context = {}
-    return render(request, 'sample_list_upload_template.tsv', context, 
+    return render(request, 'sample_list_targets_template.tsv', context, 
             content_type='text/tab-separated-values')
 
 
