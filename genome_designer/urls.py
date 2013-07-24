@@ -28,10 +28,10 @@ urlpatterns = patterns('',
 
     ############################################################################
     # Templates
-    url(r'^templates/sample_list_targets_template.tsv$',
-            'genome_designer.main.views.sample_list_upload_template'),
     ############################################################################
-    
+
+    url(r'^templates/sample_list_targets_template.tsv$',
+            'genome_designer.main.views.sample_list_targets_template'),
 
 
     ############################################################################
