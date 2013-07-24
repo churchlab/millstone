@@ -19,6 +19,8 @@ def home_view(request):
 def project_list_view(request):
     """The list of projects.
     """
+    # NOTE: The 'project_list' template variable is provided via
+    # the custom context processor main.context_processors.common_data.
     context = {}
     return render(request, 'project_list.html', context)
 
@@ -120,7 +122,8 @@ def sample_list_upload_template(request):
 @login_required
 def alignment_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
-    alignment_list = AlignmentGroup.objects.all()
+    alignment_list = AlignmentGroup.objects.filter(
+            reference_genome__project=project)
 
     # Adapt the backend objects to the frontend format.
     fe_alignment_list = [{
