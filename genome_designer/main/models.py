@@ -369,7 +369,28 @@ class Variant(Model):
     A variant need not necessarily be associated with a specific sample; the
     VariantToExperimentSample model handles this association.
     """
-    pass
+    # Maybe used in url for view of this entity.
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(Variant)))
+
+    class TYPE:
+        DELETION = 'DELETION'
+        INSERTION = 'INSERTION'
+        TRANSITION = 'TRANSITION'
+        TRANSVERSION = 'TRANSVERSION'
+        COMPLEX = 'COMPLEX' # Multi-base in different genomes
+    TYPE_CHOICES = make_choices_tuple(TYPE)
+    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
+
+    reference_genome = models.ForeignKey('ReferenceGenome')
+
+    chromosome = models.CharField(max_length=256, blank=True)
+
+    position = models.BigIntegerField()
+
+    ref_value = models.TextField();
+
+    alt_value = models.TextField();
 
 
 class VariantToExperimentSample(Model):

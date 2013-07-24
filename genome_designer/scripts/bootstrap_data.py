@@ -8,6 +8,7 @@ and want to get some new data in quickly.
 """
 
 import os
+import random
 import shutil
 
 from util import setup_django_env
@@ -89,6 +90,18 @@ def bootstrap_fake_data():
     ExperimentSampleToAlignment.objects.create(
             alignment_group=alignment_group_1,
             experiment_sample=sample_1)
+
+
+    ### Create some fake variants
+    from main.models import Variant
+    for var_count in range(100):
+        Variant.objects.create(
+            type=Variant.TYPE.TRANSITION,
+            reference_genome=ref_genome_1,
+            chromosome='chrom',
+            position=random.randint(1,ref_genome_1.num_bases),
+            ref_value='A',
+            alt_value='G')
 
 
 def reset_database():
