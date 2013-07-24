@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from main.models import AlignmentGroup
@@ -10,13 +11,11 @@ from scripts.import_util import import_reference_genome_from_local_file
 def home_view(request):
     """The main landing page.
     """
-    project_list = Project.objects.all()
-    context = {
-        'project_list': project_list
-    }
+    context = {}
     return render(request, 'home.html', context)
 
 
+@login_required
 def project_list_view(request):
     """The list of projects.
     """
@@ -24,6 +23,7 @@ def project_list_view(request):
     return render(request, 'project_list.html', context)
 
 
+@login_required
 def project_view(request, project_uid):
     """Overview of a single project.
     """
@@ -34,6 +34,7 @@ def project_view(request, project_uid):
     return render(request, 'project.html', context)
 
 
+@login_required
 def reference_genome_list_view(request, project_uid):
     """Shows the ReferenceGenomes and handles creating new
     ReferenceGenomes when requested.
@@ -96,6 +97,7 @@ def reference_genome_list_view(request, project_uid):
     return render(request, 'reference_genome_list.html', context)
 
 
+@login_required
 def sample_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
@@ -104,6 +106,7 @@ def sample_list_view(request, project_uid):
     return render(request, 'sample_list.html', context)
 
 
+@login_required
 def sample_list_upload_template(request):
     """Let the user download a blank sample upload template as a tab
     separated values file (.tsv) and allow them to fill it in and upload
@@ -114,6 +117,7 @@ def sample_list_upload_template(request):
             content_type='text/tab-separated-values')
 
 
+@login_required
 def alignment_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     alignment_list = AlignmentGroup.objects.all()
@@ -134,6 +138,7 @@ def alignment_list_view(request, project_uid):
     return render(request, 'alignment_list.html', context)
 
 
+@login_required
 def variant_set_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
@@ -142,6 +147,7 @@ def variant_set_list_view(request, project_uid):
     return render(request, 'variant_set_list.html', context)
 
 
+@login_required
 def variant_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
@@ -150,6 +156,7 @@ def variant_list_view(request, project_uid):
     return render(request, 'variant_list.html', context)
 
 
+@login_required
 def gene_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
@@ -158,6 +165,7 @@ def gene_list_view(request, project_uid):
     return render(request, 'gene_list.html', context)
 
 
+@login_required
 def goterm_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {

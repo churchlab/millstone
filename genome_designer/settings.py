@@ -2,6 +2,8 @@
 
 import os
 
+from django.conf import global_settings
+
 # The absolute path of the settings.py file's directory.
 # Useful for settings that require absolute paths like templates.
 PWD = os.path.dirname(os.path.realpath(__file__ ))
@@ -123,9 +125,20 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'registration',
     'main'
 )
 
 # We use a separate UserProfile from the build-in Django User model so that we
 # have the option of extending it.
 AUTH_PROFILE_MODULE = 'main.UserProfile'
+
+# Default redirect after login. Otherwise the login form has a 'next' hidden
+# field that is used, for example, when redirecting back to the page that
+# the user attempted to access before logging in.
+LOGIN_REDIRECT_URL = '/'
+
+# Custom template context processors.
+TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
+    'main.context_processors.common_data',
+)

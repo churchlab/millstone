@@ -1,3 +1,4 @@
+from django.conf.urls.defaults import include
 from django.conf.urls.defaults import patterns
 from django.conf.urls.defaults import url
 
@@ -24,7 +25,19 @@ urlpatterns = patterns('',
     url(r'^projects/([\w-]+)/goterms$',
             'genome_designer.main.views.goterm_list_view'),
 
+
+    ############################################################################
     # Templates
+    ############################################################################
+
     url(r'^templates/sample_list_upload_template.tsv$',
             'genome_designer.main.views.sample_list_upload_template'),
+
+
+    ############################################################################
+    # Auth
+    ############################################################################
+
+    # django-registration defaults (further delgates to django.contrib.auth.url)
+    (r'^accounts/', include('registration.backends.simple.urls')),
 )

@@ -34,11 +34,15 @@ def bootstrap_fake_data():
         user = User.objects.create_user(
                 TEST_USERNAME, password=TEST_PASSWORD, email=TEST_EMAIL)
 
-    ### Create a project
+    ### Create some projects
     from main.models import Project
     TEST_PROJECT_NAME = 'recoli'
     (test_project, project_created) = Project.objects.get_or_create(
             title=TEST_PROJECT_NAME, owner=user.get_profile())
+    (test_project_2, project_created) = Project.objects.get_or_create(
+            title='project2', owner=user.get_profile())
+    (test_project_3, project_created) = Project.objects.get_or_create(
+            title='project3', owner=user.get_profile())
 
     ### Create some reference genomes
     from main.models import ReferenceGenome
