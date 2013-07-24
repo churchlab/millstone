@@ -1,18 +1,40 @@
 <div class="well sidebar-nav">
-    <ul class="nav nav-list">
-        <li id="gd-sidenav-link-refgenomes"><a href="/refgenomes"><i class="icon-book"></i>Reference Genomes</a></li>
-        <li id="gd-sidenav-link-samples"><a href="/samples"><i class="icon-tint"></i>Samples</a></li>
-        <li id="gd-sidenav-link-alignments"><a href="/alignments"><i class="icon-align-center"></i>Alignments</a></li>
-        <li id="gd-sidenav-link-variants"><a href="/variants"><i class="icon-asterisk"></i>Variants</a></li>
-        <li id="gd-sidenav-link-variant-sets"><a href="/sets"><i class="icon-tags"></i>Sets</a></li>
-        <li id="gd-sidenav-link-genes"><a href="/genes"><i class="icon-arrow-right"></i>Genes</a></li>
-        <li id="gd-sidenav-link-goterms"><a href="/goterms"><i class="icon-th-list"></i>GO Terms</a></li>
-        <li id="divider"></li>
-        <li><label class="tree-toggle nav-header">Help</label>
-            <ul class="nav nav-list tree">
-                <li><a href="#">Link</a></li>
-                <li><a href="#">Link</a></li>
-            </ul>
-        </li>
-    </ul><!--/.nav -->
+  <ul class="nav nav-list">
+    <li id="gd-sidenav-link-refgenomes">
+      <a href="/projects/{{project.uid}}/refgenomes"><i class="icon-book"></i>Reference Genomes</a>
+    </li>
+
+    <li id="gd-sidenav-link-samples">
+      <a href="/projects/{{project.uid}}/samples"><i class="icon-tint"></i>Samples</a>
+    </li>
+
+    <li id="gd-sidenav-link-alignments">
+      <a href="/projects/{{project.uid}}/alignments"><i class="icon-align-center"></i>Alignments</a>
+    </li>
+
+    <li id="gd-sidenav-link-variants">
+      <a href="/projects/{{project.uid}}/variants"><i class="icon-asterisk"></i>Variants</a>
+    </li>
+
+    <li id="gd-sidenav-link-variant-sets">
+      <a href="/projects/{{project.uid}}/sets"><i class="icon-tags"></i>Sets</a>
+    </li>
+
+    <li id="gd-sidenav-link-genes">
+      <a href="/projects/{{project.uid}}/genes"><i class="icon-arrow-right"></i>Genes</a>
+    </li>
+
+    <li id="gd-sidenav-link-goterms">
+      <a href="/projects/{{project.uid}}/goterms"><i class="icon-th-list"></i>GO Terms</a>
+    </li>
+
+    <li id="divider"></li>
+
+    <li><label class="tree-toggle nav-header">Help</label>
+      <ul class="nav nav-list tree">
+        <li><a href="#">Link</a></li>
+        <li><a href="#">Link</a></li>
+      </ul>
+    </li>
+  </ul><!--/.nav -->
 </div><!--/.well /.sidebar-nav -->

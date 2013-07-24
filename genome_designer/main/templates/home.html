@@ -2,4 +2,9 @@
 
 {% block content%}
   <h1>Genome Designer</h1>
+
+  <h2>Projects</h2>
+  {% for project in project_list %}
+    <a class="gd-home-project-name" href="/projects/{{project.uid}}">{{project.title}}</a>
+  {% endfor %}
 {% endblock %}
