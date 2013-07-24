@@ -2,4 +2,11 @@
 
 {% block content%}
   <h1>Projects</h1>
+
+  <ul>
+  {% for project in project_list %}
+    <li><a href="{% url 'main.views.project_view' project.uid %}">{{project.title}}</a></li>
+  {% endfor %}
+  </ul>
+
 {% endblock %}

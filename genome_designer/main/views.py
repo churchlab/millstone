@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from main.models import AlignmentGroup
@@ -10,20 +11,21 @@ from scripts.import_util import import_samples_from_targets_file
 def home_view(request):
     """The main landing page.
     """
-    project_list = Project.objects.all()
-    context = {
-        'project_list': project_list
-    }
+    context = {}
     return render(request, 'home.html', context)
 
 
+@login_required
 def project_list_view(request):
     """The list of projects.
     """
+    # NOTE: The 'project_list' template variable is provided via
+    # the custom context processor main.context_processors.common_data.
     context = {}
     return render(request, 'project_list.html', context)
 
 
+@login_required
 def project_view(request, project_uid):
     """Overview of a single project.
     """
@@ -34,6 +36,7 @@ def project_view(request, project_uid):
     return render(request, 'project.html', context)
 
 
+@login_required
 def reference_genome_list_view(request, project_uid):
     """Shows the ReferenceGenomes and handles creating new
     ReferenceGenomes when requested.
@@ -95,6 +98,7 @@ def reference_genome_list_view(request, project_uid):
     return render(request, 'reference_genome_list.html', context)
 
 
+@login_required
 def sample_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     error_string = None
@@ -117,6 +121,8 @@ def sample_list_view(request, project_uid):
     return render(request, 'sample_list.html', context)
 
 
+
+@login_required
 def sample_list_targets_template(request):
     """Let the user download a blank sample targets template as a tab
     separated values file (.tsv) so they can fill it in and upload
@@ -127,9 +133,11 @@ def sample_list_targets_template(request):
             content_type='text/tab-separated-values')
 
 
+@login_required
 def alignment_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
-    alignment_list = AlignmentGroup.objects.all()
+    alignment_list = AlignmentGroup.objects.filter(
+            reference_genome__project=project)
 
     # Adapt the backend objects to the frontend format.
     fe_alignment_list = [{
@@ -147,6 +155,7 @@ def alignment_list_view(request, project_uid):
     return render(request, 'alignment_list.html', context)
 
 
+@login_required
 def variant_set_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
@@ -155,6 +164,7 @@ def variant_set_list_view(request, project_uid):
     return render(request, 'variant_set_list.html', context)
 
 
+@login_required
 def variant_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
@@ -163,6 +173,7 @@ def variant_list_view(request, project_uid):
     return render(request, 'variant_list.html', context)
 
 
+@login_required
 def gene_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
@@ -171,6 +182,7 @@ def gene_list_view(request, project_uid):
     return render(request, 'gene_list.html', context)
 
 
+@login_required
 def goterm_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
