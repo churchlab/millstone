@@ -1,9 +1,12 @@
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
+from main.models import Variant
 
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
@@ -167,8 +170,37 @@ def variant_set_list_view(request, project_uid):
 @login_required
 def variant_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
+
+    # Fetch the list of variants and render it into the dom as json.
+    # The data will be displayed to the user via the javascript DataTables
+    # component.
+    variant_list = Variant.objects.all()
+
+    fe_variant_list = [{
+        'type': obj.type,
+        'chromosome': obj.chromosome,
+        'position': obj.position,
+        'ref_value': obj.ref_value,
+        'alt_value': obj.alt_value,
+    } for obj in variant_list]
+
+    # Configuration for display using jquery.datatables.js.
+    variant_field_config = [
+        {'mData': 'type', 'sTitle': 'Type'},
+        {'mData': 'chromosome', 'sTitle': 'Chromosome'},
+        {'mData': 'position', 'sTitle': 'Position'},
+        {'mData': 'ref_value', 'sTitle': 'Ref Value'},
+        {'mData': 'alt_value', 'sTitle': 'Alt Value'}
+    ]
+
+    variant_list_json = json.dumps({
+        'variant_list': fe_variant_list,
+        'field_config': variant_field_config
+    })
+
     context = {
-        'project': project
+        'project': project,
+        'variant_list_json': variant_list_json
     }
     return render(request, 'variant_list.html', context)
 
