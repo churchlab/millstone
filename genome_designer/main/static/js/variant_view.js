@@ -23,41 +23,38 @@ gd.VariantView = Backbone.View.extend({
   updateDatatable: function() {
     $('#gd-datatable-hook').html(
         '<table cellpadding="0" cellspacing="0" border="0" class="display"' +
-            'id="example">' +
+            'id="gd-datatable">' +
         '</table>');
-    $('#example').dataTable( {
+    $('#gd-datatable').dataTable( {
         "aaData": [
-            /* Reduced data set */
-            [ "Trident", "Internet Explorer 4.0", "Win 95+", 4, "X" ],
-            [ "Trident", "Internet Explorer 5.0", "Win 95+", 5, "C" ],
-            [ "Trident", "Internet Explorer 5.5", "Win 95+", 5.5, "A" ],
-            [ "Trident", "Internet Explorer 6.0", "Win 98+", 6, "A" ],
-            [ "Trident", "Internet Explorer 7.0", "Win XP SP2+", 7, "A" ],
-            [ "Gecko", "Firefox 1.5", "Win 98+ / OSX.2+", 1.8, "A" ],
-            [ "Gecko", "Firefox 2", "Win 98+ / OSX.2+", 1.8, "A" ],
-            [ "Gecko", "Firefox 3", "Win 2k+ / OSX.3+", 1.9, "A" ],
-            [ "Webkit", "Safari 1.2", "OSX.3", 125.5, "A" ],
-            [ "Webkit", "Safari 1.3", "OSX.3", 312.8, "A" ],
-            [ "Webkit", "Safari 2.0", "OSX.4+", 419.3, "A" ],
-            [ "Webkit", "Safari 3.0", "OSX.4+", 522.1, "A" ],
-            [ "Trident", "Internet Explorer 4.0", "Win 95+", 4, "X" ],
-            [ "Trident", "Internet Explorer 5.0", "Win 95+", 5, "C" ],
-            [ "Trident", "Internet Explorer 5.5", "Win 95+", 5.5, "A" ],
-            [ "Trident", "Internet Explorer 6.0", "Win 98+", 6, "A" ],
-            [ "Trident", "Internet Explorer 7.0", "Win XP SP2+", 7, "A" ],
-            [ "Gecko", "Firefox 1.5", "Win 98+ / OSX.2+", 1.8, "A" ],
-            [ "Gecko", "Firefox 2", "Win 98+ / OSX.2+", 1.8, "A" ],
-            [ "Gecko", "Firefox 3", "Win 2k+ / OSX.3+", 1.9, "A" ],
-            [ "Webkit", "Safari 1.2", "OSX.3", 125.5, "A" ],
-            [ "Webkit", "Safari 1.3", "OSX.3", 312.8, "A" ],
-            [ "Webkit", "Safari 2.0", "OSX.4+", 419.3, "A" ],
+            {
+              "engine": "Trident",
+              "browser": "Internet Explorer 4.0",
+              "platform": "Win 95+",
+              "version": "4",
+              "grade": "X"
+            },
+            {
+              "engine": "Trident",
+              "browser": "Internet Explorer 5.0",
+              "platform": "Win 95+",
+              "version": "5",
+              "grade": "C"
+            },
+            {
+              "engine": "Trident",
+              "browser": "Internet Explorer 5.5",
+              "platform": "Win 95+",
+              "version": "5.5",
+              "grade": "A"
+            }
         ],
         "aoColumns": [
-            { "sTitle": "Engine" },
-            { "sTitle": "Browser" },
-            { "sTitle": "Platform" },
-            { "sTitle": "Version", "sClass": "center" },
-            { "sTitle": "Grade", "sClass": "center" }
+            { "mData": "engine", "sTitle": "Engine Blah" },
+            { "mData": "browser", "sTitle": "Browser" },
+            { "mData": "platform", "sTitle": "Platform" },
+            { "mData": "version", "sTitle": "Version", "sClass": "center" },
+            { "mData": "grade", "sTitle": "Grade", "sClass": "center" }
         ]
     });
   }
