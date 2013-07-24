@@ -5,7 +5,7 @@ from main.models import Project
 from main.models import ReferenceGenome
 
 from scripts.import_util import import_reference_genome_from_local_file
-
+from scripts.import_util import import_samples_from_targets_file
 
 def home_view(request):
     """The main landing page.
@@ -39,7 +39,6 @@ def reference_genome_list_view(request, project_uid):
     ReferenceGenomes when requested.
     """
     project = Project.objects.get(uid=project_uid)
-
     error_string = None
 
     # If a POST, then we are creating a new genome.
@@ -98,23 +97,22 @@ def reference_genome_list_view(request, project_uid):
 
 def sample_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
-    
     error_string = None
 
     # If a POST, then we are creating a new genome.
     if request.method == 'POST':
-        # TODO: Add more inforative error handling.
+        # TODO: Add more inforative error handling
+        print "Recieved POST!"
         try:
-            import_samples_from_local_targets(
+            import_samples_from_targets_file(
                     project,
-                    request.POST['refGenomeLabel'],
-                    request.POST['refGenomeFileLocation'],
-                    request.POST['importFileFormat'])
+                    request.FILES['targetsFile'])
         except Exception as e:
             error_string = 'Import error: ' + str(e)
     
     context = {
         'project': project,
+        'error_string': error_string
     }
     return render(request, 'sample_list.html', context)
 

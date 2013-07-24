@@ -4,6 +4,13 @@
 <div class="page-header">
   <h1>Samples</h1>
 </div>
+{% if error_string %}
+<div class="alert alert-error alert-block">
+  <button type="button" class="close" data-dismiss="alert">&times;</button>
+  <h4>Error</h4> 
+  {{ error_string }}
+</div>
+{% endif %}
 <form class="form-search">
   <div class="btn-group">
     <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
@@ -132,9 +139,9 @@
     <div id="modalFromFileTabContent" class="tab-content">
       <div class="tab-pane fade in active" id="modalFromFile_upload">
         <p>To load samples from a location on the server, you need to make a <i>targets file</i> that has information about and points to the individual samples.<strong> First download <a href="/templates/sample_list_targets_template.tsv">this template</a></strong>, open it in Excel or a text editor, and fill it in.
-        <form id="formFromFile" method="POST">
+        <form id="formFromFile" enctype="multipart/form-data" method="POST">
           {% csrf_token %}
-          <input type="file" title="Upload Sample Targets File">
+          <input type="file" name="targetsFile" title="Upload Sample Targets File">
         </form> 
       </div>
       <div class="tab-pane fade" id="modalFromFile_help">
