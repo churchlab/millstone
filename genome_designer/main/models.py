@@ -294,6 +294,9 @@ class ExperimentSample(Model):
     uid = models.CharField(max_length=36,
             default=(lambda: short_uuid(ExperimentSample)))
 
+    # A Sample belongs to a single Project.
+    project = models.ForeignKey('Project')
+
     # Human-readable identifier.
     label = models.CharField(max_length=256, blank=True)
 

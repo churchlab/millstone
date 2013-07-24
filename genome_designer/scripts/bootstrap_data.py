@@ -59,6 +59,7 @@ def bootstrap_fake_data():
     from main.models import ExperimentSample
     SAMPLE_1_LABEL = 'sample1'
     (sample_1, created) = ExperimentSample.objects.get_or_create(
+            project=test_project,
             label=SAMPLE_1_LABEL)
 
     ### Add datasets to the samples.
