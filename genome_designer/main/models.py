@@ -256,20 +256,17 @@ class ReferenceGenome(Model):
         return self.label
 
     def get_model_data_root(self):
-        """Get the root location where all user data is stores."""
+        """Get the root location for all data of this type in the project.
+        """
         return os.path.join(self.project.get_model_data_dir(), 'ref_genomes')
 
     def get_model_data_dir(self):
-        """Get the full path to where the user's data is stored.
-
-        The data dir is the media root url combined with the user id.
+        """Get the full path to the location of this model's data.
         """
         return os.path.join(self.get_model_data_root(), str(self.uid))
 
     def ensure_model_data_dir_exists(self):
-        """Ensure that a data directory exists for the user.
-
-        The data directory is named according to the UserProfile.id.
+        """Ensure that a data directory exists for this model.
         """
         # Make sure the root of projects exists
         ensure_exists_0775_dir(self.get_model_data_root())
@@ -303,6 +300,34 @@ class ExperimentSample(Model):
     # The datasets associated with this sample. The semantic sense of the
     # dataset can be determined from the Dataset.type field.
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
+
+    def __unicode__(self):
+        return self.label
+
+    def get_model_data_root(self):
+        """Get the root location for all data of this type in the project.
+        """
+        return os.path.join(self.project.get_model_data_dir(), 'samples')
+
+    def get_model_data_dir(self):
+        """Get the full path to the location of this model's data.
+        """
+        return os.path.join(self.get_model_data_root(), str(self.uid))
+
+    def ensure_model_data_dir_exists(self):
+        """Ensure that a data directory exists for this model.
+        """
+        # Make sure the root of projects exists
+        ensure_exists_0775_dir(self.get_model_data_root())
+
+        # Check whether the data dir exists, and create it if not.
+        return ensure_exists_0775_dir(self.get_model_data_dir())
+
+def post_sample_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_sample_create, sender=ExperimentSample,
+        dispatch_uid='post_sample_create')
 
 
 class AlignmentGroup(Model):

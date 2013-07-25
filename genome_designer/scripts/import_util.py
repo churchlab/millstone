@@ -2,11 +2,14 @@
 Methods related to importing data.
 """
 
+import copy
+import csv
 import os
 import shutil
 import re
 
 from main.models import Dataset
+from main.models import ExperimentSample
 from main.models import ReferenceGenome
 from settings import PWD
 
@@ -55,81 +58,92 @@ def import_reference_genome_from_local_file(project, label, file_location,
             dataset_type, file_location)
     return reference_genome
 
+
 def import_samples_from_targets_file(project, targets_file):
     """Uses the uploaded targets file to add a set of samples to the project.
     We need to check each line of the targets file for consistency before we
-    do anything, however. 
-    
+    do anything, however.
+
     It writes a copy of the uploaded targets file to a temporary file
-    
+
     Args:
-        project: The project we're storing everything relative to
+        project: The project we're storing everything relative to>
         targets_file: The UploadedFile django object that holds the targets
-            in .tsv format. 
+            in .tsv format.
     """
-    
     # The targets file shouldn't be over 1 Mb ( that would be ~3,000 genomes)
     assert targets_file.size < 1000000, "Targets file is too large."
-    
-    #Check the header first, and make sure it has the required columns in 
-    # the right order.
-    target_header = targets_file.readline().rstrip().split('\t')
-    
-    assert len(target_header) >= 6, "Bad header. Were columns removed?"
-    
-    required_header = ['Sample_Name','Plate_or_Group','Well','Read_1_Path','Read_2_Path','Parent_Samples']
-    for col, check in zip(target_header[0:len(required_header)], required_header):
-        assert col == check, "Header column '%s' is missing or out of order." 
-    
-    optional_header = target_header[len(required_header):]
-    field_names = required_header + optional_header 
-    
-    #Now go through every row and make a dict. 
-    #All paths should be correct and all values should be alphanumeric.
-    #Also, we need to make sure that we have access to that path
-    rows = []
-    row_count = -1
-    for row in targets_file:
-        row_dict = {}
-        row_count += 1
-        #skip the first row, which is the header
-        if row_count == 0: continue
-                
-        fields = row.rstrip().split('\t')
-        
-        assert len(fields) == len(field_names), "Row %d has the wrong length." % row_count
-        
-        for field_name, field in zip(field_names, fields): 
-            
-            print "%d : %s : %s" % (row_count, field_name, field)
-            
+
+    # Detect the format.
+    reader = csv.DictReader(targets_file, delimiter='\t')
+
+    # Validate the header.
+    targets_file_header = reader.fieldnames
+    assert len(targets_file_header) >= 6, "Bad header. Were columns removed?"
+
+    REQUIRED_HEADER_PART = ['Sample_Name', 'Plate_or_Group', 'Well',
+            'Read_1_Path', 'Read_2_Path','Parent_Samples']
+    for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
+            REQUIRED_HEADER_PART):
+        assert col == check, "Header column '%s' is missing or out of order."
+
+    # Validate all the rows.
+    valid_rows = []
+    for row in reader:
+        # Make a copy of the row so we can clean up the data for further
+        # processing.
+        clean_row = copy.copy(row)
+
+        # Make sure the row has all the fields
+        assert len(targets_file_header) == len(row.keys()), (
+                "Row %s has the wrong length." % str(row))
+
+        for field_name, field_value in row.iteritems():
             if 'Path' not in field_name:
                 #make sure each field is alphanumeric only
-                assert re.match('^[\. \w-]*$', field) is not None, 'Only alphanumeric characters and spaces are allowed, except for the paths.\n(Row %d, "%s")' % (row_count, field_name)
+                assert re.match('^[\. \w-]*$', field_value) is not None, (
+                        'Only alphanumeric characters and spaces are allowed, '
+                        'except for the paths.\n(Row %d, "%s")' % (
+                                row_count, field_name))
             else:
-                #if it is a path, then try to open the file and read one byte
-                #replace the string '$GD_ROOT with the project path, so we can use the test data
-                field = field.replace('$GD_ROOT', PWD)
-                
-                with open(field, 'rb') as test_file:
+                # If it is a path, then try to open the file and read one byte.
+                # Replace the string '$GD_ROOT with the project path, so we
+                # can use the test data
+                clean_field_value = field_value.replace('$GD_ROOT', PWD)
+                with open(clean_field_value, 'rb') as test_file:
                     try:
                         test_file.read(8)
                     except:
-                        raise
-            
-            row_dict[field_name] = field
-            
-        rows.append(row_dict)
-    
-    #TODO: use this list of dicts to update the database, create new sample dirs,
-    #      and copy the data to a location within GD.     
-    for row in rows:
-        print row
+                        raise Exception("Cannot read file at %s" %
+                                clean_field_value)
+                clean_row[field_name] = clean_field_value
+
+        # Save this row.
+        valid_rows.append(clean_row)
+
+    # Now create ExperimentSample objects along with their respective Datasets.
+    # The data is copied to the entity location.
+    for row in valid_rows:
+        # Create ExperimentSample object and then store the data relative to
+        # it.
+        sample_label = row['Sample_Name']
+        experiment_sample = ExperimentSample.objects.create(
+                project=project, label=sample_label)
+        _copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1, row['Read_1_Path'])
+        if 'Read_2_Path' in row and row['Read_2_Path']:
+            _copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ2,
+                    Dataset.TYPE.FASTQ2, row['Read_2_Path'])
+
 
 def _copy_and_add_dataset_source(entity, dataset_label, dataset_type,
         original_source_location):
     """Copies the dataset to the entity location and then adds as
     Dataset.
+
+    The model entity must satisfy the following interface:
+        * property dataset_set
+        * method get_model_data_dir()
 
     Returns the Dataset object.
     """
@@ -137,13 +151,13 @@ def _copy_and_add_dataset_source(entity, dataset_label, dataset_type,
     dest = os.path.join(entity.get_model_data_dir(), source_name)
     if not original_source_location == dest:
         shutil.copy(original_source_location, dest)
-    return _add_dataset_to_genome(
+    return _add_dataset_to_entity(
             entity, dataset_label, dataset_type, dest)
 
 
-def _add_dataset_to_genome(genome, dataset_label, dataset_type,
+def _add_dataset_to_entity(entity, dataset_label, dataset_type,
         filesystem_location):
-    """Helper function for adding a Dataset to a ReferenceGenome.
+    """Helper function for adding a Dataset to a model.
 
     Returns the Dataset object.
     """
@@ -151,6 +165,6 @@ def _add_dataset_to_genome(genome, dataset_label, dataset_type,
             label=dataset_label,
             type=dataset_type,
             filesystem_location=filesystem_location)
-    genome.dataset_set.add(dataset)
-    genome.save()
+    entity.dataset_set.add(dataset)
+    entity.save()
     return dataset
