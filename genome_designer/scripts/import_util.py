@@ -86,7 +86,7 @@ def import_samples_from_targets_file(project, targets_file):
     for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
             REQUIRED_HEADER_PART):
         assert col == check, (
-            "Header column '%s' is missing or out of order." % check
+            "Header column '%s' is missing or out of order." % check)
 
     # Validate all the rows.
     valid_rows = []
