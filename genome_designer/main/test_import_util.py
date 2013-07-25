@@ -7,12 +7,12 @@ import os
 from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
 
-from genome_designer.main.models import Dataset
-from genome_designer.main.models import ExperimentSample
-from genome_designer.main.models import Project
-from genome_designer.scripts.import_util import import_samples_from_targets_file
-from genome_designer.scripts.bootstrap_data import bootstrap_fake_data
-from genome_designer.settings import PWD as GD_ROOT_PATH
+from main.models import Dataset
+from main.models import ExperimentSample
+from main.models import Project
+from scripts.import_util import import_samples_from_targets_file
+from scripts.bootstrap_data import bootstrap_fake_data
+from settings import PWD as GD_ROOT_PATH
 
 class TestImportSamplesFromTargetsFile(TestCase):
     """Tests for scripts.import_util.import_samples_from_targets_file().
