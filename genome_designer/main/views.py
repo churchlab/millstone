@@ -129,7 +129,7 @@ def sample_list_targets_template(request):
     it back to the server. 
     """
     context = {}
-    return render(request, 'sample_list_targets_template.tsv', context, 
+    return render(request, 'sample_list_targets_template.tsv', context,
             content_type='text/tab-separated-values')
 
 
@@ -154,6 +154,13 @@ def alignment_list_view(request, project_uid):
     }
     return render(request, 'alignment_list.html', context)
 
+def alignment_create_view(request, project_uid):
+    project = Project.objects.get(uid=project_uid)
+   
+    context = {
+        'project': project,
+    }
+    return render(request, 'alignment_create.html', context)
 
 @login_required
 def variant_set_list_view(request, project_uid):

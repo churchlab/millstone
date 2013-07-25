@@ -79,7 +79,8 @@ def import_samples_from_targets_file(project, targets_file):
     
     required_header = ['Sample_Name','Plate_or_Group','Well','Read_1_Path','Read_2_Path','Parent_Samples']
     for col, check in zip(target_header[0:len(required_header)], required_header):
-        assert col == check, "Header column '%s' is missing or out of order." 
+        assert col == check, "Header column '%s' is missing or out of order." % check
+         
     
     optional_header = target_header[len(required_header):]
     field_names = required_header + optional_header 
