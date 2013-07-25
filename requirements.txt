@@ -1,6 +1,15 @@
 Django==1.5.1
+amqp==1.0.12
+anyjson==0.3.3
 argparse==1.2.1
+billiard==2.7.3.31
 biopython==1.62b
+celery==3.0.21
+django-celery==3.0.17
 django-registration==1.0
 ipython==0.13.2
+kombu==2.5.12
+python-dateutil==2.1
+pytz==2013b
+six==1.3.0
 wsgiref==0.1.2
