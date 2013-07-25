@@ -125,6 +125,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'djcelery',
     'registration',
     'main'
 )
@@ -133,16 +134,28 @@ INSTALLED_APPS = (
 # have the option of extending it.
 AUTH_PROFILE_MODULE = 'main.UserProfile'
 
-# Default redirect after login. Otherwise the login form has a 'next' hidden
-# field that is used, for example, when redirecting back to the page that
-# the user attempted to access before logging in.
-LOGIN_REDIRECT_URL = '/'
-
 # Custom template context processors.
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
     'main.context_processors.common_data',
 )
 
-# Used by django-registration (although we aren't messing around with account
-# activation right now).
+###############################################################################
+# Registration / Accounts
+###############################################################################
+
+# django-registration
+# One-week activation window.
 ACCOUNT_ACTIVATION_DAYS = 7
+
+LOGIN_REDIRECT_URL = '/'
+
+
+###############################################################################
+# Django Celery - async task queue management
+###############################################################################
+
+import djcelery
+djcelery.setup_loader()
+
+# RabbitMQ settings
+BROKER_URL = 'amqp://guest:guest@localhost:5672//'

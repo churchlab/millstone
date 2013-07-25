@@ -37,19 +37,46 @@ packages.
 However, in reality, this doesn't seem to work perfectly. In particular, it may
 be necessary to install specific packages first.
 
+NOTE: Watch changes to requirements.txt and re-run the install command when
+collaborators add new dependencies.
 
-## Running the Django server
+### Async Queue - Celery and RabbitMQ
+
+Asynchronous processing is necessary for many of the analysis tasks in this
+application.  We use the open source project celery since it is being actively
+developed and has a library for integrating with Django. Celery requires a
+message broker, for which we use RabbitMQ which is the default for Celery.
+
+1. Install Celery
+
+    The `celery` and `django-celery` packages are listed in
+    requirements.txt and should be installed in your virtualenv following the
+    instructions above.
+
+2. Install RabbitMQ - On Ubuntu, install using sudo:
+
+        $ sudo apt-get install rabbitmq-server
+
+    Full instructions are [here](http://www.rabbitmq.com/download.html).
+
+
+## Running the application
 
 0. Activate your virtualenv, e.g.:
 
         $ source ~/pyenvs/genome-designer-env/bin/activate .
 
-1. Navigate to the the `genome_designer/` directory.
+1. Navigate to the the `genome_designer/` dir.
 
-        $ python manage.py runserver
+2. From one terminal, start the celery server.
 
+        (venv)$ ./run_celery.sh
 
-2. Visit the url <http://localhost:8000/> to see the demo.
+3. Open another terminal and start the django server.
+
+        (venv)$ python manage.py runserver
+
+4. Visit the url <http://localhost:8000/> to see the demo.
 
 
 ## Tests

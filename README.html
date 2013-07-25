@@ -1,0 +1,103 @@
+<h1>genome-designer-v2</h1>
+<p>Second generation of Genome Designer</p>
+<h2>Installation</h2>
+<h3>Python environment</h3>
+<p>We recommend using <a href="http://pypi.python.org/pypi/virtualenv">virtualenv</a> for
+creating and managing a sandbox python environment. This strategy makes it easy
+to stay up with requirements. Our requirements are listed in <code>requirements.txt</code>.
+Follow the instructions below to setup your virtualenv and install the required
+packages.</p>
+<h4>Setting up a virtual python environment</h4>
+<ol>
+<li>
+<p>Install <a href="http://www.virtualenv.org/en/latest/index.html">virtualenv</a> if you don't have it yet. (You may want to install <a href="http://pypi.python.org/pypi/pip/">pip</a> first.)</p>
+</li>
+<li>
+<p>Create a new virtual environment for this project. This virtual environment isn't part of the project so just put it somewhere on your machine.  I keep all of my virtual environments in the directory ~/pyenvs/.</p>
+<pre><code>$ virtualenv ~/pyenvs/genome-designer-env
+</code></pre>
+<p>If you want to use a version of python different from the OS default you can specify the python binary with the '-p' option:</p>
+<pre><code>$ virtualenv -p /usr/local/bin/python2.7 ~/pyenvs/genome-designer-env
+</code></pre>
+</li>
+<li>
+<p>Activate the environment in the shell. This will use <code>python</code> and other binaries like <code>pip</code> that are located your pyenv. You should do this whenever running any python/django scripts.</p>
+<pre><code>$ source ~/pyenvs/genome-designer-env/bin/activate .
+</code></pre>
+</li>
+<li>
+<p>Install the dependencies in your virtual environment. We've exported the requirements in the requirements.txt file. In theory, these should all be installable with the single command:</p>
+<pre><code>$ pip install -r requirements.txt
+</code></pre>
+</li>
+</ol>
+<p>However, in reality, this doesn't seem to work perfectly. In particular, it may
+be necessary to install specific packages first.</p>
+<p>NOTE: Watch changes to requirements.txt and re-run the install command when
+collaborators add new dependencies.</p>
+<h3>Async Queue - Celery and RabbitMQ</h3>
+<p>Asynchronous processing is necessary for many of the analysis tasks in this
+application.  We use the open source project celery since it is being actively
+developed and has a library for integrating with Django. Celery requires a
+message broker, for which we use RabbitMQ which is the default for Celery.</p>
+<ol>
+<li>
+<p>Install Celery</p>
+<p>The <code>celery</code> and <code>django-celery</code> packages are listed in
+requirements.txt and should be installed in your virtualenv following the
+instructions above.</p>
+</li>
+<li>
+<p>Install RabbitMQ - On Ubuntu, install using sudo:</p>
+<pre><code>$ sudo apt-get install rabbitmq-server
+</code></pre>
+<p>Full instructions are <a href="http://www.rabbitmq.com/download.html">here</a>.</p>
+</li>
+</ol>
+<h2>Running the application</h2>
+<ol>
+<li>
+<p>Activate your virtualenv, e.g.:</p>
+<pre><code>$ source ~/pyenvs/genome-designer-env/bin/activate .
+</code></pre>
+</li>
+<li>
+<p>Navigate to the the <code>genome_designer/</code> dir.</p>
+</li>
+<li>
+<p>From one terminal, start the celery server.</p>
+<pre><code>(venv)$ ./run_celery.sh
+</code></pre>
+</li>
+<li>
+<p>Open another terminal and start the django server.</p>
+<pre><code>(venv)$ python manage.py runserver
+</code></pre>
+</li>
+<li>
+<p>Visit the url <a href="http://localhost:8000/">http://localhost:8000/</a> to see the demo.</p>
+</li>
+</ol>
+<h2>Tests</h2>
+<p>We'll be adding more tests as we go and updating the following instructions.
+The following command runs all the tests related to Django:</p>
+<pre><code>(venv)$ python manage.py test
+</code></pre>
+<p>NOTE: There are several django-registration tests failing at the moment.</p>
+<p>In order to run only the tests related to our project, run:</p>
+<pre><code>(venv)$ python manage.py test main
+</code></pre>
+<h3>Adding Tests</h3>
+<p>The way the current strategy of Django's default test runner works, is that it
+checks the <code>tests.py</code> file in every django app (we only have main right now),
+and runs the tests there.  For now, we've defined a test suite in <code>tests.py</code>
+that discovers any files under the <code>main</code> directory of the name form <code>test*.py</code>
+(e.g. <code>test_import_util.py</code>), so the current strategy for adding a new test
+module is to create a module of this form under the <code>main</code> directory.</p>
+<h2>Bootstrapping Test Data</h2>
+<p>From the <code>genome_designer</code> directory, run:</p>
+<pre><code>(venv)$ python scripts/bootstrap_data.py
+</code></pre>
+<p>NOTE: This will delete the entire dev database and re-create it with the
+hard-coded test models only.</p><link href="http://kevinburke.bitbucket.org/markdowncss/markdown.css" rel="stylesheet"></link>
+
