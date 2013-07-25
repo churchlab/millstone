@@ -54,10 +54,25 @@ be necessary to install specific packages first.
 
 ## Tests
 
-We'll be adding more tests as we go and updating the following instructions. For
-now, as a starting point/placeholder, developers should be able to run the Django tests.
+We'll be adding more tests as we go and updating the following instructions.
+The following command runs all the tests related to Django:
 
     (venv)$ python manage.py test
+
+NOTE: There are several django-registration tests failing at the moment.
+
+In order to run only the tests related to our project, run:
+
+    (venv)$ python manage.py test main
+
+### Adding Tests
+
+The way the current strategy of Django's default test runner works, is that it
+checks the `tests.py` file in every django app (we only have main right now),
+and runs the tests there.  For now, we've defined a test suite in `tests.py`
+that discovers any files under the `main` directory of the name form `test*.py`
+(e.g. `test_import_util.py`), so the current strategy for adding a new test
+module is to create a module of this form under the `main` directory.
 
 
 ## Bootstrapping Test Data

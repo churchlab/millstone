@@ -142,3 +142,7 @@ LOGIN_REDIRECT_URL = '/'
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
     'main.context_processors.common_data',
 )
+
+# Used by django-registration (although we aren't messing around with account
+# activation right now).
+ACCOUNT_ACTIVATION_DAYS = 7

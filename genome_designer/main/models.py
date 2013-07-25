@@ -256,20 +256,17 @@ class ReferenceGenome(Model):
         return self.label
 
     def get_model_data_root(self):
-        """Get the root location where all user data is stores."""
+        """Get the root location for all data of this type in the project.
+        """
         return os.path.join(self.project.get_model_data_dir(), 'ref_genomes')
 
     def get_model_data_dir(self):
-        """Get the full path to where the user's data is stored.
-
-        The data dir is the media root url combined with the user id.
+        """Get the full path to the location of this model's data.
         """
         return os.path.join(self.get_model_data_root(), str(self.uid))
 
     def ensure_model_data_dir_exists(self):
-        """Ensure that a data directory exists for the user.
-
-        The data directory is named according to the UserProfile.id.
+        """Ensure that a data directory exists for this model.
         """
         # Make sure the root of projects exists
         ensure_exists_0775_dir(self.get_model_data_root())
@@ -294,12 +291,43 @@ class ExperimentSample(Model):
     uid = models.CharField(max_length=36,
             default=(lambda: short_uuid(ExperimentSample)))
 
+    # A Sample belongs to a single Project.
+    project = models.ForeignKey('Project')
+
     # Human-readable identifier.
     label = models.CharField(max_length=256, blank=True)
 
     # The datasets associated with this sample. The semantic sense of the
     # dataset can be determined from the Dataset.type field.
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
+
+    def __unicode__(self):
+        return self.label
+
+    def get_model_data_root(self):
+        """Get the root location for all data of this type in the project.
+        """
+        return os.path.join(self.project.get_model_data_dir(), 'samples')
+
+    def get_model_data_dir(self):
+        """Get the full path to the location of this model's data.
+        """
+        return os.path.join(self.get_model_data_root(), str(self.uid))
+
+    def ensure_model_data_dir_exists(self):
+        """Ensure that a data directory exists for this model.
+        """
+        # Make sure the root of projects exists
+        ensure_exists_0775_dir(self.get_model_data_root())
+
+        # Check whether the data dir exists, and create it if not.
+        return ensure_exists_0775_dir(self.get_model_data_dir())
+
+def post_sample_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_sample_create, sender=ExperimentSample,
+        dispatch_uid='post_sample_create')
 
 
 class AlignmentGroup(Model):
@@ -366,7 +394,28 @@ class Variant(Model):
     A variant need not necessarily be associated with a specific sample; the
     VariantToExperimentSample model handles this association.
     """
-    pass
+    # Maybe used in url for view of this entity.
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(Variant)))
+
+    class TYPE:
+        DELETION = 'DELETION'
+        INSERTION = 'INSERTION'
+        TRANSITION = 'TRANSITION'
+        TRANSVERSION = 'TRANSVERSION'
+        COMPLEX = 'COMPLEX' # Multi-base in different genomes
+    TYPE_CHOICES = make_choices_tuple(TYPE)
+    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
+
+    reference_genome = models.ForeignKey('ReferenceGenome')
+
+    chromosome = models.CharField(max_length=256, blank=True)
+
+    position = models.BigIntegerField()
+
+    ref_value = models.TextField();
+
+    alt_value = models.TextField();
 
 
 class VariantToExperimentSample(Model):

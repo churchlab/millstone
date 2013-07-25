@@ -1,16 +1,14 @@
 """
-This file demonstrates writing tests using the unittest module. These will pass
-when you run "manage.py test".
+Tests for the main app.
 
-Replace this with more appropriate tests for your application.
+We use this module to discover all other tests of the form 'test*.py'
+located within the same directory containing this module.
 """
 
-from django.test import TestCase
+import os
+import unittest
 
+PWD = os.path.dirname(os.path.realpath(__file__ ))
 
-class SimpleTest(TestCase):
-    def test_basic_addition(self):
-        """
-        Tests that 1 + 1 always equals 2.
-        """
-        self.assertEqual(1 + 1, 2)
+def suite():
+    return unittest.TestLoader().discover(PWD, pattern='test*.py')
