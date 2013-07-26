@@ -86,18 +86,19 @@ def import_samples_from_targets_file(project, targets_file):
             'Read_1_Path', 'Read_2_Path','Parent_Samples']
     for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
             REQUIRED_HEADER_PART):
-        assert col == check, "Header column '%s' is missing or out of order."
+        assert col == check, (
+            "Header column '%s' is missing or out of order." % check)
 
     # Validate all the rows.
     valid_rows = []
-    for row in reader:
+    for row_num, row in enumerate(reader):
         # Make a copy of the row so we can clean up the data for further
         # processing.
         clean_row = copy.copy(row)
 
         # Make sure the row has all the fields
         assert len(targets_file_header) == len(row.keys()), (
-                "Row %s has the wrong length." % str(row))
+                "Row %d has the wrong number of fields." % row_num)
 
         for field_name, field_value in row.iteritems():
             if 'Path' not in field_name:
@@ -105,7 +106,7 @@ def import_samples_from_targets_file(project, targets_file):
                 assert re.match('^[\. \w-]*$', field_value) is not None, (
                         'Only alphanumeric characters and spaces are allowed, '
                         'except for the paths.\n(Row %d, "%s")' % (
-                                row_count, field_name))
+                                row_num, field_name))
             else:
                 # If it is a path, then try to open the file and read one byte.
                 # Replace the string '$GD_ROOT with the project path, so we
@@ -117,6 +118,7 @@ def import_samples_from_targets_file(project, targets_file):
                     except:
                         raise Exception("Cannot read file at %s" %
                                 clean_field_value)
+
                 clean_row[field_name] = clean_field_value
 
         # Save this row.

@@ -3,11 +3,12 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from main.adapters import get_adapter
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
+from main.models import ExperimentSample
 from main.models import Variant
-
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
 
@@ -132,31 +133,39 @@ def sample_list_targets_template(request):
     it back to the server. 
     """
     context = {}
-    return render(request, 'sample_list_targets_template.tsv', context, 
+    return render(request, 'sample_list_targets_template.tsv', context,
             content_type='text/tab-separated-values')
 
 
 @login_required
 def alignment_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
-    alignment_list = AlignmentGroup.objects.filter(
-            reference_genome__project=project)
-
-    # Adapt the backend objects to the frontend format.
-    fe_alignment_list = [{
-        'label': alignment_group_obj.label,
-        'reference_genome': alignment_group_obj.reference_genome,
-        'sample_desc': str(len(alignment_group_obj.experimentsampletoalignment_set.all())) + ' samples',
-        'start_time': alignment_group_obj.start_time,
-        'end_time': alignment_group_obj.end_time,
-    } for alignment_group_obj in alignment_list]
 
     context = {
         'project': project,
-        'alignment_list': fe_alignment_list
+        'alignment_list_json': get_adapter(AlignmentGroup, 
+            {'reference_genome__project':project})
     }
     return render(request, 'alignment_list.html', context)
 
+def alignment_create_view(request, project_uid):
+    project = Project.objects.get(uid=project_uid)
+   
+    # TODO: THIS IS JUST A PLACEHOLDER TABLE FOR TESTING DATATABLES IN TABS.
+    # Fetch the list of variants and render it into the dom as json.
+    # The data will be displayed to the user via the javascript DataTables
+    # component.
+    samples_list = ExperimentSample.objects.filter(project=project)
+    ref_genomes_list = ReferenceGenome.objects.filter(project=project)   
+   
+    context = {
+        'project': project,
+        'samples_list_json': get_adapter(ExperimentSample, 
+            {'project':project}),
+        'ref_genomes_list_json': get_adapter(ReferenceGenome,
+            {'project':project})
+    }
+    return render(request, 'alignment_create.html', context)
 
 @login_required
 def variant_set_list_view(request, project_uid):
@@ -174,34 +183,12 @@ def variant_list_view(request, project_uid):
     # Fetch the list of variants and render it into the dom as json.
     # The data will be displayed to the user via the javascript DataTables
     # component.
-    variant_list = Variant.objects.all()
-
-    fe_variant_list = [{
-        'type': obj.type,
-        'chromosome': obj.chromosome,
-        'position': obj.position,
-        'ref_value': obj.ref_value,
-        'alt_value': obj.alt_value,
-    } for obj in variant_list]
-
-    # Configuration for display using jquery.datatables.js.
-    variant_field_config = [
-        {'mData': 'type', 'sTitle': 'Type'},
-        {'mData': 'chromosome', 'sTitle': 'Chromosome'},
-        {'mData': 'position', 'sTitle': 'Position'},
-        {'mData': 'ref_value', 'sTitle': 'Ref Value'},
-        {'mData': 'alt_value', 'sTitle': 'Alt Value'}
-    ]
-
-    variant_list_json = json.dumps({
-        'variant_list': fe_variant_list,
-        'field_config': variant_field_config
-    })
-
     context = {
-        'project': project,
-        'variant_list_json': variant_list_json
+       'project': project,
+       'variant_list_json': get_adapter(Variant, 
+           {'reference_genome__project':project})
     }
+        
     return render(request, 'variant_list.html', context)
 
 

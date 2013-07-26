@@ -5,30 +5,21 @@
   <h1>Alignments</h1>
 </div>
 
-<table class="table table-bordered">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Ref Genome</th>
-      <th>Sample</th>
-      <th>Start Time</th>
-      <th>Finish Time</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for obj in alignment_list %}
-      <tr>
-        <td>{{obj.label}}</td>
-        <td>{{obj.reference_genome.label}}</td>
-        <td>{{obj.sample_desc}}</td>
-        <td>{{obj.start_time}}</td>
-        <td>{{obj.end_time}}</td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<p>
+<a href="{% url 'main.views.alignment_create_view' project.uid %}"><button type="submit" class="btn btn-primary">New Alignment...</button></a>
+</p>
+
+<div class="container span12" style="margin-top: 10px margin-right: 50px">
+  <div id="gd-alignment_view-datatable-hook">
+  </div>
+</div>
 
 <script type="text/javascript">
   VIEW_TAG = 'ALIGNMENT';
+  
+  {% autoescape off %}
+    ALIGNMENT_LIST_DATA = {{alignment_list_json}};
+  {% endautoescape %}
+  
 </script>
 {% endblock %}
