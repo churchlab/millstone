@@ -16,6 +16,13 @@ Note on filesystem directory structure: (IN PROGRESS)
         ../projects/1324abcd/samples/5678jklm
         ../projects/1324abcd/ref_genomes/
         ../projects/1324abcd/variant_calls/
+        
+Implementation Notes:
+    * get_field_order() for each model/table is used by the Adapter class
+      in adapters.py to know WHICH FIELDS are to be displayed and WHAT ORDER.
+      If you don't return a field in get_field_order, it won't be sent to 
+      datatables.js for display. 
+    
 """
 import os
 import re
@@ -241,16 +248,17 @@ class ReferenceGenome(Model):
     project = models.ForeignKey('Project')
 
     # A human-readable label for this genome.
-    label = models.CharField(max_length=256)
+    label = models.CharField(verbose_name="Name", max_length=256)
 
     # Number of chromosomes.
-    num_chromosomes = models.IntegerField()
+    num_chromosomes = models.IntegerField(verbose_name="# Chromosomes")
 
     # Number of chromosomes.
-    num_bases = models.BigIntegerField()
+    num_bases = models.BigIntegerField(verbose_name="Total Size")
 
     # Datasets pointing to files on the system (e.g. .fasta files, etc.)
-    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
+    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
+        verbose_name="Datasets")
 
     def __unicode__(self):
         return self.label
@@ -273,6 +281,15 @@ class ReferenceGenome(Model):
 
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
+    
+    @classmethod
+    def get_field_order(clazz):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
+        """
+        return ['label', 
+                'num_chromosomes', 
+                'num_bases']
 
 # When a new ReferenceGenome is created, create its data dir.
 def post_ref_genome_create(sender, instance, created, **kwargs):
@@ -295,11 +312,19 @@ class ExperimentSample(Model):
     project = models.ForeignKey('Project')
 
     # Human-readable identifier.
-    label = models.CharField(max_length=256, blank=True)
+    label = models.CharField('Sample Name', max_length=256)
+    
+    # Human-readable sample group that this value is in. 
+    group = models.CharField('Plate/Group', max_length=256)
+    
+    # Human-readable 'position' (well number, etc) that this sample is in 
+    # within a group
+    well = models.CharField('Position/Well', max_length=256)
 
     # The datasets associated with this sample. The semantic sense of the
     # dataset can be determined from the Dataset.type field.
-    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
+    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
+        verbose_name="Datasets")
 
     def __unicode__(self):
         return self.label
@@ -322,6 +347,15 @@ class ExperimentSample(Model):
 
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
+    
+    @classmethod
+    def get_field_order(clazz):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
+        """
+        return ['label', 
+                'group', 
+                'well']
 
 def post_sample_create(sender, instance, created, **kwargs):
     if created:
@@ -363,6 +397,17 @@ class AlignmentGroup(Model):
     # Times for the alignment run.
     start_time = models.DateTimeField(auto_now=True)
     end_time = models.DateTimeField(auto_now=True)
+    
+    @classmethod
+    def get_field_order(clazz):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
+        """
+        return ['reference_genome', 
+                'label', 
+                'aligner',
+                'start_time',
+                'end_time']
 
 
 class ExperimentSampleToAlignment(Model):
@@ -405,17 +450,30 @@ class Variant(Model):
         TRANSVERSION = 'TRANSVERSION'
         COMPLEX = 'COMPLEX' # Multi-base in different genomes
     TYPE_CHOICES = make_choices_tuple(TYPE)
-    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
+    type = models.CharField('Type', max_length=40, choices=TYPE_CHOICES)
 
-    reference_genome = models.ForeignKey('ReferenceGenome')
+    reference_genome = models.ForeignKey('ReferenceGenome', 
+        verbose_name='Reference Genome')
 
-    chromosome = models.CharField(max_length=256, blank=True)
+    chromosome = models.CharField('Chromosome', max_length=256, blank=True)
 
-    position = models.BigIntegerField()
+    position = models.BigIntegerField('Position')
 
-    ref_value = models.TextField();
+    ref_value = models.TextField('Ref');
 
-    alt_value = models.TextField();
+    alt_value = models.TextField('Alt');
+    
+    @classmethod
+    def get_field_order(clazz):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
+        """
+        return ['reference_genome',
+                'chromosome', 
+                'position',
+                'type',
+                'ref_value',
+                'alt_value']
 
 
 class VariantToExperimentSample(Model):

@@ -9,15 +9,12 @@ gd.VariantView = Backbone.View.extend({
 
   initialize: function() {
     this.render();
-
-    this.updateDatatable();
   },
-
 
   render: function() {
     $('#gd-sidenav-link-variants').addClass('active');
+    this.updateDatatable();
   },
-
 
   /**
    * Updates the datatable view based on the data available.
@@ -30,12 +27,14 @@ gd.VariantView = Backbone.View.extend({
    */
   updateDatatable: function(data, column_config) {
     $('#gd-datatable-hook').html(
-        '<table cellpadding="0" cellspacing="0" border="0" class="display"' +
+        '<table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered"' +
             'id="gd-datatable">' +
         '</table>');
     $('#gd-datatable').dataTable({
-        'aaData': VARIANT_LIST_DATA['variant_list'],
-        'aoColumns': VARIANT_LIST_DATA['field_config']
+        'aaData': VARIANT_LIST_DATA['obj_list'],
+        'aoColumns': VARIANT_LIST_DATA['field_config'],
+        "bSortClasses": false,
+        'sPaginationType': 'bootstrap'
     });
   }
 });
