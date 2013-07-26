@@ -82,7 +82,8 @@ message broker, for which we use RabbitMQ which is the default for Celery.
 ## Tests
 
 We'll be adding more tests as we go and updating the following instructions.
-The following command runs all the tests related to Django:
+The following command runs all the tests related to Django, including
+Django's own tests and any installed apps.
 
     (venv)$ python manage.py test
 
@@ -91,6 +92,12 @@ NOTE: There are several django-registration tests failing at the moment.
 In order to run only the tests related to our project, run:
 
     (venv)$ python manage.py test main
+
+I'm still figuring out a reasonable way to test individual modules. For now,
+see what's added in `main/test_models.py` (both top and bottom of file). Then,
+you can run:
+
+    (venv)$ python -m main.test_models
 
 ### Adding Tests
 

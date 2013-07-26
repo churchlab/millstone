@@ -17,6 +17,7 @@ Note on filesystem directory structure: (IN PROGRESS)
         ../projects/1324abcd/ref_genomes/
         ../projects/1324abcd/variant_calls/
 """
+
 import os
 import re
 import stat
@@ -98,6 +99,28 @@ def assert_unique_types(type_class):
     assert len(all_type_name_list) == len(set(all_type_name_list))
 
 
+def clean_filesystem_location(filesystem_location):
+    """If the filesystem location contains the full absolute path,
+    trim it to be relative to the Django app MEDIA_ROOT.
+    """
+    clean_filesystem_location = filesystem_location
+    match = re.search(settings.MEDIA_ROOT, filesystem_location)
+    if match:
+        clean_filesystem_location = clean_filesystem_location[match.end() + 1:]
+    return clean_filesystem_location
+
+
+def get_dataset_with_type(entity, type):
+    """Returns the Dataset with the requested type, or None if doesn't exist.
+    """
+    results = entity.dataset_set.filter(type=type)
+    assert len(results) < 2, ("More than 2 Datasets of type %s for entity %s."
+            % (str(entity), type))
+    if len(results) > 0:
+        return results[0]
+    return None
+
+
 ###############################################################################
 # User-related models
 ###############################################################################
@@ -156,6 +179,7 @@ class Dataset(Model):
         REFERENCE_GENOME_GENBANK = 'rgg'
         FASTQ1 = 'f1'
         FASTQ2 = 'f2'
+        BWA_ALIGN = 'bwa_align'
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
 
@@ -165,13 +189,30 @@ class Dataset(Model):
     # Location on the filesystem relative to settings.MEDIA_ROOT.
     filesystem_location = models.CharField(max_length=512)
 
+    # When the dataset is a result of a computation, we'll set a status on it.
+    # NOTE: The reliability of the present implementation of this model feature
+    # is questionable.
+    class STATUS:
+        """The status of running this Dataset.
+
+        Limit to 40-chars as per Dataset.status field def.
+        """
+        UNKNOWN = 'UNKNOWN'
+        COMPUTING = 'COMPUTING'
+        READY = 'READY'
+        FAILED = 'FAILED'
+    STATUS_CHOICES = make_choices_tuple(STATUS)
+    status = models.CharField(max_length=40, choices=STATUS_CHOICES,
+            default=STATUS.READY)
+
     def __unicode__(self):
         return self.label
 
     def get_absolute_location(self):
         """Returns the full path to the file on the filesystem.
         """
-        return os.path.join(settings.MEDIA_ROOT, self.filesystem_location)
+        return os.path.join(settings.PWD, settings.MEDIA_ROOT,
+                self.filesystem_location)
 
 # Make sure the Dataset types are unique. This runs once at startup.
 assert_unique_types(Dataset.TYPE)
@@ -201,8 +242,9 @@ class Project(Model):
         return self.title + '-' + str(self.owner)
 
     def get_model_data_root(self):
-        """Get the root location where all user data is stores."""
-        return os.path.join(settings.MEDIA_ROOT, 'projects')
+        """Get the absolute location where all project data is stored.
+        """
+        return os.path.join(settings.PWD, settings.MEDIA_ROOT, 'projects')
 
     def get_model_data_dir(self):
         """Get the full path to where the user's data is stored.
@@ -355,7 +397,6 @@ class AlignmentGroup(Model):
     class ALIGNER:
         """Constants for representing the aligner type.
         """
-        BOWTIE2 = 'BOWTIE2'
         BWA = 'BWA'
     ALIGNER_CHOICES = make_choices_tuple(ALIGNER)
     aligner = models.CharField(max_length=10, choices=ALIGNER_CHOICES)
@@ -367,7 +408,7 @@ class AlignmentGroup(Model):
 
 class ExperimentSampleToAlignment(Model):
     """Model that describes the alignment of a single ExperimentSample
-    to an Alignment.
+    to an AlignmentGroup.
     """
     uid = models.CharField(max_length=36,
             default=(lambda: short_uuid(ExperimentSampleToAlignment)))
@@ -375,6 +416,8 @@ class ExperimentSampleToAlignment(Model):
     alignment_group = models.ForeignKey('AlignmentGroup')
 
     experiment_sample = models.ForeignKey('ExperimentSample')
+
+    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
 
 
 ###############################################################################
