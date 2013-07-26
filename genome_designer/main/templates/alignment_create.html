@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content%}
+<h1>Create Alignment</h1>
+<ul id="modalFromFileTab" class="nav nav-tabs">
+  <li class="active"><a href="#alignCreateTab_ref_genome" data-toggle="tab">1. Reference Genome</a></li>
+  <li><a href="#alignCreateTab_samples" data-toggle="tab">2. Samples</a></li>
+  <li><a href="#alignCreateTab_options" data-toggle="tab">3. Alignment Options</a></li>
+</ul>
+<div id="alignCreateTabs" class="tab-content">
+  <div class="tab-pane fade in active" id="alignCreateTab_ref_genome">
+    <h3>1. Choose Reference Genome</h3> 
+    <p>Select a genome sequence to which the reads will be aligned.</p>
+    <div id="gd-datatable-ref_genome-hook" class="span10 offset1">
+    </div>
+  </div>
+  <div class="tab-pane fade in" id="alignCreateTab_samples">
+    <h3>2. Choose Samples</h3>
+    <p>Select one or more samples whose FASTQ reads will be aligned. Variants for these samples will be called together in one VCF file.</p>
+    <div id="gd-datatable-samples-hook" class="span10 offset1">
+    </div>  
+  </div>
+  <div class="tab-pane fade in" id="alignCreateTab_options">
+    <h3>3. Choose Alignment Options</h3>
+    <p>Select aligner to use and set the aligner's options.</p>
+  </div>
+</div>
+<script type="text/javascript">
+  VIEW_TAG = 'ALIGNMENT_CREATE';
+
+  {% autoescape off %}
+    REF_GENOME_LIST_DATA = {{ref_genomes_list_json}};
+    SAMPLES_LIST_DATA = {{samples_list_json}};
+  {% endautoescape %}
+</script>
+{% endblock %}
