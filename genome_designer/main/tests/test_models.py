@@ -3,11 +3,6 @@ Tests for models.py.
 """
 
 import os
-import unittest
-
-# Setup the test environment if testing this module alone.
-from scripts.util import setup_django_env
-setup_django_env()
 
 from django.test import TestCase
 
@@ -36,8 +31,3 @@ class TestModels(TestCase):
                 EXPECTED_CLEAN_URL)
         self.assertEqual(EXPECTED_CLEAN_URL,
                 clean_filesystem_location(dirty_full_url))
-
-
-
-if __name__ == '__main__':
-    unittest.main()

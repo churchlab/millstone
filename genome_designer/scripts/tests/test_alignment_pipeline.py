@@ -3,11 +3,6 @@ Tests for alignment_pipeline.py
 """
 
 import os
-import unittest
-
-# Setup the test environment if testing this module alone.
-from scripts.util import setup_django_env
-setup_django_env()
 
 from django.test import TestCase
 
@@ -68,7 +63,3 @@ class TestAlignmentPipeline(TestCase):
         bwa_align_dataset_path = bwa_align_dataset.get_absolute_location()
         self.assertTrue(os.path.exists(bwa_align_dataset_path,), (
                 "No file at location %s" % bwa_align_dataset_path))
-
-
-if __name__ == '__main__':
-    unittest.main()

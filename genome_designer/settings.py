@@ -119,15 +119,25 @@ TEMPLATE_DIRS = (
 )
 
 INSTALLED_APPS = (
+    # django built-ins
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # async queue
     'djcelery',
+
+    # third-party apps
     'registration',
-    'main'
+
+    # our apps
+    'main',
+
+    # Testing
+    'django_nose'
 )
 
 # We use a separate UserProfile from the build-in Django User model so that we
@@ -159,3 +169,10 @@ djcelery.setup_loader()
 
 # RabbitMQ settings
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+
+
+###############################################################################
+# Testing
+###############################################################################
+
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
