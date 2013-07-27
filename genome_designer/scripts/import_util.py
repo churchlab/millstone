@@ -79,6 +79,7 @@ def import_samples_from_targets_file(project, targets_file):
 
     # Validate the header.
     targets_file_header = reader.fieldnames
+    
     assert len(targets_file_header) >= 6, "Bad header. Were columns removed?"
 
     REQUIRED_HEADER_PART = ['Sample_Name', 'Plate_or_Group', 'Well',
@@ -91,10 +92,15 @@ def import_samples_from_targets_file(project, targets_file):
     # Validate all the rows.
     valid_rows = []
     for row_num, row in enumerate(reader):
+        
         # Make a copy of the row so we can clean up the data for further
         # processing.
         clean_row = copy.copy(row)
-
+        
+        #TODO: Every row seems to have an empty K/V pair {None:''}, not sure
+        #why. Here I remove it by hand:
+        row = dict([(k, v) for k, v in row.iteritems() if k is not None])
+        
         # Make sure the row has all the fields
         assert len(targets_file_header) == len(row.keys()), (
                 "Row %d has the wrong number of fields." % row_num)

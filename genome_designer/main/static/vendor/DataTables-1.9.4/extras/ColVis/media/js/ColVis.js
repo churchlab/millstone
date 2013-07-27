@@ -1,6 +1,6 @@
 /*
  * File:        ColVis.js
- * Version:     1.0.8
+ * Version:     1.1.0-dev
  * CVS:         $Id$
  * Description: Controls for column visiblity in DataTables
  * Author:      Allan Jardine (www.sprymedia.co.uk)
@@ -10,7 +10,7 @@
  * License:     GPL v2 or BSD 3 point style
  * Project:     Just a little bit of fun :-)
  * Contact:     www.sprymedia.co.uk/contact
- * 
+ *
  * Copyright 2010-2011 Allan Jardine, all rights reserved.
  *
  * This source file is free software, under either the GPL v2 license or a
@@ -21,13 +21,13 @@
 
 (function($) {
 
-/** 
+/**
  * ColVis provides column visiblity control for DataTables
  * @class ColVis
  * @constructor
  * @param {object} DataTables settings object
  */
-ColVis = function( oDTSettings, oInit )
+var ColVis = function( oDTSettings, oInit )
 {
 	/* Santiy check that we are a new instance */
 	if ( !this.CLASS || this.CLASS != "ColVis" )
@@ -112,6 +112,14 @@ ColVis = function( oDTSettings, oInit )
 		 *  @default  []
 		 */
 		"aiExclude": [],
+		
+		/**
+		 * Group buttons
+		 *  @property aoGroups
+		 *  @type     Array
+		 *  @default  []
+		 */
+		"aoGroups": [],
 		
 		/**
 		 * Store the original viisbility settings so they could be restored
@@ -243,6 +251,14 @@ ColVis = function( oDTSettings, oInit )
 		"buttons": [],
 		
 		/**
+		 * List of group button elements
+		 *  @property groupButtons
+		 *  @type     Array
+		 *  @default  []
+		 */
+		"groupButtons": [],
+
+		/**
 		 * Restore button
 		 *  @property restore
 		 *  @type     Node
@@ -290,6 +306,7 @@ ColVis.prototype = {
 		}
 		
 		/* Re-add them (this is not the optimal way of doing this, it is fast and effective) */
+		this._fnAddGroups();
 		this._fnAddButtons();
 		
 		/* Update the checkboxes */
@@ -306,7 +323,7 @@ ColVis.prototype = {
 	 * Constructor logic
 	 *  @method  _fnConstruct
 	 *  @returns void
-	 *  @private 
+	 *  @private
 	 */
 	"_fnConstruct": function ()
 	{
@@ -325,6 +342,7 @@ ColVis.prototype = {
 		this.dom.collection = this._fnDomCollection();
 		this.dom.background = this._fnDomBackground();
 		
+		this._fnAddGroups();
 		this._fnAddButtons();
 		
 		/* Store the original visbility information */
@@ -361,7 +379,7 @@ ColVis.prototype = {
 	 * Apply any customisation to the settings from the DataTables initialisation
 	 *  @method  _fnApplyCustomisation
 	 *  @returns void
-	 *  @private 
+	 *  @private
 	 */
 	"_fnApplyCustomisation": function ()
 	{
@@ -431,6 +449,11 @@ ColVis.prototype = {
 		{
 			this.s.bCssPosition = oConfig.bCssPosition;
 		}
+
+		if ( typeof oConfig.aoGroups != 'undefined' )
+		{
+			this.s.aoGroups = oConfig.aoGroups;
+		}
 	},
 	
 	
@@ -439,24 +462,74 @@ ColVis.prototype = {
 	 * update the table's column visibility and ColVis will still be accurate.
 	 *  @method  _fnDrawCallback
 	 *  @returns void
-	 *  @private 
+	 *  @private
 	 */
 	"_fnDrawCallback": function ()
 	{
-		var aoColumns = this.s.dt.aoColumns;
+		var columns = this.s.dt.aoColumns;
+		var buttons = this.dom.buttons;
+		var groups = this.s.aoGroups;
 		
-		for ( var i=0, iLen=aoColumns.length ; i<iLen ; i++ )
+		for ( var i=0, iLen=columns.length ; i<iLen ; i++ )
 		{
-			if ( this.dom.buttons[i] !== null )
+			if ( buttons[i] !== null )
 			{
-				if ( aoColumns[i].bVisible )
-				{
-					$('input', this.dom.buttons[i]).attr('checked','checked');
-				}
-				else
-				{
-					$('input', this.dom.buttons[i]).removeAttr('checked');
-				}
+				$('input', buttons[i]).prop( 'checked', columns[i].bVisible );
+			}
+		}
+
+		var allVisible = function ( columnIndeces ) {
+			for ( var k=0, kLen=columnIndeces.length ; k<kLen ; k++ )
+			{
+				if (  columns[columnIndeces[k]].bVisible === false ) { return false; }
+			}
+			return true;
+		};
+		var allHidden = function ( columnIndeces ) {
+			for ( var m=0 , mLen=columnIndeces.length ; m<mLen ; m++ )
+			{
+				if ( columns[columnIndeces[m]].bVisible === true ) { return false; }
+			}
+			return true;
+		};
+
+		for ( var j=0, jLen=groups.length ; j<jLen ; j++ )
+		{
+			if ( allVisible(groups[j].aiColumns) )
+			{
+				$('input', this.dom.groupButtons[j]).prop('checked', true);
+				$('input', this.dom.groupButtons[j]).prop('indeterminate', false);
+			}
+			else if ( allHidden(groups[j].aiColumns) )
+			{
+				$('input', this.dom.groupButtons[j]).prop('checked', false);
+				$('input', this.dom.groupButtons[j]).prop('indeterminate', false);
+			}
+			else
+			{
+				$('input', this.dom.groupButtons[j]).prop('indeterminate', true);
+			}
+		}
+	},
+
+
+	/**
+	 * Loop through the groups (provided in the settings) and create a button for each.
+	 *  @method  _fnAddgroups
+	 *  @returns void
+	 *  @private
+	 */
+	"_fnAddGroups": function ()
+	{
+		var nButton;
+
+		if ( typeof this.s.aoGroups != 'undefined' )
+		{
+			for ( var i=0, iLen=this.s.aoGroups.length ; i<iLen ; i++ )
+			{
+				nButton = this._fnDomGroupButton( i );
+				this.dom.groupButtons.push( nButton );
+				this.dom.collection.appendChild( nButton );
 			}
 		}
 	},
@@ -466,7 +539,7 @@ ColVis.prototype = {
 	 * Loop through the columns in the table and as a new button for each one.
 	 *  @method  _fnAddButtons
 	 *  @returns void
-	 *  @private 
+	 *  @private
 	 */
 	"_fnAddButtons": function ()
 	{
@@ -474,17 +547,19 @@ ColVis.prototype = {
 			nButton,
 			sExclude = ","+this.s.aiExclude.join(',')+",";
 		
-		for ( var i=0, iLen=this.s.dt.aoColumns.length ; i<iLen ; i++ )
-		{
-			if ( sExclude.indexOf( ","+i+"," ) == -1 )
+		if ( $.inArray( 'all', this.s.aiExclude ) === -1 ) {
+			for ( var i=0, iLen=this.s.dt.aoColumns.length ; i<iLen ; i++ )
 			{
-				nButton = this._fnDomColumnButton( i );
-				this.dom.buttons.push( nButton );
-				this.dom.collection.appendChild( nButton );
-			}
-			else
-			{
-				this.dom.buttons.push( null );
+				if ( sExclude.indexOf( ","+i+"," ) == -1 )
+				{
+					nButton = this._fnDomColumnButton( i );
+					this.dom.buttons.push( nButton );
+					this.dom.collection.appendChild( nButton );
+				}
+				else
+				{
+					this.dom.buttons.push( null );
+				}
 			}
 		}
 		
@@ -510,7 +585,7 @@ ColVis.prototype = {
 	 * Create a button which allows a "restore" action
 	 *  @method  _fnDomRestoreButton
 	 *  @returns {Node} Created button
-	 *  @private 
+	 *  @private
 	 */
 	"_fnDomRestoreButton": function ()
 	{
@@ -542,7 +617,7 @@ ColVis.prototype = {
 	 * Create a button which allows a "show all" action
 	 *  @method  _fnDomShowAllButton
 	 *  @returns {Node} Created button
-	 *  @private 
+	 *  @private
 	 */
 	"_fnDomShowAllButton": function ()
 	{
@@ -574,11 +649,53 @@ ColVis.prototype = {
 	
 	
 	/**
+	 * Create the DOM for a show / hide group button
+	 *  @method  _fnDomGroupButton
+	 *  @param {int} i Group in question, order based on that provided in settings
+	 *  @returns {Node} Created button
+	 *  @private
+	 */
+	"_fnDomGroupButton": function ( i )
+	{
+		var
+			that = this,
+			oGroup = this.s.aoGroups[i],
+			aoColumns = this.s.dt.aoColumns,
+			nButton = document.createElement('button'),
+			nSpan = document.createElement('span'),
+			dt = this.s.dt;
+
+		nButton.className = !dt.bJUI ? "ColVis_Group ColVis_Button TableTools_Button" :
+			"ColVis_Group ColVis_Button TableTools_Button ui-button ui-state-default";
+		nButton.appendChild( nSpan );
+		var sTitle = oGroup.sTitle;
+		$(nSpan).html(
+			'<span class="ColVis_radio"><input type="checkbox"/></span>'+
+			'<span class="ColVis_title">'+sTitle+'</span>' );
+
+		$(nButton).click( function (e) {
+			var showHide = !$('input', this).is(":checked");
+			if ( e.target.nodeName.toLowerCase() == "input" )
+			{
+				showHide = $('input', this).is(":checked");
+			}
+
+			for ( var j=0 ; j < oGroup.aiColumns.length ; j++ )
+			{
+				that.s.dt.oInstance.fnSetColumnVis( oGroup.aiColumns[j], showHide );
+			}
+		});
+
+		return nButton;
+	},
+
+
+	/**
 	 * Create the DOM for a show / hide button
 	 *  @method  _fnDomColumnButton
 	 *  @param {int} i Column in question
 	 *  @returns {Node} Created button
-	 *  @private 
+	 *  @private
 	 */
 	"_fnDomColumnButton": function ( i )
 	{
@@ -594,7 +711,7 @@ ColVis.prototype = {
 		nButton.appendChild( nSpan );
 		var sTitle = this.s.fnLabel===null ? oColumn.sTitle : this.s.fnLabel( i, oColumn.sTitle, oColumn.nTh );
 		$(nSpan).html(
-			'<span class="ColVis_radio"><input type="checkbox"/></span>'+
+			'<span class="ColVis_radio"><input type="checkbox" checked=""/></span>'+
 			'<span class="ColVis_title">'+sTitle+'</span>' );
 		
 		$(nButton).click( function (e) {
@@ -639,7 +756,7 @@ ColVis.prototype = {
 	 * Get the position in the DataTables instance array of the table for this instance of ColVis
 	 *  @method  _fnDataTablesApiIndex
 	 *  @returns {int} Index
-	 *  @private 
+	 *  @private
 	 */
 	"_fnDataTablesApiIndex": function ()
 	{
@@ -659,7 +776,7 @@ ColVis.prototype = {
 	 *  @method  _fnDomBaseButton
 	 *  @param   {String} text Button text
 	 *  @returns {Node} DIV element for the button
-	 *  @private 
+	 *  @private
 	 */
 	"_fnDomBaseButton": function ( text )
 	{
@@ -687,7 +804,7 @@ ColVis.prototype = {
 	 * Create the element used to contain list the columns (it is shown and hidden as needed)
 	 *  @method  _fnDomCollection
 	 *  @returns {Node} div container for the collection
-	 *  @private 
+	 *  @private
 	 */
 	"_fnDomCollection": function ()
 	{
@@ -711,11 +828,11 @@ ColVis.prototype = {
 	 * An element to be placed on top of the activate button to catch events
 	 *  @method  _fnDomCatcher
 	 *  @returns {Node} div container for the collection
-	 *  @private 
+	 *  @private
 	 */
 	"_fnDomCatcher": function ()
 	{
-		var 
+		var
 			that = this,
 			nCatcher = document.createElement('div');
 		nCatcher.className = "ColVis_catcher TableTools_catcher";
@@ -729,26 +846,22 @@ ColVis.prototype = {
 	
 	
 	/**
-	 * Create the element used to shade the background, and capture hide events (it is shown and 
+	 * Create the element used to shade the background, and capture hide events (it is shown and
 	 * hidden as needed)
 	 *  @method  _fnDomBackground
 	 *  @returns {Node} div container for the background
-	 *  @private 
+	 *  @private
 	 */
 	"_fnDomBackground": function ()
 	{
 		var that = this;
 		
-		var nBackground = document.createElement('div');
-		nBackground.style.position = "absolute";
-		nBackground.style.left = "0px";
-		nBackground.style.top = "0px";
-		nBackground.className = "ColVis_collectionBackground TableTools_collectionBackground";
-		$(nBackground).css('opacity', 0);
-		
-		$(nBackground).click( function () {
-			that._fnCollectionHide.call( that, null, null );
-		} );
+		var background = $('<div></div>')
+			.addClass( 'ColVis_collectionBackground TableTools_collectionBackground' )
+			.css( 'opacity', 0 )
+			.click( function () {
+				that._fnCollectionHide.call( that, null, null );
+			} );
 		
 		/* When considering a mouse over action for the activation, we also consider a mouse out
 		 * which is the same as a mouse over the background - without all the messing around of
@@ -756,13 +869,13 @@ ColVis.prototype = {
 		 */
 		if ( this.s.activate == "mouseover" )
 		{
-			$(nBackground).mouseover( function () {
+			background.mouseover( function () {
 				that.s.overcollection = false;
 				that._fnCollectionHide.call( that, null, null );
 			} );
 		}
 		
-		return nBackground;
+		return background[0];
 	},
 	
 	
@@ -770,11 +883,11 @@ ColVis.prototype = {
 	 * Show the show / hide list and the background
 	 *  @method  _fnCollectionShow
 	 *  @returns void
-	 *  @private 
+	 *  @private
 	 */
 	"_fnCollectionShow": function ()
 	{
-		var that = this, i, iLen;
+		var that = this, i, iLen, iLeft;
 		var oPos = $(this.dom.button).offset();
 		var nHidden = this.dom.collection;
 		var nBackground = this.dom.background;
@@ -786,14 +899,14 @@ ColVis.prototype = {
 			nHidden.style.top = iDivY+"px";
 			nHidden.style.left = iDivX+"px";
 		}
-		nHidden.style.display = "block";
-		$(nHidden).css('opacity',0);
 		
-		var iWinHeight = $(window).height(), iDocHeight = $(document).height(),
-		 	iWinWidth = $(window).width(), iDocWidth = $(document).width();
+		$(nHidden).css( {
+			'display': 'block',
+			'opacity': 0
+		} );
 		
-		nBackground.style.height = ((iWinHeight>iDocHeight)? iWinHeight : iDocHeight) +"px";
-		nBackground.style.width = ((iWinWidth<iDocWidth)? iWinWidth : iDocWidth) +"px";
+		nBackground.style.bottom ='0px';
+		nBackground.style.right = '0px';
 		
 		var oStyle = this.dom.catcher.style;
 		oStyle.height = $(this.dom.button).outerHeight()+"px";
@@ -818,7 +931,7 @@ ColVis.prototype = {
 					aiSizes.push( $(this.dom.buttons[i]).outerWidth() );
 				}
 			}
-			iMax = Math.max.apply(window, aiSizes);
+			var iMax = Math.max.apply(window, aiSizes);
 			for ( i=0, iLen=this.dom.buttons.length ; i<iLen ; i++ )
 			{
 				if ( this.dom.buttons[i] !== null )
@@ -829,36 +942,38 @@ ColVis.prototype = {
 			this.dom.collection.style.width = iMax+"px";
 		}
 		
+		/* This results in a very small delay for the end user but it allows the animation to be
+		 * much smoother. If you don't want the animation, then the setTimeout can be removed
+		 */
+		$(nHidden).animate({"opacity": 1}, that.s.iOverlayFade);
+		$(nBackground).animate({"opacity": 0.1}, that.s.iOverlayFade, 'linear', function () {
+			/* In IE6 if you set the checked attribute of a hidden checkbox, then this is not visually
+			 * reflected. As such, we need to do it here, once it is visible. Unbelievable.
+			 */
+			if ( $.browser && $.browser.msie && $.browser.version == "6.0" )
+			{
+				that._fnDrawCallback();
+			}
+		});
+		
 		/* Visual corrections to try and keep the collection visible */
 		if ( !this.s.bCssPosition )
 		{
-			nHidden.style.left = this.s.sAlign=="left" ?
-				iDivX+"px" : (iDivX-$(nHidden).outerWidth()+$(this.dom.button).outerWidth())+"px";
+			iLeft = ( this.s.sAlign=="left" ) ?
+				iDivX :
+				iDivX - $(nHidden).outerWidth() + $(this.dom.button).outerWidth();
+
+			nHidden.style.left = iLeft+"px";
 
 			var iDivWidth = $(nHidden).outerWidth();
 			var iDivHeight = $(nHidden).outerHeight();
+			var iDocWidth = $(document).width();
 			
-			if ( iDivX + iDivWidth > iDocWidth )
+			if ( iLeft + iDivWidth > iDocWidth )
 			{
 				nHidden.style.left = (iDocWidth-iDivWidth)+"px";
 			}
 		}
-		
-		/* This results in a very small delay for the end user but it allows the animation to be
-		 * much smoother. If you don't want the animation, then the setTimeout can be removed
-		 */
-		setTimeout( function () {
-			$(nHidden).animate({"opacity": 1}, that.s.iOverlayFade);
-			$(nBackground).animate({"opacity": 0.1}, that.s.iOverlayFade, 'linear', function () {
-				/* In IE6 if you set the checked attribute of a hidden checkbox, then this is not visually
-				 * reflected. As such, we need to do it here, once it is visible. Unbelievable.
-				 */
-				if ( jQuery.browser.msie && jQuery.browser.version == "6.0" )
-				{
-					that._fnDrawCallback();
-				}
-			});
-		}, 10 );
 		
 		this.s.hidden = false;
 	},
@@ -868,7 +983,7 @@ ColVis.prototype = {
 	 * Hide the show / hide list and the background
 	 *  @method  _fnCollectionHide
 	 *  @returns void
-	 *  @private 
+	 *  @private
 	 */
 	"_fnCollectionHide": function (  )
 	{
@@ -976,7 +1091,7 @@ ColVis.prototype.CLASS = "ColVis";
  *  @type      String
  *  @default   See code
  */
-ColVis.VERSION = "1.0.8";
+ColVis.VERSION = "1.1.0-dev";
 ColVis.prototype.VERSION = ColVis.VERSION;
 
 
@@ -1009,5 +1124,10 @@ else
 {
 	alert( "Warning: ColVis requires DataTables 1.7 or greater - www.datatables.net/download");
 }
+
+
+// Make ColVis accessible from the DataTables instance
+$.fn.dataTable.ColVis = ColVis;
+
 
 })(jQuery);

@@ -403,8 +403,8 @@ class AlignmentGroup(Model):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
-        return ['reference_genome', 
-                'label', 
+        return ['label',
+                'reference_genome',  
                 'aligner',
                 'start_time',
                 'end_time']

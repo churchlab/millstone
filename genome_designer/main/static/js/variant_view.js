@@ -33,6 +33,7 @@ gd.VariantView = Backbone.View.extend({
     $('#gd-datatable').dataTable({
         'aaData': VARIANT_LIST_DATA['obj_list'],
         'aoColumns': VARIANT_LIST_DATA['field_config'],
+        'sDom': "<'row'<'span5'l><'span5'f><'align-right span2'C>r>t<'row'<'span6'i><'span6'p>>",
         "bSortClasses": false,
         'sPaginationType': 'bootstrap'
     });
