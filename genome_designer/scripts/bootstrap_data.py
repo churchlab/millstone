@@ -21,6 +21,7 @@ PWD = os.path.dirname(os.path.realpath(__file__ ))
 def bootstrap_fake_data():
     """Fill the database with fake data.
     """
+    from django.db import transaction
 
     # Imports only work after the environment has been set up.
     from django.contrib.auth.models import User
@@ -94,14 +95,17 @@ def bootstrap_fake_data():
 
     ### Create some fake variants
     from main.models import Variant
-    for var_count in range(100):
-        Variant.objects.create(
-            type=Variant.TYPE.TRANSITION,
-            reference_genome=ref_genome_1,
-            chromosome='chrom',
-            position=random.randint(1,ref_genome_1.num_bases),
-            ref_value='A',
-            alt_value='G')
+    @transaction.commit_on_success
+    def _create_fake_variants():
+        for var_count in range(100):
+            Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=ref_genome_1,
+                chromosome='chrom',
+                position=random.randint(1,ref_genome_1.num_bases),
+                ref_value='A',
+                alt_value='G')
+    _create_fake_variants()
 
 
 def reset_database():

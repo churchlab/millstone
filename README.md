@@ -81,26 +81,31 @@ message broker, for which we use RabbitMQ which is the default for Celery.
 
 ## Tests
 
-We'll be adding more tests as we go and updating the following instructions.
-The following command runs all the tests related to Django:
+We currently use [django-nose](https://pypi.python.org/pypi/django-nose) for
+testing. This package should be seamlessly hooked up to Django's normal testing
+so you can do the standard `manage.py` command:
 
     (venv)$ python manage.py test
 
-NOTE: There are several django-registration tests failing at the moment.
+Nose also allows us to run tests only in specific modules.
 
-In order to run only the tests related to our project, run:
+In order to run only the tests in, say, the `main` app directory, run:
 
     (venv)$ python manage.py test main
 
+And for only the tests in `scripts` call:
+
+    (venv)$ python manage.py test scripts
+
+To run a single test module, run:
+
+    (venv)$ python manage.py test main.tests.test_models
+
+
 ### Adding Tests
 
-The way the current strategy of Django's default test runner works, is that it
-checks the `tests.py` file in every django app (we only have main right now),
-and runs the tests there.  For now, we've defined a test suite in `tests.py`
-that discovers any files under the `main` directory of the name form `test*.py`
-(e.g. `test_import_util.py`), so the current strategy for adding a new test
-module is to create a module of this form under the `main` directory.
-
+Nose automatically discovers files with names of the form `test_*.py` as test
+files.
 
 ## Bootstrapping Test Data
 

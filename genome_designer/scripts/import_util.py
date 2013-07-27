@@ -8,6 +8,7 @@ import os
 import shutil
 import re
 
+from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ReferenceGenome
@@ -54,7 +55,7 @@ def import_reference_genome_from_local_file(project, label, file_location,
 
     # Copy the source file to the ReferenceGenome data location.
     dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE[import_format]
-    _copy_and_add_dataset_source(reference_genome, dataset_type,
+    copy_and_add_dataset_source(reference_genome, dataset_type,
             dataset_type, file_location)
     return reference_genome
 
@@ -137,14 +138,14 @@ def import_samples_from_targets_file(project, targets_file):
         sample_label = row['Sample_Name']
         experiment_sample = ExperimentSample.objects.create(
                 project=project, label=sample_label)
-        _copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ1,
+        copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ1,
                 Dataset.TYPE.FASTQ1, row['Read_1_Path'])
         if 'Read_2_Path' in row and row['Read_2_Path']:
-            _copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ2,
+            copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ2,
                     Dataset.TYPE.FASTQ2, row['Read_2_Path'])
 
 
-def _copy_and_add_dataset_source(entity, dataset_label, dataset_type,
+def copy_and_add_dataset_source(entity, dataset_label, dataset_type,
         original_source_location):
     """Copies the dataset to the entity location and then adds as
     Dataset.
@@ -159,11 +160,11 @@ def _copy_and_add_dataset_source(entity, dataset_label, dataset_type,
     dest = os.path.join(entity.get_model_data_dir(), source_name)
     if not original_source_location == dest:
         shutil.copy(original_source_location, dest)
-    return _add_dataset_to_entity(
+    return add_dataset_to_entity(
             entity, dataset_label, dataset_type, dest)
 
 
-def _add_dataset_to_entity(entity, dataset_label, dataset_type,
+def add_dataset_to_entity(entity, dataset_label, dataset_type,
         filesystem_location):
     """Helper function for adding a Dataset to a model.
 
@@ -172,7 +173,7 @@ def _add_dataset_to_entity(entity, dataset_label, dataset_type,
     dataset = Dataset.objects.create(
             label=dataset_label,
             type=dataset_type,
-            filesystem_location=filesystem_location)
+            filesystem_location=clean_filesystem_location(filesystem_location))
     entity.dataset_set.add(dataset)
     entity.save()
     return dataset
