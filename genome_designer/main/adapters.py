@@ -52,8 +52,8 @@ def get_adapter(model, filters={}):
             return model_field.get_fe_representation()
         return str(model_field)
 
-    fe_obj_list = [dict([(field, _get_fe_representation(obj,field))
-                    for field in field_list])
+    fe_obj_list = [dict([(field, _get_fe_representation(obj, field))
+        for field in field_list] + [('href', 'http://google.com')])
             for obj in obj_list]
 
     #A list of dicts containing the order of each column and the field titles

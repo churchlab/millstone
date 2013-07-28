@@ -35,7 +35,9 @@ gd.DataTableComponent = Backbone.View.extend({
     var displayableObjList = [];
 
     _.each(objList, function(obj) {
-      displayableObj = {}
+      var displayableObj = {}
+
+      // For any nested objects, try to render them as links.
       _.each(_.pairs(obj), function(pair) {
         var key = pair[0];
         var value = pair[1];
@@ -45,6 +47,13 @@ gd.DataTableComponent = Backbone.View.extend({
         }
         displayableObj[key] = displayValue;
       })
+
+      // For the object itself, if there is a label and href key,
+      // change value keyed by value to be an anchor.
+      if ('label' in obj && 'href' in obj) {
+        displayableObj['label'] =
+            '<a href="' + obj.href + '">' + obj.label + '</>';
+      }
 
       displayableObjList.push(displayableObj);
     });
