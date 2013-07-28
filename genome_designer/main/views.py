@@ -148,16 +148,10 @@ def alignment_list_view(request, project_uid):
     }
     return render(request, 'alignment_list.html', context)
 
+
+@login_required
 def alignment_create_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
-   
-    # TODO: THIS IS JUST A PLACEHOLDER TABLE FOR TESTING DATATABLES IN TABS.
-    # Fetch the list of variants and render it into the dom as json.
-    # The data will be displayed to the user via the javascript DataTables
-    # component.
-    samples_list = ExperimentSample.objects.filter(project=project)
-    ref_genomes_list = ReferenceGenome.objects.filter(project=project)   
-   
     context = {
         'project': project,
         'samples_list_json': get_adapter(ExperimentSample, 
@@ -166,6 +160,7 @@ def alignment_create_view(request, project_uid):
             {'project':project})
     }
     return render(request, 'alignment_create.html', context)
+
 
 @login_required
 def variant_set_list_view(request, project_uid):

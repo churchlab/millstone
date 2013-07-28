@@ -31,6 +31,7 @@ import stat
 from uuid import uuid4
 
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Model
 from django.db.models.signals import post_save
@@ -304,6 +305,15 @@ class ReferenceGenome(Model):
 
     def __unicode__(self):
         return self.label
+
+    def get_fe_representation(self):
+        return {
+                'label': self.label,
+                'href':  reverse(
+                    'genome_designer.main.views.reference_genome_list_view',
+                    args=(self.project.uid,))
+        }
+
 
     def get_model_data_root(self):
         """Get the root location for all data of this type in the project.

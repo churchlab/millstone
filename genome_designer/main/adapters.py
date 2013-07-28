@@ -7,6 +7,8 @@
 
 import json
 
+from django.db.models import Model
+
 def get_adapter(model, filters={}):
     """Adapter - Converts django models to Front-end format.
 
@@ -35,9 +37,25 @@ def get_adapter(model, filters={}):
     
     #A list of dicts with object data, where each dict is one object 
     #and all the fields required for front-end display.
-    fe_obj_list = [dict([(field, str(getattr(obj,field))) for field in field_list])
-        for obj in obj_list]
-    
+    def _get_fe_representation(model_obj, field):
+        """Returns the best frontend representation for a model field that is
+        implemented.
+
+        For unicode fields, we can just return them as strings. However, it's
+        more complicated for fields that are models themselves. In that case,
+        we look for a get_fe_representation method on the model and use that if
+        possible, else resort to casting the model to a string.
+        """
+        model_field = getattr(model_obj,field)
+        if isinstance(model_field, Model) and hasattr(
+                model_field, 'get_fe_representation'):
+            return model_field.get_fe_representation()
+        return str(model_field)
+
+    fe_obj_list = [dict([(field, _get_fe_representation(obj,field))
+                    for field in field_list])
+            for obj in obj_list]
+
     #A list of dicts containing the order of each column and the field titles
     #for each column, used for configuring jquery.datatables.js
     obj_field_config = [{'mData': name, 'sTitle': verbose_name
@@ -50,4 +68,4 @@ def get_adapter(model, filters={}):
     
     print obj_list_json
     
-    return obj_list_json    
+    return obj_list_json
