@@ -116,7 +116,7 @@ def sample_list_view(request, project_uid):
                     request.FILES['targetsFile'])
         except Exception as e:
             error_string = 'Import error: ' + str(e)
-    
+
     context = {
         'project': project,
         'error_string': error_string
@@ -127,7 +127,7 @@ def sample_list_view(request, project_uid):
 def sample_list_targets_template(request):
     """Let the user download a blank sample targets template as a tab
     separated values file (.tsv) so they can fill it in and upload
-    it back to the server. 
+    it back to the server.
     """
     context = {}
     return render(request, 'sample_list_targets_template.tsv', context,
@@ -140,8 +140,8 @@ def alignment_list_view(request, project_uid):
 
     context = {
         'project': project,
-        'alignment_list_json': get_adapter(AlignmentGroup, 
-            {'reference_genome__project':project})
+        'alignment_list_json': get_adapter(AlignmentGroup,
+                {'reference_genome__project':project})
     }
     return render(request, 'alignment_list.html', context)
 
@@ -151,10 +151,10 @@ def alignment_create_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
         'project': project,
-        'samples_list_json': get_adapter(ExperimentSample, 
-            {'project':project}),
+        'samples_list_json': get_adapter(ExperimentSample,
+                {'project':project}),
         'ref_genomes_list_json': get_adapter(ReferenceGenome,
-            {'project':project})
+                {'project':project})
     }
     return render(request, 'alignment_create.html', context)
 
@@ -177,10 +177,10 @@ def variant_list_view(request, project_uid):
     # component.
     context = {
        'project': project,
-       'variant_list_json': get_adapter(Variant, 
-           {'reference_genome__project':project})
+       'variant_list_json': get_adapter(Variant,
+            {'reference_genome__project':project})
     }
-        
+
     return render(request, 'variant_list.html', context)
 
 
