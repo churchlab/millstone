@@ -65,7 +65,5 @@ def get_adapter(model, filters={}):
         'obj_list': fe_obj_list,
         'field_config': obj_field_config
     })
-    
-    print obj_list_json
-    
+
     return obj_list_json

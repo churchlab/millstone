@@ -146,4 +146,4 @@ if ( $.fn.DataTable.TableTools ) {
 	} );
 }
 
-$.fn.DataTable.defaults.sDom = "<'row-fluid'<'span6'l><'span6'f>r>t<'row-fluid'<'span6'i><'span6'p>>";
+$.fn.DataTable.defaults.sDom = "<'row-fluid'<'span5'l><'span5'f><'align-right span2'C>r>t<'row-fluid'<'span6'i><'span6'p>>";

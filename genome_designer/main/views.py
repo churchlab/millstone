@@ -63,7 +63,6 @@ def reference_genome_list_view(request, project_uid):
     # Grab all the ReferenceGenomes for this project.
     ref_genome_list = ReferenceGenome.objects.filter(project=project)
 
-
     # Adapt the backend objects to the frontend format.
     fe_ref_genome_list = [{
         'label': obj.label,
@@ -123,8 +122,6 @@ def sample_list_view(request, project_uid):
         'error_string': error_string
     }
     return render(request, 'sample_list.html', context)
-
-
 
 @login_required
 def sample_list_targets_template(request):

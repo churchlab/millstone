@@ -73,6 +73,7 @@ gd.DataTableComponent = Backbone.View.extend({
     $('#' + datatableId).dataTable({
         'aaData': objList,
         'aoColumns': fieldConfig,
+        'sDom': "<'row'<'span5'l><'span5'f><'align-right span2'C>r>t<'row'<'span6'i><'span6'p>>",
         "bSortClasses": false,
         'sPaginationType': 'bootstrap'
     });
