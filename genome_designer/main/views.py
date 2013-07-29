@@ -3,7 +3,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
-from main.adapters import get_adapter
+from main.adapters import adapt_model_to_frontend
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
@@ -140,7 +140,7 @@ def alignment_list_view(request, project_uid):
 
     context = {
         'project': project,
-        'alignment_list_json': get_adapter(AlignmentGroup,
+        'alignment_list_json': adapt_model_to_frontend(AlignmentGroup,
                 {'reference_genome__project':project})
     }
     return render(request, 'alignment_list.html', context)
@@ -151,9 +151,9 @@ def alignment_create_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     context = {
         'project': project,
-        'samples_list_json': get_adapter(ExperimentSample,
+        'samples_list_json': adapt_model_to_frontend(ExperimentSample,
                 {'project':project}),
-        'ref_genomes_list_json': get_adapter(ReferenceGenome,
+        'ref_genomes_list_json': adapt_model_to_frontend(ReferenceGenome,
                 {'project':project})
     }
     return render(request, 'alignment_create.html', context)
@@ -177,7 +177,7 @@ def variant_list_view(request, project_uid):
     # component.
     context = {
        'project': project,
-       'variant_list_json': get_adapter(Variant,
+       'variant_list_json': adapt_model_to_frontend(Variant,
             {'reference_genome__project':project})
     }
 

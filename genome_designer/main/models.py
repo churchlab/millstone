@@ -305,14 +305,12 @@ class ReferenceGenome(Model):
     def __unicode__(self):
         return self.label
 
-    def get_fe_representation(self):
-        return {
-                'label': self.label,
-                'href':  reverse(
-                    'genome_designer.main.views.reference_genome_list_view',
-                    args=(self.project.uid,))
-        }
-
+    def get_href(self):
+        """Link to url view for this model.
+        """
+        return reverse(
+                'genome_designer.main.views.reference_genome_list_view',
+                args=(self.project.uid,))
 
     def get_model_data_root(self):
         """Get the root location for all data of this type in the project.

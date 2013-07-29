@@ -9,8 +9,8 @@ import json
 
 from django.db.models import Model
 
-def get_adapter(model, filters={}):
-    """Converts django models to Front-end format.
+def adapt_model_to_frontend(model, filters={}):
+    """Converts django models to frontend format.
 
     Calls on the model's get_field_order method to know which fields that
     are available for display and what order.
@@ -25,12 +25,16 @@ def get_adapter(model, filters={}):
         model/table display.
     """
 
-    # Fetch all objects in this model and render it into the dom as json.
-    # The data will be displayed to the user via the javascript DataTables
-    # component.
+    # Fetch all objects in this model and package as json to be rendered into
+    # the dom. The data will be displayed to the user, e.g. via the javascript
+    # DataTables component.
 
     # Get all objects that pass the filter.
     obj_list = model.objects.filter(**filters)
+
+    # A list of dicts with object data, where each dict is one object
+    # and all the fields required for front-end display.
+    fe_obj_list = [adapt_model_instance_to_frontend(obj) for obj in obj_list]
 
     # Get a list of fields required for displaying the objects, in the order
     # in which they should be displayed.
@@ -40,36 +44,58 @@ def get_adapter(model, filters={}):
     field_verbose_names = [model._meta.get_field(field).verbose_name
             for field in field_list]
 
-    def _get_fe_representation(model_obj, field):
-        """Returns the best frontend representation for a model field that is
-        implemented.
-
-        For unicode fields, we can just return them as strings. However, it's
-        more complicated for fields that are models themselves. In that case,
-        we look for a get_fe_representation method on the model and use that if
-        possible, else resort to casting the model to a string.
-        """
-        model_field = getattr(model_obj,field)
-        if isinstance(model_field, Model) and hasattr(
-                model_field, 'get_fe_representation'):
-            return model_field.get_fe_representation()
-        return str(model_field)
-
-    # A list of dicts with object data, where each dict is one object
-    # and all the fields required for front-end display.
-    fe_obj_list = [dict([(field, _get_fe_representation(obj, field))
-        for field in field_list] + [('href', 'http://google.com')])
-            for obj in obj_list]
-
     # A list of dicts containing the order of each column and the field titles
     # for each column, used for configuring jquery.datatables.js
-    obj_field_config = [{'mData': name, 'sTitle': verbose_name
-        } for (name, verbose_name) in zip(field_list, field_verbose_names)]
+    obj_field_config = [{
+        'mData': name,
+        'sTitle': verbose_name
+    } for (name, verbose_name) in zip(field_list, field_verbose_names)]
 
-    # The json result.
-    obj_list_json = json.dumps({
+
+    # Package the result.
+    return json.dumps({
         'obj_list': fe_obj_list,
         'field_config': obj_field_config
     })
 
-    return obj_list_json
+
+def adapt_model_instance_to_frontend(model_instance):
+    """Adapts a single model instance to the frontend representation.
+
+    Args:
+        model_instance: An instance of a Model object. The model class must
+            implement a get_field_order() method.
+
+    Returns:
+        A dictionary representation of the model. Maybe contained nested
+            objects.
+    """
+    # The model class.
+    model_type = type(model_instance)
+
+    # The visible fields of the model.
+    visible_field_list = model_type.get_field_order()
+
+    # Get (key, value) pairs for visible fields.
+    visible_field_pairs = [(field, get_model_field_fe_representation(
+        model_instance, field)) for field in visible_field_list]
+
+    # Other values.
+    other_pairs = []
+    if hasattr(model_instance, 'get_href'):
+        other_pairs.append(('href', model_instance.get_href()))
+
+    # Wrap the results in a dictionary.
+    return dict(visible_field_pairs + other_pairs)
+
+
+def get_model_field_fe_representation(model_obj, field):
+        """Returns the best frontend representation for a model field that is
+        implemented.
+
+        This method allows recursively diving into models.
+        """
+        model_field = getattr(model_obj,field)
+        if isinstance(model_field, Model):
+            return adapt_model_instance_to_frontend(model_field)
+        return str(model_field)
