@@ -16,7 +16,6 @@ urlpatterns = patterns('',
             'genome_designer.main.views.alignment_list_view'),
     url(r'^projects/([\w-]+)/alignments/create$',
             'genome_designer.main.views.alignment_create_view'),
-            
     url(r'^projects/([\w-]+)/sets$',
             'genome_designer.main.views.variant_set_list_view'),
     url(r'^projects/([\w-]+)/samples$',

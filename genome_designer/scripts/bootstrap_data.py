@@ -17,6 +17,11 @@ from util import setup_django_env
 # This is the directory where this bootstrap script is located.
 PWD = os.path.dirname(os.path.realpath(__file__ ))
 
+# Test data.
+TEST_USERNAME = 'gmcdev'
+TEST_PASSWORD = 'g3n3d3z'
+TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
+
 
 def bootstrap_fake_data():
     """Fill the database with fake data.
@@ -27,9 +32,6 @@ def bootstrap_fake_data():
     from django.contrib.auth.models import User
 
     ### Get or create the user.
-    TEST_USERNAME = 'gmcdev'
-    TEST_PASSWORD = 'g3n3d3z'
-    TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
     try:
         user = User.objects.get(username=TEST_USERNAME)
     except User.DoesNotExist:
