@@ -140,6 +140,38 @@ INSTALLED_APPS = (
     'django_nose'
 )
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+
+    'handlers': {
+        'console':{
+            'level':'DEBUG',
+            'class':'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+    },
+
+    'loggers': {
+        'django': {
+            'handlers':['console'],
+            'level':'INFO',
+            'propagate': True,
+        },
+    }
+}
+
+
+###############################################################################
+# Custom Config
+###############################################################################
+
 # We use a separate UserProfile from the build-in Django User model so that we
 # have the option of extending it.
 AUTH_PROFILE_MODULE = 'main.UserProfile'
