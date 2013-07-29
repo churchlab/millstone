@@ -10,14 +10,13 @@ gd.DataTableComponent = Backbone.View.extend({
 
   /** Override. */
   initialize: function() {
-    // Raw list of objects.
-    this.objList = this.options.objList;
-
     // Objects converted into displayable form.
-    this.displayableObjList = this.makeDisplayableObjectList(this.objList);
+    this.displayableObjList = this.makeDisplayableObjectList(
+        this.options.objList);
 
-    // List of fields.
-    this.fieldConfig = this.options.fieldConfig;
+    // Display fields.
+    this.displayableFieldConfig = this.makeDisplayableFieldConfig(
+        this.options.fieldConfig);
 
     this.render();
   },
@@ -26,7 +25,7 @@ gd.DataTableComponent = Backbone.View.extend({
   /** Override. */
   render: function() {
     // Draw the Datatable.
-    this.updateDatatable(this.displayableObjList, this.fieldConfig);
+    this.updateDatatable(this.displayableObjList, this.displayableFieldConfig);
   },
 
 
@@ -55,10 +54,32 @@ gd.DataTableComponent = Backbone.View.extend({
             '<a href="' + obj.href + '">' + obj.label + '</>';
       }
 
+      // Add a checkbox.
+      displayableObj['checkbox'] = '<input type="checkbox">';
+
       displayableObjList.push(displayableObj);
     });
 
     return displayableObjList;
+  },
+
+
+  /** Make the field config displayable. */
+  makeDisplayableFieldConfig: function(fieldConfig) {
+    var displayableFieldConfig = [];
+
+    // Perform a deep copy.
+    _.each(fieldConfig, function(col) {
+      displayableFieldConfig.push(_.clone(col));
+    })
+
+    // Add a column for a select checkbox.
+    displayableFieldConfig.push({
+        'mData': 'checkbox',
+        'sTitle': 'Select'
+    });
+
+    return displayableFieldConfig;
   },
 
 
