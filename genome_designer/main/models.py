@@ -309,8 +309,8 @@ class ReferenceGenome(Model):
         """Link to url view for this model.
         """
         return reverse(
-                'genome_designer.main.views.reference_genome_list_view',
-                args=(self.project.uid,))
+                'genome_designer.main.views.reference_genome_view',
+                args=(self.project.uid, self.uid))
 
     def get_model_data_root(self):
         """Get the root location for all data of this type in the project.

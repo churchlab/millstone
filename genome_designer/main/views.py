@@ -102,6 +102,19 @@ def reference_genome_list_view(request, project_uid):
 
 
 @login_required
+def reference_genome_view(request, project_uid, ref_genome_uid):
+    """Overview of a single project.
+    """
+    project = Project.objects.get(uid=project_uid)
+    reference_genome = ReferenceGenome.objects.get(uid=ref_genome_uid)
+    context = {
+        'project': project,
+        'reference_genome': reference_genome
+    }
+    return render(request, 'reference_genome.html', context)
+
+
+@login_required
 def sample_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     error_string = None
