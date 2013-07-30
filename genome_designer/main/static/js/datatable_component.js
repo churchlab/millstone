@@ -64,7 +64,7 @@ gd.DataTableComponent = Backbone.View.extend({
       }
 
       displayableObj['checkbox'] =
-          '<input type="checkbox" name="gd-row-select" value="' + uid + '">';
+          '<input type="checkbox" class="gd-dt-cb" name="gd-row-select" value="' + uid + '">';
 
       displayableObjList.push(displayableObj);
     });
@@ -85,12 +85,45 @@ gd.DataTableComponent = Backbone.View.extend({
     // Add a column for a select checkbox.
     displayableFieldConfig.push({
         'mData': 'checkbox',
-        'sTitle': 'Select'
+        'sTitle': 'Select',
+        'sClass': 'gd-dt-cb-div'
     });
 
     return displayableFieldConfig;
   },
 
+  /**
+   * Listens to newly made datatables checkboxes to update class info and 
+   * make their parent td clickable.
+   */
+  listenToCheckboxes: function() {
+    
+    $('td.gd-dt-cb-div').click(function(ev){
+        if (ev.target.nodeName === "INPUT"){
+            return;
+        }
+
+        var cb = $(this).find('input:checkbox.gd-dt-cb').get(0);
+
+        if ($(cb).is(':checked')){
+            $(cb).removeAttr('checked');
+
+        }else {
+            $(cb).attr('checked','checked');
+        }
+        $(cb).triggerHandler('change');
+    });
+
+    $('input:checkbox.gd-dt-cb').change(
+        function(){
+            var $this = $(this)
+            if ($this.is(':checked')) {
+                $this.parent('td').addClass('active');
+            } else {
+                  $this.parent('td').removeClass('active');
+            }
+    });
+  },
 
   /**
    * Updates the datatable view based on the data available.
@@ -116,8 +149,9 @@ gd.DataTableComponent = Backbone.View.extend({
         "bSortClasses": false,
         'sPaginationType': 'bootstrap'
     });
+    
+    this.listenToCheckboxes();
   },
-
 
   /** Returns an array of uids for the rows that are selected. */
   getCheckedRowUids: function() {

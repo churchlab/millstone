@@ -11,6 +11,54 @@ body {
   font-size: 20px;
 }
 
+/* GD Checkboxes for Datatables, checkbox td changes color */
+
+td.gd-dt-cb-div {
+    background-color: rgb(245, 245, 245);
+    border-bottom-color: rgb(204, 204, 204);
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+    border-left-color: rgb(204, 204, 204);
+    border-left-style: solid;
+    border-left-width: 1px;
+    border-right-color: rgb(204, 204, 204);
+    border-right-style: solid;
+    border-right-width: 1px;
+    border-top-color: rgb(204, 204, 204);
+    border-top-style: solid;
+    border-top-width: 1px;
+    cursor: default;
+    display: block;
+    float: left;
+    margin-bottom: 0px;
+    margin-left: -1px;
+    margin-right: 0px;
+    margin-top: 0px;
+    min-width: 16px;
+    padding-bottom: 4px;
+    padding-left: 5px;
+    padding-right: 4px;
+    padding-top: 4px;
+    position: relative;
+    text-align: center;
+}
+
+td.gd-dt-cb-div.active  {
+    background-color: rgb(169, 219, 169);
+    border-bottom-color: rgb(70, 165, 70);
+    border-left-color: rgb(70, 165, 70);
+    border-right-color: rgb(70, 165, 70);
+    border-top-color: rgb(70, 165, 70);
+}
+
+tr:nth-child(odd) > td.gd-dt-cb-div.active {
+    background-color: rgb(169, 219, 169);
+    border-bottom-color: rgb(70, 165, 70);
+    border-left-color: rgb(70, 165, 70);
+    border-right-color: rgb(70, 165, 70);
+    border-top-color: rgb(70, 165, 70);
+}
+
 /* Datatables Bootstrap 2 CSS http://datatables.net/blog/Twitter_Bootstrap_2 */
 div.dataTables_length label {
 	float: left;

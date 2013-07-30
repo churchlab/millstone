@@ -125,7 +125,7 @@ def _get_file_url_from_dropbox(dropbox_url, filename):
         raise InputError(
             'Could not get file %s from Dropbox URL %s. Check settings.' % (
                 filename, dropbox_url))
-        
+
     return url_soup.find_all(href=re.compile(filename))[0]['href']
 
 if __name__ == '__main__':
