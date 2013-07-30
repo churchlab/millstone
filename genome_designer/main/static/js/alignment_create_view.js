@@ -47,8 +47,8 @@ gd.AlignmentCreateView = Backbone.View.extend({
 
     // Grab the selected rows.
     var postData = {
-        'refGenomes': this.refGenomeDataTable.getCheckedRowUids(),
-        'samples': this.samplesDatatable.getCheckedRowUids()
+        'refGenomeUidList': this.refGenomeDataTable.getCheckedRowUids(),
+        'sampleUidList': this.samplesDatatable.getCheckedRowUids()
     };
 
     var onSuccess = function(data) {
@@ -57,6 +57,6 @@ gd.AlignmentCreateView = Backbone.View.extend({
     };
 
     // Execute the post. Should return a redirect response.
-    $.post(postUrl, postData, onSuccess, 'json');
+    $.post(postUrl, JSON.stringify(postData), onSuccess, 'json');
   }
 });

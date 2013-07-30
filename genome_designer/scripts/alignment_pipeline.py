@@ -11,13 +11,53 @@ from subprocess import CalledProcessError
 
 from main.models import clean_filesystem_location
 from main.models import get_dataset_with_type
+from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from scripts.import_util import add_dataset_to_entity
 
-def align_with_bwa(alignment_group, experiment_sample):
+
+def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
+        test_models_only=False):
+    """Creates an AlignmentGroup and kicks off alignment for each one.
+
+    We create an AlignmentGroup for each ReferenceGenome and align all
+    ExpermentSamples to each ReferenceGenome separately.
+
+    Args:
+        ref_genome_list: List of ReferenceGenome instances.
+        sample_list: List of sample instances. Must belong to same project as
+            ReferenceGenomes.
+        test_models_only: If True, don't actually run alignments. Just create
+            models.
+
+    """
+    assert len(ref_genome_list) > 0, (
+            "Must provide at least one ReferenceGenome.")
+    assert len(sample_list) > 0, (
+            "Must provide at least one ExperimentSample.")
+
+    for ref_genome in ref_genome_list:
+        alignment_group = AlignmentGroup.objects.create(
+                label='TODO_LABEL',
+                reference_genome=ref_genome,
+                aligner=AlignmentGroup.ALIGNER.BWA)
+        for sample in sample_list:
+            align_with_bwa(alignment_group, sample,
+                    test_models_only=test_models_only)
+
+
+def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):
     """Aligns a sample to a reference genome using the bwa tool.
     """
+    # Create the initial record.
+    sample_alignment = ExperimentSampleToAlignment.objects.create(
+            alignment_group=alignment_group,
+            experiment_sample=experiment_sample)
+
+    if test_models_only:
+        return
+
     # Grab the reference genome fasta for the alignment.
     ref_genome_fasta = get_dataset_with_type(
             alignment_group.reference_genome,
@@ -114,10 +154,7 @@ def align_with_bwa(alignment_group, experiment_sample):
     result_bam_file = process_sam_bam_file(experiment_sample,
             alignment_group.reference_genome, output_sam, error_output)
 
-    # Save the result to the database.
-    sample_alignment = ExperimentSampleToAlignment.objects.create(
-            alignment_group=alignment_group,
-            experiment_sample=experiment_sample)
+    # Record the resulting dataset in the database
     add_dataset_to_entity(sample_alignment, Dataset.TYPE.BWA_ALIGN,
             Dataset.TYPE.BWA_ALIGN, clean_filesystem_location(result_bam_file))
 

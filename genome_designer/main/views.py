@@ -12,6 +12,7 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import ExperimentSample
 from main.models import Variant
+from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
 
@@ -167,7 +168,30 @@ def alignment_create_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
 
     if request.POST:
-        # TODO: Handle POST data.
+        # Parse the data from the request body.
+        request_data = json.loads(request.body)
+
+        # Make sure the required keys are present.
+        REQUIRED_KEYS = ['refGenomeUidList', 'sampleUidList']
+        if not all(key in request_data for key in REQUIRED_KEYS):
+            return HttpResponseBadRequest("Invalid request. Missing keys.")
+
+        # Parse the data and look up the relevant model instances.
+
+        ref_genome_list = ReferenceGenome.objects.filter(
+                uid__in=request_data['refGenomeUidList'])
+        assert len(ref_genome_list) == len(request_data['refGenomeUidList'])
+
+        sample_list = ExperimentSample.objects.filter(
+                uid__in=request_data['sampleUidList'])
+        assert len(sample_list) == len(request_data['sampleUidList'])
+
+        # Kick of alignments.
+        # NOTE: Hard-coded test_models_only=True for now.
+        create_alignment_groups_and_start_alignments(ref_genome_list,
+                sample_list, test_models_only=True)
+
+        # Success. Return a redirect response.
         response_data = {
             'redirect': reverse(
                     'genome_designer.main.views.alignment_list_view',
