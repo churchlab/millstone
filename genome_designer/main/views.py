@@ -1,14 +1,18 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
+from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 from django.shortcuts import render
 
-from main.adapters import get_adapter
+from main.adapters import adapt_model_to_frontend
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import ExperimentSample
 from main.models import Variant
+from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
 
@@ -102,6 +106,19 @@ def reference_genome_list_view(request, project_uid):
 
 
 @login_required
+def reference_genome_view(request, project_uid, ref_genome_uid):
+    """Overview of a single project.
+    """
+    project = Project.objects.get(uid=project_uid)
+    reference_genome = ReferenceGenome.objects.get(uid=ref_genome_uid)
+    context = {
+        'project': project,
+        'reference_genome': reference_genome
+    }
+    return render(request, 'reference_genome.html', context)
+
+
+@login_required
 def sample_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
     error_string = None
@@ -116,7 +133,7 @@ def sample_list_view(request, project_uid):
                     request.FILES['targetsFile'])
         except Exception as e:
             error_string = 'Import error: ' + str(e)
-    
+
     context = {
         'project': project,
         'error_string': error_string
@@ -127,7 +144,7 @@ def sample_list_view(request, project_uid):
 def sample_list_targets_template(request):
     """Let the user download a blank sample targets template as a tab
     separated values file (.tsv) so they can fill it in and upload
-    it back to the server. 
+    it back to the server.
     """
     context = {}
     return render(request, 'sample_list_targets_template.tsv', context,
@@ -140,29 +157,58 @@ def alignment_list_view(request, project_uid):
 
     context = {
         'project': project,
-        'alignment_list_json': get_adapter(AlignmentGroup, 
-            {'reference_genome__project':project})
+        'alignment_list_json': adapt_model_to_frontend(AlignmentGroup,
+                {'reference_genome__project':project})
     }
     return render(request, 'alignment_list.html', context)
 
+
+@login_required
 def alignment_create_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
-   
-    # TODO: THIS IS JUST A PLACEHOLDER TABLE FOR TESTING DATATABLES IN TABS.
-    # Fetch the list of variants and render it into the dom as json.
-    # The data will be displayed to the user via the javascript DataTables
-    # component.
-    samples_list = ExperimentSample.objects.filter(project=project)
-    ref_genomes_list = ReferenceGenome.objects.filter(project=project)   
-   
+
+    if request.POST:
+        # Parse the data from the request body.
+        request_data = json.loads(request.body)
+
+        # Make sure the required keys are present.
+        REQUIRED_KEYS = ['refGenomeUidList', 'sampleUidList']
+        if not all(key in request_data for key in REQUIRED_KEYS):
+            return HttpResponseBadRequest("Invalid request. Missing keys.")
+
+        # Parse the data and look up the relevant model instances.
+
+        ref_genome_list = ReferenceGenome.objects.filter(
+                uid__in=request_data['refGenomeUidList'])
+        assert len(ref_genome_list) == len(request_data['refGenomeUidList'])
+
+        sample_list = ExperimentSample.objects.filter(
+                uid__in=request_data['sampleUidList'])
+        assert len(sample_list) == len(request_data['sampleUidList'])
+
+        # Kick of alignments.
+        # NOTE: Hard-coded test_models_only=True for now.
+        create_alignment_groups_and_start_alignments(ref_genome_list,
+                sample_list, test_models_only=True)
+
+        # Success. Return a redirect response.
+        response_data = {
+            'redirect': reverse(
+                    'genome_designer.main.views.alignment_list_view',
+                    args=(project.uid,)),
+        }
+        return HttpResponse(json.dumps(response_data),
+                content_type='application/json')
+
     context = {
         'project': project,
-        'samples_list_json': get_adapter(ExperimentSample, 
-            {'project':project}),
-        'ref_genomes_list_json': get_adapter(ReferenceGenome,
-            {'project':project})
+        'samples_list_json': adapt_model_to_frontend(ExperimentSample,
+                {'project':project}),
+        'ref_genomes_list_json': adapt_model_to_frontend(ReferenceGenome,
+                {'project':project})
     }
     return render(request, 'alignment_create.html', context)
+
 
 @login_required
 def variant_set_list_view(request, project_uid):
@@ -182,10 +228,10 @@ def variant_list_view(request, project_uid):
     # component.
     context = {
        'project': project,
-       'variant_list_json': get_adapter(Variant, 
-           {'reference_genome__project':project})
+       'variant_list_json': adapt_model_to_frontend(Variant,
+            {'reference_genome__project':project})
     }
-        
+
     return render(request, 'variant_list.html', context)
 
 

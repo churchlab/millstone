@@ -39,7 +39,7 @@ ALLOWED_HOSTS = []
 # timezone as the operating system.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-TIME_ZONE = 'America/Chicago'
+TIME_ZONE = 'America/New_York'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -139,6 +139,38 @@ INSTALLED_APPS = (
     # Testing
     'django_nose'
 )
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+
+    'handlers': {
+        'console':{
+            'level':'DEBUG',
+            'class':'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+    },
+
+    'loggers': {
+        'django': {
+            'handlers':['console'],
+            'level':'INFO',
+            'propagate': True,
+        },
+    }
+}
+
+
+###############################################################################
+# Custom Config
+###############################################################################
 
 # We use a separate UserProfile from the build-in Django User model so that we
 # have the option of extending it.

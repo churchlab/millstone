@@ -7,48 +7,56 @@ gd.AlignmentCreateView = Backbone.View.extend({
   el: '#gd-page-container',
 
 
+  /** Override. */
   initialize: function() {
     this.render();
   },
 
 
+  /** Override. */
   render: function() {
     $('#gd-sidenav-link-alignments').addClass('active');
-    this.updateDatatable();
+
+    this.refGenomeDataTable = new gd.DataTableComponent({
+        el: $('#gd-datatable-ref_genome-hook'),
+        objList: REF_GENOME_LIST_DATA['obj_list'],
+        fieldConfig: REF_GENOME_LIST_DATA['field_config']
+    });
+
+    this.samplesDatatable = new gd.DataTableComponent({
+        el: $('#gd-datatable-samples-hook'),
+        objList: SAMPLES_LIST_DATA['obj_list'],
+        fieldConfig: SAMPLES_LIST_DATA['field_config']
+    });
+  },
+
+
+  events: {
+    'click #gd-align-create-submit-btn': 'handleSubmitClick',
   },
 
 
   /**
-   * Updates the datatable view based on the data available.
-   *
-   * @param {array} data List of objects to display
-   * @param {array} column_config List of column config objects. These must
-   *    have the keys (NOTE camel-case):
-   *        mData: key corresponding to key in data.
-   *        sTitle: title for the column.
+   * Handles a click on the submit button, aggregating the config
+   * options selected and sending a request to the server to start
+   * an alignment run.
    */
-  updateDatatable: function(data, column_config) {
-    $('#gd-datatable-ref_genome-hook').html(
-      '<table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered"' +
-          'id="gd-ref_genome-datatable">' +
-      '</table>');
-    $('#gd-datatable-samples-hook').html(
-      '<table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered"' +
-          'id="gd-samples-datatable">' +
-      '</table>');
-    $('#gd-ref_genome-datatable').dataTable({
-        'aaData': REF_GENOME_LIST_DATA['obj_list'],
-        'aoColumns': REF_GENOME_LIST_DATA['field_config'],
-        "bSortClasses": false,
-        'sDom': "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
-        'sPaginationType': 'bootstrap'
-    });
-    $('#gd-samples-datatable').dataTable({
-        'aaData': SAMPLES_LIST_DATA['obj_list'],
-        'aoColumns': SAMPLES_LIST_DATA['field_config'],
-        "bSortClasses": false,
-        'sPaginationType': 'bootstrap'
-    });
-    
+  handleSubmitClick: function(){
+    // Post to this same view for now.
+    var postUrl = window.location.pathname;
+
+    // Grab the selected rows.
+    var postData = {
+        'refGenomeUidList': this.refGenomeDataTable.getCheckedRowUids(),
+        'sampleUidList': this.samplesDatatable.getCheckedRowUids()
+    };
+
+    var onSuccess = function(data) {
+      // Redirect according to the server response.
+      window.location.href = data.redirect;
+    };
+
+    // Execute the post. Should return a redirect response.
+    $.post(postUrl, JSON.stringify(postData), onSuccess, 'json');
   }
 });

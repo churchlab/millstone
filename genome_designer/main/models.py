@@ -16,13 +16,12 @@ Note on filesystem directory structure: (IN PROGRESS)
         ../projects/1324abcd/samples/5678jklm
         ../projects/1324abcd/ref_genomes/
         ../projects/1324abcd/variant_calls/
-        
+
 Implementation Notes:
     * get_field_order() for each model/table is used by the Adapter class
       in adapters.py to know WHICH FIELDS are to be displayed and WHAT ORDER.
-      If you don't return a field in get_field_order, it won't be sent to 
-      datatables.js for display. 
-    
+      If you don't return a field in get_field_order, it won't be sent to
+      datatables.js for display.
 """
 
 import os
@@ -31,6 +30,7 @@ import stat
 from uuid import uuid4
 
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Model
 from django.db.models.signals import post_save
@@ -305,6 +305,13 @@ class ReferenceGenome(Model):
     def __unicode__(self):
         return self.label
 
+    def get_href(self):
+        """Link to url view for this model.
+        """
+        return reverse(
+                'genome_designer.main.views.reference_genome_view',
+                args=(self.project.uid, self.uid))
+
     def get_model_data_root(self):
         """Get the root location for all data of this type in the project.
         """
@@ -323,14 +330,14 @@ class ReferenceGenome(Model):
 
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
-    
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
-        return ['label', 
-                'num_chromosomes', 
+        return ['label',
+                'num_chromosomes',
                 'num_bases']
 
 # When a new ReferenceGenome is created, create its data dir.
@@ -355,11 +362,11 @@ class ExperimentSample(Model):
 
     # Human-readable identifier.
     label = models.CharField('Sample Name', max_length=256)
-    
-    # Human-readable sample group that this value is in. 
+
+    # Human-readable sample group that this value is in.
     group = models.CharField('Plate/Group', max_length=256)
-    
-    # Human-readable 'position' (well number, etc) that this sample is in 
+
+    # Human-readable 'position' (well number, etc) that this sample is in
     # within a group
     well = models.CharField('Position/Well', max_length=256)
 
@@ -389,14 +396,14 @@ class ExperimentSample(Model):
 
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
-    
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
-        return ['label', 
-                'group', 
+        return ['label',
+                'group',
                 'well']
 
 def post_sample_create(sender, instance, created, **kwargs):
@@ -438,14 +445,14 @@ class AlignmentGroup(Model):
     # Times for the alignment run.
     start_time = models.DateTimeField(auto_now=True)
     end_time = models.DateTimeField(auto_now=True)
-    
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
         return ['label',
-                'reference_genome',  
+                'reference_genome',
                 'aligner',
                 'start_time',
                 'end_time']
@@ -495,7 +502,7 @@ class Variant(Model):
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField('Type', max_length=40, choices=TYPE_CHOICES)
 
-    reference_genome = models.ForeignKey('ReferenceGenome', 
+    reference_genome = models.ForeignKey('ReferenceGenome',
         verbose_name='Reference Genome')
 
     chromosome = models.CharField('Chromosome', max_length=256, blank=True)
@@ -505,14 +512,14 @@ class Variant(Model):
     ref_value = models.TextField('Ref');
 
     alt_value = models.TextField('Alt');
-    
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
         return ['reference_genome',
-                'chromosome', 
+                'chromosome',
                 'position',
                 'type',
                 'ref_value',
