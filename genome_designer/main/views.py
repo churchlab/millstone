@@ -181,10 +181,16 @@ def alignment_create_view(request, project_uid):
         ref_genome_list = ReferenceGenome.objects.filter(
                 uid__in=request_data['refGenomeUidList'])
         assert len(ref_genome_list) == len(request_data['refGenomeUidList'])
+        if not len(ref_genome_list) > 0:
+            return HttpResponseBadRequest(
+                    "At least one reference genome required.")
 
         sample_list = ExperimentSample.objects.filter(
                 uid__in=request_data['sampleUidList'])
         assert len(sample_list) == len(request_data['sampleUidList'])
+        if not len(sample_list) > 0:
+            return HttpResponseBadRequest(
+                    "At least sample required.")
 
         # Kick of alignments.
         # NOTE: Hard-coded test_models_only=True for now.

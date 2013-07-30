@@ -41,15 +41,22 @@ gd.AlignmentCreateView = Backbone.View.extend({
    * options selected and sending a request to the server to start
    * an alignment run.
    */
-  handleSubmitClick: function(){
+  handleSubmitClick: function() {
     // Post to this same view for now.
     var postUrl = window.location.pathname;
 
     // Grab the selected rows.
     var postData = {
-        'refGenomeUidList': this.refGenomeDataTable.getCheckedRowUids(),
-        'sampleUidList': this.samplesDatatable.getCheckedRowUids()
+        refGenomeUidList: this.refGenomeDataTable.getCheckedRowUids(),
+        sampleUidList: this.samplesDatatable.getCheckedRowUids()
     };
+
+    var validationResult = this.validatePostData(postData);
+    if (!validationResult.is_success) {
+      $('#gd-align-create-submit-error-msg').text(validationResult.error_msg);
+      $('#gd-align-create-submit-error').show();
+      return;
+    }
 
     var onSuccess = function(data) {
       // Redirect according to the server response.
@@ -58,5 +65,34 @@ gd.AlignmentCreateView = Backbone.View.extend({
 
     // Execute the post. Should return a redirect response.
     $.post(postUrl, JSON.stringify(postData), onSuccess, 'json');
+  },
+
+
+  /**
+   * Validate the post data before submitting.
+   * @param {object} postData The creation data to be posted to the server.
+   * @return {object} Response with keys:
+   *     * is_success {boolean} Whether validation succeded.
+   *     * error_msg {string} Human-readable description of the error.
+   */
+  validatePostData: function(postData) {
+    if (!postData.refGenomeUidList.length) {
+      return {
+          is_success: false,
+          error_msg: 'Please select at least one reference genome.'
+      };
+    }
+
+    if (!postData.sampleUidList.length) {
+      return {
+          is_success: false,
+          error_msg: 'Please select at least one sample.'
+      };
+    }
+
+    return {
+          is_success: true,
+          error_msg: ''
+    };
   }
 });
