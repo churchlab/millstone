@@ -8,6 +8,7 @@ and carry out the gauntlet of steps to perform alignments and clean them up.
 import os
 import subprocess
 from subprocess import CalledProcessError
+import sys
 
 from main.models import clean_filesystem_location
 from main.models import get_dataset_with_type
@@ -15,7 +16,9 @@ from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from scripts.import_util import add_dataset_to_entity
+from settings import PWD, TOOLS_DIR
 
+TOOLS_DIR = os.path.join(PWD,TOOLS_DIR)
 
 def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
         test_models_only=False):
@@ -97,7 +100,7 @@ def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):
     output_index_1 = os.path.splitext(input_reads_1_fq)[0] + '.sai'
     with open(output_index_1, 'w') as input_reads_1_stdout_fh:
         align_input_1_args = [
-            'bwa',
+            '%s/bwa/bwa' % TOOLS_DIR,
             'aln',
             '-t', '1', # threads
             ref_genome_fasta,
@@ -112,7 +115,7 @@ def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):
         output_index_2 = os.path.splitext(input_reads_2_fq)[0] + '.sai'
         with open(output_index_2, 'w') as input_reads_2_stdout_fh:
             align_input_2_args = [
-                'bwa',
+                '%s/bwa/bwa' % TOOLS_DIR,
                 'aln',
                 '-t', '1', # threads
                 ref_genome_fasta,
@@ -132,7 +135,7 @@ def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):
     if is_paired_end:
         with open(output_sam, 'w') as fh:
             subprocess.check_call([
-                'bwa',
+                '%s/bwa/bwa' % TOOLS_DIR,
                 'sampe',
                 ref_genome_fasta,
                 output_index_1,
@@ -143,7 +146,7 @@ def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):
     else:
         with open(output_sam, 'w') as fh:
             subprocess.check_call([
-                'bwa',
+                '%s/bwa/bwa' % TOOLS_DIR,
                 'samse',
                 ref_genome_fasta,
                 output_index_1,
@@ -177,7 +180,7 @@ def build_bwa_index(ref_genome_fasta, error_output=None):
     the extension '.bwt' to the name of the fasta.
     """
     subprocess.check_call([
-        'bwa',
+        '%s/bwa/bwa' % TOOLS_DIR,
         'index',
         '-a',
         'is',
@@ -224,7 +227,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
         if opt_processing_mask['make_bam']:
             fh = open(bam_file_location, 'w')
             subprocess.check_call([
-                'samtools',
+                '%s/samtools/samtools' % TOOLS_DIR,
                 'view',
                 '-bS',
                 sam_file_location
@@ -242,7 +245,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
     if opt_processing_mask['sort']:
         # 2a. Perform the actual sorting.
         subprocess.check_call([
-            'samtools',
+            '%s/samtools/samtools' % TOOLS_DIR,
             'sort',
             bam_file_location,
             sorted_output_name
@@ -250,7 +253,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
 
         # 2b. Index the sorted result.
         subprocess.check_call([
-            'samtools',
+            '%s/samtools/samtools' % TOOLS_DIR,
             'index',
             sorted_bam_file_location,
         ], stderr=error_output)
@@ -272,7 +275,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
     if opt_processing_mask['indel_realigner']:
         # Make sure the previous result is indexed.
         subprocess.check_call([
-                'samtools',
+                '%s/samtools/samtools' % TOOLS_DIR,
                 'index',
                 grouped_bam_file_location,
         ], stderr=error_output)
@@ -292,7 +295,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
     # 5. Create index.
     if opt_processing_mask['index']:
         subprocess.check_call([
-            'samtools',
+            '%s/samtools/samtools' % TOOLS_DIR,
             'index',
             realigned_bam_file_location,
         ], stderr=error_output)
@@ -309,7 +312,7 @@ def add_groups(experiment_sample, input_bam_file, bam_output_file, error_output)
 
     prefix = experiment_sample.uid
     subprocess.check_call([
-        'java', '-jar', '/opt/picard/AddOrReplaceReadGroups.jar',
+        'java', '-jar', '%s/picard/AddOrReplaceReadGroups.jar' % TOOLS_DIR,
         'I=' + input_bam_file,
         'O=' + bam_output_file,
         'RGPU=' + prefix,
@@ -320,7 +323,7 @@ def add_groups(experiment_sample, input_bam_file, bam_output_file, error_output)
         'SORT_ORDER=coordinate',
         'TMP_DIR=' + picard_tmp_dir, # Write temp data locally to avoid exhausting space.
         'VALIDATION_STRINGENCY=LENIENT' # Prevent unmapped read problems
-    ], stderr=error_output)
+    ], stderr=sys.stderr)
 
 
 def realign_given_indels(
@@ -341,16 +344,16 @@ def realign_given_indels(
 
     # Prepare realignment intervals file.
     subprocess.check_call([
-        'java', '-jar', '/opt/gatk/GenomeAnalysisTK.jar',
+        'java', '-jar', '%s/gatk/GenomeAnalysisTK.jar' % TOOLS_DIR,
         '-T', 'RealignerTargetCreator',
         '-I', input_bam_file,
         '-R', ref_genome_fasta_location,
         '-o', temp_intervals_file,
-    ], stderr=error_output)
+    ], stderr=sys.stderr)
 
     # Perform realignment.
     subprocess.check_call([
-        'java', '-jar', '/opt/gatk/GenomeAnalysisTK.jar',
+        'java', '-jar', '%s/gatk/GenomeAnalysisTK.jar' % TOOLS_DIR,
         '-T', 'IndelRealigner',
         '-I', input_bam_file,
         '-R', ref_genome_fasta_location,
@@ -363,7 +366,7 @@ def compute_insert_metrics(bam_file_location, stderr=None):
     output = _get_metrics_output_filename(bam_file_location)
     histogram_file = os.path.splitext(bam_file_location)[0] + '.histmet.txt'
     subprocess.check_call([
-        'java', '-jar', '/opt/picard/CollectInsertSizeMetrics.jar',
+        'java', '-jar', '%s/picard/CollectInsertSizeMetrics.jar' % TOOLS_DIR,
         'I=' + bam_file_location,
         'O=' + output,
         'HISTOGRAM_FILE=' + histogram_file,

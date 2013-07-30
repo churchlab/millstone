@@ -37,3 +37,6 @@ nosetests.xml
 # Data from development
 *.db
 temp_data/
+
+# Third-party tools
+tools/

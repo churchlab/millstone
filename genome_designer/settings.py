@@ -8,6 +8,10 @@ from django.conf import global_settings
 # Useful for settings that require absolute paths like templates.
 PWD = os.path.dirname(os.path.realpath(__file__ ))
 
+# The relative path of the third party tools that we will download in 
+# setup.py and call through various scripts. 
+TOOLS_DIR = 'tools'
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
