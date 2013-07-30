@@ -164,6 +164,19 @@ def alignment_list_view(request, project_uid):
 
 
 @login_required
+def alignment_view(request, project_uid, alignment_group_uid):
+    """View of a single AlignmentGroup.
+    """
+    project = Project.objects.get(uid=project_uid)
+    alignment_group = AlignmentGroup.objects.get(uid=alignment_group_uid)
+    context = {
+        'project': project,
+        'alignment_group': alignment_group
+    }
+    return render(request, 'alignment.html', context)
+
+
+@login_required
 def alignment_create_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
 
