@@ -11,6 +11,7 @@ from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import ExperimentSample
+from main.models import ExperimentSampleToAlignment
 from main.models import Variant
 from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
 from scripts.import_util import import_reference_genome_from_local_file
@@ -171,7 +172,10 @@ def alignment_view(request, project_uid, alignment_group_uid):
     alignment_group = AlignmentGroup.objects.get(uid=alignment_group_uid)
     context = {
         'project': project,
-        'alignment_group': alignment_group
+        'alignment_group': alignment_group,
+        'experiment_sample_to_alignment_list_json': adapt_model_to_frontend(
+                ExperimentSampleToAlignment,
+                {'alignment_group': alignment_group})
     }
     return render(request, 'alignment.html', context)
 

@@ -3,7 +3,7 @@
  */
 
 
-gd.AlignmentView = Backbone.View.extend({
+gd.AlignmentListView = Backbone.View.extend({
   el: '#gd-page-container',
 
   initialize: function() {
@@ -15,8 +15,8 @@ gd.AlignmentView = Backbone.View.extend({
 
     this.datatable = new gd.DataTableComponent({
         el: $('#gd-alignment_view-datatable-hook'),
-        objList: EXPERIMENT_TO_SAMPLE_DATA['obj_list'],
-        fieldConfig: EXPERIMENT_TO_SAMPLE_DATA['field_config']
+        objList: ALIGNMENT_LIST_DATA['obj_list'],
+        fieldConfig: ALIGNMENT_LIST_DATA['field_config']
     });
   },
 });

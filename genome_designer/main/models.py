@@ -479,6 +479,16 @@ class ExperimentSampleToAlignment(Model):
 
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
 
+    @classmethod
+    def get_field_order(clazz):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
+        """
+        return [
+            'experiment_sample',
+        ]
+
+
 
 ###############################################################################
 # Variants (SNVs and SVs)

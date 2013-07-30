@@ -98,31 +98,27 @@ gd.DataTableComponent = Backbone.View.extend({
    * make their parent td clickable.
    */
   listenToCheckboxes: function() {
-    
     $('td.gd-dt-cb-div').click(function(ev){
-        if (ev.target.nodeName === "INPUT"){
-            return;
-        }
+      if (ev.target.nodeName === "INPUT"){
+        return;
+      }
 
-        var cb = $(this).find('input:checkbox.gd-dt-cb').get(0);
+      var cb = $(this).find('input:checkbox.gd-dt-cb').get(0);
 
-        if ($(cb).is(':checked')){
-            $(cb).removeAttr('checked');
-
-        }else {
-            $(cb).attr('checked','checked');
-        }
-        $(cb).triggerHandler('change');
+      if ($(cb).is(':checked')){
+        $(cb).prop('checked', false);
+      } else {
+        $(cb).prop('checked', true);
+      }
+      $(cb).triggerHandler('change');
     });
 
-    $('input:checkbox.gd-dt-cb').change(
-        function(){
-            var $this = $(this)
-            if ($this.is(':checked')) {
-                $this.parent('td').addClass('active');
-            } else {
-                  $this.parent('td').removeClass('active');
-            }
+    $('input:checkbox.gd-dt-cb').change(function(){
+      if ($(this).is(':checked')) {
+        $(this).parent('td').addClass('active');
+      } else {
+        $(this).parent('td').removeClass('active');
+      }
     });
   },
 
@@ -151,7 +147,7 @@ gd.DataTableComponent = Backbone.View.extend({
         "bAutoWidth": false,
         'sPaginationType': 'bootstrap'
     });
-    
+
     this.listenToCheckboxes();
   },
 
