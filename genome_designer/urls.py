@@ -20,10 +20,10 @@ urlpatterns = patterns('',
     # Alignments
     url(r'^projects/([\w-]+)/alignments$',
             'genome_designer.main.views.alignment_list_view'),
-    url(r'^projects/([\w-]+)/alignments/([\w-]+)$',
-            'genome_designer.main.views.alignment_view'),
     url(r'^projects/([\w-]+)/alignments/create$',
             'genome_designer.main.views.alignment_create_view'),
+    url(r'^projects/([\w-]+)/alignments/([\w-]+)$',
+            'genome_designer.main.views.alignment_view'),
 
     # Variant sets
     url(r'^projects/([\w-]+)/sets$',
