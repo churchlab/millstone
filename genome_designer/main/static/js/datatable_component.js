@@ -86,7 +86,8 @@ gd.DataTableComponent = Backbone.View.extend({
     displayableFieldConfig.push({
         'mData': 'checkbox',
         'sTitle': 'Select',
-        'sClass': 'gd-dt-cb-div'
+        'sClass': 'gd-dt-cb-div',
+        'sWidth': '10%',
     });
 
     return displayableFieldConfig;
@@ -147,6 +148,7 @@ gd.DataTableComponent = Backbone.View.extend({
         'aoColumns': fieldConfig,
         'sDom': "<'row'<'span5'l><'span5'f><'align-right span2'C>r>t<'row'<'span6'i><'span6'p>>",
         "bSortClasses": false,
+        "bAutoWidth": false,
         'sPaginationType': 'bootstrap'
     });
     
