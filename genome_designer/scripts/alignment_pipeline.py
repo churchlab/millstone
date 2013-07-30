@@ -323,7 +323,7 @@ def add_groups(experiment_sample, input_bam_file, bam_output_file, error_output)
         'SORT_ORDER=coordinate',
         'TMP_DIR=' + picard_tmp_dir, # Write temp data locally to avoid exhausting space.
         'VALIDATION_STRINGENCY=LENIENT' # Prevent unmapped read problems
-    ], stderr=sys.stderr)
+    ], stderr=error_output)
 
 
 def realign_given_indels(
@@ -349,7 +349,7 @@ def realign_given_indels(
         '-I', input_bam_file,
         '-R', ref_genome_fasta_location,
         '-o', temp_intervals_file,
-    ], stderr=sys.stderr)
+    ], stderr=error_output)
 
     # Perform realignment.
     subprocess.check_call([
