@@ -76,7 +76,7 @@ class TestAlignmentPipeline(TestCase):
         ref_genome_list = [self.reference_genome]
         sample_list = [self.experiment_sample]
         create_alignment_groups_and_start_alignments(ref_genome_list,
-                sample_list, test_models_only=True)
+                sample_list, test_models_only=True, concurrent=False)
 
         alignment_group_obj_list = AlignmentGroup.objects.filter(
                 reference_genome=self.reference_genome)
