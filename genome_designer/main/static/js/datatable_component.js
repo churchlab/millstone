@@ -123,7 +123,9 @@ gd.DataTableComponent = Backbone.View.extend({
   getCheckedRowUids: function() {
     var selectedUids = [];
     _.each($('input', this.datatable.fnGetNodes()), function(checkboxEl) {
-      selectedUids.push(checkboxEl.value);
+      if (checkboxEl.checked) {
+        selectedUids.push(checkboxEl.value);
+      }
     });
     return selectedUids;
   }
