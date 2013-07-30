@@ -11,7 +11,7 @@ gd.AlignmentView = Backbone.View.extend({
   },
 
   render: function() {
-    $('#gd-sidenav-link-alignments').addClass('active');
+    this.decorateSidebar();
 
     this.datatable = new gd.DataTableComponent({
         el: $('#gd-alignment_view-datatable-hook'),
@@ -19,4 +19,15 @@ gd.AlignmentView = Backbone.View.extend({
         fieldConfig: EXPERIMENT_TO_SAMPLE_DATA['field_config']
     });
   },
+
+  /** Decorate the side nav bar. */
+  decorateSidebar: function() {
+    $('#gd-sidenav-link-alignments').addClass('active');
+
+    // Draw a sub-menu.
+    $('#gd-sidenav-link-alignments').append(
+        '<ul class="nav nav-list">' +
+          '<li>... ' + this.model.get('label') + '</li>' +
+        '</ul>');
+  }
 });
