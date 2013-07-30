@@ -446,6 +446,14 @@ class AlignmentGroup(Model):
     start_time = models.DateTimeField(auto_now=True)
     end_time = models.DateTimeField(auto_now=True)
 
+    def get_href(self):
+        """Link to url view for this model.
+        """
+        return reverse(
+                'genome_designer.main.views.alignment_view',
+                args=(self.reference_genome.project.uid, self.uid))
+
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
