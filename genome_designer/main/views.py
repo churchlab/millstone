@@ -1,6 +1,9 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
+from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 from django.shortcuts import render
 
 from main.adapters import adapt_model_to_frontend
@@ -162,6 +165,17 @@ def alignment_list_view(request, project_uid):
 @login_required
 def alignment_create_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
+
+    if request.POST:
+        # TODO: Handle POST data.
+        response_data = {
+            'redirect': reverse(
+                    'genome_designer.main.views.alignment_list_view',
+                    args=(project.uid,)),
+        }
+        return HttpResponse(json.dumps(response_data),
+                content_type='application/json')
+
     context = {
         'project': project,
         'samples_list_json': adapt_model_to_frontend(ExperimentSample,

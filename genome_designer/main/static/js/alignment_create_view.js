@@ -28,5 +28,35 @@ gd.AlignmentCreateView = Backbone.View.extend({
         objList: SAMPLES_LIST_DATA['obj_list'],
         fieldConfig: SAMPLES_LIST_DATA['field_config']
     });
+  },
+
+
+  events: {
+    'click #gd-align-create-submit-btn': 'handleSubmitClick',
+  },
+
+
+  /**
+   * Handles a click on the submit button, aggregating the config
+   * options selected and sending a request to the server to start
+   * an alignment run.
+   */
+  handleSubmitClick: function(){
+    // Post to this same view for now.
+    var postUrl = window.location.pathname;
+
+    // Grab the selected rows.
+    var postData = {
+        'refGenomes': this.refGenomeDataTable.getCheckedRowUids(),
+        'samples': this.samplesDatatable.getCheckedRowUids()
+    };
+
+    var onSuccess = function(data) {
+      // Redirect according to the server response.
+      window.location.href = data.redirect;
+    };
+
+    // Execute the post. Should return a redirect response.
+    $.post(postUrl, postData, onSuccess, 'json');
   }
 });

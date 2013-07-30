@@ -84,6 +84,8 @@ def adapt_model_instance_to_frontend(model_instance):
     other_pairs = []
     if hasattr(model_instance, 'get_href'):
         other_pairs.append(('href', model_instance.get_href()))
+    if hasattr(model_instance, 'uid'):
+        other_pairs.append(('uid', model_instance.uid))
 
     # Wrap the results in a dictionary.
     return dict(visible_field_pairs + other_pairs)

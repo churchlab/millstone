@@ -10,6 +10,9 @@ gd.DataTableComponent = Backbone.View.extend({
 
   /** Override. */
   initialize: function() {
+    // Handle that will store the reference to the datatable.
+    this.datatable = null;
+
     // Objects converted into displayable form.
     this.displayableObjList = this.makeDisplayableObjectList(
         this.options.objList);
@@ -41,7 +44,7 @@ gd.DataTableComponent = Backbone.View.extend({
         var key = pair[0];
         var value = pair[1];
         var displayValue = value;
-        if (typeof(value) == 'object') {
+        if (typeof(value) == 'object' && 'href' in value) {
           displayValue = '<a href="' + value.href + '">' + value.label + '</>';
         }
         displayableObj[key] = displayValue;
@@ -55,7 +58,13 @@ gd.DataTableComponent = Backbone.View.extend({
       }
 
       // Add a checkbox.
-      displayableObj['checkbox'] = '<input type="checkbox">';
+      var uid = 'undefined';
+      if ('uid' in displayableObj) {
+        uid = displayableObj['uid'];
+      }
+
+      displayableObj['checkbox'] =
+          '<input type="checkbox" name="gd-row-select" value="' + uid + '">';
 
       displayableObjList.push(displayableObj);
     });
@@ -100,12 +109,22 @@ gd.DataTableComponent = Backbone.View.extend({
             'class="table table-striped table-bordered"' +
             'id=' + datatableId + '>' +
         '</table>');
-    $('#' + datatableId).dataTable({
+    this.datatable = $('#' + datatableId).dataTable({
         'aaData': objList,
         'aoColumns': fieldConfig,
         'sDom': "<'row'<'span5'l><'span5'f><'align-right span2'C>r>t<'row'<'span6'i><'span6'p>>",
         "bSortClasses": false,
         'sPaginationType': 'bootstrap'
     });
+  },
+
+
+  /** Returns an array of uids for the rows that are selected. */
+  getCheckedRowUids: function() {
+    var selectedUids = [];
+    _.each($('input', this.datatable.fnGetNodes()), function(checkboxEl) {
+      selectedUids.push(checkboxEl.value);
+    });
+    return selectedUids;
   }
 });
