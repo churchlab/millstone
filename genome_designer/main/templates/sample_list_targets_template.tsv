@@ -1,5 +1,5 @@
 Sample_Name	Plate_or_Group	Well	Read_1_Path	Read_2_Path	Parent_Samples	Growth_Rate
-Test Sample 0	Group A	A01	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.1.fq	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.2.fq		0.5	
+Test Sample 0	Group A	A01	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.1.fq	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.2.fq		0.5
 Test Sample 1	Group A	A02	$GD_ROOT/test_data/fake_genome_and_reads/38d786f2/test_genome_1.snps.simLibrary.1.fq	$GD_ROOT/test_data/fake_genome_and_reads/38d786f2/test_genome_1.snps.simLibrary.2.fq	Test Sample 0	0.7
 Test Sample 2	Group A	A03	$GD_ROOT/test_data/fake_genome_and_reads/9b19e708/test_genome_2.snps.simLibrary.1.fq	$GD_ROOT/test_data/fake_genome_and_reads/9b19e708/test_genome_2.snps.simLibrary.2.fq	Test Sample 0	0.6
 Test Sample 3	Group A	A04	$GD_ROOT/test_data/fake_genome_and_reads/9dd7a7a1/test_genome_3.snps.simLibrary.1.fq	$GD_ROOT/test_data/fake_genome_and_reads/9dd7a7a1/test_genome_3.snps.simLibrary.2.fq	Test Sample 0	0.8
