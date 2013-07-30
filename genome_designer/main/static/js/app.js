@@ -31,7 +31,11 @@ gd.App.prototype.run = function() {
     case 'ALIGNMENT':
       var view = new gd.AlignmentView();
       break;
-    
+
+    case 'ALIGNMENT_LIST':
+      var view = new gd.AlignmentListView();
+      break;
+
     case 'ALIGNMENT_CREATE':
       var view = new gd.AlignmentCreateView();
       break;
