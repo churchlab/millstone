@@ -5,13 +5,35 @@ Script to setup some test data.
 
 This is useful during development when we are continuously wiping the db
 and want to get some new data in quickly.
+
+NOTE: Several tests use this module, so avoid breaking tests when changing
+this.
 """
+
+# Since this script is intended to be used from the terminal, setup the
+# environment first so that django and model imports work.
+from util import setup_django_env
+setup_django_env()
 
 import os
 import random
 import shutil
 
-from util import setup_django_env
+from django.db import transaction
+from django.contrib.auth.models import User
+from django.core.management import call_command
+
+from main.models import AlignmentGroup
+from main.models import Dataset
+from main.models import ExperimentSample
+from main.models import ExperimentSampleToAlignment
+from main.models import Project
+from main.models import ReferenceGenome
+from main.models import Variant
+from scripts.import_util import copy_and_add_dataset_source
+from scripts.import_util import import_reference_genome_from_local_file
+import settings
+from settings import PWD as GD_ROOT
 
 
 # This is the directory where this bootstrap script is located.
@@ -19,18 +41,24 @@ PWD = os.path.dirname(os.path.realpath(__file__ ))
 
 # Test data.
 TEST_USERNAME = 'gmcdev'
+
 TEST_PASSWORD = 'g3n3d3z'
+
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
+
+TEST_FASTA  = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+        'test_genome.fa')
+
+TEST_FASTQ1 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+        '38d786f2', 'test_genome_1.snps.simLibrary.1.fq')
+
+TEST_FASTQ2 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+        '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
 
 
 def bootstrap_fake_data():
     """Fill the database with fake data.
     """
-    from django.db import transaction
-
-    # Imports only work after the environment has been set up.
-    from django.contrib.auth.models import User
-
     ### Get or create the user.
     try:
         user = User.objects.get(username=TEST_USERNAME)
@@ -39,7 +67,6 @@ def bootstrap_fake_data():
                 TEST_USERNAME, password=TEST_PASSWORD, email=TEST_EMAIL)
 
     ### Create some projects
-    from main.models import Project
     TEST_PROJECT_NAME = 'recoli'
     (test_project, project_created) = Project.objects.get_or_create(
             title=TEST_PROJECT_NAME, owner=user.get_profile())
@@ -49,7 +76,6 @@ def bootstrap_fake_data():
             title='project3', owner=user.get_profile())
 
     ### Create some reference genomes
-    from main.models import ReferenceGenome
     REF_GENOME_1_LABEL = 'mg1655'
     (ref_genome_1, ref_genome_created) = ReferenceGenome.objects.get_or_create(
             label=REF_GENOME_1_LABEL, project=test_project, num_chromosomes=1,
@@ -59,44 +85,35 @@ def bootstrap_fake_data():
             label=REF_GENOME_2_LABEL, project=test_project, num_chromosomes=1,
             num_bases=200)
 
-    ### Create some samples
-    from main.models import ExperimentSample
+    # Import a reference genome from file.
+    ref_genome_3 = import_reference_genome_from_local_file(
+            test_project, 'test_genome', TEST_FASTA, 'fasta')
+
+    ### Create some samples with backing data.
     SAMPLE_1_LABEL = 'sample1'
     (sample_1, created) = ExperimentSample.objects.get_or_create(
             project=test_project,
             label=SAMPLE_1_LABEL)
-
     ### Add datasets to the samples.
-    from main.models import Dataset
-
-    dataset_1 = Dataset.objects.create(
-            type=Dataset.TYPE.FASTQ1,
-            label='sample1_fastq1',
-            filesystem_location='blah')
-    sample_1.dataset_set.add(dataset_1)
-
-    dataset_2 = Dataset.objects.create(
-            type=Dataset.TYPE.FASTQ2,
-            label='sample1_fastq2',
-            filesystem_location='blah2')
-    sample_1.dataset_set.add(dataset_2)
+    if not sample_1.dataset_set.filter(type=Dataset.TYPE.FASTQ1):
+        copy_and_add_dataset_source(sample_1, Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1, TEST_FASTQ1)
+    if not sample_1.dataset_set.filter(type=Dataset.TYPE.FASTQ2):
+        copy_and_add_dataset_source(sample_1, Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2, TEST_FASTQ2)
 
     ### Create an alignment.
-    from main.models import AlignmentGroup
     alignment_group_1 = AlignmentGroup.objects.create(
             label='Alignment 1',
             reference_genome=ref_genome_1,
             aligner=AlignmentGroup.ALIGNER.BWA)
 
     # Link it to a sample.
-    from main.models import ExperimentSampleToAlignment
     ExperimentSampleToAlignment.objects.create(
             alignment_group=alignment_group_1,
             experiment_sample=sample_1)
 
-
     ### Create some fake variants
-    from main.models import Variant
     @transaction.commit_on_success
     def _create_fake_variants():
         for var_count in range(100):
@@ -116,8 +133,6 @@ def reset_database():
     For now, only works with the temp.db database to prevent
     accidentally deleting data down the line.
     """
-    import settings
-
     ### Delete the old database if it exists.
     print 'Deleting old database ...'
     TEMP_DB_NAME = 'temp.db'
@@ -129,7 +144,6 @@ def reset_database():
         os.remove(tempdb_abs_path)
 
     ### Run syncdb
-    from django.core.management import call_command
     # NOTE: Remove interactive=False if you want to have the option of creating
     # a super user on sync.
     print 'Creating new database via syncdb ...'
@@ -142,6 +156,5 @@ def reset_database():
 
 
 if __name__ == '__main__':
-    setup_django_env()
     reset_database()
     bootstrap_fake_data()
