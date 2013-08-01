@@ -17,13 +17,13 @@ td.gd-dt-cb-div {
     background-color: rgb(245, 245, 245);
     border-bottom-color: rgb(204, 204, 204);
     border-bottom-style: solid;
-    border-bottom-width: 1px;
+    border-bottom-width: 0px;
     border-left-color: rgb(204, 204, 204);
     border-left-style: solid;
     border-left-width: 1px;
     border-right-color: rgb(204, 204, 204);
     border-right-style: solid;
-    border-right-width: 1px;
+    border-right-width: 0px;
     border-top-color: rgb(204, 204, 204);
     border-top-style: solid;
     border-top-width: 1px;
@@ -45,6 +45,8 @@ td.gd-dt-cb-div {
 
 td.gd-dt-cb-div.active  {
     background-color: rgb(169, 219, 169);
+    border-right-width: 1px;
+    border-bottom-width: 1px;
     border-bottom-color: rgb(70, 165, 70);
     border-left-color: rgb(70, 165, 70);
     border-right-color: rgb(70, 165, 70);
@@ -53,6 +55,8 @@ td.gd-dt-cb-div.active  {
 
 tr:nth-child(odd) > td.gd-dt-cb-div.active {
     background-color: rgb(169, 219, 169);
+    border-right-width: 1px;
+    border-bottom-width: 1px;
     border-bottom-color: rgb(70, 165, 70);
     border-left-color: rgb(70, 165, 70);
     border-right-color: rgb(70, 165, 70);

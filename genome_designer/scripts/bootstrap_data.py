@@ -108,7 +108,48 @@ def bootstrap_fake_data():
                 ref_value='A',
                 alt_value='G')
     _create_fake_variants()
+    
+    ### Add fake variants to a set
+    from main.models import VariantSet
+    from main.models import VariantToVariantSet
+    @transaction.commit_on_success
+    def _add_fake_variants_to_fake_set():
+        
+        ref_genome_1 = ReferenceGenome.objects.get(
+            label=REF_GENOME_1_LABEL)
+        
+        (sample_1, created) = ExperimentSample.objects.get_or_create(
+            project=test_project,
+            label=SAMPLE_1_LABEL)
 
+
+        var_set1 = VariantSet.objects.create(
+            reference_genome=ref_genome_1,
+            label='Test Set (vars at pos 0-50)')
+        var_set2 = VariantSet.objects.create(
+            reference_genome=ref_genome_1,
+            label='Test Set (vars at pos 51-100)')
+
+        variant_list = Variant.objects.filter(
+            reference_genome=ref_genome_1)
+        for var in variant_list:
+            
+            #add variant to one of two sets, depending on var position
+            if var.position < 50:
+                if var.position < 25:
+                    vvs = VariantToVariantSet.objects.create(
+                        variant=var,
+                        variant_set=var_set1)
+                else:
+                    vvs = VariantToVariantSet.objects.create(
+                        variant=var,
+                        variant_set=var_set2)
+
+                #add a sample to the association if the variant is odd
+                if var.position % 2:
+                    vvs.sample_variant_set_association.add(sample_1)
+                    
+    _add_fake_variants_to_fake_set()
 
 def reset_database():
     """Deletes the old database and sets up a new one.

@@ -209,10 +209,10 @@ def alignment_create_view(request, project_uid):
             return HttpResponseBadRequest(
                     "At least sample required.")
 
-        # Kick of alignments.
+        # Kick off alignments.
         # NOTE: Hard-coded test_models_only=True for now.
         create_alignment_groups_and_start_alignments(ref_genome_list,
-                sample_list, test_models_only=True)
+                sample_list, test_models_only=False)
 
         # Success. Return a redirect response.
         response_data = {

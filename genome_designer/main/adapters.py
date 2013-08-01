@@ -6,8 +6,11 @@
 """
 
 import json
+import string
 
-from django.db.models import Model
+from django.db.models import Model, ManyToManyField
+
+#from django.db.models.fields.related import ManyRelatedManager
 
 def adapt_model_to_frontend(model, filters={}):
     """Converts django models to frontend format.
@@ -38,11 +41,18 @@ def adapt_model_to_frontend(model, filters={}):
 
     # Get a list of fields required for displaying the objects, in the order
     # in which they should be displayed.
-    field_list = model.get_field_order()
+    field_dict_list = model.get_field_order()
+    
+    # Each field is a dict with two keys, 'field' for field name and 'verbose'
+    # for display name. Get each. If 'verbose' is missing, then make verbose 
+    # be the field with _'s turned to spaces and Title Cased. 
+    field_list = [fdict['field'] for fdict in field_dict_list]
 
     # Get the verbose field names, which will be used as column headers.
-    field_verbose_names = [model._meta.get_field(field).verbose_name
-            for field in field_list]
+    get_verbose= lambda fdict: (fdict['verbose'] if 'verbose' in fdict else 
+        string.capwords(fdict['field'],'_').replace('_',' '))    
+    field_verbose_names = [get_verbose(fdict) for fdict in field_dict_list]
+
 
     # A list of dicts containing the order of each column and the field titles
     # for each column, used for configuring jquery.datatables.js
@@ -67,14 +77,14 @@ def adapt_model_instance_to_frontend(model_instance):
             implement a get_field_order() method.
 
     Returns:
-        A dictionary representation of the model. Maybe contained nested
+        A dictionary representation of the model. May contained nested
             objects.
     """
     # The model class.
     model_type = type(model_instance)
 
     # The visible fields of the model.
-    visible_field_list = model_type.get_field_order()
+    visible_field_list = [f['field'] for f in model_type.get_field_order()]
 
     # Get (key, value) pairs for visible fields.
     visible_field_pairs = [(field, get_model_field_fe_representation(
@@ -98,6 +108,10 @@ def get_model_field_fe_representation(model_obj, field):
         This method allows recursively diving into models.
         """
         model_field = getattr(model_obj,field)
+        
         if isinstance(model_field, Model):
             return adapt_model_instance_to_frontend(model_field)
+        elif model_field.__class__.__name__ ==  'ManyRelatedManager':
+            return [
+                adapt_model_instance_to_frontend(m) for m in model_field.all()]
         return str(model_field)

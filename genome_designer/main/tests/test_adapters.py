@@ -45,7 +45,7 @@ class TestAdapters(TestCase):
         self.assertEqual(1, len(fe_ref_genomes['obj_list']))
         ref_genome_1_fe = fe_ref_genomes['obj_list'][0]
         for field in ReferenceGenome.get_field_order():
-            self.assertTrue(field in ref_genome_1_fe)
+            self.assertTrue(field['field'] in ref_genome_1_fe)
         self.assertTrue('href' in ref_genome_1_fe)
 
 
@@ -66,8 +66,9 @@ class TestAdapters(TestCase):
         fe_variant = fe_variants['obj_list'][0]
 
         for field in Variant.get_field_order():
-            self.assertTrue(field in fe_variant)
+            self.assertTrue(field['field'] in fe_variant)
 
         self.assertTrue('reference_genome' in fe_variant)
         for ref_genome_field in ReferenceGenome.get_field_order():
-            self.assertTrue(ref_genome_field in fe_variant['reference_genome'])
+            self.assertTrue(ref_genome_field['field'] in 
+                fe_variant['reference_genome'])
