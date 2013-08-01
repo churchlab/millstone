@@ -31,3 +31,20 @@ def setup_django_env():
     # We set the process umask here to enforce this.
     # TODO: Is there a better place to set this?
     os.umask(002)
+
+
+def fn_runner(fn, args_list, concurrent=False):
+    """Helper method that handles calling a method depending on whether
+    concurrent is True or not.
+
+    Returns:
+        If concurrent=True, immediately returns a celery.Result object without
+        blocking. Otherwise blocks while executing the function, returning an
+        implicit None.
+    """
+    from main.tasks import generic_task
+
+    if concurrent:
+        return generic_task.delay(fn.__name__, args_list)
+    else:
+        fn(*args_list)

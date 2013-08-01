@@ -16,12 +16,13 @@ from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from scripts.import_util import add_dataset_to_entity
+from scripts.util import fn_runner
 from settings import PWD, TOOLS_DIR
 
 TOOLS_DIR = os.path.join(PWD,TOOLS_DIR)
 
 def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
-        test_models_only=False):
+        test_models_only=False, concurrent=True):
     """Creates an AlignmentGroup and kicks off alignment for each one.
 
     We create an AlignmentGroup for each ReferenceGenome and align all
@@ -33,7 +34,7 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
             ReferenceGenomes.
         test_models_only: If True, don't actually run alignments. Just create
             models.
-
+        concurrent: Whether to run the alignments in parallel.
     """
     assert len(ref_genome_list) > 0, (
             "Must provide at least one ReferenceGenome.")
@@ -45,9 +46,13 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
                 label='TODO_LABEL',
                 reference_genome=ref_genome,
                 aligner=AlignmentGroup.ALIGNER.BWA)
+
+        # Kick of the alignments concurrently.
+        alignment_tasks = []
         for sample in sample_list:
-            align_with_bwa(alignment_group, sample,
-                    test_models_only=test_models_only)
+            args = [alignment_group, sample, test_models_only]
+            alignment_tasks.append(fn_runner(align_with_bwa, args, concurrent))
+
 
 
 def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):

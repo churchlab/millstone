@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.shortcuts import render
 
+from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.models import AlignmentGroup
 from main.models import Project
@@ -170,12 +171,18 @@ def alignment_view(request, project_uid, alignment_group_uid):
     """
     project = Project.objects.get(uid=project_uid)
     alignment_group = AlignmentGroup.objects.get(uid=alignment_group_uid)
+
+    # Initial javascript data.
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(alignment_group)
+    })
     context = {
         'project': project,
         'alignment_group': alignment_group,
         'experiment_sample_to_alignment_list_json': adapt_model_to_frontend(
                 ExperimentSampleToAlignment,
-                {'alignment_group': alignment_group})
+                {'alignment_group': alignment_group}),
+        'init_js_data': init_js_data
     }
     return render(request, 'alignment.html', context)
 

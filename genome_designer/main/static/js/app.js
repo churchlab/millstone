@@ -29,7 +29,8 @@ gd.App.prototype.run = function() {
       break;
 
     case 'ALIGNMENT':
-      var view = new gd.AlignmentView();
+      var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var view = new gd.AlignmentView({'model': model});
       break;
 
     case 'ALIGNMENT_LIST':
@@ -39,7 +40,6 @@ gd.App.prototype.run = function() {
     case 'ALIGNMENT_CREATE':
       var view = new gd.AlignmentCreateView();
       break;
-    
 
     case 'VARIANT_SET':
       var view = new gd.VariantSetView();

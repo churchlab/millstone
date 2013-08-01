@@ -5,6 +5,7 @@ Tests for alignment_pipeline.py
 import os
 
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from main.models import AlignmentGroup
 from main.models import Dataset
@@ -70,13 +71,15 @@ class TestAlignmentPipeline(TestCase):
                 "No file at location %s" % bwa_align_dataset_path))
 
 
+    @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS = True,
+            CELERY_ALWAYS_EAGER = True, BROKER_BACKEND = 'memory')
     def test_create_alignment_groups_and_start_alignments(self):
         """Tests creating an alignment group.
         """
         ref_genome_list = [self.reference_genome]
         sample_list = [self.experiment_sample]
         create_alignment_groups_and_start_alignments(ref_genome_list,
-                sample_list, test_models_only=True)
+                sample_list, test_models_only=True, concurrent=True)
 
         alignment_group_obj_list = AlignmentGroup.objects.filter(
                 reference_genome=self.reference_genome)
