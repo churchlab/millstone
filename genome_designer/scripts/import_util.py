@@ -156,12 +156,23 @@ def copy_and_add_dataset_source(entity, dataset_label, dataset_type,
 
     Returns the Dataset object.
     """
+    dest = copy_dataset_to_entity_data_dir(entity, original_source_location)
+    return add_dataset_to_entity(
+            entity, dataset_label, dataset_type, dest)
+
+
+def copy_dataset_to_entity_data_dir(entity, original_source_location):
+    """Copies the data to the entity model data dir.
+
+    Returns:
+        The destination to which the file was copied.
+    """
+    assert hasattr(entity, 'get_model_data_dir')
     source_name = os.path.split(original_source_location)[1]
     dest = os.path.join(entity.get_model_data_dir(), source_name)
     if not original_source_location == dest:
         shutil.copy(original_source_location, dest)
-    return add_dataset_to_entity(
-            entity, dataset_label, dataset_type, dest)
+    return dest
 
 
 def add_dataset_to_entity(entity, dataset_label, dataset_type,

@@ -176,7 +176,7 @@ class Dataset(Model):
     """
     # NOTE: I'm not sure whether we'll need uid for this, but keeping it
     # just in case for now.
-    uid = models.CharField(max_length=36, unique=True, 
+    uid = models.CharField(max_length=36, unique=True,
             default=(lambda: short_uuid(Dataset)))
 
     # The type of data this represents (e.g. Dataset.Type.BWA_ALIGN).
@@ -192,6 +192,7 @@ class Dataset(Model):
         FASTQ1 = 'f1'
         FASTQ2 = 'f2'
         BWA_ALIGN = 'bwa_align'
+        VCF_FREEBAYES = 'vcff'
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
 
@@ -330,7 +331,7 @@ class ReferenceGenome(Model):
     def ensure_model_data_dir_exists(self):
         """Ensure that a data directory exists for this model.
         """
-        # Make sure the root of projects exists
+        # Make sure the root exists.
         ensure_exists_0775_dir(self.get_model_data_root())
 
         # Check whether the data dir exists, and create it if not.
@@ -451,13 +452,39 @@ class AlignmentGroup(Model):
     start_time = models.DateTimeField(auto_now=True)
     end_time = models.DateTimeField(auto_now=True)
 
+    # Datasets pointing to files on the system (e.g. .fasta files, etc.)
+    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
+            verbose_name="Datasets")
+
+    def __unicode__(self):
+        return self.label
+
+    def get_model_data_root(self):
+        """Get the root location for all data of this type in the project.
+        """
+        return os.path.join(self.reference_genome.project.get_model_data_dir(),
+                'alignment_groups')
+
+    def get_model_data_dir(self):
+        """Get the full path to the location of this model's data.
+        """
+        return os.path.join(self.get_model_data_root(), str(self.uid))
+
+    def ensure_model_data_dir_exists(self):
+        """Ensure that a data directory exists for this model.
+        """
+        # Make sure the root exists.
+        ensure_exists_0775_dir(self.get_model_data_root())
+
+        # Check whether the data dir exists, and create it if not.
+        return ensure_exists_0775_dir(self.get_model_data_dir())
+
     def get_href(self):
         """Link to url view for this model.
         """
         return reverse(
                 'genome_designer.main.views.alignment_view',
                 args=(self.reference_genome.project.uid, self.uid))
-
 
     @classmethod
     def get_field_order(clazz):
@@ -469,6 +496,13 @@ class AlignmentGroup(Model):
                 {'field':'aligner'},
                 {'field':'start_time'},
                 {'field':'end_time'}]
+
+# We'll store freebayes and such under this location.
+def post_alignment_group_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_alignment_group_create, sender=AlignmentGroup,
+        dispatch_uid='alignment_group_create')
 
 
 class ExperimentSampleToAlignment(Model):
