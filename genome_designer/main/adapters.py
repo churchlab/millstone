@@ -69,12 +69,18 @@ def adapt_model_to_frontend(model, filters={}):
     })
 
 
-def adapt_model_instance_to_frontend(model_instance):
+def adapt_model_instance_to_frontend(model_instance, field_info={}):
     """Adapts a single model instance to the frontend representation.
 
     Args:
         model_instance: An instance of a Model object. The model class must
             implement a get_field_order() method.
+        field_info: If called recursively from 
+            get_model_field_fe_representation(), function also be passed 
+            with field_info keys from parent_model.get_field_order(). This
+            can decorate the serialized model with information like CSS class,
+            state, instructions on how to render in datatable_component.js, 
+            etc. 
 
     Returns:
         A dictionary representation of the model. May contained nested
@@ -85,10 +91,13 @@ def adapt_model_instance_to_frontend(model_instance):
 
     # The visible fields of the model.
     visible_field_list = [f['field'] for f in model_type.get_field_order()]
+    visible_field_dict = {f['field'] : f for f in model_type.get_field_order()}
+
 
     # Get (key, value) pairs for visible fields.
     visible_field_pairs = [(field, get_model_field_fe_representation(
-        model_instance, field)) for field in visible_field_list]
+        model_instance, field, visible_field_dict[field])) for field 
+        in visible_field_list]
 
     # Other values.
     other_pairs = []
@@ -96,22 +105,33 @@ def adapt_model_instance_to_frontend(model_instance):
         other_pairs.append(('href', model_instance.get_href()))
     if hasattr(model_instance, 'uid'):
         other_pairs.append(('uid', model_instance.uid))
-
+        
+    # Add in keys from field_info, which are inherited from parent model, if
+    # this function is called recursively from 
+    # get_model_field_fe_representation().
+    if field_info: 
+        other_pairs.extend(field_info.items())
+    
+    print field_info
+    print visible_field_pairs
+    print other_pairs
+    
     # Wrap the results in a dictionary.
     return dict(visible_field_pairs + other_pairs)
 
 
-def get_model_field_fe_representation(model_obj, field):
+def get_model_field_fe_representation(model_obj, field, field_info={}):
         """Returns the best frontend representation for a model field that is
         implemented.
 
         This method allows recursively diving into models.
+        
         """
         model_field = getattr(model_obj,field)
         
         if isinstance(model_field, Model):
-            return adapt_model_instance_to_frontend(model_field)
+            return adapt_model_instance_to_frontend(model_field, field_info)
         elif model_field.__class__.__name__ ==  'ManyRelatedManager':
             return [
-                adapt_model_instance_to_frontend(m) for m in model_field.all()]
+                adapt_model_instance_to_frontend(m, field_info) for m in model_field.all()]
         return str(model_field)

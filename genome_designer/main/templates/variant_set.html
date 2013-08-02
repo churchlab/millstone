@@ -2,19 +2,21 @@
 
 {% block content%}
 <div class="page-header">
-  <h1>Variant Sets</h1>
+  <h1>Alignment {{variant_set.label}}</h1>
 </div>
 
 <div class="container span12" style="box-sizing: border-box; padding: 50px">
-  <div id="gd-variant_set_list_view-datatable-hook">
+  <div id="gd-variant_set_view-datatable-hook">
   </div>
 </div>
 
 <script type="text/javascript">
-  VIEW_TAG = 'VARIANT_SET_LIST';
+  VIEW_TAG = 'VARIANTSET';
 
   {% autoescape off %}
-    VARIANT_SET_LIST_DATA = {{variant_set_list_json}};
+    VARIANT_TO_VARIANT_SET_DATA = {{variant_to_variant_set_json}};
+    
+    INIT_JS_DATA = {{init_js_data}};
   {% endautoescape %}
 </script>
 {% endblock %}

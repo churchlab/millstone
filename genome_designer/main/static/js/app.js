@@ -45,6 +45,10 @@ gd.App.prototype.run = function() {
       var view = new gd.VariantSetView();
       break;
 
+    case 'VARIANT_SET_LIST':
+      var view = new gd.VariantSetListView();
+      break;
+
     case 'VARIANT':
       var view = new gd.VariantView();
       break;

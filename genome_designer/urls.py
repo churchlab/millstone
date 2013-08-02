@@ -28,6 +28,9 @@ urlpatterns = patterns('',
     # Variant sets
     url(r'^projects/([\w-]+)/sets$',
             'genome_designer.main.views.variant_set_list_view'),
+    url(r'^projects/([\w-]+)/sets/([\w-]+)$',
+            'genome_designer.main.views.variant_set_view'),
+
 
     # Samples
     url(r'^projects/([\w-]+)/samples$',
