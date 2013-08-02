@@ -547,7 +547,9 @@ class Variant(Model):
                 {'field':'type'},
                 {'field':'ref_value', 'verbose':'Reference'},
                 {'field':'alt_value', 'verbose':'Alternate(s)'},
-                {'field':'variantset_set', 'verbose':'Set Membership'}]
+                {'field':'variantset_set', 
+                    'verbose':'Set Membership',
+                    'classes':['label']}]
 
 
 class VariantToExperimentSample(Model):
@@ -596,15 +598,16 @@ class VariantToVariantSet(Model):
     variant_set = models.ForeignKey('VariantSet')
     
     sample_variant_set_association = models.ManyToManyField('ExperimentSample',
-        blank=True, null=True)
+        blank=True, null=True)    
     
-    def get_href(self):
-        """Link to url view for this model.
+    @classmethod
+    def get_field_order(clazz):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
         """
-        return reverse(
-                'genome_designer.main.views.variantset_view',
-                args=(self.variant_set.project.uid, self.variant_set.uid))
-    
+        return [{'field':'variant'},
+                {'field':'sample_variant_set_association'}]
+
 
 class VariantSet(Model):
     """Model for grouping together variants for analysis.
@@ -637,13 +640,20 @@ class VariantSet(Model):
         through = 'VariantToVariantSet')
     
     @classmethod
-    def get_field_order(self):
+    def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
         return [{'field':'label'},
                 {'field':'reference_genome'}]
-
+    
+    def get_href(self):
+        """Link to url view for this model.
+        """
+        return reverse(
+                'genome_designer.main.views.variant_set_view',
+                args=(self.reference_genome.project.uid, self.uid))
+    
 class VariantFilter(Model):
     """Model used to save a string representation of a filter used to sift
     through Variants.

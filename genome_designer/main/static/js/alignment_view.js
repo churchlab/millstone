@@ -1,5 +1,5 @@
 /**
- * @fileoverview List of alignments.
+ * @fileoverview Single alignment and samples within.
  */
 
 

@@ -31,6 +31,25 @@ gd.DataTableComponent = Backbone.View.extend({
     this.updateDatatable(this.displayableObjList, this.displayableFieldConfig);
   },
 
+  makeDisplayableObject: function(obj) {
+    
+    /* Compute href for object with class information. */
+    if ('href' in obj && 'label' in obj) {
+
+      /* If displayable object has css classes, compile them into string */
+      if ('classes' in obj) {
+        class_str = 'class="' + obj.classes.join(' ') + '" ';
+      }
+      else {
+        class_str = '';
+      }
+      
+      displayValue = '<a ' + class_str + 'href="' + obj.href + '">' + obj.label + '</>';
+    } else if ('label' in obj) {
+      displayValue = obj.label;
+    }
+    return displayValue
+  },
 
   /** Make the list of objects into a displayable form. */
   makeDisplayableObjectList: function(objList) {
@@ -47,15 +66,14 @@ gd.DataTableComponent = Backbone.View.extend({
         var key = pair[0];
         var value = pair[1];
         var displayValue = value;
-        if (typeof(value) == 'object') {
-          if ('href' in value && 'label' in value) {
-            displayValue = '<a href="' + value.href + '">' + value.label + '</>';
-          } else if ('label' in value) {
-            displayValue = value.label;
-          }
+        if (_.isArray(value)) {
+          displayValue = _.map(value, this.makeDisplayableObject).join(' ');
+        }
+        else if (typeof(value) == 'object') {
+          displayValue = this.makeDisplayableObject(value)
         }
         displayableObj[key] = displayValue;
-      })
+      }, this);
 
       // For the object itself, if there is a label and href key,
       // change value keyed by value to be an anchor.
@@ -74,7 +92,7 @@ gd.DataTableComponent = Backbone.View.extend({
           '<input type="checkbox" class="gd-dt-cb" name="gd-row-select" value="' + uid + '">';
 
       displayableObjList.push(displayableObj);
-    });
+    }, this);
 
     return displayableObjList;
   },

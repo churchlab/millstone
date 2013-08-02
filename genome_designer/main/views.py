@@ -14,6 +14,8 @@ from main.models import ReferenceGenome
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Variant
+from main.models import VariantSet
+from main.models import VariantToVariantSet
 from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
@@ -243,10 +245,35 @@ def alignment_create_view(request, project_uid):
 @login_required
 def variant_set_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
+        
     context = {
-        'project': project
+        'project': project,
+        'variant_set_list_json': adapt_model_to_frontend(VariantSet,
+                {'reference_genome__project':project})
     }
+    
     return render(request, 'variant_set_list.html', context)
+
+@login_required
+def variant_set_view(request, project_uid, variant_set_uid):
+    project = Project.objects.get(uid=project_uid)
+    variant_set = VariantSet.objects.get(uid=variant_set_uid)
+    
+    # Initial javascript data.
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(variant_set)
+    })
+    
+    context = {
+        'project': project,
+        'variant_set': variant_set,
+        'variant_to_variant_set_json': adapt_model_to_frontend(
+                VariantToVariantSet,
+                {'variant_set': variant_set}),
+        'init_js_data': init_js_data
+    }
+    
+    return render(request, 'variant_set.html', context)
 
 
 @login_required

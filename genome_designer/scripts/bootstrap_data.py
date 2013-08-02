@@ -142,10 +142,10 @@ def bootstrap_fake_data():
 
         var_set1 = VariantSet.objects.create(
             reference_genome=ref_genome_1,
-            label='Test Set (vars at pos 0-50)')
+            label='Set A')
         var_set2 = VariantSet.objects.create(
             reference_genome=ref_genome_1,
-            label='Test Set (vars at pos 51-100)')
+            label='Set B')
 
         variant_list = Variant.objects.filter(
             reference_genome=ref_genome_1)
@@ -154,18 +154,25 @@ def bootstrap_fake_data():
             #add variant to one of two sets, depending on var position
             if var.position < 50:
                 if var.position < 25:
-                    vvs = VariantToVariantSet.objects.create(
+                    vvs1 = VariantToVariantSet.objects.create(
                         variant=var,
                         variant_set=var_set1)
-                else:
-                    vvs = VariantToVariantSet.objects.create(
+                    
+                    #add a sample to the association if the variant is odd
+                    if var.position % 2:
+                        vvs1.sample_variant_set_association.add(sample_1)
+                        
+                if var.position > 20:
+                    vvs2 = VariantToVariantSet.objects.create(
                         variant=var,
                         variant_set=var_set2)
-
-                #add a sample to the association if the variant is odd
-                if var.position % 2:
-                    vvs.sample_variant_set_association.add(sample_1)
+                
+                    #add a sample to the association if the variant is even
+                    if not var.position % 2:
+                        vvs2.sample_variant_set_association.add(sample_1)
                     
+
+                                
     _add_fake_variants_to_fake_set()
 
 def reset_database():

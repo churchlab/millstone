@@ -14,7 +14,7 @@ gd.AlignmentListView = Backbone.View.extend({
     $('#gd-sidenav-link-alignments').addClass('active');
 
     this.datatable = new gd.DataTableComponent({
-        el: $('#gd-alignment_view-datatable-hook'),
+        el: $('#gd-alignment_list_view-datatable-hook'),
         objList: ALIGNMENT_LIST_DATA['obj_list'],
         fieldConfig: ALIGNMENT_LIST_DATA['field_config']
     });
