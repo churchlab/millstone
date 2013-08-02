@@ -1,6 +1,6 @@
-from django.conf.urls.defaults import include
-from django.conf.urls.defaults import patterns
-from django.conf.urls.defaults import url
+from django.conf.urls import include
+from django.conf.urls import patterns
+from django.conf.urls import url
 
 urlpatterns = patterns('',
     url(r'^$', 'genome_designer.main.views.home_view'),
