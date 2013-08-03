@@ -5,6 +5,7 @@ Tests for alignment_pipeline.py
 import os
 
 from django.test import TestCase
+import vcf
 
 from main.models import AlignmentGroup
 from main.models import Dataset
@@ -92,3 +93,11 @@ class TestSNPCallers(TestCase):
 
         # Make sure the .vcf file actually exists.
         self.assertTrue(os.path.exists(vcf_dataset.get_absolute_location()))
+
+        # Make sure the vcf is valid by reading it using pyvcf.
+        with open(vcf_dataset.get_absolute_location()) as vcf_fh:
+            try:
+                reader = vcf.Reader(vcf_fh)
+                reader.next()
+            except:
+                self.fail("Not valid vcf")

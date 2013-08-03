@@ -39,6 +39,7 @@ from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Model
 from django.db.models.signals import post_save
+from jsonfield import JSONField
 
 import settings
 
@@ -606,7 +607,21 @@ class VariantCallerCommonData(Model):
     variant, where some of the columns describe the variant, while other
     columns have a one-to-one correspondence to the alignments provided.
     """
-    pass
+    # Variants are always relative to a specific reference genome.
+    reference_genome = models.ForeignKey('ReferenceGenome')
+
+    # The Variant this ends up referring to. Because of the way that
+    # we parse variants, we usually create a VariantCallerCommonData
+    # object before getting or creating the corresponding Variant
+    # so this relationship may be False during an intermediate step
+    # but should not be False once calculation completes without errors.
+    snp = models.ForeignKey('Variant', null=True)
+
+    # Source dataset for this data.
+    source_dataset = models.ForeignKey('Dataset')
+
+    # Catch-all key-value data store.
+    data = JSONField()
 
 
 class VariantEvidence(Model):

@@ -5,16 +5,26 @@ Functions for calling SNPs.
 import os
 import subprocess
 
+import vcf
+
 from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
+from scripts.vcf_parser import parse_alignment_group_vcf
+
+
+# For now, we always use this dataset type for storing the vcf.
+VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
 
 
 def run_snp_calling_pipeline(alignment_group):
     """Calls SNPs for all of the alignments in the alignment_group.
     """
     run_freebayes(alignment_group, Dataset.TYPE.BWA_ALIGN)
+
+    # Parse the resulting vcf.
+    parse_alignment_group_vcf(alignment_group, VCF_DATASET_TYPE)
 
 
 def run_freebayes(alignment_group, alignment_type):
@@ -31,7 +41,7 @@ def run_freebayes(alignment_group, alignment_type):
 
     # We'll store it as a Dataset on the Genome,
     # implicitly validating the alignment_type.
-    vcf_dataset_type = Dataset.TYPE.VCF_FREEBAYES
+    vcf_dataset_type = VCF_DATASET_TYPE
 
     # Prepare a directory to put the output files.
     # We'll put them in /projects/<project_uid>/alignment_groups/vcf/freebayes/
