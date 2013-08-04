@@ -40,3 +40,6 @@ temp_data/
 
 # Third-party tools
 tools/
+
+# Textmate project file
+*.tmproj

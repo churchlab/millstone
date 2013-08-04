@@ -121,17 +121,17 @@ def adapt_model_instance_to_frontend(model_instance, field_info={}):
 
 
 def get_model_field_fe_representation(model_obj, field, field_info={}):
-        """Returns the best frontend representation for a model field that is
-        implemented.
+    """Returns the best frontend representation for a model field that is
+    implemented.
 
-        This method allows recursively diving into models.
-        
-        """
-        model_field = getattr(model_obj,field)
-        
-        if isinstance(model_field, Model):
-            return adapt_model_instance_to_frontend(model_field, field_info)
-        elif model_field.__class__.__name__ ==  'ManyRelatedManager':
-            return [
-                adapt_model_instance_to_frontend(m, field_info) for m in model_field.all()]
-        return str(model_field)
+    This method allows recursively diving into models.
+    
+    """
+    model_field = getattr(model_obj,field)
+    
+    if isinstance(model_field, Model):
+        return adapt_model_instance_to_frontend(model_field, field_info)
+    elif model_field.__class__.__name__ ==  'ManyRelatedManager':
+        return [
+            adapt_model_instance_to_frontend(m, field_info) for m in model_field.all()]
+    return str(model_field)

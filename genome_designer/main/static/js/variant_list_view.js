@@ -3,7 +3,7 @@
  */
 
 
-gd.VariantView = Backbone.View.extend({
+gd.VariantListView = Backbone.View.extend({
   el: '#gd-page-container',
 
 

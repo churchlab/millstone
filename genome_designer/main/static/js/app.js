@@ -49,8 +49,8 @@ gd.App.prototype.run = function() {
       var view = new gd.VariantSetListView();
       break;
 
-    case 'VARIANT':
-      var view = new gd.VariantView();
+    case 'VARIANT_LIST':
+      var view = new gd.VariantListView();
       break;
 
     case 'GENE':

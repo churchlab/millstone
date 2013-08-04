@@ -16,8 +16,10 @@ gd.AlignmentView = Backbone.View.extend({
     this.datatable = new gd.DataTableComponent({
         el: $('#gd-alignment_view-datatable-hook'),
         objList: EXPERIMENT_TO_SAMPLE_DATA['obj_list'],
-        fieldConfig: EXPERIMENT_TO_SAMPLE_DATA['field_config']
+        fieldConfig: EXPERIMENT_TO_SAMPLE_DATA['field_config'],
     });
+    
+    this.datatable.addDropdownOption('Test Option', 'test');
   },
 
   /** Decorate the side nav bar. */
