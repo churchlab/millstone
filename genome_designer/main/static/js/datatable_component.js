@@ -196,7 +196,6 @@ gd.DataTableComponent = Backbone.View.extend({
    * Add a dropdown option to the datatable.
    */
   addDropdownOption: function (html, click_event) {
-    alert('rendering dropdown option!');
     var rendered = '<li role="presentation"><a role="menuitem" tabindex="-1" onclick="'+ click_event + '">' + html + '</a></li>';
     $('#' + this.datatableId + '-dropdown').append(rendered);
   },
