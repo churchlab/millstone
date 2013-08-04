@@ -13,6 +13,10 @@ from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
 from scripts.vcf_parser import parse_alignment_group_vcf
 
+from settings import PWD, TOOLS_DIR
+
+# Load the tools dir from settings.py
+TOOLS_DIR = os.path.join(PWD,TOOLS_DIR)
 
 # For now, we always use this dataset type for storing the vcf.
 VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
@@ -76,17 +80,16 @@ def run_freebayes(alignment_group, alignment_type):
         bam_part.append(bam_file)
 
     # Build the full command and execute it for all bam files at once.
-    full_command = (['freebayes'] + bam_part + [
+    full_command = (['%s/freebayes/freebayes' %  TOOLS_DIR] + bam_part + [
         '--fasta-reference', fasta_ref,
         '--pvar', '0.001',
         '--ploidy', '2',
         '--min-alternate-fraction', '.3',
-        '--no-ewens-priors',
+        '--hwe-priors-off',
+        '--binomial-obs-priors-off',
         '--use-mapping-quality',
-        '--no-marginals',
-        '--left-align-indels',
         '--min-base-quality', '25',
-        '--min-supporting-quality', '30,30'
+        '--min-mapping-quality', '30'
     ])
 
     with open(vcf_output_filename, 'w') as fh:
