@@ -19,6 +19,7 @@ from main.models import VariantToVariantSet
 from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
+from scripts.snp_callers import run_snp_calling_pipeline
 
 def home_view(request):
     """The main landing page.
@@ -173,6 +174,10 @@ def alignment_view(request, project_uid, alignment_group_uid):
     """
     project = Project.objects.get(uid=project_uid)
     alignment_group = AlignmentGroup.objects.get(uid=alignment_group_uid)
+
+    if request.POST:
+        run_snp_calling_pipeline(alignment_group)
+        return HttpResponse('ok')
 
     # Initial javascript data.
     init_js_data = json.dumps({
