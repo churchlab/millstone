@@ -17,12 +17,13 @@ from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from scripts.import_util import add_dataset_to_entity
 from scripts.util import fn_runner
+from settings import DEBUG_CONCURRENT
 from settings import PWD, TOOLS_DIR
 
 TOOLS_DIR = os.path.join(PWD,TOOLS_DIR)
 
 def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
-        test_models_only=False, concurrent=True):
+        test_models_only=False, concurrent=DEBUG_CONCURRENT):
     """Creates an AlignmentGroup and kicks off alignment for each one.
 
     We create an AlignmentGroup for each ReferenceGenome and align all
@@ -34,7 +35,7 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
             ReferenceGenomes.
         test_models_only: If True, don't actually run alignments. Just create
             models.
-        concurrent: Whether to run the alignments in parallel.
+        concurrent: If True, run alignments in parallel.
     """
     assert len(ref_genome_list) > 0, (
             "Must provide at least one ReferenceGenome.")

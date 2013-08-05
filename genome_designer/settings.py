@@ -13,6 +13,11 @@ PWD = os.path.dirname(os.path.realpath(__file__ ))
 TOOLS_DIR = 'tools'
 
 DEBUG = True
+
+# Default True, requiring celery server to be running.
+# Set this to False to force synchronous behavior.
+DEBUG_CONCURRENT = True
+
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
