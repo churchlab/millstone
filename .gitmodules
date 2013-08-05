@@ -1,0 +1,3 @@
+[submodule "jbrowse"]
+	path = jbrowse
+	url = git@github.com:churchlab/jbrowse.git
