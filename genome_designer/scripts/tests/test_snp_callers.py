@@ -68,10 +68,6 @@ class TestSNPCallers(TestCase):
         copy_and_add_dataset_source(sample_1, Dataset.TYPE.FASTQ2,
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
 
-        ### Add alignment data.
-        copy_and_add_dataset_source(sample_1, Dataset.TYPE.BWA_ALIGN,
-                Dataset.TYPE.BWA_ALIGN, TEST_BAM)
-
         # Create alignment to the sample.
         sample_alignment = ExperimentSampleToAlignment.objects.create(
                 alignment_group=alignment_group,
