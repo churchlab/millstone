@@ -18,9 +18,9 @@ from main.models import ExperimentSampleToAlignment
 from scripts.import_util import add_dataset_to_entity
 from scripts.util import fn_runner
 from settings import DEBUG_CONCURRENT
-from settings import PWD, TOOLS_DIR
+from settings import PWD
+from settings import TOOLS_DIR
 
-TOOLS_DIR = os.path.join(PWD,TOOLS_DIR)
 
 def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
         test_models_only=False, concurrent=DEBUG_CONCURRENT):

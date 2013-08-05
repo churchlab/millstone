@@ -14,9 +14,9 @@ import zipfile
 
 from bs4 import BeautifulSoup
 
-from settings import TOOLS_DIR, PWD
+from settings import PWD
+from settings import TOOLS_DIR
 
-TOOLS_DIR = os.path.join(PWD, TOOLS_DIR)
 
 TOOLS_URLS = { 
     'bwa' : {

@@ -8,17 +8,17 @@ from django.conf import global_settings
 # Useful for settings that require absolute paths like templates.
 PWD = os.path.dirname(os.path.realpath(__file__ ))
 
-# The relative path of the third party tools that we will download in 
-# setup.py and call through various scripts. 
-TOOLS_DIR = 'tools'
+# Absolute path to the third-party tools dir where setup.py stores
+# downloaded tools that are used internally.
+TOOLS_DIR = os.path.join(PWD, 'tools')
 
 DEBUG = True
+
+TEMPLATE_DEBUG = DEBUG
 
 # Default True, requiring celery server to be running.
 # Set this to False to force synchronous behavior.
 DEBUG_CONCURRENT = True
-
-TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),

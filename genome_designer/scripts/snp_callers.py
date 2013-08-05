@@ -14,10 +14,9 @@ from main.models import get_dataset_with_type
 from scripts.util import fn_runner
 from scripts.vcf_parser import parse_alignment_group_vcf
 from settings import DEBUG_CONCURRENT
-from settings import PWD, TOOLS_DIR
+from settings import PWD
+from settings import TOOLS_DIR
 
-# Load the tools dir from settings.py
-TOOLS_DIR = os.path.join(PWD,TOOLS_DIR)
 
 # For now, we always use this dataset type for storing the vcf.
 VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
