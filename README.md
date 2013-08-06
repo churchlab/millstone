@@ -60,6 +60,50 @@ message broker, for which we use RabbitMQ which is the default for Celery.
     Full instructions are [here](http://www.rabbitmq.com/download.html).
 
 
+### Git Submodules
+
+We currently submodule `jbrowse` and perhaps will do so with other tools in the
+future. Specifically, we have submoduled a forked copy of `jbrowse` at a
+specific commit. To checkout the appropriate submodule states, run:
+
+    $ git submodule update --init --recursive
+
+This will pull the submodules and also pull any of their submodules.
+
+
+### JBrowse (continued)
+
+After installing JBrowse via the Git submodule route described above, you
+need to do the following to get JBrowse up and running:
+
+1. Run the JBrowse setup script inside the `jbrowse` dir.
+
+        $ ./setup.sh
+
+
+2. Install nginx if it's not already installed and copy or symlink the config
+   file to nginx sites-enabled dir.
+
+        $ ln -s config/jbrowse.local.nginx /etc/nginx/sites-enabled
+
+3. Restart nginx.
+
+        $ sudo service nginx restart
+
+4. Check that JBrowse is working locally by visiting:
+
+      <http://localhost/jbrowse/index.html?data=sample_data/json/volvox>
+
+
+### Other third-party tools
+
+For most third-party tools that the application depends on, we've put them in a
+Dropbox, as either Mac OS X or Linux binaries. Run `setup.py` which should
+create a `tools/` dir and will download the correct build for your system.
+We recommend using our builds, as they have been tested with the rest of
+the application.
+
+
 ## Running the application
 
 0. Activate your virtualenv, e.g.:
