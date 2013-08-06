@@ -30,7 +30,11 @@ from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
+from main.models import VariantSet
+from main.models import VariantToVariantSet
+from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
+from scripts.import_util import copy_dataset_to_entity_data_dir
 from scripts.import_util import import_reference_genome_from_local_file
 import settings
 from settings import PWD as GD_ROOT
@@ -54,6 +58,12 @@ TEST_FASTQ1 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
 
 TEST_FASTQ2 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
+
+TEST_BAM = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+        '38d786f2', 'bwa_align.sorted.grouped.realigned.bam')
+
+TEST_BAM_INDEX = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+        '38d786f2', 'bwa_align.sorted.grouped.realigned.bam.bai')
 
 
 def bootstrap_fake_data():
@@ -80,6 +90,7 @@ def bootstrap_fake_data():
     (ref_genome_1, ref_genome_created) = ReferenceGenome.objects.get_or_create(
             label=REF_GENOME_1_LABEL, project=test_project, num_chromosomes=1,
             num_bases=100)
+
     REF_GENOME_2_LABEL = 'c321D'
     (ref_genome_2, ref_genome_created) = ReferenceGenome.objects.get_or_create(
             label=REF_GENOME_2_LABEL, project=test_project, num_chromosomes=1,
@@ -105,13 +116,19 @@ def bootstrap_fake_data():
     ### Create an alignment.
     alignment_group_1 = AlignmentGroup.objects.create(
             label='Alignment 1',
-            reference_genome=ref_genome_1,
+            reference_genome=ref_genome_3,
             aligner=AlignmentGroup.ALIGNER.BWA)
-
     # Link it to a sample.
-    ExperimentSampleToAlignment.objects.create(
+    sample_alignment = ExperimentSampleToAlignment.objects.create(
             alignment_group=alignment_group_1,
             experiment_sample=sample_1)
+    ### Add alignment data. NOTE: Stored in sample model dir.
+    # NOTE: This is a bit convoluted. Perhaps it would be better to store alignments
+    # in the ExperimentSampleToAlignment directory.
+    copy_dest = copy_dataset_to_entity_data_dir(sample_1, TEST_BAM)
+    copy_dataset_to_entity_data_dir(sample_1, TEST_BAM_INDEX)
+    add_dataset_to_entity(sample_alignment, Dataset.TYPE.BWA_ALIGN,
+            Dataset.TYPE.BWA_ALIGN, copy_dest)
 
     ### Create some fake variants
     @transaction.commit_on_success
@@ -127,18 +144,14 @@ def bootstrap_fake_data():
     _create_fake_variants()
     
     ### Add fake variants to a set
-    from main.models import VariantSet
-    from main.models import VariantToVariantSet
     @transaction.commit_on_success
     def _add_fake_variants_to_fake_set():
-        
         ref_genome_1 = ReferenceGenome.objects.get(
             label=REF_GENOME_1_LABEL)
         
         (sample_1, created) = ExperimentSample.objects.get_or_create(
             project=test_project,
             label=SAMPLE_1_LABEL)
-
 
         var_set1 = VariantSet.objects.create(
             reference_genome=ref_genome_1,
@@ -170,9 +183,6 @@ def bootstrap_fake_data():
                     #add a sample to the association if the variant is even
                     if not var.position % 2:
                         vvs2.sample_variant_set_association.add(sample_1)
-                    
-
-                                
     _add_fake_variants_to_fake_set()
 
 def reset_database():

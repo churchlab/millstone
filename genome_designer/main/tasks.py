@@ -12,6 +12,7 @@ it here.
 from celery import task
 
 from scripts.alignment_pipeline import *
+from scripts.snp_callers import *
 
 @task()
 def generic_task(fn_name, args_list):

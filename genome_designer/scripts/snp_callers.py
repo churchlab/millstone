@@ -11,19 +11,26 @@ from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
+from scripts.util import fn_runner
 from scripts.vcf_parser import parse_alignment_group_vcf
+from settings import DEBUG_CONCURRENT
+from settings import PWD
+from settings import TOOLS_DIR
 
-from settings import PWD, TOOLS_DIR
-
-# Load the tools dir from settings.py
-TOOLS_DIR = os.path.join(PWD,TOOLS_DIR)
 
 # For now, we always use this dataset type for storing the vcf.
 VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
 
 
-def run_snp_calling_pipeline(alignment_group):
+def run_snp_calling_pipeline(alignment_group, concurrent=DEBUG_CONCURRENT):
     """Calls SNPs for all of the alignments in the alignment_group.
+    """
+    args = [alignment_group]
+    fn_runner(run_snp_calling_pipeline_internal, args, concurrent)
+
+
+def run_snp_calling_pipeline_internal(alignment_group):
+    """Internal method to provide async interface.
     """
     run_freebayes(alignment_group, Dataset.TYPE.BWA_ALIGN)
 

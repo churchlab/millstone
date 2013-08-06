@@ -29,7 +29,7 @@ class TestViews(TestCase):
         """Call all of the views and make sure they don't error.
         """
         test_project = Project.objects.all()[0]
-        ref_genome = test_project.referencegenome_set.all()[0]
+        ref_genome = test_project.referencegenome_set.get(label='test_genome')
         alignment_group = ref_genome.alignmentgroup_set.all()[0]
 
         urls = [
