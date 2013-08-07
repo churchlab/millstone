@@ -80,6 +80,7 @@ def reference_genome_list_view(request, project_uid):
         'annotated': False,
         'parents': [],
         'children': [],
+        'href': obj.get_href()
     } for obj in ref_genome_list]
 
     # HACK: Add some fake data for now.
@@ -118,7 +119,8 @@ def reference_genome_view(request, project_uid, ref_genome_uid):
     reference_genome = ReferenceGenome.objects.get(uid=ref_genome_uid)
     context = {
         'project': project,
-        'reference_genome': reference_genome
+        'reference_genome': reference_genome,
+        'jbrowse_link': reference_genome.get_client_jbrowse_link()
     }
     return render(request, 'reference_genome.html', context)
 

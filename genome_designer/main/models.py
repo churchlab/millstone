@@ -348,6 +348,21 @@ class ReferenceGenome(Model):
         """Ensures that the jbrowse data dir exists."""
         return ensure_exists_0775_dir(self.get_jbrowse_directory_path())
 
+    def get_client_jbrowse_link(self):
+        """Returns the link to jbrowse for this ReferenceGenome.
+
+        Example url for user with uid 'abc', and project id 'xyz', and
+        refgenome id 456:
+            '/jbrowse/?data=gd_data/abc/projects/xyz/ref_genomes/456/jbrowse/'
+        """
+        return os.path.join(
+                '/jbrowse/?data=gd_data/',
+                'projects',
+                str(self.project.uid),
+                'ref_genomes',
+                str(self.uid),
+                'jbrowse')
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.

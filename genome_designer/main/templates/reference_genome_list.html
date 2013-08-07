@@ -34,7 +34,7 @@
   <tbody>
     {% for obj in ref_genome_list %}
       <tr>
-        <td><a href="#">{{obj.label}}</a></td>
+        <td><a href="{{obj.href}}">{{obj.label}}</a></td>
         <td>{{obj.num_chromosomes}}</td>
         <td>{{obj.total_size}}</td>
         <td>
