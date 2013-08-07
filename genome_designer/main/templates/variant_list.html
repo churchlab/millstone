@@ -4,7 +4,11 @@
 <div class="page-header">
   <h1>Variants</h1>
 </div>
-<div class="container span12" style="box-sizing: border-box; padding: 50px">
+<div id="gd-variant-set-action-submit-alert" class="alert" style="display:none">
+  <button type="button" class="close" data-dismiss="alert">&times;</button>
+  <span id="gd-variant-set-action-submit-alert-msg"></span>
+</div>
+<div class="container span12" style="box-sizing: border-box; padding: 30px; padding-top: 0px">
   <div id="gd-datatable-hook">
   </div>
 </div>
@@ -13,7 +17,10 @@
   VIEW_TAG = 'VARIANT_LIST';
 
   {% autoescape off %}
+    // variant list data for datatable-hook
     VARIANT_LIST_DATA = {{variant_list_json}};
+    // variant set list data for adding variants to sets with dropdown menu
+    VARIANT_SET_LIST_DATA = {{variant_set_list_json}};
   {% endautoescape %}
 </script>
 {% endblock %}
