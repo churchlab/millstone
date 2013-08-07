@@ -65,6 +65,18 @@ TEST_BAM = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
 TEST_BAM_INDEX = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'bwa_align.sorted.grouped.realigned.bam.bai')
 
+TEST_PROJECT_NAME = 'recoli'
+
+REF_GENOME_1_LABEL = 'mg1655'
+
+REF_GENOME_2_LABEL = 'c321D'
+
+SAMPLE_1_LABEL = 'sample1'
+
+VARIANTSET_1_LABEL = 'Set A'
+
+VARIANTSET_2_LABEL = 'Set B'
+
 
 def bootstrap_fake_data():
     """Fill the database with fake data.
@@ -77,7 +89,6 @@ def bootstrap_fake_data():
                 TEST_USERNAME, password=TEST_PASSWORD, email=TEST_EMAIL)
 
     ### Create some projects
-    TEST_PROJECT_NAME = 'recoli'
     (test_project, project_created) = Project.objects.get_or_create(
             title=TEST_PROJECT_NAME, owner=user.get_profile())
     (test_project_2, project_created) = Project.objects.get_or_create(
@@ -86,12 +97,11 @@ def bootstrap_fake_data():
             title='project3', owner=user.get_profile())
 
     ### Create some reference genomes
-    REF_GENOME_1_LABEL = 'mg1655'
+
     (ref_genome_1, ref_genome_created) = ReferenceGenome.objects.get_or_create(
             label=REF_GENOME_1_LABEL, project=test_project, num_chromosomes=1,
             num_bases=100)
 
-    REF_GENOME_2_LABEL = 'c321D'
     (ref_genome_2, ref_genome_created) = ReferenceGenome.objects.get_or_create(
             label=REF_GENOME_2_LABEL, project=test_project, num_chromosomes=1,
             num_bases=200)
@@ -101,7 +111,6 @@ def bootstrap_fake_data():
             test_project, 'test_genome', TEST_FASTA, 'fasta')
 
     ### Create some samples with backing data.
-    SAMPLE_1_LABEL = 'sample1'
     (sample_1, created) = ExperimentSample.objects.get_or_create(
             project=test_project,
             label=SAMPLE_1_LABEL)
@@ -142,44 +151,44 @@ def bootstrap_fake_data():
                 ref_value='A',
                 alt_value='G')
     _create_fake_variants()
-    
+
     ### Add fake variants to a set
     @transaction.commit_on_success
     def _add_fake_variants_to_fake_set():
         ref_genome_1 = ReferenceGenome.objects.get(
             label=REF_GENOME_1_LABEL)
-        
+
         (sample_1, created) = ExperimentSample.objects.get_or_create(
             project=test_project,
             label=SAMPLE_1_LABEL)
 
         var_set1 = VariantSet.objects.create(
             reference_genome=ref_genome_1,
-            label='Set A')
+            label=VARIANTSET_1_LABEL)
         var_set2 = VariantSet.objects.create(
             reference_genome=ref_genome_1,
-            label='Set B')
+            label=VARIANTSET_2_LABEL)
 
         variant_list = Variant.objects.filter(
             reference_genome=ref_genome_1)
         for var in variant_list:
-            
+
             #add variant to one of two sets, depending on var position
             if var.position < 50:
                 if var.position < 25:
                     vvs1 = VariantToVariantSet.objects.create(
                         variant=var,
                         variant_set=var_set1)
-                    
+
                     #add a sample to the association if the variant is odd
                     if var.position % 2:
                         vvs1.sample_variant_set_association.add(sample_1)
-                        
+
                 if var.position > 20:
                     vvs2 = VariantToVariantSet.objects.create(
                         variant=var,
                         variant_set=var_set2)
-                
+
                     #add a sample to the association if the variant is even
                     if not var.position % 2:
                         vvs2.sample_variant_set_association.add(sample_1)

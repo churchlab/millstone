@@ -5,16 +5,17 @@
   <h1>Alignment {{alignment_group.label}}</h1>
 </div>
 
-<div class="span3">
-  <a href="#">Variants for this alignment</a>
-</div>
-<div class="span3">
-  <button id="gd-alignments-rerun-variants-btn" class="btn">
-    Re-run
+
+<div class="btn-toolbar">
+  <button class="btn btn-primary" href="#">
+    Go to Variants for this alignment&hellip;
+  </button>
+  <button id="gd-alignments-rerun-variants-btn" class="btn btn-primary">
+    Re-run&hellip;
   </button>
 </div>
 
-<div class="container span12" style="box-sizing: border-box; padding: 50px">
+<div class="container span12" style="box-sizing: border-box; padding: 30px; padding-top: 10px;">
   <div id="gd-alignment_view-datatable-hook">
   </div>
 </div>
@@ -24,7 +25,7 @@
 
   {% autoescape off %}
     EXPERIMENT_TO_SAMPLE_DATA = {{experiment_sample_to_alignment_list_json}};
-
+    
     INIT_JS_DATA = {{init_js_data}};
   {% endautoescape %}
 </script>

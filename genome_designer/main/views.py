@@ -20,6 +20,7 @@ from scripts.alignment_pipeline import create_alignment_groups_and_start_alignme
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
 from scripts.snp_callers import run_snp_calling_pipeline
+from scripts.variant_sets import add_or_remove_variants_from_set
 
 def home_view(request):
     """The main landing page.
@@ -220,8 +221,7 @@ def alignment_create_view(request, project_uid):
                 uid__in=request_data['sampleUidList'])
         assert len(sample_list) == len(request_data['sampleUidList'])
         if not len(sample_list) > 0:
-            return HttpResponseBadRequest(
-                    "At least sample required.")
+            return HttpResponseBadRequest("At least one sample required.")
 
         # Kick off alignments.
         # NOTE: Hard-coded test_models_only=True for now.
@@ -250,25 +250,25 @@ def alignment_create_view(request, project_uid):
 @login_required
 def variant_set_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
-        
+
     context = {
         'project': project,
         'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 {'reference_genome__project':project})
     }
-    
+
     return render(request, 'variant_set_list.html', context)
 
 @login_required
 def variant_set_view(request, project_uid, variant_set_uid):
     project = Project.objects.get(uid=project_uid)
     variant_set = VariantSet.objects.get(uid=variant_set_uid)
-    
+
     # Initial javascript data.
     init_js_data = json.dumps({
         'entity': adapt_model_instance_to_frontend(variant_set)
     })
-    
+
     context = {
         'project': project,
         'variant_set': variant_set,
@@ -277,7 +277,7 @@ def variant_set_view(request, project_uid, variant_set_uid):
                 {'variant_set': variant_set}),
         'init_js_data': init_js_data
     }
-    
+
     return render(request, 'variant_set.html', context)
 
 
@@ -285,16 +285,46 @@ def variant_set_view(request, project_uid, variant_set_uid):
 def variant_list_view(request, project_uid):
     project = Project.objects.get(uid=project_uid)
 
-    # Fetch the list of variants and render it into the dom as json.
-    # The data will be displayed to the user via the javascript DataTables
-    # component.
-    context = {
-       'project': project,
-       'variant_list_json': adapt_model_to_frontend(Variant,
-            {'reference_genome__project':project})
-    }
+    # The json data required to populate datables and dropdowns.
+    # Can be called either by render or post response.
+    def get_json_data():
+        return {
+           'variant_list_json': adapt_model_to_frontend(Variant,
+                {'reference_genome__project':project}),
+           'variant_set_list_json': adapt_model_to_frontend(VariantSet,
+                {'reference_genome__project':project})}
 
-    return render(request, 'variant_list.html', context)
+    context = {}
+
+    # If we are returning data after a post and not redirecting.
+    if request.POST:
+        # Parse the data from the request body.
+        request_data = json.loads(request.body)
+
+        # Make sure the required keys are present.
+        REQUIRED_KEYS = [
+                'variantUidList',
+                'variantSetAction',
+                'variantSetUid']
+
+        if not all(key in request_data for key in REQUIRED_KEYS):
+            return HttpResponseBadRequest("Invalid request. Missing keys.")
+
+        # Add or remove the variants to the set, as variantSetAction.
+        context.update(add_or_remove_variants_from_set(**request_data))
+
+        # Get new updated json info for datatables and dropdown.
+        context.update(get_json_data())
+
+        return HttpResponse(
+                json.dumps(context),
+                content_type='application/json')
+
+    # If we are rendering a new view.
+    else:
+        context.update({'project': project})
+        context.update(get_json_data())
+        return render(request, 'variant_list.html', context)
 
 
 @login_required
