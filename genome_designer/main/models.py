@@ -338,6 +338,16 @@ class ReferenceGenome(Model):
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
+    def get_jbrowse_directory_path(self):
+        """Returns the full path to the root of JBrowse data for this
+        ReferenceGenome.
+        """
+        return os.path.join(self.get_model_data_dir(), 'jbrowse')
+
+    def ensure_jbrowse_dir(self):
+        """Ensures that the jbrowse data dir exists."""
+        return ensure_exists_0775_dir(self.get_jbrowse_directory_path())
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.

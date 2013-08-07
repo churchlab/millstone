@@ -16,6 +16,7 @@ from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from scripts.import_util import add_dataset_to_entity
+from scripts.jbrowse_util import prepare_reference_sequence
 from scripts.util import fn_runner
 from settings import DEBUG_CONCURRENT
 from settings import PWD
@@ -47,6 +48,9 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
                 label='TODO_LABEL',
                 reference_genome=ref_genome,
                 aligner=AlignmentGroup.ALIGNER.BWA)
+
+        # Make sure the initial JBrowse config is prepared.
+        prepare_reference_sequence(alignment_group.reference_genome)
 
         # Kick of the alignments concurrently.
         alignment_tasks = []

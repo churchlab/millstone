@@ -88,3 +88,9 @@ class TestAlignmentPipeline(TestCase):
         alignment_group_obj = alignment_group_obj_list[0]
         self.assertEqual(1,
                 len(alignment_group_obj.experimentsampletoalignment_set.all()))
+
+        # Make sure the initial JBrowse config has been created.
+        jbrowse_dir = self.reference_genome.get_jbrowse_directory_path()
+        self.assertTrue(os.path.exists(jbrowse_dir))
+        self.assertTrue(os.path.exists(os.path.join(jbrowse_dir,
+                'trackList.json')))

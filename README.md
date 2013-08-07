@@ -94,6 +94,11 @@ need to do the following to get JBrowse up and running:
 
       <http://localhost/jbrowse/index.html?data=sample_data/json/volvox>
 
+If upon running the Genome Designer application or its tests you observe errors
+related to missing perl modules, you can install them with `cpanm`, e.g.:
+
+        $ cpanm local::lib
+
 
 ### Other third-party tools
 
@@ -144,6 +149,10 @@ And for only the tests in `scripts` call:
 To run a single test module, run:
 
     (venv)$ python manage.py test main.tests.test_models
+
+To run a single test case, e.g.:
+
+    (venv)$ python manage.py test scripts/tests/test_alignment_pipeline.py:TestAlignmentPipeline.test_create_alignment_groups_and_start_alignments
 
 
 ### Adding Tests
