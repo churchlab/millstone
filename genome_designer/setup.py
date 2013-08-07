@@ -14,7 +14,9 @@ import zipfile
 
 from bs4 import BeautifulSoup
 
-from settings import PWD
+from settings import JBROwSE_DATA_SYMLINK_PATH
+from settings import MEDIA_ROOT
+from settings import PWD as GD_ROOT
 from settings import TOOLS_DIR
 
 
@@ -55,6 +57,10 @@ TOOLS_URLS = {
 }    
 
 def setup():
+    download_tools()
+    setup_jbrowse()
+
+def download_tools():
     # Create tools dir if it doesn't exist.
     if not os.path.isdir(TOOLS_DIR):
         os.mkdir(TOOLS_DIR)
@@ -127,6 +133,17 @@ def _get_file_url_from_dropbox(dropbox_url, filename):
                 filename, dropbox_url))
 
     return url_soup.find_all(href=re.compile(filename))[0]['href']
+
+
+def setup_jbrowse():
+    """Sets up JBrowse.
+
+    TODO: Move remaining manual steps here.
+    """
+    if not os.path.exists(JBROwSE_DATA_SYMLINK_PATH):
+        os.symlink(os.path.join(GD_ROOT, MEDIA_ROOT),
+                JBROwSE_DATA_SYMLINK_PATH)
+
 
 if __name__ == '__main__':
     setup()

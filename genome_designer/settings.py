@@ -220,6 +220,32 @@ TOOLS_DIR = 'tools'
 
 
 ###############################################################################
+# JBrowse
+###############################################################################
+
+# Root of the JBrowse installation.
+JBROWSE_ROOT = os.path.abspath(os.path.join(PWD, '../jbrowse'))
+
+# The location of the JBrowse scripts (perl scripts, ugh)
+JBROWSE_BIN_PATH = os.path.abspath(os.path.join(PWD, '../jbrowse/bin'))
+
+# Name of the symlink from within JBrowse to the data dir.
+# See JBROWSE_DATA_URL_ROOT description below.
+JBROWSE_DATA_SYMLINK_NAME = 'gd_data'
+
+# Full path to the JBrowse symlink (links back to the app data dir).
+JBROwSE_DATA_SYMLINK_PATH = os.path.join(JBROWSE_ROOT,
+        JBROWSE_DATA_SYMLINK_NAME)
+
+# The url root to data that JBrowse displays.
+# The app admin should create a symlink from the actual data root to this
+# location inside of the jbrowse/ dir. For example, the way we display bam
+# files is configuring the trackList.json file with a track with the following
+# key-value: "urlTemplate" : "/jbrowse/gd_data/users/8fc1f831/projects/58a62c7d/genomes/8dc829ec/align.bam"
+JBROWSE_DATA_URL_ROOT= '/jbrowse/' + JBROWSE_DATA_SYMLINK_NAME + '/'
+
+
+###############################################################################
 # Testing
 ###############################################################################
 

@@ -3,5 +3,9 @@ server {
 
 	location /jbrowse {
 		alias /home/glebk/Projects/churchlab/genome-designer-v2/jbrowse;
-	}
+  }
+
+  location / {
+    proxy_pass http://localhost:8000;
+  }
 }
