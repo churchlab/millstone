@@ -133,8 +133,7 @@ def sample_list_view(request, project_uid):
 
     # If a POST, then we are creating a new genome.
     if request.method == 'POST':
-        # TODO: Add more inforative error handling
-        print "Recieved POST!"
+        # TODO: Add more informative error handling
         try:
             import_samples_from_targets_file(
                     project,

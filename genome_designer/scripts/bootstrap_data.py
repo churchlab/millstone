@@ -102,7 +102,6 @@ def bootstrap_fake_data():
             test_project, REF_GENOME_1_LABEL, TEST_FASTA, 'fasta')
     prepare_reference_sequence(ref_genome_1)
 
-    REF_GENOME_2_LABEL = 'c321D'
     ref_genome_2 = import_reference_genome_from_local_file(
             test_project, REF_GENOME_2_LABEL, TEST_FASTA, 'fasta')
     prepare_reference_sequence(ref_genome_2)

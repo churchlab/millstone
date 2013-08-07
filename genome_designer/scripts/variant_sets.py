@@ -1,16 +1,40 @@
+"""
+Utility methods for manipulating variant sets.
+"""
+
 from django.http import HttpResponseBadRequest
 
 from main.models import AlignmentGroup
-from main.models import Project
-from main.models import ReferenceGenome
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
+from main.models import Project
+from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 
+
 def add_or_remove_variants_from_set(variantUidList, variantSetAction,
-        variantSetUid, sampleUidList=[]):
+        variantSetUid):
+    """Adds or remove variants to a set.
+
+    Supports partial add or remove in the case where a requested variant
+    add/remove doesn't make sense.
+
+    NOTE: Camel-case naming to match js params.
+
+    Args:
+        variantUidList: List of variant UIDs to operate on.
+        variantSetAction: The action to perform.
+        variantSetUid: The set to the add the variant to.
+
+    Returns:
+        A dictionary containing information about how the request was handled.
+        This is ultimately returned to the UI to show the client a message.
+        Contains the following keys:
+            * alert_type: Type of message. Either 'info', 'error', or 'warn'.
+            * alert_msg: Additional information shown to the user.
+    """
 
     # Parse the data and look up the relevant model instances:
 

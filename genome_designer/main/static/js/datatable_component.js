@@ -24,21 +24,23 @@ gd.DataTableComponent = Backbone.View.extend({
     this.render();
   },
 
+
   /** Override. */
   render: function() {
     // Draw the Datatable.
     this.updateDatatable(this.displayableObjList, this.displayableFieldConfig);
   },
 
+
   /** Used for updating an already rendered datatable with new data. */
   update: function(newObjList) {
     this.displayableObjList = this.makeDisplayableObjectList(newObjList);
-    console.log(newObjList);
     this.updateDatatable(this.displayableObjList, this.displayableFieldConfig);
   },
 
-  makeDisplayableObject: function(obj) {
 
+  /** Returns a string for the displayable representation of obj. */
+  makeDisplayableObject: function(obj) {
     /* Compute href for object with class information. */
     if ('href' in obj && 'label' in obj) {
 
@@ -56,6 +58,7 @@ gd.DataTableComponent = Backbone.View.extend({
     }
     return displayValue
   },
+
 
   /** Make the list of objects into a displayable form. */
   makeDisplayableObjectList: function(objList) {
@@ -124,6 +127,7 @@ gd.DataTableComponent = Backbone.View.extend({
     return displayableFieldConfig;
   },
 
+
   /**
    * Listen to newly made datatables checkboxes to update class info and
    * make their parent td clickable.
@@ -144,7 +148,7 @@ gd.DataTableComponent = Backbone.View.extend({
       $(cb).triggerHandler('change');
     });
 
-    $('input:checkbox.gd-dt-cb').change(function(){
+    $('input:checkbox.gd-dt-cb').change(function() {
       if ($(this).is(':checked')) {
         $(this).parent('td').addClass('active');
       } else {
@@ -153,12 +157,12 @@ gd.DataTableComponent = Backbone.View.extend({
     });
   },
 
+
   /**
    * Finds the gd-dt-master-cb checkbox class and draws a master checkbox
    * and dropdown button that can toggles all checkboxes that are in its table
    */
   createMasterCheckbox: function() {
-
     $(".gd-dt-cb.master").empty();
     $(".gd-dt-cb.master").append(
       '<div class="gd-dt-cb-div master pull-right btn-group">' +
@@ -204,6 +208,7 @@ gd.DataTableComponent = Backbone.View.extend({
     $('#' + this.datatableId + '-dropdown').append(rendered);
   },
 
+
   /**
    * Updates the datatable view based on the data available.
    *
@@ -214,9 +219,8 @@ gd.DataTableComponent = Backbone.View.extend({
    *        sTitle: title for the column.
    */
   updateDatatable: function(objList, fieldConfig) {
-
-    // If this is a new datatable.
-    if(this.datatable == null) {
+    if (this.datatable == null) {
+      // First time we are drawing this table.
 
       // Create a unique id for the datatable.
       this.datatableId = this.$el.attr('id') + '-datatable';
@@ -230,25 +234,24 @@ gd.DataTableComponent = Backbone.View.extend({
           'aaData': objList,
           'aoColumns': fieldConfig,
           'sDom': "<'row'<'span3'l><'span5'f><'span3'C><'gd-dt-cb master pull-right span1'>t<'row'<'span6'i><'span6'p>>",
-          "bSortClasses": false,
-          "bAutoWidth": false,
-          "iDisplayLength": 100,
-          "aLengthMenu": [[10, 50, 100, 500, -1], [10, 50, 100, 500, "All"]],
+          'bSortClasses': false,
+          'bAutoWidth': false,
+          'iDisplayLength': 100,
+          'aLengthMenu': [[10, 50, 100, 500, -1], [10, 50, 100, 500, "All"]],
           'sPaginationType': 'bootstrap',
-          "fnCreatedRow": this.listenToCheckboxes()
+          'fnCreatedRow': this.listenToCheckboxes()
       });
-    // If we are redrawing an existing datatable.
     } else {
-          this.datatable.fnClearTable();
-          this.datatable.fnAddData(objList);
+      // We are redrawing an existing datatable.
+      this.datatable.fnClearTable();
+      this.datatable.fnAddData(objList);
     }
 
     // Initialize options for action dropdown menu (next to master checkbox).
-    this.dropdownOptions = [];
-
     this.createMasterCheckbox();
     this.listenToCheckboxes();
   },
+
 
   /** Returns an array of uids for the rows that are selected. */
   getCheckedRowUids: function() {
