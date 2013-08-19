@@ -109,25 +109,6 @@ def reference_genome_list_view(request, project_uid):
         'href': obj.get_href()
     } for obj in ref_genome_list]
 
-    # HACK: Add some fake data for now.
-    fe_ref_genome_list.append({
-        'label': 'MG1655-fake',
-        'num_chromosomes': '1',
-        'total_size': '3.6 Mbp',
-        'annotated': False,
-        'parents': [],
-        'children': ['C321D-fake', 'another'],
-    })
-
-    fe_ref_genome_list.append({
-        'label': 'C321D-fake',
-        'num_chromosomes': '1',
-        'total_size': '3.6 Mbp',
-        'annotated': True,
-        'parents': ['MG1655-fake'],
-        'children': [],
-    })
-
     # (Re-)Render the page.
     context = {
         'project': project,
