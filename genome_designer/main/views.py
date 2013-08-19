@@ -68,7 +68,9 @@ def project_create_view(request):
 def project_view(request, project_uid):
     """Overview of a single project.
     """
-    project = Project.objects.get(uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
+
     context = {
         'project': project,
     }
@@ -80,7 +82,9 @@ def reference_genome_list_view(request, project_uid):
     """Shows the ReferenceGenomes and handles creating new
     ReferenceGenomes when requested.
     """
-    project = Project.objects.get(uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
+
     error_string = None
 
     # If a POST, then we are creating a new genome.
@@ -122,8 +126,10 @@ def reference_genome_list_view(request, project_uid):
 def reference_genome_view(request, project_uid, ref_genome_uid):
     """Overview of a single project.
     """
-    project = Project.objects.get(uid=project_uid)
-    reference_genome = ReferenceGenome.objects.get(uid=ref_genome_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
+    reference_genome = ReferenceGenome.objects.get(project=project,
+            uid=ref_genome_uid)
     context = {
         'project': project,
         'reference_genome': reference_genome,
@@ -134,7 +140,9 @@ def reference_genome_view(request, project_uid, ref_genome_uid):
 
 @login_required
 def sample_list_view(request, project_uid):
-    project = Project.objects.get(uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
+
     error_string = None
 
     # If a POST, then we are creating a new genome.
@@ -157,6 +165,7 @@ def sample_list_view(request, project_uid):
     }
     return render(request, 'sample_list.html', context)
 
+
 @login_required
 def sample_list_targets_template(request):
     """Let the user download a blank sample targets template as a tab
@@ -170,7 +179,8 @@ def sample_list_targets_template(request):
 
 @login_required
 def alignment_list_view(request, project_uid):
-    project = Project.objects.get(uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
 
     context = {
         'project': project,
@@ -184,8 +194,11 @@ def alignment_list_view(request, project_uid):
 def alignment_view(request, project_uid, alignment_group_uid):
     """View of a single AlignmentGroup.
     """
-    project = Project.objects.get(uid=project_uid)
-    alignment_group = AlignmentGroup.objects.get(uid=alignment_group_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
+
+    alignment_group = AlignmentGroup.objects.get(
+            reference_genome__project=project, uid=alignment_group_uid)
 
     if request.POST:
         run_snp_calling_pipeline(alignment_group)
@@ -208,7 +221,8 @@ def alignment_view(request, project_uid, alignment_group_uid):
 
 @login_required
 def alignment_create_view(request, project_uid):
-    project = Project.objects.get(uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
 
     if request.POST:
         # Parse the data from the request body.
@@ -222,6 +236,7 @@ def alignment_create_view(request, project_uid):
         # Parse the data and look up the relevant model instances.
 
         ref_genome_list = ReferenceGenome.objects.filter(
+                project=project,
                 uid__in=request_data['refGenomeUidList'])
         assert len(ref_genome_list) == len(request_data['refGenomeUidList'])
         if not len(ref_genome_list) > 0:
@@ -229,6 +244,7 @@ def alignment_create_view(request, project_uid):
                     "At least one reference genome required.")
 
         sample_list = ExperimentSample.objects.filter(
+                project=project,
                 uid__in=request_data['sampleUidList'])
         assert len(sample_list) == len(request_data['sampleUidList'])
         if not len(sample_list) > 0:
@@ -260,7 +276,8 @@ def alignment_create_view(request, project_uid):
 
 @login_required
 def variant_set_list_view(request, project_uid):
-    project = Project.objects.get(uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
 
     context = {
         'project': project,
@@ -272,8 +289,11 @@ def variant_set_list_view(request, project_uid):
 
 @login_required
 def variant_set_view(request, project_uid, variant_set_uid):
-    project = Project.objects.get(uid=project_uid)
-    variant_set = VariantSet.objects.get(uid=variant_set_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
+    variant_set = VariantSet.objects.get(
+            reference_genome__project=project,
+            uid=variant_set_uid)
 
     # Initial javascript data.
     init_js_data = json.dumps({
@@ -294,7 +314,8 @@ def variant_set_view(request, project_uid, variant_set_uid):
 
 @login_required
 def variant_list_view(request, project_uid):
-    project = Project.objects.get(uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
 
     # The json data required to populate datables and dropdowns.
     # Can be called either by render or post response.
@@ -340,7 +361,9 @@ def variant_list_view(request, project_uid):
 
 @login_required
 def gene_list_view(request, project_uid):
-    project = Project.objects.get(uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
+
     context = {
         'project': project
     }
@@ -349,7 +372,9 @@ def gene_list_view(request, project_uid):
 
 @login_required
 def goterm_list_view(request, project_uid):
-    project = Project.objects.get(uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
+
     context = {
         'project': project
     }
