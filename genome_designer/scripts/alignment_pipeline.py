@@ -16,6 +16,7 @@ from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from scripts.import_util import add_dataset_to_entity
+from scripts.jbrowse_util import add_bam_file_track
 from scripts.jbrowse_util import prepare_reference_sequence
 from scripts.util import fn_runner
 from settings import DEBUG_CONCURRENT
@@ -170,6 +171,10 @@ def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):
     # Record the resulting dataset in the database
     add_dataset_to_entity(sample_alignment, Dataset.TYPE.BWA_ALIGN,
             Dataset.TYPE.BWA_ALIGN, clean_filesystem_location(result_bam_file))
+
+    # Add track to JBrowse
+    add_bam_file_track(alignment_group.reference_genome, sample_alignment,
+            Dataset.TYPE.BWA_ALIGN)
 
     return sample_alignment
 

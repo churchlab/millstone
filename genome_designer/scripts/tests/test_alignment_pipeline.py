@@ -2,6 +2,7 @@
 Tests for alignment_pipeline.py
 """
 
+import json
 import os
 
 from django.test import TestCase
@@ -17,6 +18,7 @@ from scripts.alignment_pipeline import create_alignment_groups_and_start_alignme
 from scripts.bootstrap_data import bootstrap_fake_data
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
+from scripts.jbrowse_util import prepare_reference_sequence
 from settings import PWD as GD_ROOT
 
 
@@ -58,6 +60,9 @@ class TestAlignmentPipeline(TestCase):
         alignment_group = AlignmentGroup.objects.create(
                 label='test alignment', reference_genome=self.reference_genome)
 
+        # Create the JBrowse placeholder.
+        prepare_reference_sequence(alignment_group.reference_genome)
+
         # Run the alignment.
         experiment_sample_alignment = align_with_bwa(
                 alignment_group, self.experiment_sample)
@@ -69,6 +74,18 @@ class TestAlignmentPipeline(TestCase):
         bwa_align_dataset_path = bwa_align_dataset.get_absolute_location()
         self.assertTrue(os.path.exists(bwa_align_dataset_path,), (
                 "No file at location %s" % bwa_align_dataset_path))
+
+        # Check that a JBrowse track for the alignment was created.
+        jbrowse_dir = self.reference_genome.get_jbrowse_directory_path()
+        with open(os.path.join(jbrowse_dir, 'trackList.json')) as fh:
+            jbrowse_config_json = json.loads(fh.read())
+            found_bam_track = False
+            for track in jbrowse_config_json['tracks']:
+                if ('storeClass' in track and track['storeClass'] ==
+                        'JBrowse/Store/SeqFeature/BAM'):
+                    found_bam_track = True
+                    break
+            self.assertTrue(found_bam_track)
 
 
     @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS = True,
