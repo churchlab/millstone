@@ -110,11 +110,38 @@ def bootstrap_fake_data():
             test_project, 'test_genome', TEST_FASTA, 'fasta')
     prepare_reference_sequence(ref_genome_3)
 
-    ### Create some samples with backing data.
+    ### Create some ExperimentSamples.
+
+    # Create some samples without backing data just to explore the UI.
+    ExperimentSample.objects.get_or_create(
+            project=test_project,
+            label='C321D_MiSeq',
+            group='Plate 1',
+            well='A01',
+            num_reads=25029296,
+    )
+
+    ExperimentSample.objects.get_or_create(
+            project=test_project,
+            label='C321D Fixed 01',
+            group='Plate 2',
+            well='A01',
+            num_reads=12345,
+    )
+
+    ExperimentSample.objects.get_or_create(
+            project=test_project,
+            label='C321D Fixed 02',
+            group='Plate 2',
+            well='A02',
+            num_reads=897213,
+    )
+
+    # Create some samples with backing data.
     (sample_1, created) = ExperimentSample.objects.get_or_create(
             project=test_project,
             label=SAMPLE_1_LABEL)
-    ### Add datasets to the samples.
+    # Add datasets to the samples.
     if not sample_1.dataset_set.filter(type=Dataset.TYPE.FASTQ1):
         copy_and_add_dataset_source(sample_1, Dataset.TYPE.FASTQ1,
                 Dataset.TYPE.FASTQ1, TEST_FASTQ1)

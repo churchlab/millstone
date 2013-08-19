@@ -402,6 +402,9 @@ class ExperimentSample(Model):
     # within a group
     well = models.CharField('Position/Well', max_length=256)
 
+    # Number of reads in the sample.
+    num_reads = models.BigIntegerField('# Reads', default=-1)
+
     # The datasets associated with this sample. The semantic sense of the
     # dataset can be determined from the Dataset.type field.
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,

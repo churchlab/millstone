@@ -53,75 +53,32 @@
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td><a href="#">C321D MiSeq</a></td>
-      <td>Plate 1</td>
-      <td>A01</td>
-      <td>25,029,296</td>
-      <td><a class="label label-success" href="#">Good</a></td>
-      <td>...</td>
-      <td><a href="#">MG1655</a></td>
-      <td>
-        <label class="checkbox">
-          <input type="checkbox" value="">
-          <div class="btn-group">
-            <a class="btn btn-small dropdown-toggle" data-toggle="dropdown" href="#">
-              Actions
-              <span class="caret"></span>
-            </a>
-            <ul class="dropdown-menu">
-              <!-- dropdown menu links -->
-            </ul>
-          </div>
-        </label>
-      </td>
-    </tr>
-    <tr>
-      <td><a href="#">C321D Fixed 01</a></td>
-      <td>Plate 2</td>
-      <td>A01</td>
-      <td>14,023,418</td>
-      <td><a class="label label-success" href="#">Good</a></td>
-      <td>...</td>
-      <td><a href="#">C321D</a></td>
-      <td>
-        <label class="checkbox">
-          <input type="checkbox" value="">
-          <div class="btn-group">
-            <a class="btn btn-small dropdown-toggle" data-toggle="dropdown" href="#">
-              Actions
-              <span class="caret"></span>
-            </a>
-            <ul class="dropdown-menu">
-              <!-- dropdown menu links -->
-            </ul>
-          </div>
-        </label>
-      </td>
-    </tr>
-    <tr>
-      <td><a href="#">C321D Fixed 02</a></td>
-      <td>Plate 2</td>
-      <td>A02</td>
-      <td>19,352,241</td>
-      <td><a class="label label-success" href="#">Good</a></td>
-      <td>...</td>
-      <td><a href="#">C321D</a></td>
-      <td>
-        <label class="checkbox">
-          <input type="checkbox" value="">
-          <div class="btn-group">
-            <a class="btn btn-small dropdown-toggle" data-toggle="dropdown" href="#">
-              Actions
-              <span class="caret"></span>
-            </a>
-            <ul class="dropdown-menu">
-              <!-- dropdown menu links -->
-            </ul>
-          </div>
-        </label>
-      </td>
-    </tr>
+    {% for sample in sample_list %}
+      <tr>
+        <td><a href="{{sample.url}}">{{sample.label}}</a></td>
+        <td>{{sample.group}}</td>
+        <td>{{sample.well}}</td>
+        <td>{{sample.num_reads}}</td>
+        <td><a class="label label-success" href="#">Good</a></td>
+        <td>...</td>
+        <td><a href="#">{{sample.aligned_to}}</a></td>
+        <td>
+          <label class="checkbox">
+            <input type="checkbox" value="">
+            <div class="btn-group">
+              <a class="btn btn-small dropdown-toggle" data-toggle="dropdown"
+                  href="#">
+                Actions
+                <span class="caret"></span>
+              </a>
+              <ul class="dropdown-menu">
+                <!-- dropdown menu links -->
+              </ul>
+            </div>
+          </label>
+        </td>
+      </tr>
+    {% endfor %}
   </tbody>
 </table>
 

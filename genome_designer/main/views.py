@@ -141,8 +141,12 @@ def sample_list_view(request, project_uid):
         except Exception as e:
             error_string = 'Import error: ' + str(e)
 
+    # Query the db for the samples for this project.
+    sample_list = ExperimentSample.objects.filter(project=project)
+
     context = {
         'project': project,
+        'sample_list': sample_list,
         'error_string': error_string
     }
     return render(request, 'sample_list.html', context)
