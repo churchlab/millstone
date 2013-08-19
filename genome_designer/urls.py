@@ -9,6 +9,8 @@ urlpatterns = patterns('',
     # Project-specific views
     url(r'^projects$',
             'genome_designer.main.views.project_list_view'),
+    url(r'^projects/create$',
+            'genome_designer.main.views.project_create_view'),
     url(r'^projects/([\w-]+)$',
             'genome_designer.main.views.project_view'),
 

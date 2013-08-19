@@ -11,6 +11,11 @@ body {
   font-size: 20px;
 }
 
+.dropdown-menu > li > a.gd-topnavbar-create-project-text {
+  color: blue;
+  font-weight: bold;
+}
+
 /* GD Checkboxes for Datatables, checkbox td changes color */
 
 td.gd-dt-cb-div {

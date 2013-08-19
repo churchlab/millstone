@@ -4,10 +4,12 @@ from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
+from django.http import HttpResponseRedirect
 from django.shortcuts import render
 
 from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_to_frontend
+from main.forms import ProjectForm
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
@@ -37,6 +39,29 @@ def project_list_view(request):
     # the custom context processor main.context_processors.common_data.
     context = {}
     return render(request, 'project_list.html', context)
+
+
+@login_required
+def project_create_view(request):
+    """View where a user creates a new Project.
+    """
+    if request.POST:
+        project = Project(owner=request.user.get_profile())
+        form = ProjectForm(request.POST, instance=project)
+        if form.is_valid():
+            form.title = form.cleaned_data['title']
+            form.save()
+            return HttpResponseRedirect(
+                    reverse('genome_designer.main.views.project_view',
+                            args=(project.uid,)))
+    else:
+        form = ProjectForm()
+
+    # form is either the form with errors from above or an empty instance.
+    context = {
+        'form': form,
+    }
+    return render(request, 'project_create.html', context)
 
 
 @login_required

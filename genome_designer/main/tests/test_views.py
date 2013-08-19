@@ -37,6 +37,7 @@ class TestViews(TestCase):
 
                 # Project-specific views
                 reverse('genome_designer.main.views.project_list_view'),
+                reverse('genome_designer.main.views.project_create_view'),
                 reverse('genome_designer.main.views.project_view',
                         args=(test_project.uid,)),
 
