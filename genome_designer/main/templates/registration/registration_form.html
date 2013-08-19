@@ -4,6 +4,6 @@
   <h1>Register</h1>
   <form action="/accounts/register/" method="post">{% csrf_token %}
     {{ form.as_p }}
-    <input type="submit" value="Submit" />
+    <input type="submit" value="Submit" class="btn"/>
   </form>
 {% endblock %}

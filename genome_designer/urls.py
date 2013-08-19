@@ -1,6 +1,7 @@
 from django.conf.urls import include
 from django.conf.urls import patterns
 from django.conf.urls import url
+from django.views.generic import RedirectView
 
 urlpatterns = patterns('',
     url(r'^$', 'genome_designer.main.views.home_view'),
@@ -63,4 +64,8 @@ urlpatterns = patterns('',
 
     # django-registration defaults (further delgates to django.contrib.auth.url)
     (r'^accounts/', include('registration.backends.simple.urls')),
+
+    # The default behavior of registration is redirect to 'users/<username>'.
+    # For now let's catch this request here and just redirect to '/'.
+    (r'^users/', RedirectView.as_view(url='/')),
 )
