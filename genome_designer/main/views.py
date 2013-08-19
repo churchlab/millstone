@@ -5,6 +5,7 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 
 from main.adapters import adapt_model_instance_to_frontend
@@ -68,7 +69,7 @@ def project_create_view(request):
 def project_view(request, project_uid):
     """Overview of a single project.
     """
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     context = {
@@ -82,7 +83,7 @@ def reference_genome_list_view(request, project_uid):
     """Shows the ReferenceGenomes and handles creating new
     ReferenceGenomes when requested.
     """
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     error_string = None
@@ -126,7 +127,7 @@ def reference_genome_list_view(request, project_uid):
 def reference_genome_view(request, project_uid, ref_genome_uid):
     """Overview of a single project.
     """
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
     reference_genome = ReferenceGenome.objects.get(project=project,
             uid=ref_genome_uid)
@@ -140,7 +141,7 @@ def reference_genome_view(request, project_uid, ref_genome_uid):
 
 @login_required
 def sample_list_view(request, project_uid):
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     error_string = None
@@ -179,7 +180,7 @@ def sample_list_targets_template(request):
 
 @login_required
 def alignment_list_view(request, project_uid):
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     context = {
@@ -194,7 +195,7 @@ def alignment_list_view(request, project_uid):
 def alignment_view(request, project_uid, alignment_group_uid):
     """View of a single AlignmentGroup.
     """
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     alignment_group = AlignmentGroup.objects.get(
@@ -221,7 +222,7 @@ def alignment_view(request, project_uid, alignment_group_uid):
 
 @login_required
 def alignment_create_view(request, project_uid):
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     if request.POST:
@@ -276,7 +277,7 @@ def alignment_create_view(request, project_uid):
 
 @login_required
 def variant_set_list_view(request, project_uid):
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     context = {
@@ -289,7 +290,7 @@ def variant_set_list_view(request, project_uid):
 
 @login_required
 def variant_set_view(request, project_uid, variant_set_uid):
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
     variant_set = VariantSet.objects.get(
             reference_genome__project=project,
@@ -314,7 +315,7 @@ def variant_set_view(request, project_uid, variant_set_uid):
 
 @login_required
 def variant_list_view(request, project_uid):
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     # The json data required to populate datables and dropdowns.
@@ -361,7 +362,7 @@ def variant_list_view(request, project_uid):
 
 @login_required
 def gene_list_view(request, project_uid):
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     context = {
@@ -372,7 +373,7 @@ def gene_list_view(request, project_uid):
 
 @login_required
 def goterm_list_view(request, project_uid):
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     context = {
