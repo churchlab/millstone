@@ -9,6 +9,7 @@ import platform
 import re
 import shutil
 import stat
+import sys
 import urllib
 import zipfile
 
@@ -20,7 +21,7 @@ from settings import PWD as GD_ROOT
 from settings import TOOLS_DIR
 
 
-TOOLS_URLS = { 
+TOOLS_URLS = {
     'bwa' : {
         'Darwin': ['https://www.dropbox.com/s/w6gs82gn0rmc60w/bwa'],
         'Linux': ['https://www.dropbox.com/s/eq3533wx8ay41sx/bwa'],
@@ -54,10 +55,10 @@ TOOLS_URLS = {
     'picard' : [
         'https://www.dropbox.com/s/189loxsmsch1xbb/picard-tools-1.96.zip'
     ]
-}    
+}
 
 def setup():
-    download_tools()
+    #download_tools()
     setup_jbrowse()
 
 def download_tools():
@@ -66,20 +67,20 @@ def download_tools():
         os.mkdir(TOOLS_DIR)
 
     sys_type = platform.system()
-    
+
     # Download the required tools from our Dropbox.
     for tool in TOOLS_URLS:
-        
+
         print 'Grabbing %s from Dropbox...' % tool
-        
-        # If the tool is a dict, then it references different OSes (i.e. 
-        # compiled binaries). Download the correct one for your OS. 
+
+        # If the tool is a dict, then it references different OSes (i.e.
+        # compiled binaries). Download the correct one for your OS.
         if isinstance(TOOLS_URLS[tool],dict):
-            try: 
+            try:
                 tool_urls = TOOLS_URLS[tool][sys_type]
             except KeyError, e:
                 raise(OSError(' '.join([
-                    'Tool "%s" missing for your OS (%s),' 
+                    'Tool "%s" missing for your OS (%s),'
                     'OSs available are: (%s)']) % (
                         tool, sys_type, str(TOOLS_URLS[tool].keys()))))
         else:
@@ -87,31 +88,31 @@ def download_tools():
 
         # Make the directory for this tool, if it doesn't exist
         dest_dir = os.path.join(TOOLS_DIR,tool)
-                
+
         if not os.path.isdir(dest_dir):
             os.mkdir(dest_dir)
 
         for tool_url in tool_urls:
-            
+
             # Grab last part of url after final '/' as file name
             dest_filename = re.match(r'^.*\/([^/]+)$', tool_url).group(1)
             dest_path = os.path.join(dest_dir,dest_filename)
 
             # Get the *actual* file URL from the dropbox popup
             tool_url = _get_file_url_from_dropbox(tool_url, dest_filename)
-            
+
             # If *.zip, download to a tmp file and unzip it to the right dir.
             if dest_filename.endswith('.zip'):
                 tmp_path, http_msg = urllib.urlretrieve(tool_url)
                 print '    %s (Unzipping...)' % tmp_path
                 tool_zipped = zipfile.ZipFile(tmp_path)
                 tool_zipped.extractall(dest_dir)
-                                
+
             # Otherwise download files to the correct location.
             else:
                 urllib.urlretrieve(tool_url,dest_path)
                 print '    %s' % dest_path
-        
+
         # This is really hackish, but because ZipFile does not save file
         # permissions, we need to make the bins executable. Luckily,
         # in all cases (so far), the bin has the same name as the tool...
@@ -121,7 +122,7 @@ def download_tools():
 
 def _get_file_url_from_dropbox(dropbox_url, filename):
     """
-    Dropbox takes you to a download page when you share a link, so to get 
+    Dropbox takes you to a download page when you share a link, so to get
     past that, we use BeautifulSoup to get the file, as per goo.gl/EeOGjC
     """
     try:
@@ -146,4 +147,9 @@ def setup_jbrowse():
 
 
 if __name__ == '__main__':
-    setup()
+
+    # Placeholder for a more comprehensive command line arg parsing:
+    if sys.argv[1] == 'jbrowse':
+        setup_jbrowse()
+    else:
+        setup()

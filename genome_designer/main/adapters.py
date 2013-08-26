@@ -1,6 +1,6 @@
 """Adapter - Converts django models to Front-end format.
 
-    Calls on the model's get_field_order method to know which fields that 
+    Calls on the model's get_field_order method to know which fields that
     are available for display and what order. Returns a config json
     that dumps the field config and the json data for model/table.
 """
@@ -42,15 +42,15 @@ def adapt_model_to_frontend(model, filters={}):
     # Get a list of fields required for displaying the objects, in the order
     # in which they should be displayed.
     field_dict_list = model.get_field_order()
-    
+
     # Each field is a dict with two keys, 'field' for field name and 'verbose'
-    # for display name. Get each. If 'verbose' is missing, then make verbose 
-    # be the field with _'s turned to spaces and Title Cased. 
+    # for display name. Get each. If 'verbose' is missing, then make verbose
+    # be the field with _'s turned to spaces and Title Cased.
     field_list = [fdict['field'] for fdict in field_dict_list]
 
     # Get the verbose field names, which will be used as column headers.
-    get_verbose= lambda fdict: (fdict['verbose'] if 'verbose' in fdict else 
-        string.capwords(fdict['field'],'_').replace('_',' '))    
+    get_verbose= lambda fdict: (fdict['verbose'] if 'verbose' in fdict else
+        string.capwords(fdict['field'],'_').replace('_',' '))
     field_verbose_names = [get_verbose(fdict) for fdict in field_dict_list]
 
 
@@ -75,12 +75,12 @@ def adapt_model_instance_to_frontend(model_instance, field_info={}):
     Args:
         model_instance: An instance of a Model object. The model class must
             implement a get_field_order() method.
-        field_info: If called recursively from 
-            get_model_field_fe_representation(), function also be passed 
+        field_info: If called recursively from
+            get_model_field_fe_representation(), function also be passed
             with field_info keys from parent_model.get_field_order(). This
             can decorate the serialized model with information like CSS class,
-            state, instructions on how to render in datatable_component.js, 
-            etc. 
+            state, instructions on how to render in datatable_component.js,
+            etc.
 
     Returns:
         A dictionary representation of the model. May contained nested
@@ -96,7 +96,7 @@ def adapt_model_instance_to_frontend(model_instance, field_info={}):
 
     # Get (key, value) pairs for visible fields.
     visible_field_pairs = [(field, get_model_field_fe_representation(
-        model_instance, field, visible_field_dict[field])) for field 
+        model_instance, field, visible_field_dict[field])) for field
         in visible_field_list]
 
     # Other values.
@@ -105,17 +105,13 @@ def adapt_model_instance_to_frontend(model_instance, field_info={}):
         other_pairs.append(('href', model_instance.get_href()))
     if hasattr(model_instance, 'uid'):
         other_pairs.append(('uid', model_instance.uid))
-        
+
     # Add in keys from field_info, which are inherited from parent model, if
-    # this function is called recursively from 
+    # this function is called recursively from
     # get_model_field_fe_representation().
-    if field_info: 
+    if field_info:
         other_pairs.extend(field_info.items())
-    
-    print field_info
-    print visible_field_pairs
-    print other_pairs
-    
+
     # Wrap the results in a dictionary.
     return dict(visible_field_pairs + other_pairs)
 
@@ -125,10 +121,10 @@ def get_model_field_fe_representation(model_obj, field, field_info={}):
     implemented.
 
     This method allows recursively diving into models.
-    
+
     """
     model_field = getattr(model_obj,field)
-    
+
     if isinstance(model_field, Model):
         return adapt_model_instance_to_frontend(model_field, field_info)
     elif model_field.__class__.__name__ ==  'ManyRelatedManager':

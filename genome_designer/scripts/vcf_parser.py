@@ -12,7 +12,6 @@ from main.models import get_dataset_with_type
 from main.models import Variant
 from main.models import VariantCallerCommonData
 
-
 def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     """Parses the VCF associated with the AlignmentGroup and saves data there.
     """
@@ -30,12 +29,12 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
             )
             # Extracting the data is somewhat of a process so we do
             # so in this function.
-            _populate_common_data_from_vcf_record(common_data_obj, record)
+            populate_common_data_from_vcf_record(common_data_obj, record)
 
-    aggregate_variants(alignment_group)
+    aggregate_variants(reference_genome)
 
 
-def _populate_common_data_from_vcf_record(common_data_obj, vcf_record):
+def populate_common_data_from_vcf_record(common_data_obj, vcf_record):
     """Get the desired data out of the vcf format and write it to
     common_data_obj.
     """
@@ -54,13 +53,14 @@ def _populate_common_data_from_vcf_record(common_data_obj, vcf_record):
     common_data_obj.data = data_dict
 
     # Populate 'INFO'
-    _populate_common_data_info(common_data_obj, vcf_record)
+    if hasattr(vcf_record, 'INFO'):
+        populate_common_data_info(common_data_obj, vcf_record)
 
     # Commit the transaction.
     common_data_obj.save()
 
 
-def _populate_common_data_info(common_data_obj, vcf_record):
+def populate_common_data_info(common_data_obj, vcf_record):
     """Parses the vcf record INFO field and saves the result into the
     common data object data field.
     """
@@ -71,16 +71,16 @@ def _populate_common_data_info(common_data_obj, vcf_record):
     common_data_obj.data = data_dict
 
 
-def aggregate_variants(alignment_group):
+def aggregate_variants(reference_genome):
     """Determine the unique set of Variants for this alignment group.
     """
     common_data_obj_list = VariantCallerCommonData.objects.filter(
-            reference_genome=alignment_group.reference_genome)
+            reference_genome=reference_genome)
     for common_data_obj in common_data_obj_list:
-        get_or_create_variant(alignment_group, common_data_obj)
+        get_or_create_variant(reference_genome, common_data_obj)
 
 
-def get_or_create_variant(alignment_group, common_data_obj):
+def get_or_create_variant(reference_genome, common_data_obj):
     """Create a variant if it doesn't already exist.
 
     Right now this assumes we are always using Freebayes for alignment.
@@ -94,10 +94,13 @@ def get_or_create_variant(alignment_group, common_data_obj):
     ref_value = pickle.loads(str(raw_data_dict['REF']))
     alt_value = pickle.loads(str(raw_data_dict['ALT']))
 
+    #TODO: we should check to make sure that this variant is valid
+    # for the reference genome - that the REF base is correct. VCFTools
+    # might have a function for this that we can plug in.
 
     # Try to find an existing one, or create it.
     variant, created = Variant.objects.get_or_create(
-            reference_genome=alignment_group.reference_genome,
+            reference_genome=reference_genome,
             type=type,
             chromosome=chromosome,
             position=position,

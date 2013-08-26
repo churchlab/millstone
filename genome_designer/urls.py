@@ -59,6 +59,9 @@ urlpatterns = patterns('',
     url(r'^templates/sample_list_targets_template.tsv$',
             'genome_designer.main.views.sample_list_targets_template'),
 
+    url(r'^templates/variant_set_upload_template.vcf$',
+            'genome_designer.main.views.variant_set_upload_template'),
+
 
     ############################################################################
     # Auth

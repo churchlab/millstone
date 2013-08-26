@@ -1,12 +1,15 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
+import os
 
 from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_to_frontend
@@ -22,8 +25,10 @@ from main.models import VariantToVariantSet
 from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
+from scripts.import_util import import_variant_set_from_vcf
 from scripts.snp_callers import run_snp_calling_pipeline
 from scripts.variant_sets import add_or_remove_variants_from_set
+import settings
 
 def home_view(request):
     """The main landing page.
@@ -179,6 +184,16 @@ def sample_list_targets_template(request):
 
 
 @login_required
+def variant_set_upload_template(request):
+    """Let the user download a blank variant set template as a blank
+    VCF file to be filled in.
+    """
+    context = {}
+    return render(request, 'variant_set_upload_template.vcf', context,
+            content_type='text/tab-separated-values')
+
+
+@login_required
 def alignment_list_view(request, project_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
@@ -280,8 +295,40 @@ def variant_set_list_view(request, project_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
+    # If a POST, then we are creating a new variant set.
+    if request.method == 'POST':
+        # TODO: Add more informative error handling.
+
+        # Save vcf file to disk temporarily first.
+        path = default_storage.save('tmp/tmp_varset.vcf',
+                ContentFile(request.FILES['vcfFile'].read()))
+        variant_set_file = os.path.join(settings.MEDIA_ROOT, path)
+
+        try:
+            import_variant_set_from_vcf(
+                    project,
+                    request.POST['refGenomeID'],
+                    request.POST['variantSetName'],
+                    variant_set_file)
+        except Exception as e:
+            error_string = 'Import error: ' + str(e)
+            print error_string
+            raise
+        finally:
+            os.remove(variant_set_file)
+
+    # Grab all the ReferenceGenomes for this project
+    # (for choosing which ref genome a new variant set goes into).
+    ref_genome_list = ReferenceGenome.objects.filter(project=project)
+
+    # We only need the label and ID for every reference genome
+    fe_ref_genome_list = [{
+        'label': obj.label,
+        'id': obj.id} for obj in ref_genome_list]
+
     context = {
         'project': project,
+        'ref_genome_list': fe_ref_genome_list,
         'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 {'reference_genome__project':project})
     }
