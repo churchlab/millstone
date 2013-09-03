@@ -20,8 +20,8 @@ gd.App.prototype.run = function() {
 
   // Route depending on the VIEW_TAG in the template.
   switch(VIEW_TAG) {
-    case 'REF_GENOME':
-      var view = new gd.RefGenomeView();
+    case 'REF_GENOME_LIST':
+      var view = new gd.RefGenomeListView();
       break;
 
     case 'SAMPLE':

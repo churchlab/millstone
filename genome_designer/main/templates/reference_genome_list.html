@@ -19,54 +19,10 @@
     {{ error_string }}
   {% endif %}
 </span>
-<table class="table">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th># Chromosomes</th>
-      <th>Total Size</th>
-      <th>Annotated?</th>
-      <th>Parents</th>
-      <th>Children</th>
-      <th> <th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for obj in ref_genome_list %}
-      <tr>
-        <td><a href="{{obj.href}}">{{obj.label}}</a></td>
-        <td>{{obj.num_chromosomes}}</td>
-        <td>{{obj.total_size}}</td>
-        <td>
-          {% if obj.annotated %}
-            <i class="icon-ok"></i>
-          {% endif %}
-        </td>
-        <td>
-          {% for parent in obj.parents %}
-            <a href="#">{{parent}}</a>,
-          {% endfor %}
-        </td>
-        <td>
-          {% for child in obj.children %}
-            <a href="#">{{child}}</a>,
-          {% endfor %}
-        </td>
-        <td>
-          <div class="btn-group">
-            <a class="btn btn-mini dropdown-toggle" data-toggle="dropdown" href="#">
-              Actions
-              <span class="caret"></span>
-            </a>
-            <ul class="dropdown-menu">
-              <!-- dropdown menu links -->
-            </ul>
-          </div>
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="container span12" style="box-sizing: border-box; padding: 50px">
+  <div id="gd-ref-genome-list-view-datatable-hook">
+  </div>
+</div>
 
 <!-- Modal -->
 <div id="modalFromFile" class="modal hide fade" tabindex="-1" role="dialog">
@@ -96,6 +52,11 @@
 </div>
 
 <script type="text/javascript">
-  VIEW_TAG = 'REF_GENOME';
+  VIEW_TAG = 'REF_GENOME_LIST';
+
+  {% autoescape off %}
+    REF_GENOME_LIST_DATA = {{ref_genome_list_json}};
+  {% endautoescape %}
+
 </script>
 {% endblock %}

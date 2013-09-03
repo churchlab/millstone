@@ -105,26 +105,13 @@ def reference_genome_list_view(request, project_uid):
         except Exception as e:
             error_string = 'Import error: ' + str(e)
 
-    # Grab all the ReferenceGenomes for this project.
-    ref_genome_list = ReferenceGenome.objects.filter(project=project)
-
-    # Adapt the backend objects to the frontend format.
-    fe_ref_genome_list = [{
-        'label': obj.label,
-        'num_chromosomes': obj.num_chromosomes,
-        'total_size': obj.num_bases,
-        'annotated': False,
-        'parents': [],
-        'children': [],
-        'href': obj.get_href()
-    } for obj in ref_genome_list]
-
-    # (Re-)Render the page.
     context = {
         'project': project,
-        'ref_genome_list': fe_ref_genome_list,
+        'ref_genome_list_json': adapt_model_to_frontend(ReferenceGenome,
+                {'project':project}),
         'error_string': error_string
     }
+
     return render(request, 'reference_genome_list.html', context)
 
 
@@ -295,6 +282,8 @@ def variant_set_list_view(request, project_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
+    error_string = ''
+
     # If a POST, then we are creating a new variant set.
     if request.method == 'POST':
         # TODO: Add more informative error handling.
@@ -312,8 +301,6 @@ def variant_set_list_view(request, project_uid):
                     variant_set_file)
         except Exception as e:
             error_string = 'Import error: ' + str(e)
-            print error_string
-            raise
         finally:
             os.remove(variant_set_file)
 
@@ -330,7 +317,8 @@ def variant_set_list_view(request, project_uid):
         'project': project,
         'ref_genome_list': fe_ref_genome_list,
         'variant_set_list_json': adapt_model_to_frontend(VariantSet,
-                {'reference_genome__project':project})
+                {'reference_genome__project':project}),
+        'error_string': error_string
     }
 
     return render(request, 'variant_set_list.html', context)
