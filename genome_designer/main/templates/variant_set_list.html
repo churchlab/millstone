@@ -20,6 +20,7 @@
   </a>
   <ul class="dropdown-menu">
     <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From File...</a></li>
+    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalEmpty" data-toggle="modal">Empty</a></li>
   </ul>
 </div>
 
@@ -28,7 +29,7 @@
   </div>
 </div>
 
-<!-- Modal -->
+<!-- From file modal -->
 <div id="modalFromFile" class="modal hide fade" tabindex="-1" role="dialog">
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal">×</button>
@@ -44,13 +45,15 @@
         <p>To add a new Variant Set (a list of putative SNPs that you want grouped together) you need to make and upload a <i>VCF file</i> that has information about each SNP relative to a reference genome.<strong> First download <a href="/templates/variant_set_upload_template.vcf">this template</a></strong>, open it in a text editor, and fill it in. Only required columns are CHROM, POS, ID, REF, and ALT. ID can be blank. More information on the VCF format is <a href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41">here</a>.
           <form id="formFromFile" enctype="multipart/form-data" method="POST">
             {% csrf_token %}
+            <input type="hidden" name="create-set-type" value="from-file">
+
             <input type="text" name="variantSetName" placeholder="Name for this Variant Set">
             <br>
             Reference Genome:
             <br>
             <select name="refGenomeID">
               {% for obj in ref_genome_list %}
-                <option value="{{obj.id}}">{{obj.label}}</option>
+                <option value="{{obj.uid}}">{{obj.label}}</option>
               {% endfor %}
             </select>
             <br>
@@ -91,6 +94,38 @@
     <button class="btn btn-primary" id="submitFormFromFile">Submit</button>
   </div>
 </div>
+
+<!-- Empty modal -->
+<div id="modalEmpty" class="modal hide fade" tabindex="-1" role="dialog">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Create Empty Variant Set</h3>
+  </div>
+
+  <div class="modal-body">
+    <form id="gd-variant-set-form-empty" method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="create-set-type" value="empty">
+
+      <input type="text" name="variantSetName"
+          placeholder="Name for this Variant Set" required>
+      <br>
+      Reference Genome:
+      <br>
+      <select name="refGenomeID">
+        {% for obj in ref_genome_list %}
+          <option value="{{obj.uid}}">{{obj.label}}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal">Cancel</button>
+    <button class="btn btn-primary" id="gd-variant-set-form-empty-submit">Submit</button>
+  </div>
+</div>
+
 
 <script type="text/javascript">
   VIEW_TAG = 'VARIANT_SET_LIST';

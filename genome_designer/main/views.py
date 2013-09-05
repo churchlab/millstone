@@ -292,52 +292,91 @@ def variant_set_list_view(request, project_uid):
 
     # If a POST, then we are creating a new variant set.
     if request.method == 'POST':
-        # TODO: Add more informative error handling.
+        # Common validation.
+        # TODO: Most of this should be validated client-side.
+        if (not 'refGenomeID' in request.POST or
+                request.POST['refGenomeID'] == ''):
+            error_string = 'No reference genome selected.'
+        elif (not 'variantSetName' in request.POST or
+                request.POST['variantSetName'] == ''):
+            error_string = 'No variant set name.'
 
-        # Save vcf file to disk temporarily first.
-        path = default_storage.save('tmp/tmp_varset.vcf',
-                ContentFile(request.FILES['vcfFile'].read()))
-        variant_set_file = os.path.join(settings.MEDIA_ROOT, path)
+        if not error_string:
+            ref_genome_uid = request.POST['refGenomeID']
+            variant_set_name = request.POST['variantSetName']
 
-        try:
-            # First validate the request.
-            # TODO: Most of this should be validated client-side.
-            if not 'refGenomeID' in request.POST:
-                error_string = 'No reference genome selected.'
-            elif (not 'variantSetName' in request.POST or
-                    request.POST['variantSetName'] == ''):
-                error_string = 'No variant set name.'
-
-            # If no error here, then continue.
-            if not error_string:
-                import_variant_set_from_vcf(
-                        project,
-                        request.POST['refGenomeID'],
-                        request.POST['variantSetName'],
-                        variant_set_file)
-        except Exception as e:
-            error_string = 'Import error: ' + str(e)
-        finally:
-            os.remove(variant_set_file)
+            # Handling depending on which form was submitted.
+            if request.POST['create-set-type'] == 'from-file':
+                error_string = _create_variant_set_from_file(request, project,
+                        ref_genome_uid, variant_set_name)
+            elif request.POST['create-set-type'] == 'empty':
+                error_string = _create_variant_set_empty(project,
+                        ref_genome_uid, variant_set_name)
+            else:
+                return HttpResponseBadRequest("Invalid request.")
 
     # Grab all the ReferenceGenomes for this project
     # (for choosing which ref genome a new variant set goes into).
     ref_genome_list = ReferenceGenome.objects.filter(project=project)
 
-    # We only need the label and ID for every reference genome
-    fe_ref_genome_list = [{
-        'label': obj.label,
-        'id': obj.id} for obj in ref_genome_list]
-
     context = {
         'project': project,
-        'ref_genome_list': fe_ref_genome_list,
+        'ref_genome_list': ref_genome_list,
         'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 {'reference_genome__project':project}),
         'error_string': error_string
     }
 
     return render(request, 'variant_set_list.html', context)
+
+
+def _create_variant_set_from_file(request, project, ref_genome_uid,
+        variant_set_name):
+    """Creates a variant set from file.
+
+    Returns:
+        A string indicating any errors that occurred. If no errors, then
+        the empty string.
+    """
+    error_string = ''
+
+    path = default_storage.save('tmp/tmp_varset.vcf',
+            ContentFile(request.FILES['vcfFile'].read()))
+    variant_set_file = os.path.join(settings.MEDIA_ROOT, path)
+
+    try:
+        import_variant_set_from_vcf(
+                project,
+                ref_genome_uid,
+                variant_set_name,
+                variant_set_file)
+    except Exception as e:
+        error_string = 'Import error: ' + str(e)
+    finally:
+        os.remove(variant_set_file)
+
+    return error_string
+
+
+def _create_variant_set_empty(project, ref_genome_uid, variant_set_name):
+    """Creates an empty variant set.
+
+    Returns:
+        A string indicating any errors that occurred. If no errors, then
+        the empty string.
+    """
+    error_string = ''
+
+    ref_genome = ReferenceGenome.objects.get(
+            project=project,
+            uid=ref_genome_uid)
+
+    variant_set = VariantSet.objects.create(
+            reference_genome=ref_genome,
+            label=variant_set_name)
+
+    return error_string
+
 
 @login_required
 def variant_set_view(request, project_uid, variant_set_uid):

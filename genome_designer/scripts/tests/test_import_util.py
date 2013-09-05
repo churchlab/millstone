@@ -77,15 +77,15 @@ class TestImportVariantSetFromVCFFile(TestCase):
         # TODO: when we start checking variant integrity, make sure this is
         # the right project/reference genome!
         project = Project.objects.all()[0]
-        REF_GENOME_ID = 1
+        REF_GENOME_UID = project.referencegenome_set.all()[0].uid
 
         import_variant_set_from_vcf(project,
-                REF_GENOME_ID,
+                REF_GENOME_UID,
                 VARIANT_SET_NAME,
                 VARIANT_SET_VCF_FILEPATH)
 
         new_variant_set = VariantSet.objects.get(
-            reference_genome__id=REF_GENOME_ID,
+            reference_genome__uid=REF_GENOME_UID,
             label=VARIANT_SET_NAME)
 
         self.assertEqual(len(new_variant_set.variants.all()),

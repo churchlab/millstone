@@ -21,10 +21,15 @@ gd.VariantSetListView = Backbone.View.extend({
   },
 
   events: {
-    'click #submitFormFromFile': 'handleFormSubmit',
+    'click #submitFormFromFile': 'handleFormSubmitFromFile',
+    'click #gd-variant-set-form-empty-submit': 'handleFormSubmitEmpty'
   },
 
-  handleFormSubmit: function() {
+  handleFormSubmitFromFile: function() {
     $("#formFromFile").submit();
+  },
+
+  handleFormSubmitEmpty: function() {
+    $("#gd-variant-set-form-empty").submit();
   },
 });

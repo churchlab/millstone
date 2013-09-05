@@ -157,20 +157,20 @@ def import_samples_from_targets_file(project, targets_file):
                     Dataset.TYPE.FASTQ2, row['Read_2_Path'])
 
 @transaction.commit_on_success
-def import_variant_set_from_vcf(project, ref_genome_id, variant_set_name,
+def import_variant_set_from_vcf(project, ref_genome_uid, variant_set_name,
         variant_set_file):
     """Convert an uploaded VCF file into a new variant set object.
 
     Args:
-        * project object
-        * reference genome id
-        * the name of the variant set (label)
-        * the path to the variant set on disk
+        project: The Project this set is part of.
+        ref_genome_uid: ReferenceGenome uid.
+        variant_set_name: Name of the variant set (label).
+        variant_set_file: Path to the variant set on disk.
     """
 
     ref_genome = ReferenceGenome.objects.get(
             project=project,
-            id=ref_genome_id)
+            uid=ref_genome_uid)
 
     # For now, variant set name must be unique even among diff ref genomes
     variant_set_name_exists = len(VariantSet.objects.filter(
