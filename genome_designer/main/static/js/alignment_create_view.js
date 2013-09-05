@@ -59,11 +59,17 @@ gd.AlignmentCreateView = Backbone.View.extend({
     }
 
     var onSuccess = function(data) {
+      if ('error' in data) {
+        $('#gd-align-create-submit-error-msg').text(data.error);
+        $('#gd-align-create-submit-error').show();
+        return;
+      }
+
       // Redirect according to the server response.
       window.location.href = data.redirect;
     };
 
-    // Execute the post. Should return a redirect response.
+    // Execute the post. Handle the response accordingly.
     $.post(postUrl, JSON.stringify(postData), onSuccess, 'json');
   },
 

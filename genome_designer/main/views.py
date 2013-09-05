@@ -255,15 +255,21 @@ def alignment_create_view(request, project_uid):
 
         # Kick off alignments.
         # NOTE: Hard-coded test_models_only=True for now.
-        create_alignment_groups_and_start_alignments(ref_genome_list,
-                sample_list, test_models_only=False)
+        try:
+            create_alignment_groups_and_start_alignments(ref_genome_list,
+                    sample_list, test_models_only=False)
 
-        # Success. Return a redirect response.
-        response_data = {
-            'redirect': reverse(
-                    'genome_designer.main.views.alignment_list_view',
-                    args=(project.uid,)),
-        }
+            # Success. Return a redirect response.
+            response_data = {
+                'redirect': reverse(
+                        'genome_designer.main.views.alignment_list_view',
+                        args=(project.uid,)),
+            }
+        except Exception as e:
+            response_data = {
+                'error': str(e)
+            }
+
         return HttpResponse(json.dumps(response_data),
                 content_type='application/json')
 

@@ -10,6 +10,8 @@ import subprocess
 from subprocess import CalledProcessError
 import sys
 
+from main.celery_util import CELERY_ERROR_KEY
+from main.celery_util import get_celery_worker_status
 from main.models import clean_filesystem_location
 from main.models import get_dataset_with_type
 from main.models import AlignmentGroup
@@ -43,6 +45,10 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
             "Must provide at least one ReferenceGenome.")
     assert len(sample_list) > 0, (
             "Must provide at least one ExperimentSample.")
+
+    # Check whether Celery is running.
+    celery_status = get_celery_worker_status()
+    assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
 
     for ref_genome in ref_genome_list:
         alignment_group = AlignmentGroup.objects.create(
