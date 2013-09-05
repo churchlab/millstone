@@ -53,6 +53,9 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
         # Make sure the initial JBrowse config is prepared.
         prepare_reference_sequence(alignment_group.reference_genome)
 
+        # Create the bwa index before perfoming the alignments in parallel.
+        ensure_bwa_index(ref_genome_fasta)
+
         # Kick of the alignments concurrently.
         alignment_tasks = []
         for sample in sample_list:
@@ -60,14 +63,34 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
             alignment_tasks.append(fn_runner(align_with_bwa, args, concurrent))
 
 
-
-def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):
+def align_with_bwa(alignment_group, experiment_sample=None,
+        sample_alignment=None, test_models_only=False):
     """Aligns a sample to a reference genome using the bwa tool.
+
+    Args:
+        alignment_group: AlignmentGroup that this alignment is part of.
+        experiment_sample: ExperimentSample with handle to source fastq, etc.
+            If not provided, then sample_alignment must be provided.
+        sample_alignment: If provided, delete any previously contained
+            alignment data and re-run alignment.
+        test_models_only: If True, don't actually perform alignment, just
+            create the basic models.
     """
-    # Create the initial record.
-    sample_alignment = ExperimentSampleToAlignment.objects.create(
-            alignment_group=alignment_group,
-            experiment_sample=experiment_sample)
+    ### Validation
+
+    if not experiment_sample:
+        assert sample_alignment
+
+    ### Alignment Logic
+
+    if sample_alignment:
+        # TODO: Delete existing data?
+        experiment_sample = sample_alignment.experiment_sample
+    else:
+        # Create the initial record.
+        sample_alignment = ExperimentSampleToAlignment.objects.create(
+                alignment_group=alignment_group,
+                experiment_sample=experiment_sample)
 
     if test_models_only:
         return
@@ -85,8 +108,7 @@ def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):
     # NOTE: When aligning multiple samples to the same reference genome
     # concurrently, the build index method should be called once to completion
     # before starting the concurrent alignment jobs.
-    if not exists_bwa_index(ref_genome_fasta):
-        build_bwa_index(ref_genome_fasta, error_output)
+    ensure_bwa_index(ref_genome_fasta)
 
     # Grab the fastq sources, and determine whether we are doing paired ends.
     all_datasets = experiment_sample.dataset_set.all()
@@ -179,13 +201,15 @@ def align_with_bwa(alignment_group, experiment_sample, test_models_only=False):
     return sample_alignment
 
 
-def exists_bwa_index(ref_genome_fasta):
-    """Checks whether the index for the fasta exists.
+def ensure_bwa_index(ref_genome_fasta, error_output=None):
+    """Creates the bwa index if it doesn't exist already.
 
-    The logic is to use the convention that the index file location is the
-    fasta location with the extension '.bwt' appended to it.
+    We rely on the convention that the index file location is the fasta
+    location with the extension '.bwt' appended to it.
     """
-    return os.path.exists(ref_genome_fasta + '.bwt')
+    if not os.path.exists(ref_genome_fasta + '.bwt'):
+        build_bwa_index(ref_genome_fasta, error_output)
+
 
 
 def build_bwa_index(ref_genome_fasta, error_output=None):
