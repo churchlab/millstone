@@ -32,6 +32,21 @@ body {
   font-weight: bold;
 }
 
+input.gd-form-tall {
+  height: 40px;
+  margin: 5px 0 5px 0;
+}
+
+
+/** Filter. */
+
+.gd-filter-container {
+  border: 1px dotted black;
+  margin-bottom: 10px;
+  padding: 10px 0 10px 10px;
+}
+
+
 /* GD Checkboxes for Datatables, checkbox td changes color */
 
 td.gd-dt-cb-div {
