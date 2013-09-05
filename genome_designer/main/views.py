@@ -294,11 +294,21 @@ def variant_set_list_view(request, project_uid):
         variant_set_file = os.path.join(settings.MEDIA_ROOT, path)
 
         try:
-            import_variant_set_from_vcf(
-                    project,
-                    request.POST['refGenomeID'],
-                    request.POST['variantSetName'],
-                    variant_set_file)
+            # First validate the request.
+            # TODO: Most of this should be validated client-side.
+            if not 'refGenomeID' in request.POST:
+                error_string = 'No reference genome selected.'
+            elif (not 'variantSetName' in request.POST or
+                    request.POST['variantSetName'] == ''):
+                error_string = 'No variant set name.'
+
+            # If no error here, then continue.
+            if not error_string:
+                import_variant_set_from_vcf(
+                        project,
+                        request.POST['refGenomeID'],
+                        request.POST['variantSetName'],
+                        variant_set_file)
         except Exception as e:
             error_string = 'Import error: ' + str(e)
         finally:
