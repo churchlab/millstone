@@ -4,13 +4,15 @@
 <div class="page-header">
   <h1>Samples</h1>
 </div>
-{% if error_string %} 
-<div class="alert alert-error alert-block">
-  <button type="button" class="close" data-dismiss="alert">&times;</button>
-  <h4>Error</h4> 
-  {{ error_string }}
-</div>
+
+{% if error_string %}
+  <div class="alert alert-error alert-block">
+    <button type="button" class="close" data-dismiss="alert">&times;</button>
+    <h4>Error</h4>
+    {{ error_string }}
+  </div>
 {% endif %}
+
 <form class="form-search">
   <div class="btn-group">
     <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">

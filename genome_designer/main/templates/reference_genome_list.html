@@ -4,24 +4,29 @@
 <div class="page-header">
   <h1>Reference Genomes</h1>
 </div>
-<div class="btn-group">
-  <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
-    Create New
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu">
-    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From Variant Set...</a></li>
-    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>
-  </ul>
-</div>
-<span class="gd-error-text">
+
+<p>
   {% if error_string %}
-    {{ error_string }}
+    <div class="alert alert-error alert-block">
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+      <h4>Error</h4>
+      {{ error_string }}
+    </div>
   {% endif %}
-</span>
-<div class="container span12" style="box-sizing: border-box; padding: 50px">
-  <div id="gd-ref-genome-list-view-datatable-hook">
+
+  <div class="btn-group">
+    <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
+      Create New
+      <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+      <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From Variant Set...</a></li>
+      <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>
+    </ul>
   </div>
+</p>
+
+<div id="gd-ref-genome-list-view-datatable-hook" class="container-fluid">
 </div>
 
 <!-- Modal -->

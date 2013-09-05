@@ -5,7 +5,6 @@
   <h1>Alignment {{alignment_group.label}}</h1>
 </div>
 
-
 <div class="btn-toolbar">
   <button class="btn btn-primary" href="#">
     Go to Variants for this alignment&hellip;
@@ -15,9 +14,7 @@
   </button>
 </div>
 
-<div class="container span12" style="box-sizing: border-box; padding: 30px; padding-top: 10px;">
-  <div id="gd-alignment_view-datatable-hook">
-  </div>
+<div id="gd-alignment_view-datatable-hook" class="container-fluid">
 </div>
 
 <script type="text/javascript">
@@ -25,7 +22,7 @@
 
   {% autoescape off %}
     EXPERIMENT_TO_SAMPLE_DATA = {{experiment_sample_to_alignment_list_json}};
-    
+
     INIT_JS_DATA = {{init_js_data}};
   {% endautoescape %}
 </script>
