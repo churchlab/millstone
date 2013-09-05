@@ -219,7 +219,25 @@ def bootstrap_fake_data():
                     #add a sample to the association if the variant is even
                     if not var.position % 2:
                         vvs2.sample_variant_set_association.add(sample_1)
+
+        # Make sure that both sets have at least one variant.
+        guaranteed_var = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=ref_genome_1,
+                chromosome='chrom',
+                position=22,
+                ref_value='A',
+                alt_value='G')
+        vvs1 = VariantToVariantSet.objects.create(
+                variant=guaranteed_var,
+                variant_set=var_set1)
+        vvs2 = VariantToVariantSet.objects.create(
+                variant=guaranteed_var,
+                variant_set=var_set2)
+        vvs2.sample_variant_set_association.add(sample_1)
+
     _add_fake_variants_to_fake_set()
+
 
 def reset_database():
     """Deletes the old database and sets up a new one.

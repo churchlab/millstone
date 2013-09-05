@@ -43,6 +43,7 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
                 reference_genome=self.ref_genome_1,
                 label=VARIANTSET_2_LABEL)[0].uid
 
+
     def test_add_variants_to_set(self):
 
         variant_uids = Variant.objects.filter(
@@ -55,7 +56,8 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
                 'add',
                 self.var_set1_uid)
 
-        assert response['alert_type'] == 'info', str(response)
+        self.assertEqual(response['alert_type'], 'info', str(response))
+
 
     def test_remove_variant_from_set(self):
 
@@ -72,5 +74,5 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
                 'remove',
                 self.var_set2_uid)
 
-        assert response['alert_type'] == 'info', str(response)
+        self.assertEqual(response['alert_type'], 'info', str(response))
 
