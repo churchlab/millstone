@@ -68,7 +68,7 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
         # Kick of the alignments concurrently.
         alignment_tasks = []
         for sample in sample_list:
-            args = [alignment_group, sample, test_models_only]
+            args = [alignment_group, sample, None, test_models_only]
             alignment_tasks.append(fn_runner(align_with_bwa, args, concurrent))
 
 
