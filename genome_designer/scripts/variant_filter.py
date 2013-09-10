@@ -6,7 +6,7 @@ from collections import OrderedDict
 import re
 
 from django.db.models import Q
-from sympy.core.function import sympify
+from sympy.logic import boolalg
 
 
 ###############################################################################
@@ -111,7 +111,7 @@ class VariantFilterEvaluator(object):
             else:
                 symbolified_tokens.append(token)
         symbolified_string = ''.join(symbolified_tokens)
-        self.sympy_representation = sympify(symbolified_string)
+        self.sympy_representation = boolalg.to_dnf(symbolified_string)
 
 
     def get_condition_string_for_symbol(self, symbol):
@@ -120,6 +120,21 @@ class VariantFilterEvaluator(object):
         else:
             symbol_str = str(symbol)
         return self.symbol_to_expression_map[symbol_str]
+
+
+    def evaluate_single_symbol(self, symbol):
+        """Returns Q_object corresponding to single symbol.
+        """
+        condition_string = self.get_condition_string_for_symbol(symbol)
+        delim_key_value_triple = _get_delim_key_value_triple(
+                condition_string)
+        return _get_django_q_object_for_triple(delim_key_value_triple)
+
+
+    def evaluate_ANDed_clause(self, sympy_clause):
+        assert isinstance(sympy_clause, boolalg.And)
+        return [self.evaluate_single_symbol(symbol) for symbol in
+                sympy_clause.args]
 
 
 class QueryWrapper(object):
@@ -182,7 +197,7 @@ def _get_django_q_object_for_triple(delim_key_value_triple):
 
 
 ###############################################################################
-# Main entry method.
+# Main client method.
 ###############################################################################
 
 def get_variants_that_pass_filter(filter_string, ref_genome):
@@ -206,24 +221,35 @@ def get_variants_that_pass_filter(filter_string, ref_genome):
         List of Variant model objects.
     """
     evaluator = VariantFilterEvaluator(filter_string, ref_genome)
-    q_obj_list = []
     if not evaluator.sympy_representation.is_Boolean:
-        condition_string = evaluator.get_condition_string_for_symbol(
+        full_q = evaluator.evaluate_single_symbol(
                 evaluator.sympy_representation)
-        delim_key_value_triple = _get_delim_key_value_triple(condition_string)
-        q_obj_list.append(_get_django_q_object_for_triple(
-                delim_key_value_triple))
     else:
-        for symbol in evaluator.sympy_representation.args:
-            condition_string = evaluator.get_condition_string_for_symbol(symbol)
-            delim_key_value_triple = _get_delim_key_value_triple(condition_string)
-            q_obj_list.append(_get_django_q_object_for_triple(
-                    delim_key_value_triple))
-
-    # Combine the Q objects.
-    full_q = Q()
-    for q_obj in q_obj_list:
-        full_q &= q_obj
+        if isinstance(evaluator.sympy_representation, boolalg.And):
+            q_obj_list = evaluator.evaluate_ANDed_clause(
+                evaluator.sympy_representation)
+            full_q = Q()
+            for q_obj in q_obj_list:
+                full_q &= q_obj
+        elif isinstance(evaluator.sympy_representation, boolalg.Or):
+            ANDed_q_list = []
+            for clause in evaluator.sympy_representation.args:
+                if isinstance(clause, boolalg.Or):
+                    raise AssertionError("Unexpected OR inside an OR. Debug.")
+                elif isinstance(clause, boolalg.And):
+                    q_obj_list = evaluator.evaluate_ANDed_clause(clause)
+                    ANDed_q = Q()
+                    for q_obj in q_obj_list:
+                        ANDed_q &= q_obj
+                    ANDed_q_list.append(ANDed_q)
+                else:
+                    ANDed_q_list.append(evaluator.evaluate_single_symbol(clause))
+            full_q = Q()
+            for q_obj in ANDed_q_list:
+                full_q |= q_obj
+        else:
+            raise AssertionError("Unexpected type %s " %
+                    type(evaluator.sympy_representation))
 
     # Send the query to the database.
     query_result = ref_genome.variant_set.filter(full_q)

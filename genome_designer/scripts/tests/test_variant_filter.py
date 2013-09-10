@@ -137,6 +137,39 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
             get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
 
 
+    def test_filter__by_position_complex(self):
+        """Test filtering by position.
+        """
+        # Create several Variants with positions:
+        # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+        for pos in range(10):
+            Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=pos,
+                ref_value='A',
+                alt_value='G')
+
+        # Test AND case.
+        QUERY_STRING = 'position < 1 & position > 7'
+        variants = get_variants_that_pass_filter(QUERY_STRING,
+                self.ref_genome)
+        self.assertEqual(0, len(variants))
+
+        # Test OR case.
+        QUERY_STRING = 'position < 1 | position > 7'
+        variants = get_variants_that_pass_filter(QUERY_STRING,
+                self.ref_genome)
+        self.assertEqual(3, len(variants))
+        for pos in [0, 8, 9]:
+            found = False
+            for var in variants:
+                if var.position == pos:
+                    found = True
+                    break
+            self.assertTrue(found, "Expected variant at pos %d not found" % pos)
+
 
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
     """Tests for the object that encapsulates evaluation of the filter string.
