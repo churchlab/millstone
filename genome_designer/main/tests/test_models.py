@@ -6,6 +6,7 @@ import os
 
 from django.test import TestCase
 
+from main.models import auto_generate_short_name
 from main.models import clean_filesystem_location
 import settings
 
@@ -31,3 +32,9 @@ class TestModels(TestCase):
                 EXPECTED_CLEAN_URL)
         self.assertEqual(EXPECTED_CLEAN_URL,
                 clean_filesystem_location(dirty_full_url))
+
+    def test_auto_generate_short_name(self):
+        LONG_NAME = 'E Coli K12 Substrain MG1655'
+        EXPECTED_SHORT_NAME = 'e_coli_k12_s'
+        self.assertEqual(EXPECTED_SHORT_NAME,
+                auto_generate_short_name(LONG_NAME))
