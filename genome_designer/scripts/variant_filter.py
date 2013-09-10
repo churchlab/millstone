@@ -1,5 +1,28 @@
 """
 Methods for filtering over Variants.
+
+The fields that we allow querying against vary across different models,
+and for each model, the field may either be a column in the SQL database, a key
+in the catch-all serialized key-value dictionary.
+
+A naive implementation would pull all Variant objects from the SQl database
+(limited to the ReferenceGenome provided) into memory, and then iterate over
+all these objects for each condition in the query. However, we could reduce
+the number of objects pulled into memory by extracting the parts of the query
+that correspond to columns in the SQL table. The strategy for doing this is
+to convert the query into disjunctive normal form, an OR of ANDs, and then
+evaluate each conjunction (AND clause) separately. Finally, take the union
+of the result of each evaluated conjunction.
+
+We can use sympy, a python symbolic mathematics library, to help convert the
+user's query into DNF. The main idea here is to take the raw query, replace
+conditions with a symbol, convert to DNF using sympy, and then evaluate each
+conjunctive clause as described above.
+
+Other implementation nuances to note:
+    * Since we are comparing across multiple tables that are inter-related,
+      remember to use Django's select_related() method where appropriate, in
+      order to limit the number of independent hits of the SQL db.
 """
 
 from collections import OrderedDict
