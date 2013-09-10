@@ -114,7 +114,55 @@ class VariantFilterEvaluator(object):
         self.sympy_representation = boolalg.to_dnf(symbolified_string)
 
 
+    def evaluate(self):
+        """Evaluates the filter string provided.
+
+        Returns:
+            List of Variants that pass the filter query.
+        """
+        if not self.sympy_representation.is_Boolean:
+            full_q = self.evaluate_single_symbol(self.sympy_representation)
+        else:
+            if isinstance(self.sympy_representation, boolalg.And):
+                q_obj_list = self.evaluate_ANDed_clause(
+                        self.sympy_representation)
+                full_q = Q()
+                for q_obj in q_obj_list:
+                    full_q &= q_obj
+            elif isinstance(self.sympy_representation, boolalg.Or):
+                ANDed_q_list = []
+                for clause in self.sympy_representation.args:
+                    if isinstance(clause, boolalg.Or):
+                        raise AssertionError("Unexpected OR inside an OR. Debug.")
+                    elif isinstance(clause, boolalg.And):
+                        q_obj_list = self.evaluate_ANDed_clause(clause)
+                        ANDed_q = Q()
+                        for q_obj in q_obj_list:
+                            ANDed_q &= q_obj
+                        ANDed_q_list.append(ANDed_q)
+                    else:
+                        ANDed_q_list.append(self.evaluate_single_symbol(clause))
+                full_q = Q()
+                for q_obj in ANDed_q_list:
+                    full_q |= q_obj
+            else:
+                raise AssertionError("Unexpected type %s " %
+                        type(self.sympy_representation))
+
+        # Send the query to the database.
+        query_result = self.ref_genome.variant_set.filter(full_q)
+        return query_result
+
+
     def get_condition_string_for_symbol(self, symbol):
+        """Returns the condition string that the symbol replaced.
+
+        Args:
+            symbol: A sympy.core.symbol.Symbol or string.
+
+        Returns:
+            A string representing a query condition.
+        """
         if isinstance(symbol, str):
             symbol_str = symbol
         else:
@@ -221,36 +269,4 @@ def get_variants_that_pass_filter(filter_string, ref_genome):
         List of Variant model objects.
     """
     evaluator = VariantFilterEvaluator(filter_string, ref_genome)
-    if not evaluator.sympy_representation.is_Boolean:
-        full_q = evaluator.evaluate_single_symbol(
-                evaluator.sympy_representation)
-    else:
-        if isinstance(evaluator.sympy_representation, boolalg.And):
-            q_obj_list = evaluator.evaluate_ANDed_clause(
-                evaluator.sympy_representation)
-            full_q = Q()
-            for q_obj in q_obj_list:
-                full_q &= q_obj
-        elif isinstance(evaluator.sympy_representation, boolalg.Or):
-            ANDed_q_list = []
-            for clause in evaluator.sympy_representation.args:
-                if isinstance(clause, boolalg.Or):
-                    raise AssertionError("Unexpected OR inside an OR. Debug.")
-                elif isinstance(clause, boolalg.And):
-                    q_obj_list = evaluator.evaluate_ANDed_clause(clause)
-                    ANDed_q = Q()
-                    for q_obj in q_obj_list:
-                        ANDed_q &= q_obj
-                    ANDed_q_list.append(ANDed_q)
-                else:
-                    ANDed_q_list.append(evaluator.evaluate_single_symbol(clause))
-            full_q = Q()
-            for q_obj in ANDed_q_list:
-                full_q |= q_obj
-        else:
-            raise AssertionError("Unexpected type %s " %
-                    type(evaluator.sympy_representation))
-
-    # Send the query to the database.
-    query_result = ref_genome.variant_set.filter(full_q)
-    return query_result
+    return evaluator.evaluate()
