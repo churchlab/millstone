@@ -33,6 +33,8 @@ TEST_FASTQ1 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
 TEST_FASTQ2 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
 
+TEST_SAMPLE_UID = '38d786f2'
+
 TEST_BAM = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'bwa_align.sorted.grouped.realigned.bam')
 
@@ -69,6 +71,7 @@ class TestSNPCallers(TestCase):
 
         # Create a sample.
         sample_1 = ExperimentSample.objects.create(
+                uid=TEST_SAMPLE_UID,
                 project=self.project,
                 label='sample1')
         ### Add the raw reads
@@ -77,7 +80,7 @@ class TestSNPCallers(TestCase):
         copy_and_add_dataset_source(sample_1, Dataset.TYPE.FASTQ2,
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
 
-        # Create alignment to the sample.
+        # Create relationshpi between alignment and sample.
         sample_alignment = ExperimentSampleToAlignment.objects.create(
                 alignment_group=alignment_group,
                 experiment_sample=sample_1)
@@ -140,6 +143,8 @@ class TestSNPCallers(TestCase):
         FAKE_READS_FASTQ2 = os.path.join(KNOWN_SUBSTITUTIONS_ROOT,
                 'test_genome_known_substitutions_0.snps.simLibrary.2.fq')
 
+        FAKE_READS_SAMPLE_UID = '93b68da4'
+
         FAKE_READS_BAM = os.path.join(KNOWN_SUBSTITUTIONS_ROOT,
                 'bwa_align.sorted.grouped.realigned.bam')
 
@@ -156,6 +161,7 @@ class TestSNPCallers(TestCase):
 
         # Create a sample.
         sample_1 = ExperimentSample.objects.create(
+                uid=FAKE_READS_SAMPLE_UID,
                 project=self.project,
                 label='sample1')
         ### Add the raw reads
