@@ -67,7 +67,7 @@ ALL_KEY_MAP_LIST = ALL_SQL_KEY_MAP_LIST + [
     VARIANT_EVIDENCE_MAP,
 ]
 
-TYPE_TO_SUPPORTED_OPERATIONS_HARD_CODED = {
+TYPE_TO_SUPPORTED_OPERATIONS = {
         'Float': ['=', '!=', '>=', '<=', '>', '<'],
         'Integer': ['=', '==', '!=', '>=', '<=', '>', '<'],
         'String': ['=', '==', '!='],
@@ -244,13 +244,38 @@ class VariantFilterEvaluator(object):
 
         # Now perform the SQL query to pull the models that pass the Q part
         # into memory.
-        query_result = self.ref_genome.variant_set.filter(q_part)
+        variant_list = self.ref_genome.variant_set.filter(q_part)
 
-        # TODO: Bring in models other than Variant.
+        # NOTE: Getting this correct first. After that, optimize lookups.
+        for triple in remaining_triples:
+            (delim, key, value) = triple
+            passing_variant_list = []
+            for variant in variant_list:
+                if key in VARIANT_CALLER_COMMON_MAP:
+                    _assert_delim_for_key(VARIANT_CALLER_COMMON_MAP, delim, key)
+                    all_common_data_obj = (
+                            variant.variantcallercommondata_set.all())
+                    # TODO: Figure out semantics of having more than one common
+                    # data object.
+                    for common_data_obj in all_common_data_obj:
+                        data_dict = common_data_obj.as_dict()
+                        passing = _evaluate_condition_in_triple(
+                                data_dict, VARIANT_CALLER_COMMON_MAP, triple)
+                        if passing:
+                            passing_variant_list.append(variant)
+                            break
+                else:
+                    raise ParseError(key, 'Unrecognized filter key.')
 
-        # TODO: Filter these further by the remaining triples.
+                for common_data_obj in variant.variantcallercommondata_set.all():
+                    data_dict = common_data_obj.as_dict()
+                    data_dict
 
-        return query_result
+            # Since we are inside of a conjunction, we only need to check
+            # the remaining variants on the next iteration.
+            variant_list = passing_variant_list
+
+        return variant_list
 
 
     def handle_single_symbol(self, symbol):
@@ -318,6 +343,56 @@ def _get_django_q_object_for_triple(delim_key_value_triple):
     (delim, key, value) = delim_key_value_triple
     postfix = DELIM_TO_Q_POSTFIX[delim]
     return eval('Q(' + key + postfix + '=' + '"' + value + '"' + ')')
+
+
+def _evaluate_condition_in_triple(data_map, type_map, triple):
+    """Evaluates a condition.
+    """
+    (delim, key, value) = triple
+    cast_type_string = type_map[key]['type']
+    if cast_type_string == 'Boolean':
+        return _evaluate_boolean_condition(data_map, key, value)
+    else:
+        casted_value = _cast_value_to_type(value, cast_type_string)
+        return eval('data_map[key] ' + delim + ' casted_value')
+
+
+def _evaluate_boolean_condition(data_dict, key, value):
+    """Evaluates a boolean condition.
+    """
+    VALID_BOOLEAN_TRUE_VALUES = ['True', 'true', 'T', 't']
+    VALID_BOOLEAN_FALSE_VALUES = ['False', 'false', 'F', 'f']
+    init_result = data_dict[key]
+    if value in VALID_BOOLEAN_TRUE_VALUES:
+        return init_result
+    elif value in VALID_BOOLEAN_FALSE_VALUES:
+        return not init_result
+    else:
+        raise ParseError(value, 'Invalid boolean value, use True or False')
+
+
+def _cast_value_to_type(value, cast_type_string):
+    """Return the value casted to the type specified by the cast_type_string,
+    as defined in snp_filter_key_map.py
+    """
+    if cast_type_string == 'Integer':
+        return int(value)
+    elif cast_type_string == 'Float':
+        return float(value)
+    elif cast_type_string == 'String':
+        return str(value)
+    else:
+        raise Exception("Unsupported type " + cast_type_string)
+
+
+def _assert_delim_for_key(type_map, delim, key):
+    """Asserts that the delimiter can be evaluated for the type comparison
+    specified by the key. Raises a ParseError if not.
+    """
+    data_type = type_map[key]['type']
+    if not delim in TYPE_TO_SUPPORTED_OPERATIONS[data_type]:
+        raise ParseError(str(key) + str(delim),
+                'Invalid delim for type indicated by key.')
 
 
 ###############################################################################

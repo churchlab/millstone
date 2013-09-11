@@ -30,6 +30,7 @@ Implementation Notes:
 """
 
 import os
+import pickle
 import re
 import stat
 from uuid import uuid4
@@ -654,6 +655,32 @@ class VariantCallerCommonData(Model):
 
     # Catch-all key-value data store.
     data = JSONField()
+
+    def as_dict(self):
+        """Converts a common data object into a dictionary from key to cleaned
+        values.
+
+        Cleaned generally means that fields that had to be pickled for storage
+        are unpickled.
+
+        Note that the original object had some SQL-level fields, but most of the
+        data pased from the vcf file is in a catch-all 'data' field.
+        This method flattens the structure so that all data is available on the
+        resulting top-level object.
+
+        Returns:
+            A flattened dictionary of cleaned data.
+        """
+        cleaned_common_data = {}
+
+        for key, value in self.data.iteritems():
+            try:
+                clean_value = pickle.loads(str(value))
+            except:
+                clean_value = str(value)
+            cleaned_common_data[key] = clean_value
+        return cleaned_common_data
+
 
 
 class VariantEvidence(Model):

@@ -2,13 +2,17 @@
 Tests for variant_filter.py.
 """
 
+import pickle
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from sympy.core.function import sympify
 
+from main.models import Dataset
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
+from main.models import VariantCallerCommonData
 from scripts.variant_filter import get_variants_that_pass_filter
 from scripts.variant_filter import symbol_generator
 from scripts.variant_filter import ParseError
@@ -26,6 +30,11 @@ class BaseTestVariantFilterTestCase(TestCase):
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(project=project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
+        self.vcf_dataset = Dataset.objects.create(
+                label='test_data_set',
+                type=Dataset.TYPE.VCF_FREEBAYES,
+                filesystem_location='fake location')
+
 
 
 class TestVariantFilter(BaseTestVariantFilterTestCase):
@@ -191,12 +200,42 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         QUERY_STRING = 'position < 1 & INFO_XRM > 0'
         variants = get_variants_that_pass_filter(QUERY_STRING,
                 self.ref_genome)
-        self.assertEqual(1, len(variants))
+        self.assertEqual(0, len(variants))
 
         QUERY_STRING = 'position < 1 | position >= 7 & INFO_XRM > 0'
         variants = get_variants_that_pass_filter(QUERY_STRING,
                 self.ref_genome)
-        self.assertEqual(4, len(variants))
+        self.assertEqual(1, len(variants))
+
+
+    def test_filter__common_data(self):
+        """Test with VariantCallerCommonData filtering.
+        """
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=2,
+                ref_value='A',
+                alt_value='G')
+        raw_data_dict = {
+                'INFO_XRM': pickle.dumps(0.12),
+        }
+        VariantCallerCommonData.objects.create(
+                variant=variant,
+                source_dataset=self.vcf_dataset,
+                data=raw_data_dict
+        )
+
+        QUERY_STRING = 'position < 5 & INFO_XRM > 0'
+        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        self.assertEqual(1, len(variants))
+
+        QUERY_STRING = 'position < 5 & INFO_XRM > 1'
+        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        self.assertEqual(0, len(variants))
+
+
 
 
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
