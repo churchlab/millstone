@@ -288,6 +288,36 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         self.assertEqual(0, len(variants))
 
 
+    def test_filter__equality(self):
+        """Test filtering with equality operators.
+        """
+        # Create several Variants with positions:
+        # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+        for pos in range(10):
+            Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=pos,
+                ref_value='A',
+                alt_value='G')
+
+        variants = get_variants_that_pass_filter('position == 5',
+                self.ref_genome)
+        self.assertEqual(1, len(variants))
+        self.assertEqual(5, variants[0].position)
+
+        variants = get_variants_that_pass_filter('position = 5',
+                self.ref_genome)
+        self.assertEqual(1, len(variants))
+        self.assertEqual(5, variants[0].position)
+
+        variants = get_variants_that_pass_filter('position != 5',
+                self.ref_genome)
+        self.assertEqual(9, len(variants))
+        for var in variants:
+            self.assertTrue(var.position != 5)
+
 
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
     """Tests for the object that encapsulates evaluation of the filter string.

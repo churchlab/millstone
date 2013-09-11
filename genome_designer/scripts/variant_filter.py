@@ -89,6 +89,7 @@ DELIM_TO_Q_POSTFIX = OrderedDict()
 DELIM_TO_Q_POSTFIX['=='] = ''
 DELIM_TO_Q_POSTFIX['<='] = '__lte'
 DELIM_TO_Q_POSTFIX['>='] = '__gte'
+DELIM_TO_Q_POSTFIX['!='] = 'see special handling'
 DELIM_TO_Q_POSTFIX['<'] = '__lt'
 DELIM_TO_Q_POSTFIX['>'] = '__gt'
 DELIM_TO_Q_POSTFIX['='] = ''
@@ -131,7 +132,7 @@ def symbol_generator():
         current_char = chr(next_ord)
 
 
-EXPRESSION_REGEX = re.compile('(\w+[=><]{1}[=]{0,1}\w+)')
+EXPRESSION_REGEX = re.compile('(\w+[=><!]{1}[=]{0,1}\w+)')
 
 class VariantFilterEvaluator(object):
     """Object that encapsulates methods for evaluating a filter.
@@ -189,9 +190,9 @@ class VariantFilterEvaluator(object):
         """Evaluates the conditions in the filter string.
 
         Returns:
-            Set of Variants that pass the filter query.
+            List of Variants that pass the filter query.
         """
-        return self.evaluate_disjunction(self.sympy_representation)
+        return list(self.evaluate_disjunction(self.sympy_representation))
 
 
     def evaluate_disjunction(self, disjunction_clause):
@@ -329,7 +330,7 @@ def _get_delim_key_value_triple(raw_string):
                     else:
                         raise ParseError(raw_string, 'Key type not yet supported.')
             # If we got here, the key was not found in any data_map.
-            raise ParseError(raw_string, 'Unrecognized filter key.')
+            raise ParseError(raw_string, 'Unrecognized filter key: %s' % key)
 
     # If we got here, we didn't find a match.
     raise ParseError(raw_string, 'No valid filter delimeter.')
@@ -355,8 +356,18 @@ def _get_django_q_object_for_triple(delim_key_value_triple):
     """
     assert len(delim_key_value_triple) == 3
     (delim, key, value) = delim_key_value_triple
-    postfix = DELIM_TO_Q_POSTFIX[delim]
-    return eval('Q(' + key + postfix + '=' + '"' + value + '"' + ')')
+
+    # Special handling for != delim.
+    if delim == '!=':
+        postfix = ''
+        maybe_not_prefix = '~'
+    else:
+        postfix = DELIM_TO_Q_POSTFIX[delim]
+        maybe_not_prefix = ''
+
+    eval_string = (maybe_not_prefix + 'Q(' + key + postfix + '=' + '"' + value +
+            '"' + ')')
+    return eval(eval_string)
 
 
 def _evaluate_condition_in_triple(data_map, type_map, triple):
