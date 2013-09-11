@@ -51,15 +51,18 @@ VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP = {
 VARIANT_EVIDENCE_SQL_KEY_MAP = {
 }
 
+ALL_SQL_KEY_MAP_LIST = [
+    VARIANT_SQL_KEY_MAP,
+    VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP,
+    VARIANT_EVIDENCE_SQL_KEY_MAP,
+]
+
 # TODO: Generate these from the vcf dataset(s) associated with the reference
 # genome we are querying against.
 from snp_filter_key_map import VARIANT_CALLER_COMMON_MAP
 from snp_filter_key_map import VARIANT_EVIDENCE_MAP
 
-ALL_KEY_MAP_LIST = [
-    VARIANT_SQL_KEY_MAP,
-    VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP,
-    VARIANT_EVIDENCE_SQL_KEY_MAP,
+ALL_KEY_MAP_LIST = ALL_SQL_KEY_MAP_LIST + [
     VARIANT_CALLER_COMMON_MAP,
     VARIANT_EVIDENCE_MAP,
 ]
@@ -259,10 +262,11 @@ class VariantFilterEvaluator(object):
         """
         condition_string = self.get_condition_string_for_symbol(symbol)
         (delim, key, value) = _get_delim_key_value_triple(condition_string)
-        if key in VARIANT_SQL_KEY_MAP:
-            return _get_django_q_object_for_triple((delim, key, value))
-        else:
-            return (delim, key, value)
+        for key_map in ALL_SQL_KEY_MAP_LIST:
+            if key in key_map:
+                return _get_django_q_object_for_triple((delim, key, value))
+            else:
+                return (delim, key, value)
 
 
 ###############################################################################
