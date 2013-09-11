@@ -34,14 +34,6 @@ HEADER_STRING = (
 SOURCE_VCF = 'snp_filter_key_map_source.vcf'
 
 
-TYPE_TO_SUPPORTED_OPERATIONS_HARD_CODED = {
-        'Float': ['=', '!=', '>=', '<=', '>', '<'],
-        'Integer': ['=', '==', '!=', '>=', '<=', '>', '<'],
-        'String': ['=', '==', '!='],
-        'Boolean': ['=', '==', '!=']
-}
-
-
 SNP_CALLER_COMMON_DATA_HARD_CODED = {
     'CHROM': {'type': 'String', 'num': 1},
     'POS': {'type': 'Integer', 'num': 1},
@@ -79,7 +71,7 @@ def generate_filter_key_map(source_vcf=SOURCE_VCF):
             inner_map['num'] = value.num
             snp_caller_common_data_map[key] = inner_map
         snp_caller_common_data_map.update(SNP_CALLER_COMMON_DATA_HARD_CODED)
-        output_fh.write('SNP_CALLER_COMMON_MAP = ')
+        output_fh.write('VARIANT_CALLER_COMMON_MAP = ')
         output_fh.write(pprint.pformat(snp_caller_common_data_map, indent=4))
         output_fh.write('\n\n')
 
@@ -92,20 +84,14 @@ def generate_filter_key_map(source_vcf=SOURCE_VCF):
             inner_map['num'] = value.num
             snp_evidence_data_map[key] = inner_map
         snp_evidence_data_map.update(SNP_EVIDENCE_HARD_CODED)
-        output_fh.write('SNP_EVIDENCE_MAP = ')
+        output_fh.write('VARIANT_EVIDENCE_MAP = ')
         output_fh.write(pprint.pformat(snp_evidence_data_map, indent=4))
-        output_fh.write('\n\n')
-
-        output_fh.write('TYPE_TO_SUPPORTED_OPERATIONS = ')
-        output_fh.write(pprint.pformat(
-                TYPE_TO_SUPPORTED_OPERATIONS_HARD_CODED, indent=4))
         output_fh.write('\n')
 
 
     # Test the generated file by running imports.
-    from snp_filter_key_map import SNP_CALLER_COMMON_MAP
-    from snp_filter_key_map import SNP_EVIDENCE_MAP
-    from snp_filter_key_map import TYPE_TO_SUPPORTED_OPERATIONS
+    from snp_filter_key_map import VARIANT_CALLER_COMMON_MAP
+    from snp_filter_key_map import VARIANT_EVIDENCE_MAP
 
 
 if __name__ == '__main__':

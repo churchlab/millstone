@@ -171,6 +171,34 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
             self.assertTrue(found, "Expected variant at pos %d not found" % pos)
 
 
+    def test_filter__with_non_SQL_key(self):
+        """Tests handling of non-SQL key.
+
+        NOTE: This is not actually testing filtering, just showing that we
+        can handle the key.
+        """
+        # Create several Variants with positions:
+        # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+        for pos in range(10):
+            Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=pos,
+                ref_value='A',
+                alt_value='G')
+
+        QUERY_STRING = 'position < 1 & INFO_XRM > 0'
+        variants = get_variants_that_pass_filter(QUERY_STRING,
+                self.ref_genome)
+        self.assertEqual(1, len(variants))
+
+        QUERY_STRING = 'position < 1 | position >= 7 & INFO_XRM > 0'
+        variants = get_variants_that_pass_filter(QUERY_STRING,
+                self.ref_genome)
+        self.assertEqual(4, len(variants))
+
+
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
     """Tests for the object that encapsulates evaluation of the filter string.
     """

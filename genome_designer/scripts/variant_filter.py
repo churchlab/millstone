@@ -51,6 +51,18 @@ VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP = {
 VARIANT_EVIDENCE_SQL_KEY_MAP = {
 }
 
+# TODO: Generate these from the vcf dataset(s) associated with the reference
+# genome we are querying against.
+from snp_filter_key_map import VARIANT_CALLER_COMMON_MAP
+from snp_filter_key_map import VARIANT_EVIDENCE_MAP
+
+ALL_KEY_MAP_LIST = [
+    VARIANT_SQL_KEY_MAP,
+    VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP,
+    VARIANT_EVIDENCE_SQL_KEY_MAP,
+    VARIANT_CALLER_COMMON_MAP,
+    VARIANT_EVIDENCE_MAP,
+]
 
 TYPE_TO_SUPPORTED_OPERATIONS_HARD_CODED = {
         'Float': ['=', '!=', '>=', '<=', '>', '<'],
@@ -265,7 +277,7 @@ def _get_delim_key_value_triple(raw_string):
         delimeter = _clean_delim(raw_delim)
         if len(split_result) == 2:
             key, value = split_result
-            for data_map in [VARIANT_SQL_KEY_MAP]:
+            for data_map in ALL_KEY_MAP_LIST:
                 # Make sure this is a valid key and valid delimeter.
                 if key in data_map:
                     specs = data_map[key]
