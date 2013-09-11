@@ -31,6 +31,8 @@ import re
 from django.db.models import Q
 from sympy.logic import boolalg
 
+from main.models import VariantEvidence
+
 
 ###############################################################################
 # Hard-coded query keys.
@@ -246,7 +248,9 @@ class VariantFilterEvaluator(object):
         # into memory.
         variant_list = self.ref_genome.variant_set.filter(q_part)
 
-        # NOTE: Getting this correct first. After that, optimize lookups.
+        # NOTE: The following code doesn't take into account sample scope.
+        # Rather, it's meant to be a first demonstration of filtering and
+        # needs to be re-written once we clarify what is going on in the UI.
         for triple in remaining_triples:
             (delim, key, value) = triple
             passing_variant_list = []
@@ -264,12 +268,23 @@ class VariantFilterEvaluator(object):
                         if passing:
                             passing_variant_list.append(variant)
                             break
+
+                elif key in VARIANT_EVIDENCE_MAP:
+                    _assert_delim_for_key(VARIANT_EVIDENCE_MAP, delim, key)
+                    all_variant_evidence_obj_list = (
+                            VariantEvidence.objects.filter(
+                                    variant_caller_common_data__in=variant.variantcallercommondata_set.all()))
+                    for variant_evidence_obj in all_variant_evidence_obj_list:
+                        data_dict = variant_evidence_obj.as_dict()
+                        if not data_dict['called']:
+                            continue
+                        passing = _evaluate_condition_in_triple(
+                                data_dict, VARIANT_EVIDENCE_MAP, triple)
+                        if passing:
+                            passing_variant_list.append(variant)
+                            break
                 else:
                     raise ParseError(key, 'Unrecognized filter key.')
-
-                for common_data_obj in variant.variantcallercommondata_set.all():
-                    data_dict = common_data_obj.as_dict()
-                    data_dict
 
             # Since we are inside of a conjunction, we only need to check
             # the remaining variants on the next iteration.

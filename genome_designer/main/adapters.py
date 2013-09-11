@@ -36,7 +36,7 @@ def adapt_model_to_frontend(model, filters={}, obj_list=None):
     # DataTables component.
 
     # Get all objects that pass the filter.
-    if not obj_list:
+    if obj_list is None:
         obj_list = model.objects.filter(**filters)
 
     # A list of dicts with object data, where each dict is one object

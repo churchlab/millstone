@@ -144,6 +144,21 @@ def auto_generate_short_name(long_name):
     return short_name
 
 
+def get_flattened_unpickled_data(data):
+    """Returns a dictionary from key to string values.
+
+    Tries to unpickle the values if possible.
+    """
+    clean_data = {}
+    for key, value in data.iteritems():
+        try:
+            clean_value = pickle.loads(str(value))
+        except:
+            clean_value = str(value)
+        clean_data[key] = clean_value
+    return clean_data
+
+
 ###############################################################################
 # User-related models
 ###############################################################################
@@ -664,16 +679,7 @@ class VariantCallerCommonData(Model):
         Returns:
             A flattened dictionary of cleaned data.
         """
-        cleaned_common_data = {}
-
-        for key, value in self.data.iteritems():
-            try:
-                clean_value = pickle.loads(str(value))
-            except:
-                clean_value = str(value)
-            cleaned_common_data[key] = clean_value
-        return cleaned_common_data
-
+        return get_flattened_unpickled_data(self.data)
 
 
 class VariantEvidence(Model):
@@ -695,6 +701,13 @@ class VariantEvidence(Model):
     # Catch-all key-value set of data.
     # TODO: Extract interesting keys (e.g. gt_type) into their own SQL fields.
     data = JSONField()
+
+    def as_dict(self):
+        """Returns a flattened dictionary of the unpickled element values in
+        VarantEvidence.data.
+        """
+        return get_flattened_unpickled_data(self.data)
+
 
 
 ###############################################################################

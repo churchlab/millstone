@@ -9,10 +9,12 @@ from django.test import TestCase
 from sympy.core.function import sympify
 
 from main.models import Dataset
+from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantCallerCommonData
+from main.models import VariantEvidence
 from scripts.variant_filter import get_variants_that_pass_filter
 from scripts.variant_filter import symbol_generator
 from scripts.variant_filter import ParseError
@@ -26,9 +28,9 @@ class BaseTestVariantFilterTestCase(TestCase):
     def setUp(self):
         user = User.objects.create_user('testuser', password='password',
                 email='test@test.com')
-        project = Project.objects.create(owner=user.get_profile(),
+        self.project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
-        self.ref_genome = ReferenceGenome.objects.create(project=project,
+        self.ref_genome = ReferenceGenome.objects.create(project=self.project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
         self.vcf_dataset = Dataset.objects.create(
                 label='test_data_set',
@@ -235,6 +237,55 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         self.assertEqual(0, len(variants))
 
+
+    def test_filter__variant_evidence(self):
+        """Test with VariantEvidence objects.
+        """
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=2,
+                ref_value='A',
+                alt_value='G')
+
+        raw_common_data_dict = {
+                'INFO_XRM': pickle.dumps(0.12),
+        }
+        common_data_obj = VariantCallerCommonData.objects.create(
+                variant=variant,
+                source_dataset=self.vcf_dataset,
+                data=raw_common_data_dict
+        )
+
+        sample_obj = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample',
+                group='Plate 1',
+                well='A01',
+                num_reads=100,
+        )
+
+        raw_sample_data_dict = {
+                'called': True,
+                'gt_type': pickle.dumps(2),
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+        QUERY_STRING = 'position < 5 & gt_type = 2'
+        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        self.assertEqual(1, len(variants))
+
+        QUERY_STRING = 'position < 5 & gt_type = 1'
+        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        self.assertEqual(0, len(variants))
+
+        QUERY_STRING = 'position > 5 & gt_type = 2'
+        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        self.assertEqual(0, len(variants))
 
 
 
