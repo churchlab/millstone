@@ -15,7 +15,7 @@ def get_celery_worker_status():
 
     Source: http://stackoverflow.com/questions/8506914/detect-whether-celery-is-available-running
     """
-    if settings.BROKER_BACKEND == 'memory':
+    if hasattr(settings, 'BROKER_BACKEND') and settings.BROKER_BACKEND == 'memory':
         # We are testing with in-memory celery. Celery is effectively running.
         return {}
 
