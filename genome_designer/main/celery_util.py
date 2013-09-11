@@ -5,6 +5,7 @@ Methods for interfacing with the Celery task queue management library.
 from errno import errorcode
 
 from celery.task.control import inspect
+from django.conf import settings
 
 
 CELERY_ERROR_KEY = 'ERROR'
@@ -14,6 +15,10 @@ def get_celery_worker_status():
 
     Source: http://stackoverflow.com/questions/8506914/detect-whether-celery-is-available-running
     """
+    if settings.BROKER_BACKEND == 'memory':
+        # We are testing with in-memory celery. Celery is effectively running.
+        return {}
+
     try:
         insp = inspect()
         d = insp.stats()
