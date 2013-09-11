@@ -69,7 +69,7 @@ class TestViews(TestCase):
 
                 # Variants
                 reverse('genome_designer.main.views.variant_list_view',
-                        args=(test_project.uid,)),
+                        args=(test_project.uid, ref_genome.uid)),
 
                 # Genes
                 reverse('genome_designer.main.views.gene_list_view',

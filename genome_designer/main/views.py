@@ -403,9 +403,11 @@ def variant_set_view(request, project_uid, variant_set_uid):
 
 
 @login_required
-def variant_list_view(request, project_uid):
+def variant_list_view(request, project_uid, ref_genome_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
+    reference_genome = ReferenceGenome.objects.get(project=project,
+            uid=ref_genome_uid)
 
     # The json data required to populate datables and dropdowns.
     # Can be called either by render or post response.
@@ -444,7 +446,10 @@ def variant_list_view(request, project_uid):
 
     # If we are rendering a new view.
     else:
-        context.update({'project': project})
+        context.update({
+            'project': project,
+            'reference_genome': reference_genome,
+        })
         context.update(get_json_data())
         return render(request, 'variant_list.html', context)
 

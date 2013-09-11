@@ -4,4 +4,9 @@
   <h1>Reference Genome: {{reference_genome.label}}</h1>
 
   <a href="{{jbrowse_link}}" target="_blank">JBrowse</a>
+
+  <a href="{% url 'main.views.variant_list_view' project.uid reference_genome.uid %}">
+    Variants
+  </a>
+
 {% endblock %}
