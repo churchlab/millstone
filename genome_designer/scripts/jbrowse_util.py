@@ -15,11 +15,12 @@ from settings import JBROwSE_DATA_SYMLINK_PATH
 from settings import JBROWSE_DATA_URL_ROOT
 
 
+# TODO: Figure out better place to put this.
 # JBrowse requires the symlink path to exist. See settings.py
 # comments for more info.
-assert os.path.exists(JBROwSE_DATA_SYMLINK_PATH), (
-        "%s does not exists. You may need to symlink it." %
-                JBROwSE_DATA_SYMLINK_PATH)
+# assert os.path.exists(JBROwSE_DATA_SYMLINK_PATH), (
+#         "%s does not exists. You may need to symlink it." %
+#                 JBROwSE_DATA_SYMLINK_PATH)
 
 
 def prepare_reference_sequence(reference_genome):
