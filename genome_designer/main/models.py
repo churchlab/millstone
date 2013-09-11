@@ -626,13 +626,6 @@ class Variant(Model):
                     'classes':['label']}]
 
 
-class VariantToExperimentSample(Model):
-    """Model that represents the relationship between a particular Variant
-    and a particular ExperimentSample.
-    """
-    pass
-
-
 class VariantCallerCommonData(Model):
     """Model that describes data provided by a specific caller about a
     particular Variant.
@@ -687,7 +680,21 @@ class VariantEvidence(Model):
     """Evidence for a particular variant occurring in a particular
     ExperimentSample.
     """
-    pass
+    # Maybe used in url for view of this entity.
+    uid = models.CharField(max_length=36,
+            default=(lambda: short_uuid(VariantEvidence)))
+
+    # The specific ExperimentSample that this object provides evidence
+    # of the respective variant occurring in.
+    # NOTE: This implies the ReferenceGenome.
+    experiment_sample = models.ForeignKey('ExperimentSample')
+
+    # The location of the common data for this call.
+    variant_caller_common_data = models.ForeignKey('VariantCallerCommonData')
+
+    # Catch-all key-value set of data.
+    # TODO: Extract interesting keys (e.g. gt_type) into their own SQL fields.
+    data = JSONField()
 
 
 ###############################################################################
@@ -697,8 +704,9 @@ class VariantEvidence(Model):
 class VariantToVariantSet(Model):
     """Relationship between variants and variant sets.
 
-    In addition to linking a variant to a set, can also point to
-    samples with which the relationship is associated.
+    In addition to linking a variant to a set, this model also allows
+    strengthening the information content of the relationship by indicating
+    which specific ExperimentSamples this relationship is valid for.
     """
 
     variant = models.ForeignKey('Variant')
@@ -706,7 +714,7 @@ class VariantToVariantSet(Model):
     variant_set = models.ForeignKey('VariantSet')
 
     sample_variant_set_association = models.ManyToManyField('ExperimentSample',
-        blank=True, null=True)
+            blank=True, null=True)
 
     @classmethod
     def get_field_order(clazz):

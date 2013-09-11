@@ -9,6 +9,7 @@ import vcf
 
 from main.models import AlignmentGroup
 from main.models import Dataset
+from main.models import ExperimentSample
 from main.models import Project
 from main.models import Variant
 from main.models import VariantCallerCommonData
@@ -45,6 +46,23 @@ class TestVCFParser(TestCase):
                 label='test alignment', reference_genome=self.reference_genome)
         copy_and_add_dataset_source(alignment_group, VCF_DATATYPE,
                 VCF_DATATYPE, TEST_GENOME_SNPS)
+
+        # Create experiment sample objects having UIDs that correspond to those
+        # in the vcf file. This is a bit "fake" in that the actual pipeline we
+        # will be generating the vcf file from the samples (see add_groups()
+        # stage of pipeline.
+        with open(TEST_GENOME_SNPS) as fh:
+            reader = vcf.Reader(fh)
+            experiment_sample_uids = reader.samples
+        for sample_uid in experiment_sample_uids:
+            ExperimentSample.objects.create(
+                uid=sample_uid,
+                project=self.project,
+                label='fakename:' + sample_uid,
+                group='Plate 1',
+                well='A01',
+                num_reads=100,
+            )
 
         # Count the number of records in the vcf file for testing.
         record_count = 0

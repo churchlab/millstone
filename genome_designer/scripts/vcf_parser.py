@@ -9,8 +9,10 @@ import pickle
 import vcf
 
 from main.models import get_dataset_with_type
+from main.models import ExperimentSample
 from main.models import Variant
 from main.models import VariantCallerCommonData
+from main.models import VariantEvidence
 
 
 def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
@@ -35,6 +37,17 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
                     source_dataset=vcf_dataset,
                     data=raw_data_dict
             )
+
+            # Create a VariantEvidence object for each ExperimentSample.
+            for sample in record.samples:
+                sample_uid = sample.sample
+                sample_data_dict = extract_sample_data_dict(sample)
+                sample_obj = ExperimentSample.objects.get(uid=sample_uid)
+                VariantEvidence.objects.create(
+                        experiment_sample=sample_obj,
+                        variant_caller_common_data=common_data_obj,
+                        data=sample_data_dict)
+
 
 
 def extract_raw_data_dict(vcf_record):
@@ -102,3 +115,52 @@ def get_or_create_variant(reference_genome, raw_data_dict):
     )
 
     return variant
+
+
+def extract_sample_data_dict(s):
+    """Manually serializes a pyvcf _Call object because their internal use of
+    __slots__ breaks python pickle.
+
+    Args:
+        pyvcf _Call object.
+
+    Returns:
+        A dictionary representing the object.
+    """
+    def _add_property(result_dict, s, key, eval_string):
+        """Helper method to add keys. PyVCF is really buggy so we need to
+        be extra paranoid when parsing it.
+        """
+        try:
+            result_dict[key] = eval('pickle.dumps(s.' + eval_string + ')')
+        except AttributeError:
+            result_dict[key] = None
+
+    result = {}
+
+    # The main properties we'll want to query across.
+    key_eval_string_pairs = (
+        ('sample', 'sample'),
+        ('called', 'called'),
+        ('gt_bases', 'gt_bases'),
+        ('gt_nums', 'gt_nums'),
+        ('gt_type', 'gt_type'),
+        ('is_het', 'is_het'),
+        ('is_variant', 'is_variant'),
+        ('phased', 'phased'),
+        ('AO', 'data.AO'),
+        ('DP', 'data.DP'),
+        ('GL', 'data.GL'),
+        ('GT', 'data.GT'),
+        ('QA', 'data.QA'),
+        ('QR', 'data.QR'),
+        ('RO', 'data.RO')
+    )
+
+    # TODO: Add support for SnpEff data. I don't remember why I was hard-coding
+    # the above fields before, but it would be nice to avoid hard-coding if
+    # possible.
+
+    for key, eval_string in key_eval_string_pairs:
+        _add_property(result, s, key, eval_string)
+    return result
