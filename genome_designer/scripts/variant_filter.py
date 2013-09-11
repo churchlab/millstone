@@ -37,10 +37,20 @@ from sympy.logic import boolalg
 # These are hard-coded to the model definitions in main/models.py.
 ###############################################################################
 
-VARIANT_KEY_MAP = {
+# Keys corresponding to columns in the Variant model.
+VARIANT_SQL_KEY_MAP = {
     'chromosome': {'type': 'String', 'num': 1},
     'position': {'type': 'Integer', 'num': 1},
 }
+
+# Keys corresponding to columns in the VariantCallerCommonData model.
+VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP = {
+}
+
+# Keys corresponding to columns in the VariantEvidence model.
+VARIANT_EVIDENCE_SQL_KEY_MAP = {
+}
+
 
 TYPE_TO_SUPPORTED_OPERATIONS_HARD_CODED = {
         'Float': ['=', '!=', '>=', '<=', '>', '<'],
@@ -89,7 +99,10 @@ class ParseError(Exception):
 
 
 def symbol_generator():
-    """Generates symbols for manipulation.
+    """Generator that yields characters in alphabetical order, starting with
+    'A' and continuing on to 'Z', followed by 'a' and ending with 'z'.
+
+    NOTE: The current implementation runs out of symbols after 26 * 2 symbols.
     """
     final_symbol_ord = ord('z')
     current_char = 'A'
@@ -122,9 +135,11 @@ class VariantFilterEvaluator(object):
         # Find all the expressions and replace them with symbols.
         self.symbol_to_expression_map = {}
 
-        tokens = EXPRESSION_REGEX.split(self.clean_filter_string)
+        # Generator object that provides symbols in alphabetical order.
         symbol_maker = symbol_generator()
+
         # Iterate through tokens and replace them with successive symbols.
+        tokens = EXPRESSION_REGEX.split(self.clean_filter_string)
         symbolified_tokens = []
         for token in tokens:
             if EXPRESSION_REGEX.match(token):
@@ -135,46 +150,6 @@ class VariantFilterEvaluator(object):
                 symbolified_tokens.append(token)
         symbolified_string = ''.join(symbolified_tokens)
         self.sympy_representation = boolalg.to_dnf(symbolified_string)
-
-
-    def evaluate(self):
-        """Evaluates the filter string provided.
-
-        Returns:
-            List of Variants that pass the filter query.
-        """
-        if not self.sympy_representation.is_Boolean:
-            full_q = self.evaluate_single_symbol(self.sympy_representation)
-        else:
-            if isinstance(self.sympy_representation, boolalg.And):
-                q_obj_list = self.evaluate_ANDed_clause(
-                        self.sympy_representation)
-                full_q = Q()
-                for q_obj in q_obj_list:
-                    full_q &= q_obj
-            elif isinstance(self.sympy_representation, boolalg.Or):
-                ANDed_q_list = []
-                for clause in self.sympy_representation.args:
-                    if isinstance(clause, boolalg.Or):
-                        raise AssertionError("Unexpected OR inside an OR. Debug.")
-                    elif isinstance(clause, boolalg.And):
-                        q_obj_list = self.evaluate_ANDed_clause(clause)
-                        ANDed_q = Q()
-                        for q_obj in q_obj_list:
-                            ANDed_q &= q_obj
-                        ANDed_q_list.append(ANDed_q)
-                    else:
-                        ANDed_q_list.append(self.evaluate_single_symbol(clause))
-                full_q = Q()
-                for q_obj in ANDed_q_list:
-                    full_q |= q_obj
-            else:
-                raise AssertionError("Unexpected type %s " %
-                        type(self.sympy_representation))
-
-        # Send the query to the database.
-        query_result = self.ref_genome.variant_set.filter(full_q)
-        return query_result
 
 
     def get_condition_string_for_symbol(self, symbol):
@@ -193,28 +168,90 @@ class VariantFilterEvaluator(object):
         return self.symbol_to_expression_map[symbol_str]
 
 
-    def evaluate_single_symbol(self, symbol):
-        """Returns Q_object corresponding to single symbol.
+    def evaluate(self):
+        """Evaluates the conditions in the filter string.
+
+        Returns:
+            Set of Variants that pass the filter query.
+        """
+        return self.evaluate_disjunction(self.sympy_representation)
+
+
+    def evaluate_disjunction(self, disjunction_clause):
+        """Evaluate a disjunction (OR) clause.
+
+        Args:
+            disjunction_clause: sympy.logic.boolalg.Or clause.
+
+        Returns:
+            Set of variants that satisfy the clause.
+        """
+        # The disjunction may contain a single condition.
+        if not isinstance(disjunction_clause, boolalg.Or):
+            return set(self.evaluate_conjunction(disjunction_clause))
+        else:
+            result = set()
+            for conjunction_clause in disjunction_clause.args:
+                result |= set(self.evaluate_conjunction(conjunction_clause))
+            return result
+
+
+    def evaluate_conjunction(self, conjunction_clause):
+        """Evaluate a conjunction condition. That is all symbols are ANDed.
+        """
+        # Iterate through the conditions corresponding to the symbols in the
+        # clause and either create Q objects out of them, relative to the
+        # Variant model, or save them as key-value models to evaluate in memory
+        # after the SQL fetch. Order doesn't matter since this is a conjunction
+        # clause.
+
+        def _single_symbol_helper(symbol, q_part, remaining_triples):
+            """Helper method for evaluating a single symbol.
+            """
+            q_or_triple = self.handle_single_symbol(symbol)
+            if isinstance(q_or_triple, Q):
+                q_part &= q_or_triple
+            else:
+                remaining_triples.append(q_or_triple)
+            return (q_part, remaining_triples)
+
+        q_part = Q()
+        remaining_triples = []
+
+        # The conjunction may contain a single condition.
+        if not conjunction_clause.is_Boolean:
+            (q_part, remaining_triples) = _single_symbol_helper(
+                    conjunction_clause, q_part, remaining_triples)
+        else:
+            for symbol in conjunction_clause.args:
+                (q_part, remaining_triples) = _single_symbol_helper(
+                        symbol, q_part, remaining_triples)
+
+        # Now perform the SQL query to pull the models that pass the Q part
+        # into memory.
+        query_result = self.ref_genome.variant_set.filter(q_part)
+
+        # TODO: Bring in models other than Variant.
+
+        # TODO: Filter these further by the remaining triples.
+
+        return query_result
+
+
+    def handle_single_symbol(self, symbol):
+        """Returns one of:
+             * A Django Q object if the symbol represents a condition that
+                can be evaluated against the SQL database.
+             * A triple of delim, key, value if the condition must be evaluated
+                in-memory.
         """
         condition_string = self.get_condition_string_for_symbol(symbol)
-        delim_key_value_triple = _get_delim_key_value_triple(
-                condition_string)
-        return _get_django_q_object_for_triple(delim_key_value_triple)
+        (delim, key, value) = _get_delim_key_value_triple(condition_string)
+        if key in VARIANT_SQL_KEY_MAP:
+            return _get_django_q_object_for_triple((delim, key, value))
+        else:
+            return (delim, key, value)
 
-
-    def evaluate_ANDed_clause(self, sympy_clause):
-        assert isinstance(sympy_clause, boolalg.And)
-        return [self.evaluate_single_symbol(symbol) for symbol in
-                sympy_clause.args]
-
-
-class QueryWrapper(object):
-    """Object that wraps a simple query, along with metadata depending on the
-    target model for the query.
-    """
-
-    def __init__(self, raw_query_string):
-        self.raw_query_string = raw_query_string
 
 ###############################################################################
 # Helper methods
@@ -228,7 +265,7 @@ def _get_delim_key_value_triple(raw_string):
         delimeter = _clean_delim(raw_delim)
         if len(split_result) == 2:
             key, value = split_result
-            for data_map in [VARIANT_KEY_MAP]:
+            for data_map in [VARIANT_SQL_KEY_MAP]:
                 # Make sure this is a valid key and valid delimeter.
                 if key in data_map:
                     specs = data_map[key]
