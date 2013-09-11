@@ -138,12 +138,17 @@ def _get_file_url_from_dropbox(dropbox_url, filename):
 
 def setup_jbrowse():
     """Sets up JBrowse.
-
-    TODO: Move remaining manual steps here.
     """
-    if not os.path.exists(JBROwSE_DATA_SYMLINK_PATH):
-        os.symlink(os.path.join(GD_ROOT, MEDIA_ROOT),
-                JBROwSE_DATA_SYMLINK_PATH)
+    # Unlink if there was a link and then create a new link.
+    try:
+        os.unlink(JBROwSE_DATA_SYMLINK_PATH)
+    except OSError:
+        # There was no symlink. That's fine.
+        pass
+
+    # Re-create the link.
+    os.symlink(os.path.join(GD_ROOT, MEDIA_ROOT),
+            JBROwSE_DATA_SYMLINK_PATH)
 
 
 if __name__ == '__main__':
