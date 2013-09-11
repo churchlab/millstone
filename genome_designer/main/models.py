@@ -32,6 +32,7 @@ Implementation Notes:
 import os
 import pickle
 import re
+import shutil
 import stat
 from uuid import uuid4
 
@@ -39,6 +40,7 @@ from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Model
+from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
 from jsonfield import JSONField
 
@@ -304,11 +306,27 @@ class Project(Model):
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
+    def delete_model_data_dir(self):
+        """Removes all data associated with this model.
+
+        WARNING: Be careful with this method!
+        """
+        data_dir = self.get_model_data_dir()
+        if os.path.exists(data_dir):
+            shutil.rmtree(data_dir)
+
+
 # When a new Project is created, create the data directory.
 def post_project_create(sender, instance, created, **kwargs):
     if created:
         instance.ensure_model_data_dir_exists()
 post_save.connect(post_project_create, sender=Project,
+        dispatch_uid='project_create')
+
+# Delete all Project data when it is deleted.
+def post_project_delete(sender, instance, **kwargs):
+    instance.delete_model_data_dir()
+post_delete.connect(post_project_delete, sender=Project,
         dispatch_uid='project_create')
 
 
