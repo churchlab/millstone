@@ -249,4 +249,4 @@ JBROWSE_DATA_URL_ROOT= '/jbrowse/' + JBROWSE_DATA_SYMLINK_NAME + '/'
 # Testing
 ###############################################################################
 
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+TEST_RUNNER = 'test_suite_runner.TempFilesystemTestSuiteRunner'
