@@ -290,8 +290,7 @@ class VariantFilterEvaluator(object):
         for key_map in ALL_SQL_KEY_MAP_LIST:
             if key in key_map:
                 return _get_django_q_object_for_triple((delim, key, value))
-            else:
-                return (delim, key, value)
+        return (delim, key, value)
 
 
 ###############################################################################
