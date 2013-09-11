@@ -345,10 +345,9 @@ def _create_variant_set_from_file(request, project, ref_genome_uid,
     variant_set_file = os.path.join(settings.MEDIA_ROOT, path)
 
     try:
-        import_variant_set_from_vcf(
-                project,
-                ref_genome_uid,
-                variant_set_name,
+        ref_genome = ReferenceGenome.objects.get(project=project,
+                uid=ref_genome_uid)
+        import_variant_set_from_vcf(ref_genome, variant_set_name,
                 variant_set_file)
     except Exception as e:
         error_string = 'Import error: ' + str(e)

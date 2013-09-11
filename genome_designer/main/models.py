@@ -645,15 +645,9 @@ class VariantCallerCommonData(Model):
     variant, where some of the columns describe the variant, while other
     columns have a one-to-one correspondence to the alignments provided.
     """
-    # Variants are always relative to a specific reference genome.
-    reference_genome = models.ForeignKey('ReferenceGenome')
-
-    # The Variant this ends up referring to. Because of the way that
-    # we parse variants, we usually create a VariantCallerCommonData
-    # object before getting or creating the corresponding Variant
-    # so this relationship may be False during an intermediate step
-    # but should not be False once calculation completes without errors.
-    snp = models.ForeignKey('Variant', null=True)
+    # Variant this object refers to. It's possible for multiple callers report
+    # the same Variant so this is a many-to-one relationship.
+    variant = models.ForeignKey('Variant')
 
     # Source dataset for this data.
     source_dataset = models.ForeignKey('Dataset')

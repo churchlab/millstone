@@ -79,15 +79,15 @@ class TestImportVariantSetFromVCFFile(TestCase):
         project = Project.objects.all()[0]
         REF_GENOME_UID = project.referencegenome_set.all()[0].uid
 
-        import_variant_set_from_vcf(project,
-                REF_GENOME_UID,
-                VARIANT_SET_NAME,
+        ref_genome = project.referencegenome_set.all()[0]
+
+        import_variant_set_from_vcf(ref_genome, VARIANT_SET_NAME,
                 VARIANT_SET_VCF_FILEPATH)
 
         new_variant_set = VariantSet.objects.get(
-            reference_genome__uid=REF_GENOME_UID,
-            label=VARIANT_SET_NAME)
+                reference_genome=ref_genome,
+                label=VARIANT_SET_NAME)
 
-        self.assertEqual(len(new_variant_set.variants.all()),
-                NUM_VARIANTS_IN_SET)
+        self.assertEqual(NUM_VARIANTS_IN_SET,
+                len(new_variant_set.variants.all()))
 

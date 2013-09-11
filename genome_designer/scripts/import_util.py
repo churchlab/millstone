@@ -20,7 +20,7 @@ from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantSet
 from main.models import VariantToVariantSet
-from scripts.vcf_parser import populate_common_data_from_vcf_record
+from scripts.vcf_parser import extract_raw_data_dict
 from scripts.vcf_parser import get_or_create_variant
 from settings import PWD
 
@@ -156,28 +156,22 @@ def import_samples_from_targets_file(project, targets_file):
             copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ2,
                     Dataset.TYPE.FASTQ2, row['Read_2_Path'])
 
+
 @transaction.commit_on_success
-def import_variant_set_from_vcf(project, ref_genome_uid, variant_set_name,
-        variant_set_file):
+def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file):
     """Convert an uploaded VCF file into a new variant set object.
 
     Args:
-        project: The Project this set is part of.
-        ref_genome_uid: ReferenceGenome uid.
+        ref_genome: ReferenceGenome.
         variant_set_name: Name of the variant set (label).
         variant_set_file: Path to the variant set on disk.
     """
-
-    ref_genome = ReferenceGenome.objects.get(
-            project=project,
-            uid=ref_genome_uid)
-
-    # For now, variant set name must be unique even among diff ref genomes
+    # For now, variant set name must be unique even among diff ref genomes.
     variant_set_name_exists = len(VariantSet.objects.filter(
             label=variant_set_name)) > 0
-
     assert not variant_set_name_exists, 'Variant set name must be unique.'
 
+    # Create the VariantSet.
     variant_set = VariantSet.objects.create(
             reference_genome=ref_genome,
             label=variant_set_name)
@@ -188,67 +182,20 @@ def import_variant_set_from_vcf(project, ref_genome_uid, variant_set_name,
     dataset = copy_and_add_dataset_source(variant_set, dataset_type,
             dataset_type, variant_set_file)
 
-    # dbg 8/25/13 - this try/except fails, so I'm doing it only w/ csv below
-    # First try with pyVCF, but if this fails then just use a csvReader
-    # try:
-    #     common_data_obj_iter = _read_variant_set_file_as_full_vcf(
-    #             variant_set_file, ref_genome, dataset)
-    # except IndexError:
-    #     common_data_obj_iter = _read_variant_set_file_as_csv(
-    #             variant_set_file, ref_genome, dataset)
+    # Now read the variant set file.
+    _read_variant_set_file_as_csv(variant_set_file, ref_genome, dataset,
+            variant_set)
 
-    common_data_obj_iter = _read_variant_set_file_as_csv(
-            variant_set_file, ref_genome, dataset)
-
-    # Finally, create this variant if it doesn't already exist and add it
-    # to the set.
-    for common_data_obj in common_data_obj_iter:
-        variant = get_or_create_variant(ref_genome, common_data_obj)
-        VariantToVariantSet.objects.create(
-                variant=variant,
-                variant_set=variant_set)
-
-def _read_variant_set_file_as_full_vcf(variant_set_file, reference_genome,
-    dataset):
-    """The importer will first try to read the VCF as an actual VCF, instead
-    of a stripped down version with no samples, info, etc. We will use
-    pyVCF for this purpose. If it fails, then we will resort to the CSV
-    approach.
-
-    Args:
-        * variant_set_file - path to vcf file
-        * reference_genome - django reference genome object
-    Returns:
-        an interator of common_data_objs used for creating or adding to
-        variant objects
-    """
-
-    with open(variant_set_file) as fh:
-       vcf_reader = vcf.Reader(fh)
-       for record in vcf_reader:
-           # Create a common data object for this variant.
-           common_data_obj = VariantCallerCommonData.objects.create(
-                   reference_genome=reference_genome,
-                   source_dataset_id=dataset.id
-           )
-           # Extracting the data is somewhat of a process so we do
-           # so in this function.
-           populate_common_data_from_vcf_record(common_data_obj, record)
-
-           yield common_data_obj
 
 def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
-    dataset):
+        dataset, variant_set):
     """If reading the variant set file as a vcf fails (because we arent using
     all columns, as will usually be the case) then read it as a CSV and check
     manually for the required columns.
 
     Args:
-        * variant_set_file - path to vcf file
-        * reference_genome - django reference genome object
-    Returns:
-        an interator of common_data_objs used for creating or adding to
-        variant objects
+        * variant_set_file: Path to vcf file.
+        * reference_genome: ReferenceGenome object.
     """
 
     with open(variant_set_file) as fh:
@@ -265,7 +212,7 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
 
         reader = csv.DictReader(vcf_noheader, delimiter='\t')
 
-        #check that the required columns are present
+        # Check that the required columns are present.
         REQUIRED_HEADER_PART = ['CHROM','POS','ID','REF','ALT']
 
         for col, check in zip(reader.fieldnames[0:len(REQUIRED_HEADER_PART)],
@@ -275,25 +222,34 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
                     ', '.join(reader.fieldnames)))
 
         class PseudoVCF:
+            """Pseudo wrapper class to satisfy interface of
+            extract_raw_data_dict().
+            """
             def __init__(self, **entries):
                 self.__dict__.update(entries)
 
         for record in reader:
-
             record = PseudoVCF(**record)
+
+            # Build a dictionary of data for this record.
+            raw_data_dict = extract_raw_data_dict(record)
+
+            # Get or create the Variant for this record.
+            variant = get_or_create_variant(reference_genome, raw_data_dict)
 
             # Create a common data object for this variant.
             common_data_obj = VariantCallerCommonData.objects.create(
-                    reference_genome=reference_genome,
-                    source_dataset_id=dataset.id
+                    variant=variant,
+                    source_dataset=dataset,
+                    data=raw_data_dict
             )
 
-            # Populate the common_data_obj with this row of the csv/vcf.
-            # The function takes an object w/ attributes so we convert the
-            # dict into one using a type() call.
-            populate_common_data_from_vcf_record(common_data_obj, record)
+            # Create a link between the Variant and the VariantSet if
+            # it doesn't exist.
+            VariantToVariantSet.objects.get_or_create(
+                    variant=variant,
+                    variant_set=variant_set)
 
-            yield common_data_obj
 
 def copy_and_add_dataset_source(entity, dataset_label, dataset_type,
         original_source_location):

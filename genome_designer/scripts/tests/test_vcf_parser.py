@@ -58,7 +58,7 @@ class TestVCFParser(TestCase):
         # There should be one VariantCallerCommonData object for each record.
         self.assertEqual(record_count,
                 len(VariantCallerCommonData.objects.filter(
-                        reference_genome=self.reference_genome)))
+                        variant__reference_genome=self.reference_genome)))
 
         # There should also be one Variant object for each record.
         self.assertEqual(record_count, len(Variant.objects.filter(
