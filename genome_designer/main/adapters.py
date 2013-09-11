@@ -8,11 +8,11 @@
 import json
 import string
 
-from django.db.models import Model, ManyToManyField
+from django.db.models import ManyToManyField
+from django.db.models import Model
 
-#from django.db.models.fields.related import ManyRelatedManager
 
-def adapt_model_to_frontend(model, filters={}):
+def adapt_model_to_frontend(model, filters={}, obj_list=None):
     """Converts django models to frontend format.
 
     Calls on the model's get_field_order method to know which fields that
@@ -20,8 +20,11 @@ def adapt_model_to_frontend(model, filters={}):
 
     Args:
         model: The django model that we are adapting
-        **kwargs: The filter conditions on the model (i.e. select
+        filters: The filter conditions on the model (i.e. select
             which instances of the model to select.)
+        obj_list: If provided, use this as the set of objects to filter.
+            NOTE: I actually want to permanently change the interface to this
+            rather than doing filtering here.
 
     Returns:
         A config json that dumps the field config and the json data for
@@ -33,7 +36,8 @@ def adapt_model_to_frontend(model, filters={}):
     # DataTables component.
 
     # Get all objects that pass the filter.
-    obj_list = model.objects.filter(**filters)
+    if not obj_list:
+        obj_list = model.objects.filter(**filters)
 
     # A list of dicts with object data, where each dict is one object
     # and all the fields required for front-end display.

@@ -1,11 +1,17 @@
 <div id="gd-snp-filter-component" class="gd-filter-container">
   <div class="gd-manual-filter-input-container">
-    <input id="gd-new-filter-input" name="snp_in_genome_filter" type="text"
-          class="input-large span6 gd-form-tall" placeholder="Enter new filter string"
-          {% if manual_filter_string %}
-            value="{{manual_filter_string}}"
-          {% endif %}
-          >
+    <form method="GET" class="form">
+      <input id="gd-new-filter-input" name="variant_filter_string" type="text"
+            class="input-large span6 gd-form-tall" placeholder="Enter new filter string"
+            {% if manual_filter_string %}
+              value="{{manual_filter_string}}"
+            {% endif %}
+            >
+      <div class="row gd-button-container">
+        <button type="submit" class="btn btn-success span2 offset5">
+          Apply Filter
+        </button>
+      </div>
+    </form>
   </div>
-
 </div>

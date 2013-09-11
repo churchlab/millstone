@@ -419,5 +419,9 @@ def get_variants_that_pass_filter(filter_string, ref_genome):
     Returns:
         List of Variant model objects.
     """
-    evaluator = VariantFilterEvaluator(filter_string, ref_genome)
+    clean_filter_string = filter_string.strip()
+    if clean_filter_string == '':
+        return ref_genome.variant_set.all()
+
+    evaluator = VariantFilterEvaluator(clean_filter_string, ref_genome)
     return evaluator.evaluate()

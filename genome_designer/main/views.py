@@ -27,6 +27,7 @@ from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
 from scripts.snp_callers import run_snp_calling_pipeline
+from scripts.variant_filter import get_variants_that_pass_filter
 from scripts.variant_sets import add_or_remove_variants_from_set
 import settings
 
@@ -402,6 +403,8 @@ def variant_set_view(request, project_uid, variant_set_uid):
     return render(request, 'variant_set.html', context)
 
 
+VARIANT_FILTER_STRING_KEY = 'variant_filter_string'
+
 @login_required
 def variant_list_view(request, project_uid, ref_genome_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
@@ -409,12 +412,25 @@ def variant_list_view(request, project_uid, ref_genome_uid):
     reference_genome = ReferenceGenome.objects.get(project=project,
             uid=ref_genome_uid)
 
+    # Figure out the filter to be applied.
+    if VARIANT_FILTER_STRING_KEY in request.GET:
+        manual_filter_string = request.GET.get(VARIANT_FILTER_STRING_KEY)
+    else:
+        manual_filter_string = ''
+
+    # TODO: Combine with saved filter string.
+    combined_filter_string = manual_filter_string
+
+    # Apply the filters.
+    variant_list = get_variants_that_pass_filter(
+            combined_filter_string, reference_genome)
+
     # The json data required to populate datables and dropdowns.
     # Can be called either by render or post response.
     def get_json_data():
         return {
            'variant_list_json': adapt_model_to_frontend(Variant,
-                {'reference_genome__project':project}),
+                    obj_list=variant_list),
            'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 {'reference_genome__project':project})}
 
@@ -449,6 +465,7 @@ def variant_list_view(request, project_uid, ref_genome_uid):
         context.update({
             'project': project,
             'reference_genome': reference_genome,
+            'manual_filter_string': manual_filter_string,
         })
         context.update(get_json_data())
         return render(request, 'variant_list.html', context)
