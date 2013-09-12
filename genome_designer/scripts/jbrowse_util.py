@@ -7,23 +7,27 @@ import json
 import os
 import subprocess
 
+
+from import_util import generate_fasta_from_genbank
 from main.models import Dataset
 from main.models import get_dataset_with_type
 from main.models import ReferenceGenome
 from settings import JBROWSE_BIN_PATH
-from settings import JBROwSE_DATA_SYMLINK_PATH
+from settings import JBROWSE_DATA_SYMLINK_PATH
 from settings import JBROWSE_DATA_URL_ROOT
 
 
 # TODO: Figure out better place to put this.
 # JBrowse requires the symlink path to exist. See settings.py
 # comments for more info.
-# assert os.path.exists(JBROwSE_DATA_SYMLINK_PATH), (
+
+# assert os.path.exists(JBROWSE_DATA_SYMLINK_PATH), (
 #         "%s does not exists. You may need to symlink it." %
-#                 JBROwSE_DATA_SYMLINK_PATH)
+#                 JBROWSE_DATA_SYMLINK_PATH)
 
 
-def prepare_reference_sequence(reference_genome):
+
+def prepare_jbrowse_ref_sequence(reference_genome, **kwargs):
     """Prepare the reference sequence and place it in the ref_genome dir.
 
     This implicitly creates the config directory structure for this reference
@@ -35,10 +39,10 @@ def prepare_reference_sequence(reference_genome):
     """
     PREPARE_REFSEQS_BIN = os.path.join(JBROWSE_BIN_PATH, 'prepare-refseqs.pl')
 
-    # First ensure that the reference genome exists.
+    # First ensure that the reference genome exists. If it fails, try to
+    # convert from genbank, then give up.
     reference_fasta = reference_genome.dataset_set.get(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-    assert reference_fasta is not None, "No reference soure fasta."
 
     # Next, ensure that the jbrowse directory exists.
     reference_genome.ensure_jbrowse_dir()

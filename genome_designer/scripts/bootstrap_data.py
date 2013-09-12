@@ -36,7 +36,6 @@ from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
 from scripts.import_util import import_reference_genome_from_local_file
-from scripts.jbrowse_util import prepare_reference_sequence
 import settings
 from settings import PWD as GD_ROOT
 
@@ -100,15 +99,12 @@ def bootstrap_fake_data():
     ### Create some reference genomes
     ref_genome_1 = import_reference_genome_from_local_file(
             test_project, REF_GENOME_1_LABEL, TEST_FASTA, 'fasta')
-    prepare_reference_sequence(ref_genome_1)
 
     ref_genome_2 = import_reference_genome_from_local_file(
             test_project, REF_GENOME_2_LABEL, TEST_FASTA, 'fasta')
-    prepare_reference_sequence(ref_genome_2)
 
     ref_genome_3 = import_reference_genome_from_local_file(
             test_project, 'test_genome', TEST_FASTA, 'fasta')
-    prepare_reference_sequence(ref_genome_3)
 
     ### Create some ExperimentSamples.
 

@@ -15,7 +15,7 @@ import zipfile
 
 from bs4 import BeautifulSoup
 
-from settings import JBROwSE_DATA_SYMLINK_PATH
+from settings import JBROWSE_DATA_SYMLINK_PATH
 from settings import MEDIA_ROOT
 from settings import PWD as GD_ROOT
 from settings import TOOLS_DIR
@@ -141,15 +141,14 @@ def setup_jbrowse():
     """
     # Unlink if there was a link and then create a new link.
     try:
-        os.unlink(JBROwSE_DATA_SYMLINK_PATH)
+        os.unlink(JBROWSE_DATA_SYMLINK_PATH)
     except OSError:
         # There was no symlink. That's fine.
         pass
 
     # Re-create the link.
     os.symlink(os.path.join(GD_ROOT, MEDIA_ROOT),
-            JBROwSE_DATA_SYMLINK_PATH)
-
+            JBROWSE_DATA_SYMLINK_PATH)
 
 if __name__ == '__main__':
 

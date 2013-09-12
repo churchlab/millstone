@@ -1,3 +1,4 @@
+
 """
 The alignment pipeline.
 
@@ -19,7 +20,7 @@ from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from scripts.import_util import add_dataset_to_entity
 from scripts.jbrowse_util import add_bam_file_track
-from scripts.jbrowse_util import prepare_reference_sequence
+from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
 from scripts.util import fn_runner
 from settings import DEBUG_CONCURRENT
 from settings import PWD
@@ -57,7 +58,9 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
                 aligner=AlignmentGroup.ALIGNER.BWA)
 
         # Make sure the initial JBrowse config is prepared.
-        prepare_reference_sequence(alignment_group.reference_genome)
+        # dbg: 9/10/13 - now doing this upon creation of a new ref genome obj
+        #                now called prepare_jbrowse_ref_sequence()
+        # prepare_jbrowse_ref_sequence(alignment_group.reference_genome)
 
         # Create the bwa index before perfoming the alignments in parallel.
         ref_genome_fasta = get_dataset_with_type(
