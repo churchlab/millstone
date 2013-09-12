@@ -265,7 +265,6 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 well='A01',
                 num_reads=100,
         )
-
         raw_sample_data_dict = {
                 'called': True,
                 'gt_type': pickle.dumps(2),
@@ -275,7 +274,27 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict)
 
+        sample_obj_2 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample 2',
+                group='Plate 1',
+                well='A02',
+                num_reads=100,
+        )
+        raw_sample_data_dict_2 = {
+                'called': True,
+                'gt_type': pickle.dumps(0),
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj_2,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict_2)
+
         QUERY_STRING = 'position < 5 & gt_type = 2'
+        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        self.assertEqual(1, len(variants))
+
+        QUERY_STRING = 'position < 5 & gt_type = 0'
         variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         self.assertEqual(1, len(variants))
 
