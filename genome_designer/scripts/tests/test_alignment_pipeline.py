@@ -18,7 +18,7 @@ from scripts.alignment_pipeline import create_alignment_groups_and_start_alignme
 from scripts.bootstrap_data import bootstrap_fake_data
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
-from scripts.jbrowse_util import prepare_reference_sequence
+from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
 from settings import PWD as GD_ROOT
 
 
@@ -61,7 +61,7 @@ class TestAlignmentPipeline(TestCase):
                 label='test alignment', reference_genome=self.reference_genome)
 
         # Create the JBrowse placeholder.
-        prepare_reference_sequence(alignment_group.reference_genome)
+        prepare_jbrowse_ref_sequence(alignment_group.reference_genome)
 
         # Run the alignment.
         experiment_sample_alignment = align_with_bwa(

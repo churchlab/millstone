@@ -47,6 +47,7 @@ from jsonfield import JSONField
 import settings
 
 
+
 ###############################################################################
 # Utilities
 ###############################################################################
@@ -87,7 +88,7 @@ def ensure_exists_0775_dir(destination):
     Does nothing if it already existed.  Errors if creation fails.
     """
     if not os.path.exists(destination):
-        os.mkdir(destination)
+        os.makedirs(destination)
         # User and group have all permissions | get group id from directory.
         os.chmod(destination, stat.S_ISGID | 0775)
 
@@ -216,7 +217,7 @@ class Dataset(Model):
         Limit to 40-chars as per Dataset.type field def.
         """
         REFERENCE_GENOME_FASTA = 'rgf' # fasta
-        REFERENCE_GENOME_GENBANK = 'rgg'
+        REFERENCE_GENOME_GENBANK = 'rgg' #genbank
         FASTQ1 = 'f1'
         FASTQ2 = 'f2'
         BWA_ALIGN = 'bwa_align'
@@ -392,6 +393,17 @@ class ReferenceGenome(Model):
         """Ensures that the jbrowse data dir exists."""
         return ensure_exists_0775_dir(self.get_jbrowse_directory_path())
 
+    def get_snpeff_directory_path(self):
+        """Returns the full path to the root of snpeff data for this
+        ReferenceGenome.
+        """
+        return os.path.join(self.get_model_data_dir(), 'snpeff',
+                self.uid)
+
+    def ensure_snpeff_dir(self):
+        """Ensures that the snpeff data dir exists."""
+        return ensure_exists_0775_dir(self.get_snpeff_directory_path())
+
     def get_client_jbrowse_link(self):
         """Returns the link to jbrowse for this ReferenceGenome.
 
@@ -407,6 +419,7 @@ class ReferenceGenome(Model):
                 str(self.uid),
                 'jbrowse')
 
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
@@ -415,14 +428,6 @@ class ReferenceGenome(Model):
         return [{'field':'label'},
                 {'field':'num_chromosomes', 'verbose':'# Chromosomes'},
                 {'field':'num_bases', 'verbose':'Total Size'}]
-
-# When a new ReferenceGenome is created, create its data dir.
-def post_ref_genome_create(sender, instance, created, **kwargs):
-    if created:
-        instance.ensure_model_data_dir_exists()
-post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
-        dispatch_uid='ref_genome_create')
-
 
 class ExperimentSample(Model):
     """Model representing data for a particular experiment sample.

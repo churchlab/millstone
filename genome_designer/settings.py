@@ -234,7 +234,7 @@ JBROWSE_BIN_PATH = os.path.abspath(os.path.join(PWD, '../jbrowse/bin'))
 JBROWSE_DATA_SYMLINK_NAME = 'gd_data'
 
 # Full path to the JBrowse symlink (links back to the app data dir).
-JBROwSE_DATA_SYMLINK_PATH = os.path.join(JBROWSE_ROOT,
+JBROWSE_DATA_SYMLINK_PATH = os.path.join(JBROWSE_ROOT,
         JBROWSE_DATA_SYMLINK_NAME)
 
 # The url root to data that JBrowse displays.
@@ -244,6 +244,16 @@ JBROwSE_DATA_SYMLINK_PATH = os.path.join(JBROWSE_ROOT,
 # key-value: "urlTemplate" : "/jbrowse/gd_data/users/8fc1f831/projects/58a62c7d/genomes/8dc829ec/align.bam"
 JBROWSE_DATA_URL_ROOT= '/jbrowse/' + JBROWSE_DATA_SYMLINK_NAME + '/'
 
+###############################################################################
+# JBrowse
+###############################################################################
+
+# Path to snpeff config template.
+
+SNPEFF_JAR_PATH = os.path.abspath(os.path.join(PWD, 'tools','snpEff',
+        'snpEff.jar'))
+SNPEFF_CFG_TEMPLATE_PATH = os.path.join(PWD, 'main',
+        'templates','snpeff.tmpl.config')
 
 ###############################################################################
 # Testing
