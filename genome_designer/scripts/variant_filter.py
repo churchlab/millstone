@@ -132,7 +132,77 @@ def symbol_generator():
         current_char = chr(next_ord)
 
 
-EXPRESSION_REGEX = re.compile('(\w+[=><!]{1}[=]{0,1}\w+)')
+class FilterEvalResult(object):
+    """Wraps the result of evaluating a filter condition.
+
+    Provides utility methods for combining results.
+    """
+
+    def __init__(self, variant_set, variant_id_to_metadata_dict):
+        if not isinstance(variant_set, set):
+            variant_set = set(variant_set)
+        self.variant_set = variant_set
+        self.variant_id_to_metadata_dict = variant_id_to_metadata_dict
+
+    def __or__(self, other):
+        return self.combine(other, '|')
+
+    def __and__(self, other):
+        return self.combine(other, '&')
+
+    def combine(self, other, op_string):
+        """Method that returns a new FilterEvalResult that is the combination
+        of this one and other.
+
+        Args:
+            other: The FilterEvalResult to combine with.
+            op_string: Either '&' or '|'.
+
+        Returns:
+            A new FilterEvalResult object.
+        """
+        assert isinstance(other, FilterEvalResult)
+        assert op_string in ['&', '|']
+
+        # Combine the Variant sets.
+        if op_string == '&':
+            new_variant_set = self.variant_set & other.variant_set
+        elif op_string == '|':
+            new_variant_set = self.variant_set | other.variant_set
+        else:
+            raise AssertionError("Unsupported op: %s" % op_string)
+
+        # Build up the new metadata map.
+        new_variant_id_to_metadata_dict = {}
+        for variant in new_variant_set:
+            merged_filter_metadata = {}
+
+            self_filter_metadata = self.variant_id_to_metadata_dict.get(
+                    variant.id, {})
+            other_filter_metadata = other.variant_id_to_metadata_dict.get(
+                    variant.id, {})
+
+            # Merge passing sample ids.
+            self_passing_genomes = self_filter_metadata.get(
+                    'passing_sample_ids', set())
+            other_passing_genomes = other_filter_metadata.get(
+                    'passing_sample_ids', set())
+            if op_string == '&':
+                merged_filter_metadata['passing_sample_ids'] = (
+                        self_passing_genomes & other_passing_genomes)
+            else:
+                merged_filter_metadata['passing_sample_ids'] = (
+                        self_passing_genomes | other_passing_genomes)
+
+            # Save the filter metadata.
+            new_variant_id_to_metadata_dict[variant.id] = merged_filter_metadata
+
+        return FilterEvalResult(new_variant_set,
+                new_variant_id_to_metadata_dict)
+
+
+# Recognizes a pattern of the form 'key op value'.
+EXPRESSION_REGEX = re.compile('(\w+\s*[=><!]{1}[=]{0,1}\s*\w+)')
 
 class VariantFilterEvaluator(object):
     """Object that encapsulates methods for evaluating a filter.
@@ -142,7 +212,12 @@ class VariantFilterEvaluator(object):
         self.raw_filter_string = raw_filter_string
         self.clean_filter_string = raw_filter_string.replace(' ', '')
         self.ref_genome = ref_genome
-        self._create_symbolic_representation()
+
+        # Catch trivial, no filter case.
+        if self.clean_filter_string == '':
+            self.sympy_representation = ''
+        else:
+            self._create_symbolic_representation()
 
 
     def _create_symbolic_representation(self):
@@ -192,7 +267,7 @@ class VariantFilterEvaluator(object):
         Returns:
             List of Variants that pass the filter query.
         """
-        return list(self.evaluate_disjunction(self.sympy_representation))
+        return self.evaluate_disjunction(self.sympy_representation)
 
 
     def evaluate_disjunction(self, disjunction_clause):
@@ -202,15 +277,15 @@ class VariantFilterEvaluator(object):
             disjunction_clause: sympy.logic.boolalg.Or clause.
 
         Returns:
-            Set of variants that satisfy the clause.
+            A FilterEvalResult object.
         """
         # The disjunction may contain a single condition.
         if not isinstance(disjunction_clause, boolalg.Or):
-            return set(self.evaluate_conjunction(disjunction_clause))
+            return self.evaluate_conjunction(disjunction_clause)
         else:
-            result = set()
+            result = FilterEvalResult(set(), {})
             for conjunction_clause in disjunction_clause.args:
-                result |= set(self.evaluate_conjunction(conjunction_clause))
+                result |= self.evaluate_conjunction(conjunction_clause)
             return result
 
 
@@ -236,22 +311,61 @@ class VariantFilterEvaluator(object):
         q_part = Q()
         remaining_triples = []
 
-        # The conjunction may contain a single condition.
-        if not conjunction_clause.is_Boolean:
-            (q_part, remaining_triples) = _single_symbol_helper(
-                    conjunction_clause, q_part, remaining_triples)
-        else:
-            for symbol in conjunction_clause.args:
+        if not conjunction_clause == '':
+            # The conjunction may contain a single condition.
+            if not conjunction_clause.is_Boolean:
                 (q_part, remaining_triples) = _single_symbol_helper(
-                        symbol, q_part, remaining_triples)
+                        conjunction_clause, q_part, remaining_triples)
+            else:
+                for symbol in conjunction_clause.args:
+                    (q_part, remaining_triples) = _single_symbol_helper(
+                            symbol, q_part, remaining_triples)
 
         # Now perform the SQL query to pull the models that pass the Q part
         # into memory.
         variant_list = self.ref_genome.variant_set.filter(q_part)
 
-        # NOTE: The following code doesn't take into account sample scope.
-        # Rather, it's meant to be a first demonstration of filtering and
-        # needs to be re-written once we clarify what is going on in the UI.
+        # Make this into a FilterEvalResult object.
+        # For now, we just set all the genomes as passing for the conditions
+        # so far.
+        variant_id_to_metadata_dict = {}
+        for variant in variant_list:
+            variant_id_to_metadata_dict[variant.id] = {
+                'passing_sample_ids': (
+                        self.get_sample_id_set_for_variant(variant)),
+            }
+        pending_result = FilterEvalResult(set(variant_list),
+                variant_id_to_metadata_dict)
+
+        return self.apply_non_sql_triples_to_query_set(pending_result,
+                remaining_triples)
+
+
+    def handle_single_symbol(self, symbol):
+        """Returns one of:
+             * A Django Q object if the symbol represents a condition that
+                can be evaluated against the SQL database.
+             * A triple of delim, key, value if the condition must be evaluated
+                in-memory.
+        """
+        condition_string = self.get_condition_string_for_symbol(symbol)
+        (delim, key, value) = _get_delim_key_value_triple(condition_string)
+        for key_map in ALL_SQL_KEY_MAP_LIST:
+            if key in key_map:
+                return _get_django_q_object_for_triple((delim, key, value))
+        return (delim, key, value)
+
+
+    def apply_non_sql_triples_to_query_set(self, filter_eval_result,
+            remaining_triples):
+        """Applies the remaining condition triples to the query set and
+        returns the trimmed down list.
+        """
+        variant_list = filter_eval_result.variant_set
+
+        variant_id_to_metadata_dict = (
+                filter_eval_result.variant_id_to_metadata_dict)
+
         for triple in remaining_triples:
             (delim, key, value) = triple
             passing_variant_list = []
@@ -268,9 +382,11 @@ class VariantFilterEvaluator(object):
                                 data_dict, VARIANT_CALLER_COMMON_MAP, triple)
                         if passing:
                             passing_variant_list.append(variant)
+                            # No need to update passing sample ids.
                             break
 
                 elif key in VARIANT_EVIDENCE_MAP:
+                    samples_passing_for_variant = set()
                     _assert_delim_for_key(VARIANT_EVIDENCE_MAP, delim, key)
                     all_variant_evidence_obj_list = (
                             VariantEvidence.objects.filter(
@@ -282,8 +398,17 @@ class VariantFilterEvaluator(object):
                         passing = _evaluate_condition_in_triple(
                                 data_dict, VARIANT_EVIDENCE_MAP, triple)
                         if passing:
-                            passing_variant_list.append(variant)
-                            break
+                            samples_passing_for_variant.add(
+                                    variant_evidence_obj.experiment_sample.id)
+                    if len(samples_passing_for_variant) > 0:
+                        passing_variant_list.append(variant)
+                        variant_id_to_metadata_dict[variant.id][
+                                'passing_sample_ids'] &= (
+                                        samples_passing_for_variant)
+                    else:
+                        variant_id_to_metadata_dict[variant.id][
+                                'passing_sample_ids'] = set()
+
                 else:
                     raise ParseError(key, 'Unrecognized filter key.')
 
@@ -291,22 +416,16 @@ class VariantFilterEvaluator(object):
             # the remaining variants on the next iteration.
             variant_list = passing_variant_list
 
-        return variant_list
+        return FilterEvalResult(set(variant_list), variant_id_to_metadata_dict)
 
 
-    def handle_single_symbol(self, symbol):
-        """Returns one of:
-             * A Django Q object if the symbol represents a condition that
-                can be evaluated against the SQL database.
-             * A triple of delim, key, value if the condition must be evaluated
-                in-memory.
+    def get_sample_id_set_for_variant(self, variant):
+        """Returns the set of all ExperimentSamples ids for which there exists a
+        relationship to the Variant
         """
-        condition_string = self.get_condition_string_for_symbol(symbol)
-        (delim, key, value) = _get_delim_key_value_triple(condition_string)
-        for key_map in ALL_SQL_KEY_MAP_LIST:
-            if key in key_map:
-                return _get_django_q_object_for_triple((delim, key, value))
-        return (delim, key, value)
+        return set([ve.experiment_sample.id for ve in
+                VariantEvidence.objects.filter(
+                        variant_caller_common_data__variant=variant)])
 
 
 ###############################################################################
@@ -444,9 +563,5 @@ def get_variants_that_pass_filter(filter_string, ref_genome):
     Returns:
         List of Variant model objects.
     """
-    clean_filter_string = filter_string.strip()
-    if clean_filter_string == '':
-        return ref_genome.variant_set.all()
-
-    evaluator = VariantFilterEvaluator(clean_filter_string, ref_genome)
+    evaluator = VariantFilterEvaluator(filter_string, ref_genome)
     return evaluator.evaluate()

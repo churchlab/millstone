@@ -423,16 +423,22 @@ def variant_list_view(request, project_uid, ref_genome_uid):
     combined_filter_string = manual_filter_string
 
     # Apply the filters.
-    variant_list = get_variants_that_pass_filter(
+    filter_result = get_variants_that_pass_filter(
             combined_filter_string, reference_genome)
+    variant_list = filter_result.variant_set
+    variant_id_to_metadata_dict = filter_result.variant_id_to_metadata_dict
 
     # Determine whether the melted or cast version is requested.
     is_melted = request.GET.get('melt', 0) == '1'
     if is_melted:
         melted_variant_list = []
         for variant in variant_list:
-            melted_variant_list.extend(variant_as_melted_list(variant))
+            melted_variant_list.extend(variant_as_melted_list(variant,
+                    variant_id_to_metadata_dict))
         variant_list = melted_variant_list
+
+    # TODO: I'm confused where we have sets and where we have lists.
+    variant_list = list(variant_list)
 
     # The json data required to populate datables and dropdowns.
     # Can be called either by render or post response.

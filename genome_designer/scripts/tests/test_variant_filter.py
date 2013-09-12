@@ -15,6 +15,7 @@ from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
+from scripts.variant_filter import EXPRESSION_REGEX
 from scripts.variant_filter import get_variants_that_pass_filter
 from scripts.variant_filter import symbol_generator
 from scripts.variant_filter import ParseError
@@ -56,15 +57,15 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 alt_value='G')
 
         # Test querying Variants with position > 5.
-        variants_above_5 = get_variants_that_pass_filter('position > 5',
-                self.ref_genome)
+        result = get_variants_that_pass_filter('position > 5', self.ref_genome)
+        variants_above_5 = result.variant_set
         self.assertEqual(4, len(variants_above_5))
         for var in variants_above_5:
             self.assertTrue(var.position > 5)
 
         # Test querying Variants with position >= 5.
-        variants_above_5 = get_variants_that_pass_filter('position >= 5',
-                self.ref_genome)
+        result = get_variants_that_pass_filter('position >= 5', self.ref_genome)
+        variants_above_5 = result.variant_set
         self.assertEqual(5, len(variants_above_5))
         for var in variants_above_5:
             self.assertTrue(var.position >= 5)
@@ -93,11 +94,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 ref_value='A',
                 alt_value='G')
 
-        self.assertEqual(6, len(get_variants_that_pass_filter(
-                'chromosome = chrom', self.ref_genome)))
+        result = get_variants_that_pass_filter('chromosome = chrom',
+                self.ref_genome)
+        self.assertEqual(6, len(result.variant_set))
 
-        self.assertEqual(9, len(get_variants_that_pass_filter(
-                'chromosome = chrom2', self.ref_genome)))
+        result = get_variants_that_pass_filter('chromosome = chrom2',
+                self.ref_genome)
+        self.assertEqual(9, len(result.variant_set))
 
 
     def test_filter__by_position_and_chromosome(self):
@@ -124,12 +127,12 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 alt_value='G')
 
         QUERY_STRING = 'position > 4 & chromosome = chrom'
-        self.assertEqual(1, len(get_variants_that_pass_filter(
-                QUERY_STRING, self.ref_genome)))
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        self.assertEqual(1, len(result.variant_set))
 
         QUERY_STRING = 'position >= 5 & chromosome = chrom2'
-        self.assertEqual(4, len(get_variants_that_pass_filter(
-                QUERY_STRING, self.ref_genome)))
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        self.assertEqual(4, len(result.variant_set))
 
 
     def test_filter__invalid_key(self):
@@ -164,18 +167,19 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         # Test AND case.
         QUERY_STRING = 'position < 1 & position > 7'
-        variants = get_variants_that_pass_filter(QUERY_STRING,
+        result = get_variants_that_pass_filter(QUERY_STRING,
                 self.ref_genome)
-        self.assertEqual(0, len(variants))
+        self.assertEqual(0, len(result.variant_set))
 
         # Test OR case.
         QUERY_STRING = 'position < 1 | position > 7'
-        variants = get_variants_that_pass_filter(QUERY_STRING,
+        result = get_variants_that_pass_filter(QUERY_STRING,
                 self.ref_genome)
-        self.assertEqual(3, len(variants))
+        variant_list = result.variant_set
+        self.assertEqual(3, len(variant_list))
         for pos in [0, 8, 9]:
             found = False
-            for var in variants:
+            for var in variant_list:
                 if var.position == pos:
                     found = True
                     break
@@ -201,12 +205,12 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         QUERY_STRING = 'position < 1 & INFO_XRM > 0'
         variants = get_variants_that_pass_filter(QUERY_STRING,
-                self.ref_genome)
+                self.ref_genome).variant_set
         self.assertEqual(0, len(variants))
 
         QUERY_STRING = 'position < 1 | position >= 7 & INFO_XRM > 0'
         variants = get_variants_that_pass_filter(QUERY_STRING,
-                self.ref_genome)
+                self.ref_genome).variant_set
         self.assertEqual(1, len(variants))
 
 
@@ -230,11 +234,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         )
 
         QUERY_STRING = 'position < 5 & INFO_XRM > 0'
-        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
         self.assertEqual(1, len(variants))
 
         QUERY_STRING = 'position < 5 & INFO_XRM > 1'
-        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
         self.assertEqual(0, len(variants))
 
 
@@ -290,21 +296,52 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict_2)
 
+        sample_obj_3 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample 3',
+                group='Plate 1',
+                well='A03',
+                num_reads=100,
+        )
+        raw_sample_data_dict = {
+                'called': False,
+                'gt_type': 1,
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj_3,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+
         QUERY_STRING = 'position < 5 & gt_type = 2'
-        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
         self.assertEqual(1, len(variants))
 
         QUERY_STRING = 'position < 5 & gt_type = 0'
-        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
         self.assertEqual(1, len(variants))
 
         QUERY_STRING = 'position < 5 & gt_type = 1'
-        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
         self.assertEqual(0, len(variants))
 
         QUERY_STRING = 'position > 5 & gt_type = 2'
-        variants = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
         self.assertEqual(0, len(variants))
+
+        QUERY_STRING = 'position < 5 & (gt_type = 0 | gt_type = 2)'
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+
+        # Check that the number of passing samples is correct.
+        passing_sample_ids = result.variant_id_to_metadata_dict[variant.id][
+                'passing_sample_ids']
+        self.assertEqual(2, len(passing_sample_ids))
 
 
     def test_filter__equality(self):
@@ -322,17 +359,17 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 alt_value='G')
 
         variants = get_variants_that_pass_filter('position == 5',
-                self.ref_genome)
+                self.ref_genome).variant_set
         self.assertEqual(1, len(variants))
-        self.assertEqual(5, variants[0].position)
+        self.assertEqual(5, variants.pop().position)
 
         variants = get_variants_that_pass_filter('position = 5',
-                self.ref_genome)
+                self.ref_genome).variant_set
         self.assertEqual(1, len(variants))
-        self.assertEqual(5, variants[0].position)
+        self.assertEqual(5, variants.pop().position)
 
         variants = get_variants_that_pass_filter('position != 5',
-                self.ref_genome)
+                self.ref_genome).variant_set
         self.assertEqual(9, len(variants))
         for var in variants:
             self.assertTrue(var.position != 5)
@@ -371,3 +408,23 @@ class TestSymbolGenerator(TestCase):
         self.assertEqual('A', symbol_maker.next())
         self.assertEqual('B', symbol_maker.next())
         self.assertEqual('C', symbol_maker.next())
+
+
+class TestExpressionRegex(TestCase):
+    """Tests the regular expression that recognizes key op value conditions.
+    """
+
+    def test_expression(self):
+        """Basic expression tests.
+        """
+        # Test positive matches.
+        self.assertTrue(EXPRESSION_REGEX.match('key=value'))
+        self.assertTrue(EXPRESSION_REGEX.match('key==value'))
+        self.assertTrue(EXPRESSION_REGEX.match('key!=value'))
+
+        # Test positive, with spaces.
+        self.assertTrue(EXPRESSION_REGEX.match('key = value'))
+
+        # Test negative matches.
+        self.assertFalse(EXPRESSION_REGEX.match('key = = value'))
+        self.assertFalse(EXPRESSION_REGEX.match('keyvalue'))
