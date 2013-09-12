@@ -48,6 +48,7 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
 
         variant_uids = Variant.objects.filter(
                 reference_genome=self.ref_genome_1,
+                position__gt=25,
                 chromosome='chrom').values_list('uid')
 
         response = add_or_remove_variants_from_set(
