@@ -12,6 +12,15 @@ from django.db.models import ManyToManyField
 from django.db.models import Model
 
 
+def adapt_model_or_modelview_list_to_frontend(instance_list):
+    """Adapts a list of model intances to the frontend represenation.
+    """
+    if len(instance_list) == 0:
+        return []
+    instance_type = type(instance_list[0])
+    return adapt_model_to_frontend(instance_type, obj_list=instance_list)
+
+
 def adapt_model_to_frontend(model, filters={}, obj_list=None):
     """Converts django models to frontend format.
 
@@ -127,7 +136,10 @@ def get_model_field_fe_representation(model_obj, field, field_info={}):
     This method allows recursively diving into models.
 
     """
-    model_field = getattr(model_obj,field)
+    if hasattr(model_obj, 'custom_getattr'):
+        model_field = model_obj.custom_getattr(field)
+    else:
+        model_field = getattr(model_obj, field)
 
     if isinstance(model_field, Model):
         return adapt_model_instance_to_frontend(model_field, field_info)

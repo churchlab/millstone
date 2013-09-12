@@ -699,6 +699,11 @@ class VariantCallerCommonData(Model):
         """
         return get_flattened_unpickled_data(self.data)
 
+    @classmethod
+    def get_field_order(clazz):
+        return []
+
+
 
 class VariantEvidence(Model):
     """Evidence for a particular variant occurring in a particular
@@ -720,12 +725,19 @@ class VariantEvidence(Model):
     # TODO: Extract interesting keys (e.g. gt_type) into their own SQL fields.
     data = JSONField()
 
+    @property
+    def gt_type(self):
+        return pickle.loads(self.data['gt_type'])
+
     def as_dict(self):
         """Returns a flattened dictionary of the unpickled element values in
         VarantEvidence.data.
         """
         return get_flattened_unpickled_data(self.data)
 
+    @classmethod
+    def get_field_order(clazz):
+        return [{'field':'gt_type'}]
 
 
 ###############################################################################

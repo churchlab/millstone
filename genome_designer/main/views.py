@@ -12,8 +12,10 @@ from django.shortcuts import render
 import os
 
 from main.adapters import adapt_model_instance_to_frontend
+from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.forms import ProjectForm
+from main.melt_util import variant_as_melted_list
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
@@ -255,10 +257,9 @@ def alignment_create_view(request, project_uid):
             return HttpResponseBadRequest("At least one sample required.")
 
         # Kick off alignments.
-        # NOTE: Hard-coded test_models_only=True for now.
         try:
             create_alignment_groups_and_start_alignments(ref_genome_list,
-                    sample_list, test_models_only=False)
+                    sample_list)
 
             # Success. Return a redirect response.
             response_data = {
@@ -425,12 +426,20 @@ def variant_list_view(request, project_uid, ref_genome_uid):
     variant_list = get_variants_that_pass_filter(
             combined_filter_string, reference_genome)
 
+    # Determine whether the melted or cast version is requested.
+    is_melted = request.GET.get('melt', 0) == '1'
+    if is_melted:
+        melted_variant_list = []
+        for variant in variant_list:
+            melted_variant_list.extend(variant_as_melted_list(variant))
+        variant_list = melted_variant_list
+
     # The json data required to populate datables and dropdowns.
     # Can be called either by render or post response.
     def get_json_data():
         return {
-           'variant_list_json': adapt_model_to_frontend(Variant,
-                    obj_list=variant_list),
+           'variant_list_json': adapt_model_or_modelview_list_to_frontend(
+                    variant_list),
            'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 {'reference_genome__project':project})}
 
@@ -466,6 +475,7 @@ def variant_list_view(request, project_uid, ref_genome_uid):
             'project': project,
             'reference_genome': reference_genome,
             'manual_filter_string': manual_filter_string,
+            'is_melted': is_melted,
         })
         context.update(get_json_data())
         return render(request, 'variant_list.html', context)

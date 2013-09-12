@@ -7,6 +7,10 @@
               value="{{manual_filter_string}}"
             {% endif %}
             >
+
+      <input type="radio" name="melt" value=0 checked>Cast
+      <input type="radio" name="melt" value=1 {% if is_melted  %}checked{% endif %}>Melted
+
       <div class="row gd-button-container">
         <button type="submit" class="btn btn-success span2 offset5">
           Apply Filter

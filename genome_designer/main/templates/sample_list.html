@@ -32,6 +32,7 @@
   <thead>
     <tr>
       <th>Name</th>
+      <th>uid</th>
       <th>Plate/Group</th>
       <th>Well</th>
       <th># Reads</th>
@@ -58,6 +59,7 @@
     {% for sample in sample_list %}
       <tr>
         <td><a href="{{sample.url}}">{{sample.label}}</a></td>
+        <td>{{sample.uid}}</td>
         <td>{{sample.group}}</td>
         <td>{{sample.well}}</td>
         <td>{{sample.num_reads}}</td>
