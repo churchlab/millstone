@@ -4,24 +4,35 @@ Tests for import_util.py.
 
 import os
 
+from django.contrib.auth.models import User
 from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
 
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
+from main.models import ReferenceGenome
 from main.models import VariantSet
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
-from scripts.bootstrap_data import bootstrap_fake_data
 from settings import PWD as GD_ROOT_PATH
+
+
+TEST_USERNAME = 'gmcdev'
+TEST_PASSWORD = 'g3n3d3z'
+TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
+
 
 class TestImportSamplesFromTargetsFile(TestCase):
     """Tests for scripts.import_util.import_samples_from_targets_file().
     """
 
     def setUp(self):
-        bootstrap_fake_data()
+        # Test models.
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+        test_project = Project.objects.create(owner=user.get_profile(),
+                title='Test Project')
 
     def test_import_samples(self):
         """Tests importing samples from a template file.
@@ -58,7 +69,14 @@ class TestImportVariantSetFromVCFFile(TestCase):
     """
 
     def setUp(self):
-        bootstrap_fake_data()
+        # Test models.
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+        test_project = Project.objects.create(owner=user.get_profile(),
+                title='Test Project')
+        ref_genome = ReferenceGenome.objects.create(project=test_project,
+                label='refgenome', num_chromosomes=1, num_bases=1000)
+
 
     def test_import_variant_set(self):
         """Tests importing variant sets from a pared-down vcf file
