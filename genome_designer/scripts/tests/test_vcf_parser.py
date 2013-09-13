@@ -4,6 +4,7 @@ Tests for vcf_parser.py
 
 import os
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 import vcf
 
@@ -13,12 +14,14 @@ from main.models import ExperimentSample
 from main.models import Project
 from main.models import Variant
 from main.models import VariantCallerCommonData
-from scripts.bootstrap_data import bootstrap_fake_data
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.vcf_parser import parse_alignment_group_vcf
 from settings import PWD as GD_ROOT
 
+TEST_USERNAME = 'gmcdev'
+TEST_PASSWORD = 'g3n3d3z'
+TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
 TEST_FASTA  = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
@@ -30,10 +33,11 @@ TEST_GENOME_SNPS = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
 class TestVCFParser(TestCase):
 
     def setUp(self):
-        bootstrap_fake_data()
-
-        self.project = Project.objects.all()[0]
-
+        # Test models.
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+        self.project = Project.objects.create(owner=user.get_profile(),
+                title='Test Project')
         self.reference_genome = import_reference_genome_from_local_file(
                 self.project, 'ref_genome', TEST_FASTA, 'fasta')
 
