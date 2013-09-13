@@ -18,7 +18,7 @@ TEMPLATE_DEBUG = DEBUG
 
 # Default True, requiring celery server to be running.
 # Set this to False to force synchronous behavior.
-DEBUG_CONCURRENT = True
+DEBUG_CONCURRENT = False
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -245,15 +245,26 @@ JBROWSE_DATA_SYMLINK_PATH = os.path.join(JBROWSE_ROOT,
 JBROWSE_DATA_URL_ROOT= '/jbrowse/' + JBROWSE_DATA_SYMLINK_NAME + '/'
 
 ###############################################################################
-# JBrowse
+# Snp Calling
 ###############################################################################
 
-# Path to snpeff config template.
-
+# Path to snpeff java jar.
 SNPEFF_JAR_PATH = os.path.abspath(os.path.join(PWD, 'tools','snpEff',
         'snpEff.jar'))
+# Path to snpeff config template.
 SNPEFF_CFG_TEMPLATE_PATH = os.path.join(PWD, 'main',
         'templates','snpeff.tmpl.config')
+
+# Upstream/downstream interval where SNPs nearby a gene are tagged. Needs to
+#   be smaller than default for bacterial genomes.
+SNPEFF_UD_INTERVAL_LENGTH = 50
+
+# SNPEff can be multithreaded; probably makes sense to set this to the same as
+# a more general CPU thread value.
+SNPEFF_THREADS = 2
+
+# If we're debugging snpeff, print the output
+SNPEFF_BUILD_DEBUG = True
 
 ###############################################################################
 # Testing

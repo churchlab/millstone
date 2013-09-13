@@ -32,10 +32,13 @@ from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantSet
 from main.models import VariantToVariantSet
+from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
+from scripts.snp_callers import run_snp_calling_pipeline
 from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
 from scripts.import_util import import_reference_genome_from_local_file
+
 import settings
 from settings import PWD as GD_ROOT
 
@@ -77,6 +80,17 @@ VARIANTSET_1_LABEL = 'Set A'
 
 VARIANTSET_2_LABEL = 'Set B'
 
+# A set of data consisting of a small annotated genome, many samples, and some
+# designed SNPs which are each in some of the samples.
+class FullVCFTestSet:
+    TEST_DIR = os.path.join(GD_ROOT,'test_data', 'full_vcf_test_set')
+    NUM_SAMPLES = 2
+    TEST_GENBANK = os.path.join(TEST_DIR, 'mg1655_tolC_through_zupT.gb')
+    FASTQ1 = [os.path.join(TEST_DIR, 'sample%d.simLibrary.1.fq' % i)
+             for i in range(NUM_SAMPLES)]
+    FASTQ2 = [os.path.join(TEST_DIR, 'sample%d.simLibrary.2.fq' % i)
+             for i in range(NUM_SAMPLES)]
+    TEST_DESIGNED_SNPS = os.path.join(TEST_DIR, 'designed_snps.vcf')
 
 def bootstrap_fake_data():
     """Fill the database with fake data.
@@ -233,6 +247,41 @@ def bootstrap_fake_data():
         vvs2.sample_variant_set_association.add(sample_1)
 
     _add_fake_variants_to_fake_set()
+
+    #############################
+    # Full VCF Testing (annotated for snpeff, variant filtering, etc)
+    #############################
+
+    # Create a new reference genome and samples using full_vcf_test_set
+    full_vcf_reference_genome = import_reference_genome_from_local_file(
+                test_project, 'mg1655_tolC_through_zupT',
+                FullVCFTestSet.TEST_GENBANK, 'genbank')
+
+    # Create all samples.
+    full_vcf_samples = []
+    for i in range(FullVCFTestSet.NUM_SAMPLES):
+        sample_obj = ExperimentSample.objects.create(
+                project=test_project,
+                label='Sample %d' % i)
+
+        # Add raw reads to each sample.
+        copy_and_add_dataset_source(sample_obj, Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1, FullVCFTestSet.FASTQ1[i])
+        copy_and_add_dataset_source(sample_obj, Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2, FullVCFTestSet.FASTQ2[i])
+
+        full_vcf_samples.append(sample_obj)
+
+    # Run the alignment. Return the alignment group created, indexed by the
+    #   reference genome's uid.
+    full_vcf_alignment_group = create_alignment_groups_and_start_alignments(
+           [full_vcf_reference_genome],
+           full_vcf_samples)[full_vcf_reference_genome.uid]
+
+
+    # Run Freebayes. This should also kick off snpeff afterwards.
+    run_snp_calling_pipeline(full_vcf_alignment_group)
+
 
 
 def reset_database():

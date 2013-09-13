@@ -223,6 +223,8 @@ class Dataset(Model):
         BWA_ALIGN = 'bwa_align'
         VCF_FREEBAYES = 'vcff'
         VCF_USERINPUT = 'vcfu'
+        VCF_FREEBAYES_SNPEFF = 'vcffe'
+
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
 
@@ -419,6 +421,13 @@ class ReferenceGenome(Model):
                 str(self.uid),
                 'jbrowse')
 
+    def is_annotated(self):
+        """For several steps (notably snpEff), we want to check that this
+        ReferenceGenome is annotated (i.e. it has a genbank file associated
+            with it.) This function returns true if a genbank file is available.
+        """
+        return self.dataset_set.filter(
+            type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists()
 
     @classmethod
     def get_field_order(clazz):

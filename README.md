@@ -59,6 +59,12 @@ message broker, for which we use RabbitMQ which is the default for Celery.
 
     Full instructions are [here](http://www.rabbitmq.com/download.html).
 
+    On Mac, homebrew can be used:
+
+        $ sudo brew install rabbitmq
+
+    Mac instructions are [here](https://www.rabbitmq.com/install-standalone-mac.html).
+
 
 ### Git Submodules
 

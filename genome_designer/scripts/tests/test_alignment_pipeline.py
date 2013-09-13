@@ -61,7 +61,8 @@ class TestAlignmentPipeline(TestCase):
                 label='test alignment', reference_genome=self.reference_genome)
 
         # Create the JBrowse placeholder.
-        prepare_jbrowse_ref_sequence(alignment_group.reference_genome)
+        # NOTE: This is done automatically now:
+        # prepare_jbrowse_ref_sequence(alignment_group.reference_genome)
 
         # Run the alignment.
         experiment_sample_alignment = align_with_bwa(
