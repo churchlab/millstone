@@ -734,6 +734,10 @@ class VariantEvidence(Model):
     def gt_type(self):
         return pickle.loads(self.data['gt_type'])
 
+    @property
+    def sample_uid(self):
+        return self.experiment_sample.uid
+
     def as_dict(self):
         """Returns a flattened dictionary of the unpickled element values in
         VarantEvidence.data.
@@ -742,7 +746,7 @@ class VariantEvidence(Model):
 
     @classmethod
     def get_field_order(clazz):
-        return [{'field':'gt_type'}]
+        return [{'field':'gt_type'}, {'field':'sample_uid'}]
 
 
 ###############################################################################

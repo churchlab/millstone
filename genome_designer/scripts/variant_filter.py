@@ -31,6 +31,7 @@ import re
 from django.db.models import Q
 from sympy.logic import boolalg
 
+from main.models import ExperimentSample
 from main.models import VariantEvidence
 
 
@@ -201,23 +202,108 @@ class FilterEvalResult(object):
                 new_variant_id_to_metadata_dict)
 
 
+FILTER_SCOPE__ALL = 'ALL'
+FILTER_SCOPE__ANY = 'ANY'
+FILTER_SCOPE__ONLY = 'ONLY'
+VALID_FILTER_SCOPES = set([
+    FILTER_SCOPE__ALL,
+    FILTER_SCOPE__ANY,
+    FILTER_SCOPE__ONLY
+])
+
+class FilterScope(object):
+    """Represents the scope that a filter should be applied over.
+    """
+
+    def __init__(self, scope_type, sample_ids):
+        """
+        Args:
+            sample_ids: Set of sample ids.
+            scope_type: A scope in VALID_FILTER_SCOPES.
+        """
+        assert scope_type in VALID_FILTER_SCOPES, "Invalid scope type."
+
+        self.sample_id_set = set(sample_ids)
+        self.scope_type = scope_type
+
+
+    @classmethod
+    def parse_sample_ids(clazz, sample_id_string):
+        """Turns a comma-separated list of sample uids or names into ids.
+        """
+        sample_uids_or_names = sample_id_string.split(',')
+        sample_uids_or_names = [s.strip() for s in sample_uids_or_names]
+        sample_ids = [ExperimentSample.objects.get(uid=uid).id for uid
+                in sample_uids_or_names]
+        return sample_ids
+
+
+# Picks out expressions like, e.g. '(position > 100) in ALL(sample1)'.
+CONDITION_PART = '\(.*\)'
+SCOPE_TYPE_PART = '(?:ALL|all|ANY|any|ONLY|only)'
+SAMPLE_LIST_PART = '\(.*\)'
+SAMPLE_SCOPE_REGEX = re.compile(
+        '(' + CONDITION_PART + '\s+in\s+' + SCOPE_TYPE_PART +
+        SAMPLE_LIST_PART + ')')
+
+# And a named version for grabbing the salient parts.
+CONDITION_PART_NAMED = '\((?P<condition>.*)\)'
+SCOPE_TYPE_PART_NAMED = '(?P<scope_type>ALL|all|ANY|any|ONLY|only)'
+SAMPLE_LIST_PART_NAMED = '\((?P<samples>.*)\)'
+SAMPLE_SCOPE_REGEX_NAMED = re.compile(
+        '(' + CONDITION_PART_NAMED + '\s+in\s+' + SCOPE_TYPE_PART_NAMED +
+        SAMPLE_LIST_PART_NAMED + ')')
+
 # Recognizes a pattern of the form 'key op value'.
 EXPRESSION_REGEX = re.compile('(\w+\s*[=><!]{1}[=]{0,1}\s*\w+)')
 
 class VariantFilterEvaluator(object):
-    """Object that encapsulates methods for evaluating a filter.
+    """Evaluator for a single scoped expression, e.g. of the form:
+        '(position > 5) in ALL(sample1, sample2)'
     """
 
-    def __init__(self, raw_filter_string, ref_genome):
+    def __init__(self, raw_filter_string, ref_genome, scope=None):
+        """Constructor.
+
+        Args:
+            raw_filter_string: String representing the raw filter.
+            ref_genome: ReferenceGenome these variants are relative to.
+            scope: Optional FilterScope object which restricts the results
+                to the samples according to the semantic setting of the scope.
+        """
+        # Validation.
+        if scope is not None:
+            assert isinstance(scope, FilterScope)
+
         self.raw_filter_string = raw_filter_string
-        self.clean_filter_string = raw_filter_string.replace(' ', '')
+        self.clean_filter_string = raw_filter_string
         self.ref_genome = ref_genome
+        self.scope = scope
+
+        # Generator object that provides symbols in alphabetical order.
+        self.symbol_maker = symbol_generator()
 
         # Catch trivial, no filter case.
         if self.clean_filter_string == '':
             self.sympy_representation = ''
         else:
             self._create_symbolic_representation()
+
+
+    def get_scope_type(self):
+        """Returns the scope type.
+        """
+        if self.scope:
+            return self.scope.scope_type
+        return None
+
+
+    def get_scope_sample_id_set(self):
+        """Returns the set of sample ids that the scope applies to.
+        """
+        if self.scope:
+            return self.scope.sample_id_set
+        return None
 
 
     def _create_symbolic_representation(self):
@@ -228,21 +314,29 @@ class VariantFilterEvaluator(object):
         # Find all the expressions and replace them with symbols.
         self.symbol_to_expression_map = {}
 
-        # Generator object that provides symbols in alphabetical order.
-        symbol_maker = symbol_generator()
+        symbolified_string = self.clean_filter_string
+        for regex in [SAMPLE_SCOPE_REGEX, EXPRESSION_REGEX]:
+            symbolified_string = self._symbolify_string_for_regex(
+                    symbolified_string, regex)
 
-        # Iterate through tokens and replace them with successive symbols.
-        tokens = EXPRESSION_REGEX.split(self.clean_filter_string)
+        self.sympy_representation = boolalg.to_dnf(symbolified_string)
+
+
+    def _symbolify_string_for_regex(self, start_string, regex):
+        """Iterates through the string tokenized by the regex and replaces
+        the matching tokens with symbols.
+        """
+        tokens = regex.split(start_string)
         symbolified_tokens = []
         for token in tokens:
-            if EXPRESSION_REGEX.match(token):
-                symbol = symbol_maker.next()
+            if regex.match(token):
+                symbol = self.symbol_maker.next()
                 self.symbol_to_expression_map[symbol] = token
                 symbolified_tokens.append(symbol)
             else:
                 symbolified_tokens.append(token)
         symbolified_string = ''.join(symbolified_tokens)
-        self.sympy_representation = boolalg.to_dnf(symbolified_string)
+        return symbolified_string
 
 
     def get_condition_string_for_symbol(self, symbol):
@@ -265,7 +359,7 @@ class VariantFilterEvaluator(object):
         """Evaluates the conditions in the filter string.
 
         Returns:
-            List of Variants that pass the filter query.
+            A FilterEvalResult object.
         """
         return self.evaluate_disjunction(self.sympy_representation)
 
@@ -274,7 +368,8 @@ class VariantFilterEvaluator(object):
         """Evaluate a disjunction (OR) clause.
 
         Args:
-            disjunction_clause: sympy.logic.boolalg.Or clause.
+            disjunction_clause: sympy.logic.boolalg.Or clause, or equivalent.
+            scope: FilterScope object.
 
         Returns:
             A FilterEvalResult object.
@@ -291,6 +386,13 @@ class VariantFilterEvaluator(object):
 
     def evaluate_conjunction(self, conjunction_clause):
         """Evaluate a conjunction condition. That is all symbols are ANDed.
+
+        Args:
+            disjunction_clause: sympy.logic.boolalg.And clause, or equivalent.
+            scope: FilterScope object.
+
+        Returns:
+            A FilterEvalResult object.
         """
         # Iterate through the conditions corresponding to the symbols in the
         # clause and either create Q objects out of them, relative to the
@@ -298,31 +400,46 @@ class VariantFilterEvaluator(object):
         # after the SQL fetch. Order doesn't matter since this is a conjunction
         # clause.
 
-        def _single_symbol_helper(symbol, q_part, remaining_triples):
+        def _single_symbol_helper(symbol, filter_eval_results, q_part,
+                remaining_triples):
             """Helper method for evaluating a single symbol.
             """
-            q_or_triple = self.handle_single_symbol(symbol)
-            if isinstance(q_or_triple, Q):
-                q_part &= q_or_triple
+            result = self.handle_single_symbol(symbol)
+            if isinstance(result, FilterEvalResult):
+                filter_eval_results.append(result)
+            elif isinstance(result, Q):
+                q_part &= result
             else:
-                remaining_triples.append(q_or_triple)
-            return (q_part, remaining_triples)
+                remaining_triples.append(result)
+            return (filter_eval_results, q_part, remaining_triples)
 
+        filter_eval_results = []
         q_part = Q()
         remaining_triples = []
 
         if not conjunction_clause == '':
             # The conjunction may contain a single condition.
             if not conjunction_clause.is_Boolean:
-                (q_part, remaining_triples) = _single_symbol_helper(
-                        conjunction_clause, q_part, remaining_triples)
+                (filter_eval_results, q_part, remaining_triples) = (
+                        _single_symbol_helper(
+                                conjunction_clause, filter_eval_results, q_part,
+                                remaining_triples))
             else:
                 for symbol in conjunction_clause.args:
-                    (q_part, remaining_triples) = _single_symbol_helper(
-                            symbol, q_part, remaining_triples)
+                    (filter_eval_results, q_part, remaining_triples) = (
+                            _single_symbol_helper(
+                                    symbol, filter_eval_results, q_part,
+                                    remaining_triples))
 
-        # Now perform the SQL query to pull the models that pass the Q part
-        # into memory.
+        ### Combine any filter results so far. These are probably results
+        ### of sub-clauses that are scoped expressions.
+        partial_result = None
+        if len(filter_eval_results) > 0:
+            partial_result = filter_eval_results[0]
+            for result in filter_eval_results[1:]:
+                partial_result &= result
+
+        ### Now handle the Q part.
         variant_list = self.ref_genome.variant_set.filter(q_part)
 
         # Make this into a FilterEvalResult object.
@@ -334,21 +451,39 @@ class VariantFilterEvaluator(object):
                 'passing_sample_ids': (
                         self.get_sample_id_set_for_variant(variant)),
             }
-        pending_result = FilterEvalResult(set(variant_list),
+        q_part_result = FilterEvalResult(set(variant_list),
                 variant_id_to_metadata_dict)
 
-        return self.apply_non_sql_triples_to_query_set(pending_result,
+        if partial_result is not None:
+            partial_result &= q_part_result
+        else:
+            partial_result = q_part_result
+
+        return self.apply_non_sql_triples_to_query_set(partial_result,
                 remaining_triples)
 
 
     def handle_single_symbol(self, symbol):
         """Returns one of:
-             * A Django Q object if the symbol represents a condition that
-                can be evaluated against the SQL database.
-             * A triple of delim, key, value if the condition must be evaluated
+            * A FilterEvalResult object if the symbol represents a scoped
+                filter condition.
+            * A Django Q object if the symbol represents a condition that
+            can be evaluated against the SQL database.
+            * A triple of delim, key, value if the condition must be evaluated
                 in-memory.
         """
         condition_string = self.get_condition_string_for_symbol(symbol)
+
+        scope_match = SAMPLE_SCOPE_REGEX_NAMED.match(condition_string)
+        if scope_match:
+            condition_string = scope_match.group('condition')
+            scope_type = scope_match.group('scope_type')
+            samples_string = scope_match.group('samples')
+            sample_ids = FilterScope.parse_sample_ids(samples_string)
+            evaluator = VariantFilterEvaluator(condition_string,
+                    self.ref_genome, FilterScope(scope_type, sample_ids))
+            return evaluator.evaluate()
+
         (delim, key, value) = _get_delim_key_value_triple(condition_string)
         for key_map in ALL_SQL_KEY_MAP_LIST:
             if key in key_map:
@@ -400,11 +535,51 @@ class VariantFilterEvaluator(object):
                         if passing:
                             samples_passing_for_variant.add(
                                     variant_evidence_obj.experiment_sample.id)
+
+                    # Determine whether the passing samples qualify this
+                    # variant as passing the filter, accounting for scope if
+                    # applicable.
                     if len(samples_passing_for_variant) > 0:
-                        passing_variant_list.append(variant)
-                        variant_id_to_metadata_dict[variant.id][
-                                'passing_sample_ids'] &= (
-                                        samples_passing_for_variant)
+                        # Compare the passing results to the scope.
+                        if self.scope is not None:
+                            scope_type = self.get_scope_type()
+                            scope_sample_id_set = self.get_scope_sample_id_set()
+                            if scope_type == FILTER_SCOPE__ALL:
+                                # All passing sample ids must be in the
+                                # scope set.
+                                intersection = (samples_passing_for_variant &
+                                        scope_sample_id_set)
+                                if (intersection == scope_sample_id_set):
+                                    passing_variant_list.append(variant)
+                                    variant_id_to_metadata_dict[variant.id][
+                                            'passing_sample_ids'] &= (
+                                                    samples_passing_for_variant)
+                            elif scope_type == FILTER_SCOPE__ANY:
+                                # At least one passing sample id must be in
+                                # the scope set.
+                                if len(samples_passing_for_variant &
+                                        scope_sample_id_set) > 0:
+                                    passing_variant_list.append(variant)
+                                    variant_id_to_metadata_dict[variant.id][
+                                            'passing_sample_ids'] &= (
+                                                    samples_passing_for_variant)
+                            elif scope_type == FILTER_SCOPE__ONLY:
+                                # The passing sample id set must be exactly
+                                # the scope set.
+                                if (samples_passing_for_variant ==
+                                        scope_sample_id_set):
+                                    passing_variant_list.append(variant)
+                                    variant_id_to_metadata_dict[variant.id][
+                                            'passing_sample_ids'] &= (
+                                                    samples_passing_for_variant)
+                            else:
+                                raise AssertionError(
+                                        "Unknown scope %s" % scope_type)
+                        else:
+                            passing_variant_list.append(variant)
+                            variant_id_to_metadata_dict[variant.id][
+                                    'passing_sample_ids'] &= (
+                                            samples_passing_for_variant)
                     else:
                         variant_id_to_metadata_dict[variant.id][
                                 'passing_sample_ids'] = set()
@@ -434,6 +609,9 @@ class VariantFilterEvaluator(object):
 
 def _get_delim_key_value_triple(raw_string):
     """Attempt to parse a (delim, key, value) triple out of raw_string."""
+    # Remove spaces from the string.
+    raw_string = raw_string.replace(' ', '')
+
     # Try the possible delimiters in order until we find one, or fail.
     for raw_delim in DELIM_TO_Q_POSTFIX.iterkeys():
         split_result = raw_string.split(raw_delim)

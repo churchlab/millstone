@@ -16,6 +16,8 @@ from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
 from scripts.variant_filter import EXPRESSION_REGEX
+from scripts.variant_filter import SAMPLE_SCOPE_REGEX
+from scripts.variant_filter import SAMPLE_SCOPE_REGEX_NAMED
 from scripts.variant_filter import get_variants_that_pass_filter
 from scripts.variant_filter import symbol_generator
 from scripts.variant_filter import ParseError
@@ -375,6 +377,105 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
             self.assertTrue(var.position != 5)
 
 
+    def test_filter__scoped(self):
+        """Test with VariantEvidence objects.
+        """
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=2,
+                ref_value='A',
+                alt_value='G')
+
+        raw_common_data_dict = {
+                'INFO_XRM': pickle.dumps(0.12),
+        }
+        common_data_obj = VariantCallerCommonData.objects.create(
+                variant=variant,
+                source_dataset=self.vcf_dataset,
+                data=raw_common_data_dict
+        )
+
+        sample_obj = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample',
+                group='Plate 1',
+                well='A01',
+                num_reads=100,
+        )
+        raw_sample_data_dict = {
+                'called': True,
+                'gt_type': pickle.dumps(2),
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+        sample_obj_2 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample 2',
+                group='Plate 1',
+                well='A02',
+                num_reads=100,
+        )
+        raw_sample_data_dict_2 = {
+                'called': True,
+                'gt_type': pickle.dumps(0),
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj_2,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict_2)
+
+        sample_obj_3 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample 3',
+                group='Plate 1',
+                well='A03',
+                num_reads=100,
+        )
+        raw_sample_data_dict = {
+                'called': False,
+                'gt_type': 1,
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj_3,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+        QUERY_STRING = '(position < 5 & gt_type = 2) in ANY(%s, %s, %s)' % (
+                sample_obj.uid, sample_obj_2.uid, sample_obj_3.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+
+        QUERY_STRING = '(position < 5 & gt_type = 2) in ALL(%s, %s, %s)' % (
+                sample_obj.uid, sample_obj_2.uid, sample_obj_3.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(0, len(variants))
+
+        QUERY_STRING = '(position < 5 & gt_type = 2) in ALL(%s)' % (
+                sample_obj.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+
+        QUERY_STRING = '(position < 5 & gt_type = 2) in ONLY(%s, %s, %s)' % (
+                sample_obj.uid, sample_obj_2.uid, sample_obj_3.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(0, len(variants))
+
+        QUERY_STRING = '(position < 5 & gt_type = 2) in ONLY(%s)' % (
+                sample_obj.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+
+
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
     """Tests for the object that encapsulates evaluation of the filter string.
     """
@@ -386,7 +487,7 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
         evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
         EXPECTED_SYMBOLIC_REP = sympify('A')
         self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
-        self.assertEqual('position>5',
+        self.assertEqual('position > 5',
                 evaluator.symbol_to_expression_map['A'])
 
         raw_filter_string = 'position>5 & chromosome= chrom1'
@@ -395,7 +496,34 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
         self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
         self.assertEqual('position>5',
                 evaluator.symbol_to_expression_map['A'])
-        self.assertEqual('chromosome=chrom1',
+        self.assertEqual('chromosome= chrom1',
+                evaluator.symbol_to_expression_map['B'])
+
+
+    def test_variant_filter_constructor__scoped(self):
+        """Tests the constructor.
+        """
+        raw_filter_string = '(position > 5) in ALL(s1)'
+        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('A')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
+        self.assertEqual(raw_filter_string,
+                evaluator.symbol_to_expression_map['A'])
+
+        raw_filter_string = '((position > 5) in ALL(s1))'
+        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('(A)')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
+        self.assertEqual(raw_filter_string,
+                evaluator.symbol_to_expression_map['A'])
+
+        raw_filter_string = '((position > 5) in ALL(s1)) | position < 2'
+        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('(A) | B')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
+        self.assertEqual('((position > 5) in ALL(s1))',
+                evaluator.symbol_to_expression_map['A'])
+        self.assertEqual('position < 2',
                 evaluator.symbol_to_expression_map['B'])
 
 
@@ -428,3 +556,43 @@ class TestExpressionRegex(TestCase):
         # Test negative matches.
         self.assertFalse(EXPRESSION_REGEX.match('key = = value'))
         self.assertFalse(EXPRESSION_REGEX.match('keyvalue'))
+
+        # Test complex matches.
+        QUERY = '(gt_type = 2 | gt_type = 1 | position > 100) in ALL(fa3a8451)'
+        self.assertTrue(SAMPLE_SCOPE_REGEX.match(QUERY))
+
+
+    def test_sample_scope_regex(self):
+        """Basic expression tests.
+        """
+        # Test positive matches.
+        self.assertTrue(SAMPLE_SCOPE_REGEX.match('(foo) in ALL(bar)'))
+        self.assertTrue(SAMPLE_SCOPE_REGEX.match('(foo) in ANY(bar)'))
+        self.assertTrue(SAMPLE_SCOPE_REGEX.match('(foo) in ONLY(bar)'))
+        self.assertTrue(SAMPLE_SCOPE_REGEX.match('(foo) in all(bar)'))
+        self.assertTrue(SAMPLE_SCOPE_REGEX.match('(foo) in any(bar)'))
+        self.assertTrue(SAMPLE_SCOPE_REGEX.match('(foo) in only(bar)'))
+        self.assertTrue(SAMPLE_SCOPE_REGEX.match('(foo) in ALL(bar,two,three)'))
+
+        # Test negative matches.
+        self.assertFalse(SAMPLE_SCOPE_REGEX.match('(foo) in ALIEN(bar)'))
+        self.assertFalse(SAMPLE_SCOPE_REGEX.match('(foo) in A(bar)'))
+        self.assertFalse(SAMPLE_SCOPE_REGEX.match('foo in A(bar)'))
+
+        # Test complex matches.
+        QUERY = '(gt_type = 2 | gt_type = 1 | position > 100) in ALL(fa3a8451)'
+        self.assertTrue(SAMPLE_SCOPE_REGEX.match(QUERY))
+
+
+    def test_sample_scope_regex__groups(self):
+        QUERY_STRING = '(position > 5) in ALL(s1,s2)'
+        match = SAMPLE_SCOPE_REGEX_NAMED.match(QUERY_STRING)
+        self.assertEqual('position > 5', match.group('condition'))
+        self.assertEqual('ALL', match.group('scope_type'))
+        self.assertEqual('s1,s2', match.group('samples'))
+
+        QUERY_STRING = '(position > 5 | gt_type = 2) in ONLY(s1)'
+        match = SAMPLE_SCOPE_REGEX_NAMED.match(QUERY_STRING)
+        self.assertEqual('position > 5 | gt_type = 2', match.group('condition'))
+        self.assertEqual('ONLY', match.group('scope_type'))
+        self.assertEqual('s1', match.group('samples'))
