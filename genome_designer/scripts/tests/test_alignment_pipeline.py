@@ -5,6 +5,7 @@ Tests for alignment_pipeline.py
 import json
 import os
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -15,30 +16,33 @@ from main.models import ExperimentSample
 from main.models import Project
 from scripts.alignment_pipeline import align_with_bwa
 from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
-from scripts.bootstrap_data import bootstrap_fake_data
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
-from settings import PWD as GD_ROOT
+import settings
 
 
-TEST_FASTA  = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+TEST_USERNAME = 'gmcdev'
+TEST_PASSWORD = 'g3n3d3z'
+TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
+
+TEST_FASTA  = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
 
-TEST_FASTQ1 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+TEST_FASTQ1 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.1.fq')
 
-TEST_FASTQ2 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+TEST_FASTQ2 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
 
 
 class TestAlignmentPipeline(TestCase):
 
     def setUp(self):
-        bootstrap_fake_data()
-
-        # Grab a project.
-        self.project = Project.objects.all()[0]
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+        self.project = Project.objects.create(owner=user.get_profile(),
+                title='Test Project')
 
         # Create a ref genome.
         self.reference_genome = import_reference_genome_from_local_file(
