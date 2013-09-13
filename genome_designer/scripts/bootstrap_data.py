@@ -92,6 +92,79 @@ class FullVCFTestSet:
              for i in range(NUM_SAMPLES)]
     TEST_DESIGNED_SNPS = os.path.join(TEST_DIR, 'designed_snps.vcf')
 
+
+def create_fake_variants_and_variant_sets(ref_genome):
+    @transaction.commit_on_success
+    def _create_fake_variants():
+        for var_count in range(100):
+            Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=ref_genome,
+                chromosome='chrom',
+                position=random.randint(1,ref_genome.num_bases),
+                ref_value='A',
+                alt_value='G')
+    _create_fake_variants()
+
+    ### Add fake variants to a set
+    @transaction.commit_on_success
+    def _add_fake_variants_to_fake_set():
+        ref_genome_1 = ReferenceGenome.objects.get(
+            label=REF_GENOME_1_LABEL)
+
+        (sample_1, created) = ExperimentSample.objects.get_or_create(
+            project=ref_genome.project,
+            label=SAMPLE_1_LABEL)
+
+        var_set1 = VariantSet.objects.create(
+            reference_genome=ref_genome,
+            label=VARIANTSET_1_LABEL)
+        var_set2 = VariantSet.objects.create(
+            reference_genome=ref_genome,
+            label=VARIANTSET_2_LABEL)
+
+        variant_list = Variant.objects.filter(reference_genome=ref_genome)
+        for var in variant_list:
+
+            #add variant to one of two sets, depending on var position
+            if var.position < 50:
+                if var.position < 25:
+                    vvs1 = VariantToVariantSet.objects.create(
+                        variant=var,
+                        variant_set=var_set1)
+
+                    #add a sample to the association if the variant is odd
+                    if var.position % 2:
+                        vvs1.sample_variant_set_association.add(sample_1)
+
+                if var.position > 20:
+                    vvs2 = VariantToVariantSet.objects.create(
+                        variant=var,
+                        variant_set=var_set2)
+
+                    #add a sample to the association if the variant is even
+                    if not var.position % 2:
+                        vvs2.sample_variant_set_association.add(sample_1)
+
+        # Make sure that both sets have at least one variant.
+        guaranteed_var = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=ref_genome,
+                chromosome='chrom',
+                position=22,
+                ref_value='A',
+                alt_value='G')
+        vvs1 = VariantToVariantSet.objects.create(
+                variant=guaranteed_var,
+                variant_set=var_set1)
+        vvs2 = VariantToVariantSet.objects.create(
+                variant=guaranteed_var,
+                variant_set=var_set2)
+        vvs2.sample_variant_set_association.add(sample_1)
+
+    _add_fake_variants_to_fake_set()
+
+
 def bootstrap_fake_data():
     """Fill the database with fake data.
     """
@@ -176,77 +249,8 @@ def bootstrap_fake_data():
     add_dataset_to_entity(sample_alignment, Dataset.TYPE.BWA_ALIGN,
             Dataset.TYPE.BWA_ALIGN, copy_dest)
 
-    ### Create some fake variants
-    @transaction.commit_on_success
-    def _create_fake_variants():
-        for var_count in range(100):
-            Variant.objects.create(
-                type=Variant.TYPE.TRANSITION,
-                reference_genome=ref_genome_1,
-                chromosome='chrom',
-                position=random.randint(1,ref_genome_1.num_bases),
-                ref_value='A',
-                alt_value='G')
-    _create_fake_variants()
-
-    ### Add fake variants to a set
-    @transaction.commit_on_success
-    def _add_fake_variants_to_fake_set():
-        ref_genome_1 = ReferenceGenome.objects.get(
-            label=REF_GENOME_1_LABEL)
-
-        (sample_1, created) = ExperimentSample.objects.get_or_create(
-            project=test_project,
-            label=SAMPLE_1_LABEL)
-
-        var_set1 = VariantSet.objects.create(
-            reference_genome=ref_genome_1,
-            label=VARIANTSET_1_LABEL)
-        var_set2 = VariantSet.objects.create(
-            reference_genome=ref_genome_1,
-            label=VARIANTSET_2_LABEL)
-
-        variant_list = Variant.objects.filter(
-            reference_genome=ref_genome_1)
-        for var in variant_list:
-
-            #add variant to one of two sets, depending on var position
-            if var.position < 50:
-                if var.position < 25:
-                    vvs1 = VariantToVariantSet.objects.create(
-                        variant=var,
-                        variant_set=var_set1)
-
-                    #add a sample to the association if the variant is odd
-                    if var.position % 2:
-                        vvs1.sample_variant_set_association.add(sample_1)
-
-                if var.position > 20:
-                    vvs2 = VariantToVariantSet.objects.create(
-                        variant=var,
-                        variant_set=var_set2)
-
-                    #add a sample to the association if the variant is even
-                    if not var.position % 2:
-                        vvs2.sample_variant_set_association.add(sample_1)
-
-        # Make sure that both sets have at least one variant.
-        guaranteed_var = Variant.objects.create(
-                type=Variant.TYPE.TRANSITION,
-                reference_genome=ref_genome_1,
-                chromosome='chrom',
-                position=22,
-                ref_value='A',
-                alt_value='G')
-        vvs1 = VariantToVariantSet.objects.create(
-                variant=guaranteed_var,
-                variant_set=var_set1)
-        vvs2 = VariantToVariantSet.objects.create(
-                variant=guaranteed_var,
-                variant_set=var_set2)
-        vvs2.sample_variant_set_association.add(sample_1)
-
-    _add_fake_variants_to_fake_set()
+    # Create fake variants.
+    create_fake_variants_and_variant_sets(ref_genome_1)
 
     #############################
     # Full VCF Testing (annotated for snpeff, variant filtering, etc)
@@ -278,10 +282,8 @@ def bootstrap_fake_data():
            [full_vcf_reference_genome],
            full_vcf_samples)[full_vcf_reference_genome.uid]
 
-
     # Run Freebayes. This should also kick off snpeff afterwards.
     run_snp_calling_pipeline(full_vcf_alignment_group)
-
 
 
 def reset_database():
