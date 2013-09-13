@@ -7,11 +7,13 @@ from django.core.urlresolvers import reverse
 from django.test import Client
 from django.test import TestCase
 
+from main.models import AlignmentGroup
 from main.models import Project
-from scripts.bootstrap_data import bootstrap_fake_data
-from scripts.bootstrap_data import TEST_USERNAME
-from scripts.bootstrap_data import TEST_PASSWORD
+from main.models import ReferenceGenome
 
+TEST_USERNAME = 'gmcdev'
+TEST_PASSWORD = 'g3n3d3z'
+TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
 STATUS_CODE__SUCCESS = 200
 STATUS_CODE__NOT_LOGGED_IN = 302
@@ -21,11 +23,18 @@ STATUS_CODE__NOT_FOUND = 404
 class TestViews(TestCase):
 
     def setUp(self):
-        bootstrap_fake_data()
+        # Test models.
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+        test_project = Project.objects.create(owner=user.get_profile(),
+                title='Test Project')
+        ref_genome = ReferenceGenome.objects.create(project=test_project,
+                label='refgenome', num_chromosomes=1, num_bases=1000)
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
 
-        test_project = Project.objects.all()[0]
-        ref_genome = test_project.referencegenome_set.get(label='test_genome')
-        alignment_group = ref_genome.alignmentgroup_set.all()[0]
 
         # Urls that do not require the user to be logged in.
         self.no_login_required_urls = [
