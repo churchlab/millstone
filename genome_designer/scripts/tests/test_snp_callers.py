@@ -80,7 +80,7 @@ class TestSNPCallers(TestCase):
         copy_and_add_dataset_source(sample_1, Dataset.TYPE.FASTQ2,
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
 
-        # Create relationshpi between alignment and sample.
+        # Create relationship between alignment and sample.
         sample_alignment = ExperimentSampleToAlignment.objects.create(
                 alignment_group=alignment_group,
                 experiment_sample=sample_1)

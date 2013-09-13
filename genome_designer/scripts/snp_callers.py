@@ -13,23 +13,29 @@ from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
+from scripts.snpeff_util import run_snpeff
 from scripts.util import fn_runner
 from scripts.vcf_parser import parse_alignment_group_vcf
 from settings import DEBUG_CONCURRENT
 from settings import PWD
 from settings import TOOLS_DIR
 
+# TODO: These VCF types should be set somewhere else. snpeff_util and vcf_parser
+# also use them, but where should they go? settings.py seems logical, but it
+# cannot import from models.py... -dbg
 
-# For now, we always use this dataset type for storing the vcf.
+# Dataset type to use for snp calling.
 VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
-
+# Dataset type to use for snp annotation.
+VCF_ANNOTATED_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 
 def run_snp_calling_pipeline(alignment_group, concurrent=DEBUG_CONCURRENT):
     """Calls SNPs for all of the alignments in the alignment_group.
     """
     # Check whether Celery is running.
     celery_status = get_celery_worker_status()
-    assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
+    assert not CELERY_ERROR_KEY in celery_status, (
+            celery_status[CELERY_ERROR_KEY])
 
     args = [alignment_group]
     fn_runner(run_snp_calling_pipeline_internal, args, concurrent)
@@ -40,8 +46,16 @@ def run_snp_calling_pipeline_internal(alignment_group):
     """
     run_freebayes(alignment_group, Dataset.TYPE.BWA_ALIGN)
 
+    # For now, automatically run snpeff if a genbank annotation is available.
+    # If no annotation, then skip it, and pass the unannotated vcf type.
+    if alignment_group.reference_genome.is_annotated():
+        run_snpeff(alignment_group, Dataset.TYPE.BWA_ALIGN)
+        vcf_dataset_type = VCF_ANNOTATED_DATASET_TYPE
+    else:
+        vcf_dataset_type = VCF_DATASET_TYPE
+
     # Parse the resulting vcf.
-    parse_alignment_group_vcf(alignment_group, VCF_DATASET_TYPE)
+    parse_alignment_group_vcf(alignment_group, vcf_dataset_type)
 
 
 def run_freebayes(alignment_group, alignment_type):

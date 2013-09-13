@@ -76,26 +76,28 @@ def generate_fasta_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a FASTA, generate
     a FASTA from the genbank. """
 
-    #If a FASTA already exists, then just return
+    # If a FASTA already exists, then just return.
     if ref_genome.dataset_set.filter(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).exists():
         return
 
-    #Check that a genbank exists
+    # Check that a genbank exists.
     assert ref_genome.dataset_set.filter(
             type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists()
 
-    #Get genbank path and filename components (for creating FASTA file name)
+    # Get genbank path and filename components (for creating FASTA file name).
     genbank_path = ref_genome.dataset_set.get(
             type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).get_absolute_location()
 
     genbank_dir, genbank_filename = os.path.split(genbank_path)
     genbank_noext = os.path.splitext(genbank_filename)[0]
 
-    #put the fasta file in the same dir, just change the extension to .fa
+    # Put the fasta file in the same dir, just change the extension to .fa.
     fasta_filename = os.path.join(genbank_dir, (genbank_noext + '.fa'))
 
+    # Get the individual records, each corresponding to a chromosome.
     genome_records = list(SeqIO.parse(genbank_path, 'genbank'))
+
     SeqIO.write(genome_records, fasta_filename, 'fasta')
 
     dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE['fasta']
@@ -103,6 +105,14 @@ def generate_fasta_from_genbank(ref_genome):
             dataset_type, fasta_filename)
 
     return
+
+def sanitize_record_id(record_id_string):
+    """We want to grab only the first word-only part of each seqrecord in a
+    FASTA/Genbank file, and use that as a consistent and readable id between
+    genbank and FASTA.
+    """
+    return re.match( r'^\w{1,20}', record_id_string).group()
+
 
 def import_samples_from_targets_file(project, targets_file):
     """Uses the uploaded targets file to add a set of samples to the project.

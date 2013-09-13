@@ -51,16 +51,16 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
     celery_status = get_celery_worker_status()
     assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
 
+    # Save the alignment group objects for returning if required.
+    alignment_groups = {}
+
     for ref_genome in ref_genome_list:
         alignment_group = AlignmentGroup.objects.create(
                 label='TODO_LABEL',
                 reference_genome=ref_genome,
                 aligner=AlignmentGroup.ALIGNER.BWA)
 
-        # Make sure the initial JBrowse config is prepared.
-        # dbg: 9/10/13 - now doing this upon creation of a new ref genome obj
-        #                now called prepare_jbrowse_ref_sequence()
-        # prepare_jbrowse_ref_sequence(alignment_group.reference_genome)
+        alignment_groups[ref_genome.uid] = alignment_group
 
         # Create the bwa index before perfoming the alignments in parallel.
         ref_genome_fasta = get_dataset_with_type(
@@ -73,6 +73,9 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
         for sample in sample_list:
             args = [alignment_group, sample, None, test_models_only]
             alignment_tasks.append(fn_runner(align_with_bwa, args, concurrent))
+
+    # Return a dictionary of all alignment groups indexed by ref_genome uid.
+    return alignment_groups
 
 
 def align_with_bwa(alignment_group, experiment_sample=None,
