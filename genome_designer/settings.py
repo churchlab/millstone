@@ -18,7 +18,7 @@ TEMPLATE_DEBUG = DEBUG
 
 # Default True, requiring celery server to be running.
 # Set this to False to force synchronous behavior.
-DEBUG_CONCURRENT = False
+DEBUG_CONCURRENT = True
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),

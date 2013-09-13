@@ -33,9 +33,10 @@ def run_snp_calling_pipeline(alignment_group, concurrent=DEBUG_CONCURRENT):
     """Calls SNPs for all of the alignments in the alignment_group.
     """
     # Check whether Celery is running.
-    celery_status = get_celery_worker_status()
-    assert not CELERY_ERROR_KEY in celery_status, (
-            celery_status[CELERY_ERROR_KEY])
+    if concurrent:
+        celery_status = get_celery_worker_status()
+        assert not CELERY_ERROR_KEY in celery_status, (
+                celery_status[CELERY_ERROR_KEY])
 
     args = [alignment_group]
     fn_runner(run_snp_calling_pipeline_internal, args, concurrent)

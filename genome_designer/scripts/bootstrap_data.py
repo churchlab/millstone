@@ -277,13 +277,13 @@ def bootstrap_fake_data():
         full_vcf_samples.append(sample_obj)
 
     # Run the alignment. Return the alignment group created, indexed by the
-    #   reference genome's uid.
-    full_vcf_alignment_group = create_alignment_groups_and_start_alignments(
-           [full_vcf_reference_genome],
-           full_vcf_samples)[full_vcf_reference_genome.uid]
+    # reference genome's uid.
+    alignment_group_dict = create_alignment_groups_and_start_alignments(
+           [full_vcf_reference_genome], full_vcf_samples, concurrent=False)
+    full_vcf_alignment_group = alignment_group_dict[full_vcf_reference_genome.uid]
 
     # Run Freebayes. This should also kick off snpeff afterwards.
-    run_snp_calling_pipeline(full_vcf_alignment_group)
+    run_snp_calling_pipeline(full_vcf_alignment_group, concurrent=False)
 
 
 def reset_database():

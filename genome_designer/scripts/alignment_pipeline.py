@@ -47,9 +47,10 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
     assert len(sample_list) > 0, (
             "Must provide at least one ExperimentSample.")
 
-    # Check whether Celery is running.
-    celery_status = get_celery_worker_status()
-    assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
+    # If running concurrently, check whether Celery is running.
+    if concurrent:
+        celery_status = get_celery_worker_status()
+        assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
 
     # Save the alignment group objects for returning if required.
     alignment_groups = {}
