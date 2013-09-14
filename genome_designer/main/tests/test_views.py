@@ -10,6 +10,7 @@ from django.test import TestCase
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
+from main.models import Variant
 
 TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
@@ -31,9 +32,17 @@ class TestViews(TestCase):
         ref_genome = ReferenceGenome.objects.create(project=test_project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
         alignment_group = AlignmentGroup.objects.create(
-            label='Alignment 1',
-            reference_genome=ref_genome,
-            aligner=AlignmentGroup.ALIGNER.BWA)
+                label='Alignment 1',
+                reference_genome=ref_genome,
+                aligner=AlignmentGroup.ALIGNER.BWA)
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=ref_genome,
+                chromosome='chrom',
+                position=10,
+                ref_value='A',
+                alt_value='G')
+
 
 
         # Urls that do not require the user to be logged in.
@@ -79,6 +88,8 @@ class TestViews(TestCase):
                 # Variants
                 reverse('genome_designer.main.views.variant_list_view',
                         args=(test_project.uid, ref_genome.uid)),
+                reverse('genome_designer.main.views.single_variant_view',
+                        args=(test_project.uid, ref_genome.uid, variant.uid)),
 
                 # Genes
                 reverse('genome_designer.main.views.gene_list_view',

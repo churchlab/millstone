@@ -55,6 +55,8 @@ gd.DataTableComponent = Backbone.View.extend({
       displayValue = '<a ' + class_str + 'href="' + obj.href + '">' + obj.label + '</>';
     } else if ('label' in obj) {
       displayValue = obj.label;
+    } else {
+      displayValue = obj;
     }
     return displayValue
   },

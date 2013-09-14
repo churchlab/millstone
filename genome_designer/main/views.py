@@ -488,6 +488,29 @@ def variant_list_view(request, project_uid, ref_genome_uid):
 
 
 @login_required
+def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+
+    variant = get_object_or_404(Variant,
+            uid=variant_uid,
+            reference_genome__uid=ref_genome_uid,
+            reference_genome__project=project)
+
+    melted_variant_list = variant_as_melted_list(variant)
+    fe_melted_variant_list = adapt_model_or_modelview_list_to_frontend(
+            melted_variant_list)
+
+    context = {
+        'project': project,
+        'variant': variant,
+        'melted_variant_list': fe_melted_variant_list
+    }
+
+    return render(request, 'single_variant_view.html', context)
+
+
+@login_required
 def gene_list_view(request, project_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)

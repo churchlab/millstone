@@ -657,12 +657,25 @@ class Variant(Model):
 
     alt_value = models.TextField('Alt');
 
+    @property
+    def label(self):
+        return str(self.position) + '_' + self.ref_value + '_' + self.alt_value
+
+    def get_href(self):
+        """Link to url view for this model.
+        """
+        return reverse(
+                'genome_designer.main.views.single_variant_view',
+                args=(self.reference_genome.project.uid,
+                        self.reference_genome.uid, self.uid))
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
-        return [{'field':'reference_genome'},
+        return [{'field':'label'},
+                {'field':'reference_genome'},
                 {'field':'chromosome'},
                 {'field':'position'},
                 {'field':'type'},
@@ -741,7 +754,9 @@ class VariantEvidence(Model):
 
     @property
     def gt_type(self):
-        return pickle.loads(self.data['gt_type'])
+        if 'gt_type' in self.data:
+            return pickle.loads(self.data['gt_type'])
+        return None
 
     @property
     def sample_uid(self):

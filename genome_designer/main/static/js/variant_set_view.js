@@ -7,6 +7,12 @@ gd.VariantSetView = Backbone.View.extend({
   el: '#gd-page-container',
 
   initialize: function() {
+    // Field config for the datatable.
+    this.fieldConfig = VARIANT_TO_VARIANT_SET_DATA.field_config;
+
+    // List of objects to display in the datatable.
+    this.variantToVariantSetData = VARIANT_TO_VARIANT_SET_DATA.obj_list;
+
     this.render();
   },
 
@@ -14,20 +20,15 @@ gd.VariantSetView = Backbone.View.extend({
     this.decorateSidebar();
 
     this.datatable = new gd.DataTableComponent({
-        el: $('#gd-variant_set_view-datatable-hook'),
-        objList: VARIANT_TO_VARIANT_SET_DATA['obj_list'],
-        fieldConfig: VARIANT_TO_VARIANT_SET_DATA['field_config']
+        el: $('#gd-datatable-hook'),
+        objList: this.variantToVariantSetData,
+        fieldConfig: this.fieldConfig
     });
+
   },
 
   /** Decorate the side nav bar. */
   decorateSidebar: function() {
-    $('#gd-sidenav-link-alignments').addClass('active');
-
-    // Draw a sub-menu.
-    $('#gd-sidenav-link-alignments').append(
-        '<ul class="nav nav-list">' +
-          '<li>... ' + this.model.get('label') + '</li>' +
-        '</ul>');
+    $('#gd-sidenav-link-variant-sets').addClass('active');
   }
 });
