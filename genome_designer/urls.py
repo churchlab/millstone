@@ -13,6 +13,9 @@ urlpatterns = patterns('',
             'genome_designer.main.views.project_create_view'),
     url(r'^projects/([\w-]+)$',
             'genome_designer.main.views.project_view'),
+    url(r'^projects/([\w-]+)/delete$',
+            'genome_designer.main.views.project_delete'),
+
 
     # Reference genomes
     url(r'^projects/([\w-]+)/refgenomes$',

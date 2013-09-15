@@ -20,6 +20,11 @@ gd.App.prototype.run = function() {
 
   // Route depending on the VIEW_TAG in the template.
   switch(VIEW_TAG) {
+    case 'PROJECT':
+      var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var view = new gd.ProjectView({'model': model});
+      break;
+
     case 'REF_GENOME_LIST':
       var view = new gd.RefGenomeListView();
       break;

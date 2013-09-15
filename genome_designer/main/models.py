@@ -318,6 +318,14 @@ class Project(Model):
         if os.path.exists(data_dir):
             shutil.rmtree(data_dir)
 
+    @classmethod
+    def get_field_order(clazz):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
+        """
+        return [{'field':'uid'},
+                {'field':'title'}]
+
 
 # When a new Project is created, create the data directory.
 def post_project_create(sender, instance, created, **kwargs):

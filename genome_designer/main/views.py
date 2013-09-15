@@ -80,10 +80,26 @@ def project_view(request, project_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
+    # Initial javascript data.
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(project)
+    })
+
     context = {
         'project': project,
+        'init_js_data': init_js_data
     }
     return render(request, 'project.html', context)
+
+
+@login_required
+def project_delete(request, project_uid):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+    project.delete()
+    response_data = {'redirect': '/'}
+    return HttpResponse(json.dumps(response_data),
+            content_type='application/json')
 
 
 @login_required

@@ -2,4 +2,17 @@
 
 {% block content%}
   <h1>{{project.title}}</h1>
+
+  <button id="gd-projects-delete-btn" class="btn btn-danger">
+    Delete
+  </button>
+
+<script type="text/javascript">
+  VIEW_TAG = 'PROJECT';
+
+  {% autoescape off %}
+    INIT_JS_DATA = {{init_js_data}};
+  {% endautoescape %}
+</script>
+
 {% endblock %}
