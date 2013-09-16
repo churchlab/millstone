@@ -221,6 +221,7 @@ class Dataset(Model):
         FASTQ1 = 'f1'
         FASTQ2 = 'f2'
         BWA_ALIGN = 'bwa_align'
+        BWA_ALIGN_ERROR = 'bwa_align_error'
         VCF_FREEBAYES = 'vcff'
         VCF_USERINPUT = 'vcfu'
         VCF_FREEBAYES_SNPEFF = 'vcffe'
@@ -232,7 +233,7 @@ class Dataset(Model):
     label = models.CharField(max_length=256)
 
     # Location on the filesystem relative to settings.MEDIA_ROOT.
-    filesystem_location = models.CharField(max_length=512)
+    filesystem_location = models.CharField(max_length=512, blank=True)
 
     # When the dataset is a result of a computation, we'll set a status on it.
     # NOTE: The reliability of the present implementation of this model feature
@@ -551,6 +552,24 @@ class AlignmentGroup(Model):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
             verbose_name="Datasets")
 
+    @property
+    def status(self):
+        """Returns an aggregate status.
+        """
+        any_computing = False
+        for alignment in self.experimentsampletoalignment_set.all():
+            alignment_dataset = get_dataset_with_type(alignment,
+                    Dataset.TYPE.BWA_ALIGN)
+            if (not alignment_dataset or
+                    alignment_dataset.status in [
+                        Dataset.STATUS.FAILED, Dataset.STATUS.UNKNOWN]):
+                return alignment_dataset.status
+            if alignment_dataset.status == Dataset.STATUS.COMPUTING:
+                any_computing = True
+        if any_computing:
+            return Dataset.STATUS.COMPUTING
+        return Dataset.STATUS.READY
+
     def __unicode__(self):
         return self.label
 
@@ -589,6 +608,7 @@ class AlignmentGroup(Model):
         return [{'field':'label'},
                 {'field':'reference_genome'},
                 {'field':'aligner'},
+                {'field':'status', 'verbose':'Job Status'},
                 {'field':'start_time'},
                 {'field':'end_time'}]
 
@@ -613,6 +633,26 @@ class ExperimentSampleToAlignment(Model):
 
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
 
+    @property
+    def status(self):
+        """The status of a running alignment job.
+        """
+        alignment_datasets = self.dataset_set.filter(
+                type=Dataset.TYPE.BWA_ALIGN)
+        if len(alignment_datasets) > 0:
+            return alignment_datasets[0].status
+        return 'UNDEFINED'
+
+    @property
+    def error_link(self):
+        return ('<a href="' +
+                reverse(
+                        'genome_designer.main.views.sample_alignment_error_view',
+                        args=(self.alignment_group.reference_genome.project.uid,
+                                self.alignment_group.uid,
+                                self.uid)) +
+                        '">error</a>')
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
@@ -620,6 +660,8 @@ class ExperimentSampleToAlignment(Model):
         """
         return [
             {'field':'experiment_sample'},
+            {'field':'status', 'verbose':'Job Status'},
+            {'field':'error_link', 'verbose': 'Error output', 'is_href': True},
         ]
 
 

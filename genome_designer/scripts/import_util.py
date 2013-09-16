@@ -326,16 +326,18 @@ def copy_dataset_to_entity_data_dir(entity, original_source_location):
 
 
 def add_dataset_to_entity(entity, dataset_label, dataset_type,
-        filesystem_location):
+        filesystem_location=None):
     """Helper function for adding a Dataset to a model.
     """
     dataset = Dataset.objects.create(
-            label=dataset_label,
-            type=dataset_type,
-            filesystem_location=clean_filesystem_location(filesystem_location))
+            label=dataset_label, type=dataset_type)
+
+    if filesystem_location is not None:
+        dataset.filesystem_location = clean_filesystem_location(
+                filesystem_location)
+        dataset.save()
 
     entity.dataset_set.add(dataset)
     entity.save()
 
     return dataset
-

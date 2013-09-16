@@ -30,6 +30,9 @@ urlpatterns = patterns('',
             'genome_designer.main.views.alignment_create_view'),
     url(r'^projects/([\w-]+)/alignments/([\w-]+)$',
             'genome_designer.main.views.alignment_view'),
+    url(r'^projects/([\w-]+)/alignments/([\w-]+)/samplealign/([\w-]+)/error$',
+            'genome_designer.main.views.sample_alignment_error_view'),
+
 
     # Variant sets
     url(r'^projects/([\w-]+)/sets$',

@@ -6,6 +6,7 @@ We start with the .fastq files and the reference for a particular genome
 and carry out the gauntlet of steps to perform alignments and clean them up.
 """
 
+import copy
 import os
 import subprocess
 from subprocess import CalledProcessError
@@ -93,12 +94,13 @@ def align_with_bwa(alignment_group, experiment_sample=None,
             create the basic models.
     """
     ### Validation
-
     if not experiment_sample:
         assert sample_alignment
 
-    ### Alignment Logic
+    # Now continue with alignment.
 
+    # First we check whether we are re-running a previously failed alignment.
+    # In other words, if an alignment instance was passed as an argument.
     if sample_alignment:
         # TODO: Delete existing data?
         experiment_sample = sample_alignment.experiment_sample
@@ -108,6 +110,8 @@ def align_with_bwa(alignment_group, experiment_sample=None,
                 alignment_group=alignment_group,
                 experiment_sample=experiment_sample)
 
+    # If we are only testing that the right models are created, then
+    # we return at this point. This should never be True in production.
     if test_models_only:
         return
 
@@ -117,104 +121,142 @@ def align_with_bwa(alignment_group, experiment_sample=None,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
     # Write error to this file.
-    error_output = open(os.path.join(experiment_sample.get_model_data_dir(),
-            'bwa_align.error'), 'w')
+    error_path = os.path.join(experiment_sample.get_model_data_dir(),
+            'bwa_align.error')
+    error_output = open(error_path, 'w')
 
-    # Build index if the index doesn't exist.
-    # NOTE: When aligning multiple samples to the same reference genome
-    # concurrently, the build index method should be called once to completion
-    # before starting the concurrent alignment jobs.
-    ensure_bwa_index(ref_genome_fasta)
+    # Create a Dataset object and set the state to COMPUTING.
+    bwa_dataset = Dataset.objects.create(
+            label=Dataset.TYPE.BWA_ALIGN,
+            type=Dataset.TYPE.BWA_ALIGN,
+            status=Dataset.STATUS.COMPUTING)
+    sample_alignment.dataset_set.add(bwa_dataset)
+    sample_alignment.save()
 
-    # Grab the fastq sources, and determine whether we are doing paired ends.
-    all_datasets = experiment_sample.dataset_set.all()
-    input_reads_1_fq = None
-    input_reads_2_fq = None
-    for dataset in all_datasets:
-        if dataset.type == Dataset.TYPE.FASTQ1:
-            input_reads_1_fq = dataset.get_absolute_location()
-        elif dataset.type == Dataset.TYPE.FASTQ2:
-            input_reads_2_fq = dataset.get_absolute_location()
-    assert input_reads_1_fq, "Must have at least one .fastq file."
-    is_paired_end = not input_reads_2_fq is None
+    # We wrap the alignment logic in a try-except so that if an error occurs,
+    # we record it and update the status of the Dataset to FAILED if anything
+    # should fail.
+    try:
+        # Build index if the index doesn't exist.
+        # NOTE: When aligning multiple samples to the same reference genome
+        # concurrently, the build index method should be called once to completion
+        # before starting the concurrent alignment jobs.
+        ensure_bwa_index(ref_genome_fasta)
 
-    # There are two steps to alignment with bwa.
-    #     1. Call 'bwa aln' to generate SA coordinate indeces. Note that
-    #        we run a separate bwa aln for each end, and do so in parallel
-    #        when paired end reads.
-    #     2. Call 'bwa sampe' (paired-end) or 'bwa samse' (single-end) to
-    #        generate SAM output.
+        # Grab the fastq sources, and determine whether we are doing paired ends.
+        input_reads_1_fq = None
+        input_reads_2_fq = None
+        for dataset in experiment_sample.dataset_set.all():
+            if dataset.type == Dataset.TYPE.FASTQ1:
+                input_reads_1_fq = dataset.get_absolute_location()
+            elif dataset.type == Dataset.TYPE.FASTQ2:
+                input_reads_2_fq = dataset.get_absolute_location()
+        assert input_reads_1_fq, "Must have at least one .fastq file."
+        is_paired_end = not input_reads_2_fq is None
 
-    # 1. Generate SA coordinates.
-    output_index_1 = os.path.splitext(input_reads_1_fq)[0] + '.sai'
-    with open(output_index_1, 'w') as input_reads_1_stdout_fh:
-        align_input_1_args = [
-            '%s/bwa/bwa' % TOOLS_DIR,
-            'aln',
-            '-t', '1', # threads
-            ref_genome_fasta,
-            input_reads_1_fq,
-        ]
+        # There are two steps to alignment with bwa.
+        #     1. Call 'bwa aln' to generate SA coordinate indeces. Note that
+        #        we run a separate bwa aln for each end, and do so in parallel
+        #        when paired end reads.
+        #     2. Call 'bwa sampe' (paired-end) or 'bwa samse' (single-end) to
+        #        generate SAM output.
 
-        # NOTE: Non-blocking. See call to wait_and_check_pipe() below.
-        align_input_1_proc = subprocess.Popen(align_input_1_args,
-                stdout=input_reads_1_stdout_fh, stderr=error_output)
-
-    if is_paired_end:
-        output_index_2 = os.path.splitext(input_reads_2_fq)[0] + '.sai'
-        with open(output_index_2, 'w') as input_reads_2_stdout_fh:
-            align_input_2_args = [
+        # 1. Generate SA coordinates.
+        output_index_1 = os.path.splitext(input_reads_1_fq)[0] + '.sai'
+        with open(output_index_1, 'w') as input_reads_1_stdout_fh:
+            align_input_1_args = [
                 '%s/bwa/bwa' % TOOLS_DIR,
                 'aln',
                 '-t', '1', # threads
                 ref_genome_fasta,
-                input_reads_2_fq,
+                input_reads_1_fq,
             ]
-            align_input_2_proc = subprocess.Popen(align_input_2_args,
-                    stdout=input_reads_2_stdout_fh, stderr=error_output)
-            wait_and_check_pipe(align_input_2_proc, align_input_2_args)
 
-    # Block here until both calls to 'bwa aln' complete.
-    wait_and_check_pipe(align_input_1_proc, align_input_1_args)
+            # NOTE: Non-blocking. See call to wait_and_check_pipe() below.
+            align_input_1_proc = subprocess.Popen(align_input_1_args,
+                    stdout=input_reads_1_stdout_fh, stderr=error_output)
 
-    # 2. Generate SAM output.
-    output_sam = os.path.join(experiment_sample.get_model_data_dir(),
-            'bwa_align.sam')
+        if is_paired_end:
+            output_index_2 = os.path.splitext(input_reads_2_fq)[0] + '.sai'
+            with open(output_index_2, 'w') as input_reads_2_stdout_fh:
+                align_input_2_args = [
+                    '%s/bwa/bwa' % TOOLS_DIR,
+                    'aln',
+                    '-t', '1', # threads
+                    ref_genome_fasta,
+                    input_reads_2_fq,
+                ]
+                align_input_2_proc = subprocess.Popen(align_input_2_args,
+                        stdout=input_reads_2_stdout_fh, stderr=error_output)
+                wait_and_check_pipe(align_input_2_proc, align_input_2_args)
 
-    if is_paired_end:
-        with open(output_sam, 'w') as fh:
-            subprocess.check_call([
-                '%s/bwa/bwa' % TOOLS_DIR,
-                'sampe',
-                ref_genome_fasta,
-                output_index_1,
-                output_index_2,
-                input_reads_1_fq,
-                input_reads_2_fq,
-            ], stdout=fh, stderr=error_output)
+        # Block here until both calls to 'bwa aln' complete.
+        wait_and_check_pipe(align_input_1_proc, align_input_1_args)
+
+        # 2. Generate SAM output.
+        output_sam = os.path.join(experiment_sample.get_model_data_dir(),
+                'bwa_align.sam')
+
+        if is_paired_end:
+            with open(output_sam, 'w') as fh:
+                subprocess.check_call([
+                    '%s/bwa/bwa' % TOOLS_DIR,
+                    'sampe',
+                    ref_genome_fasta,
+                    output_index_1,
+                    output_index_2,
+                    input_reads_1_fq,
+                    input_reads_2_fq,
+                ], stdout=fh, stderr=error_output)
+        else:
+            with open(output_sam, 'w') as fh:
+                subprocess.check_call([
+                    '%s/bwa/bwa' % TOOLS_DIR,
+                    'samse',
+                    ref_genome_fasta,
+                    output_index_1,
+                    input_reads_1_fq,
+                ], stdout=fh, stderr=error_output)
+
+        # Do several layers of processing on top of the initial alignment.
+        result_bam_file = process_sam_bam_file(experiment_sample,
+                alignment_group.reference_genome, output_sam, error_output)
+
+        # Add the resulting file to the dataset.
+        bwa_dataset.filesystem_location = clean_filesystem_location(
+                result_bam_file)
+
+        # Add track to JBrowse.
+        add_bam_file_track(alignment_group.reference_genome, sample_alignment,
+                Dataset.TYPE.BWA_ALIGN)
+
+        return sample_alignment
+
+    except subprocess.CalledProcessError as e:
+        error_output.write(str(e))
+        bwa_dataset.status = Dataset.STATUS.FAILED
+        bwa_dataset.save()
+        return
+
     else:
-        with open(output_sam, 'w') as fh:
-            subprocess.check_call([
-                '%s/bwa/bwa' % TOOLS_DIR,
-                'samse',
-                ref_genome_fasta,
-                output_index_1,
-                input_reads_1_fq,
-            ], stdout=fh, stderr=error_output)
+        bwa_dataset.filesystem_location = result_bam_file
+        bwa_dataset.status = Dataset.STATUS.READY
+        bwa_dataset.save()
 
-    # Do several layers of processing on top of the initial alignment.
-    result_bam_file = process_sam_bam_file(experiment_sample,
-            alignment_group.reference_genome, output_sam, error_output)
+        # Create a JBrowse track.
+        jbrowse_util.add_bam_file_track(
+                reference_genome, genome, Dataset.TYPE.BWA_ALIGN)
 
-    # Record the resulting dataset in the database
-    add_dataset_to_entity(sample_alignment, Dataset.TYPE.BWA_ALIGN,
-            Dataset.TYPE.BWA_ALIGN, clean_filesystem_location(result_bam_file))
+    finally:
+        error_output.close()
 
-    # Add track to JBrowse
-    add_bam_file_track(alignment_group.reference_genome, sample_alignment,
-            Dataset.TYPE.BWA_ALIGN)
-
-    return sample_alignment
+        # Add the error Dataset to the object.
+        error_dataset = Dataset.objects.create(
+                label=Dataset.TYPE.BWA_ALIGN_ERROR,
+                type=Dataset.TYPE.BWA_ALIGN_ERROR,
+                filesystem_location=clean_filesystem_location(error_path))
+        sample_alignment.dataset_set.add(error_dataset)
+        sample_alignment.save()
 
 
 def ensure_bwa_index(ref_genome_fasta, error_output=None):
@@ -270,16 +312,17 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
     Returns:
         The path of the final .bam file.
     """
-    # Make sure the mask is valid.
-    assert (set(opt_processing_mask.keys()) ==
-            set(DEFAULT_PROCESSING_MASK.keys())), "Invalid processing mask."
+    # For any keys missing from the processing mask, give them the values from
+    # the default mask.
+    effective_mask = copy.copy(DEFAULT_PROCESSING_MASK)
+    effective_mask.update(opt_processing_mask)
 
     #1. Convert to bam file if necessary
     if os.path.splitext(sam_bam_file_location)[1] == '.sam':
         sam_file_location = sam_bam_file_location
         bam_file_location = os.path.splitext(sam_file_location)[0] + '.bam'
 
-        if opt_processing_mask['make_bam']:
+        if effective_mask['make_bam']:
             fh = open(bam_file_location, 'w')
             subprocess.check_call([
                 '%s/samtools/samtools' % TOOLS_DIR,
@@ -297,7 +340,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
     # 2. Sort
     sorted_output_name = os.path.splitext(bam_file_location)[0] + '.sorted'
     sorted_bam_file_location = sorted_output_name + '.bam'
-    if opt_processing_mask['sort']:
+    if effective_mask['sort']:
         # 2a. Perform the actual sorting.
         subprocess.check_call([
             '%s/samtools/samtools' % TOOLS_DIR,
@@ -318,7 +361,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
             os.path.splitext(sorted_bam_file_location)[0] +
             '.grouped')
     grouped_bam_file_location = grouped_output_name + '.bam'
-    if opt_processing_mask['add_groups']:
+    if effective_mask['add_groups']:
         add_groups(experiment_sample, sorted_bam_file_location, grouped_bam_file_location,
                 error_output)
 
@@ -327,7 +370,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
             os.path.splitext(grouped_bam_file_location)[0] +
             '.realigned.bam'
     )
-    if opt_processing_mask['indel_realigner']:
+    if effective_mask['indel_realigner']:
         # Make sure the previous result is indexed.
         subprocess.check_call([
                 '%s/samtools/samtools' % TOOLS_DIR,
@@ -344,11 +387,11 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
         )
 
     # 4. Compute insert size metrics
-    if opt_processing_mask['compute_insert_metrics']:
+    if effective_mask['compute_insert_metrics']:
         compute_insert_metrics(realigned_bam_file_location, error_output)
 
     # 5. Create index.
-    if opt_processing_mask['index']:
+    if effective_mask['index']:
         subprocess.check_call([
             '%s/samtools/samtools' % TOOLS_DIR,
             'index',

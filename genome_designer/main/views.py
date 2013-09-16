@@ -300,6 +300,29 @@ def alignment_create_view(request, project_uid):
     }
     return render(request, 'alignment_create.html', context)
 
+@login_required
+def sample_alignment_error_view(request, project_uid, alignment_group_uid,
+        sample_alignment_uid):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+    sample_alignment = ExperimentSampleToAlignment.objects.get(
+            uid=sample_alignment_uid,
+            alignment_group__reference_genome__project__uid=project_uid)
+
+    # Get the path of the error file.
+    data_dir = sample_alignment.experiment_sample.get_model_data_dir()
+    error_file_dir = os.path.join(data_dir, 'bwa_align.error')
+    if os.path.exists(error_file_dir):
+        with open(error_file_dir) as fh:
+            raw_data = fh.read()
+    else:
+        raw_data = 'undefined'
+    context = {
+            'project': project,
+            'raw_data': raw_data
+    }
+    return render(request, 'sample_alignment_error_view.html', context)
+
 
 @login_required
 def variant_set_list_view(request, project_uid):
