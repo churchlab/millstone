@@ -15,9 +15,13 @@ from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
+from main.models import VariantSet
+from main.models import VariantToVariantSet
 from scripts.variant_filter import EXPRESSION_REGEX
 from scripts.variant_filter import SAMPLE_SCOPE_REGEX
 from scripts.variant_filter import SAMPLE_SCOPE_REGEX_NAMED
+from scripts.variant_filter import SET_REGEX
+from scripts.variant_filter import SET_REGEX_NAMED
 from scripts.variant_filter import get_variants_that_pass_filter
 from scripts.variant_filter import symbol_generator
 from scripts.variant_filter import ParseError
@@ -476,6 +480,59 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         self.assertEqual(1, len(variants))
 
 
+    def test_filter__sets(self):
+        """Test filtering relative to sets.
+        """
+        # Some variant sets for testing.
+        set_1 = VariantSet.objects.create(
+                reference_genome=self.ref_genome,
+                label='set1')
+        set_2 = VariantSet.objects.create(
+                reference_genome=self.ref_genome,
+                label='set2')
+        set_3 = VariantSet.objects.create(
+                reference_genome=self.ref_genome,
+                label='set3')
+
+        # Add some variants to each of the above sets.
+        def _create_variants_in_set(pos_range, var_set):
+            for pos in pos_range:
+                var = Variant.objects.create(
+                    type=Variant.TYPE.TRANSITION, reference_genome=self.ref_genome,
+                    chromosome='chrom', position=pos, ref_value='A', alt_value='G')
+                if var_set is not None:
+                    VariantToVariantSet.objects.create(variant=var,
+                            variant_set=var_set)
+        _create_variants_in_set(range(3), set_1)
+        _create_variants_in_set(range(3, 6), set_2)
+        _create_variants_in_set(range(6, 9), set_3)
+        _create_variants_in_set(range(9, 13), None)
+
+        # We have 13 total variants.
+        self.assertEqual(13, len(Variant.objects.all()))
+
+        QUERY_STRING = 'IN_SETS(%s)' % (set_1.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(3, len(variants))
+
+        QUERY_STRING = 'IN_SETS(%s)' % ','.join([set_1.uid, set_2.uid])
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(6, len(variants))
+
+        QUERY_STRING = 'IN_SETS(%s)' % ','.join([set_1.uid, set_2.uid, set_3.uid])
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(9, len(variants))
+
+        QUERY_STRING = 'NOT_IN_SETS(%s)' % (set_1.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(10, len(variants))
+
+
+
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
     """Tests for the object that encapsulates evaluation of the filter string.
     """
@@ -525,6 +582,19 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
                 evaluator.symbol_to_expression_map['A'])
         self.assertEqual('position < 2',
                 evaluator.symbol_to_expression_map['B'])
+
+
+    def test_variant_filter_constructor__sets(self):
+        """Test parsing out the set annotation.
+        """
+        raw_filter_string = 'IN_SETS(1234)'
+        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('A')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation,
+                "Expected: %s. Actual: %s" % (EXPECTED_SYMBOLIC_REP,
+                        evaluator.sympy_representation))
+        self.assertEqual('IN_SETS(1234)',
+                evaluator.symbol_to_expression_map['A'])
 
 
 class TestSymbolGenerator(TestCase):
@@ -584,7 +654,7 @@ class TestExpressionRegex(TestCase):
         self.assertTrue(SAMPLE_SCOPE_REGEX.match(QUERY))
 
 
-    def test_sample_scope_regex__groups(self):
+    def test_sample_scope_regex__named(self):
         QUERY_STRING = '(position > 5) in ALL(s1,s2)'
         match = SAMPLE_SCOPE_REGEX_NAMED.match(QUERY_STRING)
         self.assertEqual('position > 5', match.group('condition'))
@@ -596,3 +666,31 @@ class TestExpressionRegex(TestCase):
         self.assertEqual('position > 5 | gt_type = 2', match.group('condition'))
         self.assertEqual('ONLY', match.group('scope_type'))
         self.assertEqual('s1', match.group('samples'))
+
+
+    def test_set_regex(self):
+        QUERY_STRING = 'IN_SETS(1234)'
+        self.assertTrue(SET_REGEX.match(QUERY_STRING))
+
+        QUERY_STRING = 'IN_SETS(1234, 5678)'
+        self.assertTrue(SET_REGEX.match(QUERY_STRING))
+
+        QUERY_STRING = 'NOT_IN_SETS(1234, 5678)'
+        self.assertTrue(SET_REGEX.match(QUERY_STRING))
+
+
+    def test_set_regex__named(self):
+        QUERY_STRING = 'IN_SETS(1234)'
+        match = SET_REGEX_NAMED.match(QUERY_STRING)
+        self.assertEqual('1234', match.group('sets'))
+        self.assertFalse(match.group('maybe_not'))
+
+        QUERY_STRING = 'IN_SETS(1234, 5678)'
+        match = SET_REGEX_NAMED.match(QUERY_STRING)
+        self.assertEqual('1234, 5678', match.group('sets'))
+        self.assertFalse(match.group('maybe_not'))
+
+        QUERY_STRING = 'NOT_IN_SETS(1234, 5678)'
+        match = SET_REGEX_NAMED.match(QUERY_STRING)
+        self.assertEqual('1234, 5678', match.group('sets'))
+        self.assertTrue(match.group('maybe_not'))
