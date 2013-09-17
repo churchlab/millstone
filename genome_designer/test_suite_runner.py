@@ -10,8 +10,6 @@ from django_nose import NoseTestSuiteRunner
 
 import settings
 
-TEST_FILESYSTEM_DIR = 'temp_test_data'
-
 
 class TempFilesystemTestSuiteRunner(NoseTestSuiteRunner):
     """Subclasses the nose test runner in order to use a temp filesystem.
@@ -27,12 +25,12 @@ class TempFilesystemTestSuiteRunner(NoseTestSuiteRunner):
                 *args, **kwargs)
 
     def setup_temp_filesystem(self):
-        settings.MEDIA_ROOT = TEST_FILESYSTEM_DIR
+        settings.MEDIA_ROOT = settings.TEST_FILESYSTEM_DIR
         if os.path.exists(settings.MEDIA_ROOT):
             shutil.rmtree(settings.MEDIA_ROOT)
         os.mkdir(settings.MEDIA_ROOT)
 
     def teardown_temp_filesystem(self):
-        assert settings.MEDIA_ROOT == TEST_FILESYSTEM_DIR
+        assert settings.MEDIA_ROOT == settings.TEST_FILESYSTEM_DIR
         if os.path.exists(settings.MEDIA_ROOT):
             shutil.rmtree(settings.MEDIA_ROOT)
