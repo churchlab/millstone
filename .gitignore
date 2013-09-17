@@ -44,3 +44,6 @@ tools/
 
 # Textmate project file
 *.tmproj
+
+# Local settings overrides
+conf/local_settings.py
