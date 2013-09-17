@@ -5,6 +5,9 @@ We leverage pyvcf as much as possible.
 """
 
 import pickle
+from collections import defaultdict
+import re
+from itertools import chain
 
 import vcf
 
@@ -13,6 +16,19 @@ from main.models import ExperimentSample
 from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
+
+#Compile this SNPEFF parsing refex only once
+# Example:
+#   NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC||CODING
+#        |b3038|1|1)
+
+SNPEFF_FIELDS = ('EFFECT', 'IMPACT', 'CLASS','CONTEXT', 'AA', 'TRLEN',
+        'GENE', 'BIOTYPE', 'CODING', 'TR_BIOTYPE', 'RANK', 'GT', 'ERR', 'WARN')
+
+SNPEFF_ALT_RE = re.compile(r''.join([
+        r'(?P<%s>\w+)\((?P<%s>[\w\/]*)',
+        r'\|(?P<%s>[\w\/]*)' * (len(SNPEFF_FIELDS)-4),
+        r'\|?(?P<%s>[\w\/]*)\|?(?P<%s>[\w\/]*)\)']) % SNPEFF_FIELDS)
 
 
 def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
@@ -49,6 +65,28 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
                         data=sample_data_dict)
 
 
+def extract_snpeff_info_fields(vcf_dataset_filename, output_fh):
+    """The snpeff field starts out as a long string, consisting of many fields
+    each separated by pipes.
+
+    Effects information is added to the INFO field using an 'EFF' tag.
+    There can be multiple effects separated by comma. The format for each
+    effect is:
+
+    Effect ( Effect_Impact | Codon_Change | Amino_Acid_change | Gene_Name
+            | Gene_BioType | Coding | Transcript | Rank [ | ERRORS
+            | WARNINGS ] )
+
+    Details for each field are here:
+        http://snpeff.sourceforge.net/SnpEff_manual.html
+
+    We will pull out all of these fields separately into INFO_EFF_* and return
+    a new VCF file.
+    """
+
+    # This involves editing the header and so is a little more difficult than
+    # just parsing the record individually, so I'll do that first.
+    pass
 
 def extract_raw_data_dict(vcf_record):
     """Extract a dictionary of raw data from the Record.
@@ -80,9 +118,64 @@ def populate_common_data_info(data_dict, vcf_record):
     """Parses the vcf record INFO field and updates the data dict.
     """
     for key, value in vcf_record.INFO.iteritems():
-        effective_key = 'INFO_' + key
+        if key == 'EFF':
+            data_dict = populate_common_data_eff(value, data_dict)
+        else:
+            effective_key = 'INFO_' + key
         data_dict[effective_key] = pickle.dumps(value)
 
+def populate_common_data_eff(value, data_dict):
+    """The snpeff field starts out as a long string, consisting of many fields
+    each separated by pipes.
+
+    Effects information is added to the INFO field using an 'EFF' tag.
+    There can be multiple effects separated by comma. The format for each
+    effect is:
+
+    Effect ( Effect_Impact | Codon_Change | Amino_Acid_change | Gene_Name
+            | Gene_BioType | Coding | Transcript | Rank [ | ERRORS
+            | WARNINGS ] )
+
+    Example:
+    NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC||CODING
+        |b3038|1|1)
+
+    Details for each field are here:
+        http://snpeff.sourceforge.net/SnpEff_manual.html
+
+    We will extract each eff field separately into its own key.
+
+    NOTE: It is possible to have multiple values for each field if there are
+    multiple alts:
+
+    Example for REF=T;ALT=[C,G]:
+    NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC||CODING
+        |b3038|1|1),NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aGg|M239T
+        |386|ygiC||CODING|b3038|1|1)
+
+    In the code below, the above example would yield two re.groupdict() objs
+    from eff_group_iterators. These would be chained together and the values
+    would be 'zipped', so that the EFF_AA field would be a list of two values:
+    ['aTg/aCg','aTg/aGg'].
+    """
+
+    eff_field_lists = defaultdict(list)
+
+    #find iter produces a separate set of groups for every comma-separated
+    # alt EFF field set
+    print value
+    eff_group_iterator = SNPEFF_ALT_RE.finditer(value)
+
+    #this chains together a list of all EFF fields from all EFF
+    eff_fields = list(chain.from_iterable(
+            (eff.groupdict().items() for eff in eff_group_iterator)))
+
+    for k, v in eff_fields:
+        eff_field_lists['INFO_EFF_'+k].append(v)
+
+    data_dict.update(eff_field_lists)
+
+    return data_dict
 
 def get_or_create_variant(reference_genome, raw_data_dict):
     """Create a variant if it doesn't already exist.
