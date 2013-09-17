@@ -886,6 +886,9 @@ class VariantSet(Model):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
         verbose_name="Datasets")
 
+    def __unicode__(self):
+        return self.label
+
     @classmethod
     def get_field_order(clazz):
         """Get the order of the models for displaying on the front-end.
