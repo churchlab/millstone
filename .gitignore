@@ -47,3 +47,8 @@ tools/
 
 # Local settings overrides
 conf/local_settings.py
+
+# SnpEff Temp Data
+# TODO(dbg): Tests should clean these up.
+genome_designer/snpEff_genes.txt
+genome_designer/snpEff_summary.html
