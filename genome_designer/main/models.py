@@ -703,9 +703,9 @@ class Variant(Model):
 
     position = models.BigIntegerField('Position')
 
-    ref_value = models.TextField('Ref');
+    ref_value = models.TextField('Ref')
 
-    alt_value = models.TextField('Alt');
+    alt_value = models.TextField('Alt')
 
     @property
     def label(self):
