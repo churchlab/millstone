@@ -12,6 +12,7 @@ from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
+from main.models import Variant
 from main.models import VariantSet
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
@@ -74,7 +75,7 @@ class TestImportVariantSetFromVCFFile(TestCase):
                 email=TEST_EMAIL)
         test_project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
-        ref_genome = ReferenceGenome.objects.create(project=test_project,
+        self.ref_genome = ReferenceGenome.objects.create(project=test_project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
 
 
@@ -91,21 +92,21 @@ class TestImportVariantSetFromVCFFile(TestCase):
 
         VARIANT_SET_NAME = 'Test Set'
 
-        # Grab the test project / ref_genome from the database.
-        # TODO: when we start checking variant integrity, make sure this is
-        # the right project/reference genome!
-        project = Project.objects.all()[0]
-        REF_GENOME_UID = project.referencegenome_set.all()[0].uid
-
-        ref_genome = project.referencegenome_set.all()[0]
-
-        import_variant_set_from_vcf(ref_genome, VARIANT_SET_NAME,
+        import_variant_set_from_vcf(self.ref_genome, VARIANT_SET_NAME,
                 VARIANT_SET_VCF_FILEPATH)
 
         new_variant_set = VariantSet.objects.get(
-                reference_genome=ref_genome,
+                reference_genome=self.ref_genome,
                 label=VARIANT_SET_NAME)
 
         self.assertEqual(NUM_VARIANTS_IN_SET,
                 len(new_variant_set.variants.all()))
 
+        # Spot-check a few variants.
+        v_1128 = Variant.objects.get(reference_genome=self.ref_genome,
+                position=1128)
+        self.assertEqual('[C]', v_1128.alt_value)
+
+        v_553 = Variant.objects.get(reference_genome=self.ref_genome,
+                position=553)
+        self.assertEqual('[C,G]', v_553.alt_value)
