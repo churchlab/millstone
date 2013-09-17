@@ -68,10 +68,21 @@ class TestAlignmentPipeline(TestCase):
         experiment_sample_alignment = align_with_bwa(
                 alignment_group, self.experiment_sample)
 
-        # Check that the returned ExperimentSampleToAlignment object has the
-        # data stored in its database.
+        # Check that the run was successful as indicatedby the Dataset status.
+
+        # UNCOMMENT FOR DEBUG
+        # error = get_dataset_with_type(
+        #         experiment_sample_alignment,
+        #         Dataset.TYPE.BWA_ALIGN_ERROR).get_absolute_location()
+        # with open(error) as fh:
+        #     print fh.read()
+        # assert False
+
         bwa_align_dataset = get_dataset_with_type(
                 experiment_sample_alignment, Dataset.TYPE.BWA_ALIGN)
+        self.assertEqual(Dataset.STATUS.READY, bwa_align_dataset.status)
+
+        # Check that the alignment data was saved to a valid destination.
         bwa_align_dataset_path = bwa_align_dataset.get_absolute_location()
         self.assertTrue(os.path.exists(bwa_align_dataset_path,), (
                 "No file at location %s" % bwa_align_dataset_path))
