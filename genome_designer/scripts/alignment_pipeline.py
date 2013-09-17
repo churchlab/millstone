@@ -230,8 +230,6 @@ def align_with_bwa(alignment_group, experiment_sample=None,
         add_bam_file_track(alignment_group.reference_genome, sample_alignment,
                 Dataset.TYPE.BWA_ALIGN)
 
-        return sample_alignment
-
     except subprocess.CalledProcessError as e:
         error_output.write(str(e))
         bwa_dataset.status = Dataset.STATUS.FAILED
@@ -258,6 +256,8 @@ def align_with_bwa(alignment_group, experiment_sample=None,
         sample_alignment.dataset_set.add(error_dataset)
         sample_alignment.save()
 
+        return sample_alignment
+
 
 def ensure_bwa_index(ref_genome_fasta, error_output=None):
     """Creates the bwa index if it doesn't exist already.
@@ -268,6 +268,21 @@ def ensure_bwa_index(ref_genome_fasta, error_output=None):
     if not os.path.exists(ref_genome_fasta + '.bwt'):
         build_bwa_index(ref_genome_fasta, error_output)
 
+    # Also build the fasta index.
+    if not os.path.exists(ref_genome_fasta + '.fai'):
+        subprocess.check_call([
+            '%s/samtools/samtools' % TOOLS_DIR,
+            'faidx',
+            ref_genome_fasta
+        ], stderr=error_output)
+
+    ref_genome_dict_path = os.path.splitext(ref_genome_fasta)[0] + '.dict'
+    if not os.path.exists(ref_genome_dict_path):
+        subprocess.check_call([
+            'java', '-jar', '%s/picard/CreateSequenceDictionary.jar' % TOOLS_DIR,
+            'R=', ref_genome_fasta,
+            'O=', ref_genome_dict_path,
+        ], stderr=error_output)
 
 
 def build_bwa_index(ref_genome_fasta, error_output=None):

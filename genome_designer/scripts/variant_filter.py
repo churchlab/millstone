@@ -257,6 +257,13 @@ SAMPLE_SCOPE_REGEX_NAMED = re.compile(
 # Recognizes a pattern of the form 'key op value'.
 EXPRESSION_REGEX = re.compile('(\w+\s*[=><!]{1}[=]{0,1}\s*\w+)')
 
+# Recognizes statements about set.
+SET_REGEX = re.compile('((?:NOT_){0,1}IN_SETS\(.*\))')
+
+# Recognizes statements about set.
+SET_REGEX_NAMED = re.compile('((?P<maybe_not>NOT_){0,1}IN_SETS\((?P<sets>.*)\))')
+
+
 class VariantFilterEvaluator(object):
     """Evaluator for a single scoped expression, e.g. of the form:
         '(position > 5) in ALL(sample1, sample2)'
@@ -315,7 +322,7 @@ class VariantFilterEvaluator(object):
         self.symbol_to_expression_map = {}
 
         symbolified_string = self.clean_filter_string
-        for regex in [SAMPLE_SCOPE_REGEX, EXPRESSION_REGEX]:
+        for regex in [SAMPLE_SCOPE_REGEX, EXPRESSION_REGEX, SET_REGEX]:
             symbolified_string = self._symbolify_string_for_regex(
                     symbolified_string, regex)
 
@@ -474,6 +481,7 @@ class VariantFilterEvaluator(object):
         """
         condition_string = self.get_condition_string_for_symbol(symbol)
 
+        # First check whether this expression is contained within a scope.
         scope_match = SAMPLE_SCOPE_REGEX_NAMED.match(condition_string)
         if scope_match:
             condition_string = scope_match.group('condition')
@@ -484,6 +492,13 @@ class VariantFilterEvaluator(object):
                     self.ref_genome, FilterScope(scope_type, sample_ids))
             return evaluator.evaluate()
 
+        # Next, check if this is a set-related expression.
+        set_match = SET_REGEX.match(condition_string)
+        if set_match:
+            return _get_django_q_object_for_set_restrict(condition_string)
+
+        # Finally, if here, then this should be a basic, delimiter-separated
+        # expression.
         (delim, key, value) = _get_delim_key_value_triple(condition_string)
         for key_map in ALL_SQL_KEY_MAP_LIST:
             if key in key_map:
@@ -665,6 +680,23 @@ def _get_django_q_object_for_triple(delim_key_value_triple):
     eval_string = (maybe_not_prefix + 'Q(' + key + postfix + '=' + '"' + value +
             '"' + ')')
     return eval(eval_string)
+
+
+def _get_django_q_object_for_set_restrict(set_restrict_string):
+    """Returns the Q object for the set restrict.
+    """
+    match = SET_REGEX_NAMED.match(set_restrict_string)
+    raw_variant_set_uid_list = match.group('sets')
+    variant_set_uid_list = [uid.strip() for uid in
+            raw_variant_set_uid_list.split(',')]
+    assert len(variant_set_uid_list) > 0, (
+            "No actual sets provided in set filter.")
+    if match.group('maybe_not'):
+        maybe_not_prefix = '~'
+    else:
+        maybe_not_prefix = ''
+    return eval(maybe_not_prefix +
+            'Q(varianttovariantset__variant_set__uid__in=variant_set_uid_list)')
 
 
 def _evaluate_condition_in_triple(data_map, type_map, triple):
