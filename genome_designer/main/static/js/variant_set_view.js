@@ -30,5 +30,13 @@ gd.VariantSetView = Backbone.View.extend({
   /** Decorate the side nav bar. */
   decorateSidebar: function() {
     $('#gd-sidenav-link-variant-sets').addClass('active');
+  },
+
+  events: {
+    'click #gd-variant-set-view-export-as-csv': 'handleExportCsv',
+  },
+
+  handleExportCsv: function() {
+    $('#gd-variant-sets-export-csv-form').submit();
   }
 });

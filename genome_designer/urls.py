@@ -82,4 +82,12 @@ urlpatterns = patterns('',
     # The default behavior of registration is redirect to 'users/<username>'.
     # For now let's catch this request here and just redirect to '/'.
     (r'^users/', RedirectView.as_view(url='/')),
+
+
+    ############################################################################
+    # XHR Actions
+    ############################################################################
+
+    url(r'^_/sets/exportcsv$',
+            'genome_designer.main.xhr_handlers.export_variant_set_as_csv'),
 )

@@ -5,8 +5,24 @@
   <h1>Variant Set {{variant_set.label}}</h1>
 </div>
 
+<div class="gd-variant-set-view-dropdown dropdown btn-group">
+  <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+    Select action with set
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu">
+    <li><a id="gd-variant-set-view-export-as-csv" href="#">Export to csv</a></li>
+  </ul>
+</div>
+
 <div id="gd-datatable-hook" class="container-fluid">
 </div>
+
+<form id="gd-variant-sets-export-csv-form" action="/_/sets/exportcsv"
+    method="POST">
+  {% csrf_token %}
+  <input type="hidden" name="variant_set_uid" value={{variant_set.uid}}>
+</form>
 
 <script type="text/javascript">
   VIEW_TAG = 'VARIANT_SET';
