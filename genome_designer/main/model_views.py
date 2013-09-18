@@ -40,7 +40,10 @@ class MeltedVariantView(BaseModelView):
         for delegate in delegate_order:
             if hasattr(delegate, attr):
                 return getattr(delegate, attr)
-        raise AttributeError("MeltedVariantView object has not attribute %s" % attr)
+            elif hasattr(delegate, 'data') and attr in delegate.data:
+                return delegate.data[attr]
+        raise AttributeError(
+            "MeltedVariantView object has no attribute %s" % attr)
 
     @classmethod
     def get_field_order(clazz):
