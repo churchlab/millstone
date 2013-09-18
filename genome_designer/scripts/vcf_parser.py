@@ -26,9 +26,9 @@ SNPEFF_FIELDS = ('EFFECT', 'IMPACT', 'CLASS','CONTEXT', 'AA', 'TRLEN',
         'GENE', 'BIOTYPE', 'CODING', 'TR_BIOTYPE', 'RANK', 'GT', 'ERR', 'WARN')
 
 SNPEFF_ALT_RE = re.compile(r''.join([
-        r'(?P<%s>\w+)\((?P<%s>[\w\/]*)',
-        r'\|(?P<%s>[\w\/]*)' * (len(SNPEFF_FIELDS)-4),
-        r'\|?(?P<%s>[\w\/]*)\|?(?P<%s>[\w\/]*)\)']) % SNPEFF_FIELDS)
+        r'(?P<%s>\w+)\((?P<%s>[^\|]*)',
+        r'\|(?P<%s>[^\|]*)' * (len(SNPEFF_FIELDS)-4),
+        r'\|?(?P<%s>[^\|]*)\|?(?P<%s>[^\|]*)\)']) % SNPEFF_FIELDS)
 
 
 def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
@@ -164,7 +164,7 @@ def populate_common_data_eff(value, data_dict):
     #find iter produces a separate set of groups for every comma-separated
     # alt EFF field set
     print value
-    eff_group_iterator = SNPEFF_ALT_RE.finditer(value)
+    eff_group_iterator = (SNPEFF_ALT_RE.match(i) for i in value)
 
     #this chains together a list of all EFF fields from all EFF
     eff_fields = list(chain.from_iterable(

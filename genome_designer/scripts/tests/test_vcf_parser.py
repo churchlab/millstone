@@ -107,20 +107,20 @@ class TestVCFParser(TestCase):
         data_dict = {}
 
         # single eff
-        populate_common_data_eff(''.join((
+        populate_common_data_eff([''.join((
             'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
-            '||CODING|b3038|1|1)')), data_dict)
+            '||CODING|b3038|1|1)'))], data_dict)
 
         # eff with errors
-        populate_common_data_eff(''.join((
+        populate_common_data_eff([''.join((
             'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
-            '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST)')), data_dict)
+            '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST)'))], data_dict)
 
         # multi-eff
-        data_dict = populate_common_data_eff(''.join((
+        data_dict = populate_common_data_eff([''.join((
             'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
-            '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST),',
+            '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST),')),''.join((
             'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aGg|M239T|386|ygiC',
-            '||CODING|b3038|1|1|ERROR_TEST|WARN_TEST)')), data_dict)
+            '||CODING|b3038|1|1|ERROR_TEST|WARN_TEST)'))], data_dict)
 
         self.assertEqual(data_dict['INFO_EFF_CONTEXT'],['aTg/aCg','aTg/aGg'])
