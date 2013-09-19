@@ -17,7 +17,6 @@ from main.models import VariantCallerCommonData
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.vcf_parser import parse_alignment_group_vcf
-from scripts.vcf_parser import populate_common_data_eff
 from settings import PWD as GD_ROOT
 
 TEST_USERNAME = 'gmcdev'
@@ -100,27 +99,3 @@ class TestVCFParser(TestCase):
         self.assertEqual(0, len(Variant.objects.filter(
                 reference_genome=self.reference_genome,
                 position=454)))
-
-    def test_populate_common_data_eff(self):
-        """ Test the regex on a few snpeff field examples.
-        """
-        data_dict = {}
-
-        # single eff
-        populate_common_data_eff([''.join((
-            'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
-            '||CODING|b3038|1|1)'))], data_dict)
-
-        # eff with errors
-        populate_common_data_eff([''.join((
-            'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
-            '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST)'))], data_dict)
-
-        # multi-eff
-        data_dict = populate_common_data_eff([''.join((
-            'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
-            '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST),')),''.join((
-            'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aGg|M239T|386|ygiC',
-            '||CODING|b3038|1|1|ERROR_TEST|WARN_TEST)'))], data_dict)
-
-        self.assertEqual(data_dict['INFO_EFF_CONTEXT'],['aTg/aCg','aTg/aGg'])

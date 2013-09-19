@@ -365,6 +365,10 @@ class ReferenceGenome(Model):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
         verbose_name="Datasets")
 
+    # a key/value list of all possible VCF fields, stored as a JSONField
+    # and dynamically updated by dynamic_snp_filter_key_map.py
+    variant_key_map = JSONField()
+
     def __unicode__(self):
         return self.label
 

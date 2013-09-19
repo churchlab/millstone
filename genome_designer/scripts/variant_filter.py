@@ -60,16 +60,6 @@ ALL_SQL_KEY_MAP_LIST = [
     VARIANT_EVIDENCE_SQL_KEY_MAP,
 ]
 
-# TODO: Generate these from the vcf dataset(s) associated with the reference
-# genome we are querying against.
-from snp_filter_key_map import VARIANT_CALLER_COMMON_MAP
-from snp_filter_key_map import VARIANT_EVIDENCE_MAP
-
-ALL_KEY_MAP_LIST = ALL_SQL_KEY_MAP_LIST + [
-    VARIANT_CALLER_COMMON_MAP,
-    VARIANT_EVIDENCE_MAP,
-]
-
 TYPE_TO_SUPPORTED_OPERATIONS = {
         'Float': ['=', '!=', '>=', '<=', '>', '<'],
         'Integer': ['=', '==', '!=', '>=', '<=', '>', '<'],
@@ -285,6 +275,11 @@ class VariantFilterEvaluator(object):
         self.raw_filter_string = raw_filter_string
         self.clean_filter_string = raw_filter_string
         self.ref_genome = ref_genome
+        self.all_key_map = _get_all_key_map(self.ref_genome)
+        self.variant_caller_common_map = (
+                _get_variant_caller_common_map(self.ref_genome))
+        self.variant_evidence_map = (
+                _get_variant_evidence_map(self.ref_genome))
         self.scope = scope
 
         # Generator object that provides symbols in alphabetical order.
@@ -510,7 +505,8 @@ class VariantFilterEvaluator(object):
 
         # Finally, if here, then this should be a basic, delimiter-separated
         # expression.
-        (delim, key, value) = _get_delim_key_value_triple(condition_string)
+        (delim, key, value) = _get_delim_key_value_triple(condition_string,
+                self.all_key_map)
         for key_map in ALL_SQL_KEY_MAP_LIST:
             if key in key_map:
                 return _get_django_q_object_for_triple((delim, key, value))
@@ -531,8 +527,9 @@ class VariantFilterEvaluator(object):
             (delim, key, value) = triple
             passing_variant_list = []
             for variant in variant_list:
-                if key in VARIANT_CALLER_COMMON_MAP:
-                    _assert_delim_for_key(VARIANT_CALLER_COMMON_MAP, delim, key)
+                if key in self.variant_caller_common_map:
+                    _assert_delim_for_key(self.variant_caller_common_map,
+                            delim, key)
                     all_common_data_obj = (
                             variant.variantcallercommondata_set.all())
                     # TODO: Figure out semantics of having more than one common
@@ -540,15 +537,16 @@ class VariantFilterEvaluator(object):
                     for common_data_obj in all_common_data_obj:
                         data_dict = common_data_obj.as_dict()
                         passing = _evaluate_condition_in_triple(
-                                data_dict, VARIANT_CALLER_COMMON_MAP, triple)
+                                data_dict, self.variant_caller_common_map,
+                                triple)
                         if passing:
                             passing_variant_list.append(variant)
                             # No need to update passing sample ids.
                             break
 
-                elif key in VARIANT_EVIDENCE_MAP:
+                elif key in self.variant_evidence_map:
                     samples_passing_for_variant = set()
-                    _assert_delim_for_key(VARIANT_EVIDENCE_MAP, delim, key)
+                    _assert_delim_for_key(self.variant_evidence_map, delim, key)
                     all_variant_evidence_obj_list = (
                             VariantEvidence.objects.filter(
                                     variant_caller_common_data__in=variant.variantcallercommondata_set.all()))
@@ -557,7 +555,7 @@ class VariantFilterEvaluator(object):
                         if not data_dict['called']:
                             continue
                         passing = _evaluate_condition_in_triple(
-                                data_dict, VARIANT_EVIDENCE_MAP, triple)
+                                data_dict, self.variant_evidence_map, triple)
                         if passing:
                             samples_passing_for_variant.add(
                                     variant_evidence_obj.experiment_sample.id)
@@ -633,7 +631,7 @@ class VariantFilterEvaluator(object):
 # Helper methods
 ###############################################################################
 
-def _get_delim_key_value_triple(raw_string):
+def _get_delim_key_value_triple(raw_string, all_key_map):
     """Attempt to parse a (delim, key, value) triple out of raw_string."""
     # Remove spaces from the string.
     raw_string = raw_string.replace(' ', '')
@@ -644,7 +642,7 @@ def _get_delim_key_value_triple(raw_string):
         delimeter = _clean_delim(raw_delim)
         if len(split_result) == 2:
             key, value = split_result
-            for data_map in ALL_KEY_MAP_LIST:
+            for data_map in all_key_map:
                 # Make sure this is a valid key and valid delimeter.
                 if key in data_map:
                     specs = data_map[key]
@@ -658,6 +656,14 @@ def _get_delim_key_value_triple(raw_string):
     # If we got here, we didn't find a match.
     raise ParseError(raw_string, 'No valid filter delimeter.')
 
+def _get_all_key_map(ref_genome):
+    return [ALL_SQL_KEY_MAP_LIST] + ref_genome.variant_key_map.values()
+
+def _get_variant_caller_common_map(ref_genome):
+    return ref_genome.variant_key_map['snp_caller_common_data']
+
+def _get_variant_evidence_map(ref_genome):
+    return ref_genome.variant_key_map['snp_evidence_data']
 
 def _clean_delim(raw_delim):
     """Cleans a run delimiter.

@@ -3,6 +3,7 @@ from django.db.models.signals import m2m_changed
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
 from scripts.snpeff_util import build_snpeff
 from scripts.import_util import generate_fasta_from_genbank
+from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 
 from models import ReferenceGenome
 from models import Dataset
@@ -42,6 +43,9 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
             if not instance.dataset_set.filter(
                     type=Dataset.TYPE.REFERENCE_GENOME_FASTA).exists():
                 generate_fasta_from_genbank(instance)
+
+    #Initialize variant key map field
+    initialize_filter_key_map(instance)
 
 # Run post-save commands after making a new ref genome object
 post_save.connect(post_ref_genome_create, sender=ReferenceGenome,

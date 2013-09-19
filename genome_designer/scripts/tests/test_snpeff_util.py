@@ -11,6 +11,9 @@ import os
 from django.test import TestCase
 from django.test.utils import override_settings
 import vcf
+from collections import defaultdict
+import re
+import itertools
 
 from main.models import AlignmentGroup
 from main.models import clean_filesystem_location
@@ -24,6 +27,7 @@ from main.models import Variant
 from scripts.snpeff_util import build_snpeff
 from scripts.snpeff_util import run_snpeff
 from scripts.snpeff_util import get_snpeff_config_path
+from scripts.snpeff_util import populate_record_eff
 from scripts.snp_callers import run_snp_calling_pipeline
 from scripts.snp_callers import VCF_DATASET_TYPE
 from scripts.snp_callers import VCF_ANNOTATED_DATASET_TYPE
@@ -116,12 +120,44 @@ class TestSnpeff(TestCase):
 
         # Make sure the vcf is valid by reading it using pyvcf.
         with open(vcf_dataset.get_absolute_location()) as vcf_fh:
-            try:
-                reader = vcf.Reader(vcf_fh)
-                record = reader.next()
-            except:
-                self.fail("Not valid vcf")
+            #try:
+            reader = vcf.Reader(vcf_fh)
+            record = reader.next()
+            #except:
+                #self.fail("Not valid vcf")
             assert 'EFF' in record.INFO, (
                     'No EFF INFO field found in snpeff VCF file.')
 
+    def test_populate_record_eff(self):
+        """ Test the regex on a few snpeff field examples.
+        """
 
+        class FakeVCFRecord(object):
+            def __init__(self):
+                self.INFO = {}
+
+        test_record = FakeVCFRecord()
+
+        # single eff
+        test_record.INFO['EFF'] = [''.join((
+            'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
+            '||CODING|b3038|1|1)'))]
+        updated_test_record = populate_record_eff(test_record)
+
+        # eff with error field
+        test_record.INFO['EFF'] = [''.join((
+            'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
+            '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST)'))]
+        updated_test_record = populate_record_eff(test_record)
+
+        # multi-eff
+        test_record.INFO['EFF'] = [''.join((
+            'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
+            '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST),')),''.join((
+            'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aGg|M239T|386|ygiC',
+            '||CODING|b3038|1|1|ERROR_TEST|WARN_TEST)'))]
+
+        updated_test_record = populate_record_eff(test_record)
+
+        self.assertEqual(updated_test_record.INFO['EFF_CONTEXT'],
+                ['aTg/aCg','aTg/aGg'])
