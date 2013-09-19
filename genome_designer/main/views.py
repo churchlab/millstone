@@ -33,6 +33,11 @@ from scripts.variant_filter import get_variants_that_pass_filter
 from scripts.variant_sets import add_or_remove_variants_from_set
 import settings
 
+# Tags used to indicate which tab we are on.
+TAB_ROOT__DATA = 'DATA'
+TAB_ROOT__ALIGN = 'ALIGN'
+TAB_ROOT__ANALYZE = 'ANALYZE'
+
 def home_view(request):
     """The main landing page.
     """
@@ -87,7 +92,8 @@ def project_view(request, project_uid):
 
     context = {
         'project': project,
-        'init_js_data': init_js_data
+        'init_js_data': init_js_data,
+        'tab_root': TAB_ROOT__DATA
     }
     return render(request, 'project.html', context)
 
@@ -100,6 +106,42 @@ def project_delete(request, project_uid):
     response_data = {'redirect': '/'}
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
+
+
+@login_required
+def tab_root_data(request, project_uid):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+
+    context = {
+        'project': project,
+        'tab_root': TAB_ROOT__DATA
+    }
+    return render(request, 'project.html', context)
+
+
+@login_required
+def tab_root_align(request, project_uid):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+
+    context = {
+        'project': project,
+        'tab_root': TAB_ROOT__ALIGN
+    }
+    return render(request, 'tab_root_align.html', context)
+
+
+@login_required
+def tab_root_analyze(request, project_uid):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+
+    context = {
+        'project': project,
+        'tab_root': TAB_ROOT__ANALYZE
+    }
+    return render(request, 'tab_root_analyze.html', context)
 
 
 @login_required
@@ -126,6 +168,7 @@ def reference_genome_list_view(request, project_uid):
 
     context = {
         'project': project,
+        'tab_root': TAB_ROOT__DATA,
         'ref_genome_list_json': adapt_model_to_frontend(ReferenceGenome,
                 {'project':project}),
         'error_string': error_string
@@ -144,6 +187,7 @@ def reference_genome_view(request, project_uid, ref_genome_uid):
             uid=ref_genome_uid)
     context = {
         'project': project,
+        'tab_root': TAB_ROOT__DATA,
         'reference_genome': reference_genome,
         'jbrowse_link': reference_genome.get_client_jbrowse_link()
     }
@@ -172,6 +216,7 @@ def sample_list_view(request, project_uid):
 
     context = {
         'project': project,
+        'tab_root': TAB_ROOT__DATA,
         'sample_list': sample_list,
         'error_string': error_string
     }
@@ -206,6 +251,7 @@ def alignment_list_view(request, project_uid):
 
     context = {
         'project': project,
+        'tab_root': TAB_ROOT__DATA,
         'alignment_list_json': adapt_model_to_frontend(AlignmentGroup,
                 {'reference_genome__project':project})
     }
@@ -232,6 +278,7 @@ def alignment_view(request, project_uid, alignment_group_uid):
     })
     context = {
         'project': project,
+        'tab_root': TAB_ROOT__ALIGN,
         'alignment_group': alignment_group,
         'experiment_sample_to_alignment_list_json': adapt_model_to_frontend(
                 ExperimentSampleToAlignment,
@@ -293,6 +340,7 @@ def alignment_create_view(request, project_uid):
 
     context = {
         'project': project,
+        'tab_root': TAB_ROOT__ALIGN,
         'samples_list_json': adapt_model_to_frontend(ExperimentSample,
                 {'project':project}),
         'ref_genomes_list_json': adapt_model_to_frontend(ReferenceGenome,
@@ -318,8 +366,9 @@ def sample_alignment_error_view(request, project_uid, alignment_group_uid,
     else:
         raw_data = 'undefined'
     context = {
-            'project': project,
-            'raw_data': raw_data
+        'project': project,
+        'tab_root': TAB_ROOT__ALIGN,
+        'raw_data': raw_data
     }
     return render(request, 'sample_alignment_error_view.html', context)
 
@@ -362,6 +411,7 @@ def variant_set_list_view(request, project_uid):
 
     context = {
         'project': project,
+        'tab_root': TAB_ROOT__ANALYZE,
         'ref_genome_list': ref_genome_list,
         'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 {'reference_genome__project':project}),
@@ -433,6 +483,7 @@ def variant_set_view(request, project_uid, variant_set_uid):
 
     context = {
         'project': project,
+        'tab_root': TAB_ROOT__ANALYZE,
         'variant_set': variant_set,
         'variant_to_variant_set_json': adapt_model_to_frontend(
                 VariantToVariantSet,
@@ -518,6 +569,7 @@ def variant_list_view(request, project_uid, ref_genome_uid):
     else:
         context.update({
             'project': project,
+            'tab_root': TAB_ROOT__ANALYZE,
             'reference_genome': reference_genome,
             'manual_filter_string': manual_filter_string,
             'is_melted': is_melted,
@@ -542,6 +594,7 @@ def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
 
     context = {
         'project': project,
+        'tab_root': TAB_ROOT__ANALYZE,
         'variant': variant,
         'melted_variant_list': fe_melted_variant_list
     }
@@ -555,7 +608,8 @@ def gene_list_view(request, project_uid):
             uid=project_uid)
 
     context = {
-        'project': project
+        'project': project,
+        'tab_root': TAB_ROOT__ANALYZE,
     }
     return render(request, 'gene_list.html', context)
 
@@ -566,6 +620,7 @@ def goterm_list_view(request, project_uid):
             uid=project_uid)
 
     context = {
-        'project': project
+        'project': project,
+        'tab_root': TAB_ROOT__ANALYZE,
     }
     return render(request, 'goterm_list.html', context)
