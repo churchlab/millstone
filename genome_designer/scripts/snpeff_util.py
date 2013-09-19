@@ -298,7 +298,7 @@ def run_snpeff(alignment_group, alignment_type):
         'vcf',
         '-c', os.path.join(get_snpeff_config_path(ref_genome),'snpeff.config'),
         '-ud', str(settings.SNPEFF_UD_INTERVAL_LENGTH),
-#        '-q',
+        '-q',
         '-noLog',
 #        '-t', str(settings.SNPEFF_THREADS),
         ref_genome_uid,
@@ -333,6 +333,10 @@ def run_snpeff(alignment_group, alignment_type):
             filesystem_location=clean_filesystem_location(vcf_output_filename),
     )
     alignment_group.dataset_set.add(dataset)
+
+    #clean up the snpEff_genes.txt and snpEff_summary.txt files in the home dir
+    for file in settings.SNPEFF_SUMMARY_FILES:
+        os.remove(os.path.join(os.getcwd(),file))
 
 def convert_snpeff_info_fields(vcf_input_fh, vcf_output_fh):
     """This function takes a VCF file on an input stream, reads it in,

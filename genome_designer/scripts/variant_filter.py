@@ -632,6 +632,7 @@ class VariantFilterEvaluator(object):
 ###############################################################################
 
 def _get_delim_key_value_triple(raw_string, all_key_map):
+    print all_key_map
     """Attempt to parse a (delim, key, value) triple out of raw_string."""
     # Remove spaces from the string.
     raw_string = raw_string.replace(' ', '')
@@ -657,7 +658,7 @@ def _get_delim_key_value_triple(raw_string, all_key_map):
     raise ParseError(raw_string, 'No valid filter delimeter.')
 
 def _get_all_key_map(ref_genome):
-    return [ALL_SQL_KEY_MAP_LIST] + ref_genome.variant_key_map.values()
+    return ALL_SQL_KEY_MAP_LIST + ref_genome.variant_key_map.values()
 
 def _get_variant_caller_common_map(ref_genome):
     return ref_genome.variant_key_map['snp_caller_common_data']
