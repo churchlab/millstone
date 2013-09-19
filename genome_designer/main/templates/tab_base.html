@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block tabs_or_splash %}
+<div class="row-fluid">
+  <ul class="nav nav-tabs">
+    <li class="active"><a href="#">Data</a></li>
+    <li><a href="#">Align</a></li>
+    <li><a href="#">Analyze</a></li>
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade in active">
+      <div class="span3">
+        {% if project %}
+          {% include "side_nav_bar.html" %}
+        {% endif %}
+      </div><!--/.span3 -->
+      <div class="span9">
+        {% block content%}{% endblock %}
+      </div> <!--/.span9 -->
+    </div>
+    <div class="tab-pane fade in">
+      Other tab
+    </div>
+  </div>
+</div> <!--/.row-fluid -->
+{% endblock %}
