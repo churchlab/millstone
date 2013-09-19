@@ -258,10 +258,10 @@ SAMPLE_SCOPE_REGEX_NAMED = re.compile(
 EXPRESSION_REGEX = re.compile('(\w+\s*[=><!]{1}[=]{0,1}\s*\w+)')
 
 # Recognizes statements about set.
-SET_REGEX = re.compile('((?:NOT_){0,1}IN_SETS\(.*\))')
+SET_REGEX = re.compile('((?:NOT_){0,1}IN_SET\([\w]+\))')
 
 # Recognizes statements about set.
-SET_REGEX_NAMED = re.compile('((?P<maybe_not>NOT_){0,1}IN_SETS\((?P<sets>.*)\))')
+SET_REGEX_NAMED = re.compile('((?P<maybe_not>NOT_){0,1}IN_SET\((?P<sets>[\w]+)\))')
 
 
 class VariantFilterEvaluator(object):
@@ -407,7 +407,7 @@ class VariantFilterEvaluator(object):
         # after the SQL fetch. Order doesn't matter since this is a conjunction
         # clause.
 
-        def _single_symbol_helper(symbol, filter_eval_results, q_part,
+        def _single_symbol_helper(symbol, filter_eval_results, q_list,
                 remaining_triples):
             """Helper method for evaluating a single symbol.
             """
@@ -415,27 +415,27 @@ class VariantFilterEvaluator(object):
             if isinstance(result, FilterEvalResult):
                 filter_eval_results.append(result)
             elif isinstance(result, Q):
-                q_part &= result
+                q_list.append(result)
             else:
                 remaining_triples.append(result)
-            return (filter_eval_results, q_part, remaining_triples)
+            return (filter_eval_results, q_list, remaining_triples)
 
         filter_eval_results = []
-        q_part = Q()
+        q_list = []
         remaining_triples = []
 
         if not conjunction_clause == '':
             # The conjunction may contain a single condition.
             if not conjunction_clause.is_Boolean:
-                (filter_eval_results, q_part, remaining_triples) = (
+                (filter_eval_results, q_list, remaining_triples) = (
                         _single_symbol_helper(
-                                conjunction_clause, filter_eval_results, q_part,
+                                conjunction_clause, filter_eval_results, q_list,
                                 remaining_triples))
             else:
                 for symbol in conjunction_clause.args:
-                    (filter_eval_results, q_part, remaining_triples) = (
+                    (filter_eval_results, q_list, remaining_triples) = (
                             _single_symbol_helper(
-                                    symbol, filter_eval_results, q_part,
+                                    symbol, filter_eval_results, q_list,
                                     remaining_triples))
 
         ### Combine any filter results so far. These are probably results
@@ -446,8 +446,19 @@ class VariantFilterEvaluator(object):
             for result in filter_eval_results[1:]:
                 partial_result &= result
 
-        ### Now handle the Q part.
-        variant_list = self.ref_genome.variant_set.filter(q_part)
+        # TODO: Handle evaluating sets for melted view.
+
+        ### Now handle the Q list.
+
+        # NOTE: Previously, we were doing applying boolean operators
+        # among Q objects, but the ORM mapping fails in cases where you
+        # want to logic among VariantSet membership.
+        if len(q_list) > 0:
+            variant_list = self.ref_genome.variant_set.filter(q_list[0])
+            for q_obj in q_list[1:]:
+                variant_list = variant_list.filter(q_obj)
+        else:
+            variant_list = self.ref_genome.variant_set.all()
 
         # Make this into a FilterEvalResult object.
         # For now, we just set all the genomes as passing for the conditions
@@ -686,17 +697,16 @@ def _get_django_q_object_for_set_restrict(set_restrict_string):
     """Returns the Q object for the set restrict.
     """
     match = SET_REGEX_NAMED.match(set_restrict_string)
-    raw_variant_set_uid_list = match.group('sets')
-    variant_set_uid_list = [uid.strip() for uid in
-            raw_variant_set_uid_list.split(',')]
-    assert len(variant_set_uid_list) > 0, (
-            "No actual sets provided in set filter.")
+    variant_set_uid = match.group('sets')
+    assert len(variant_set_uid) > 0, (
+            "No actual set provided in set filter.")
+
+    q_obj = Q(varianttovariantset__variant_set__uid=variant_set_uid)
+
+    # Maybe negate the result.
     if match.group('maybe_not'):
-        maybe_not_prefix = '~'
-    else:
-        maybe_not_prefix = ''
-    return eval(maybe_not_prefix +
-            'Q(varianttovariantset__variant_set__uid__in=variant_set_uid_list)')
+        return ~q_obj
+    return q_obj
 
 
 def _evaluate_condition_in_triple(data_map, type_map, triple):

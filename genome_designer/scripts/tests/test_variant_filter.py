@@ -442,7 +442,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         )
         raw_sample_data_dict = {
                 'called': False,
-                'gt_type': 1,
+                'gt_type': pickle.dumps(1),
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj_3,
@@ -495,42 +495,66 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 label='set3')
 
         # Add some variants to each of the above sets.
-        def _create_variants_in_set(pos_range, var_set):
+        def _create_variants_in_set(pos_range, var_set_list):
             for pos in pos_range:
                 var = Variant.objects.create(
-                    type=Variant.TYPE.TRANSITION, reference_genome=self.ref_genome,
-                    chromosome='chrom', position=pos, ref_value='A', alt_value='G')
-                if var_set is not None:
-                    VariantToVariantSet.objects.create(variant=var,
-                            variant_set=var_set)
-        _create_variants_in_set(range(3), set_1)
-        _create_variants_in_set(range(3, 6), set_2)
-        _create_variants_in_set(range(6, 9), set_3)
-        _create_variants_in_set(range(9, 13), None)
+                    type=Variant.TYPE.TRANSITION,
+                    reference_genome=self.ref_genome,
+                    chromosome='chrom',
+                    position=pos,
+                    ref_value='A',
+                    alt_value='G')
+                for var_set in var_set_list:
+                    if var_set is not None:
+                        VariantToVariantSet.objects.create(variant=var,
+                                variant_set=var_set)
+        _create_variants_in_set(range(3), [set_1]) # 3
+        _create_variants_in_set(range(3, 6), [set_2]) # 3
+        _create_variants_in_set(range(6, 9), [set_3]) # 3
+        _create_variants_in_set(range(9, 13), [None]) # 4
+        _create_variants_in_set(range(13, 19), [set_1, set_2]) # 6
 
-        # We have 13 total variants.
-        self.assertEqual(13, len(Variant.objects.all()))
+        # We have 19 total variants.
+        self.assertEqual(19, len(Variant.objects.all()))
 
-        QUERY_STRING = 'IN_SETS(%s)' % (set_1.uid)
-        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
-        variants = result.variant_set
-        self.assertEqual(3, len(variants))
-
-        QUERY_STRING = 'IN_SETS(%s)' % ','.join([set_1.uid, set_2.uid])
-        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
-        variants = result.variant_set
-        self.assertEqual(6, len(variants))
-
-        QUERY_STRING = 'IN_SETS(%s)' % ','.join([set_1.uid, set_2.uid, set_3.uid])
+        QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
         self.assertEqual(9, len(variants))
 
-        QUERY_STRING = 'NOT_IN_SETS(%s)' % (set_1.uid)
+        QUERY_STRING = 'IN_SET(%s) | IN_SET(%s)' % (set_1.uid, set_2.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(12, len(variants))
+
+        QUERY_STRING = 'IN_SET(%s) | IN_SET(%s) | IN_SET(%s)' % (
+                set_1.uid, set_2.uid, set_3.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(15, len(variants))
+
+        QUERY_STRING = 'NOT_IN_SET(%s)' % (set_1.uid)
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
         self.assertEqual(10, len(variants))
 
+        QUERY_STRING = 'IN_SET(%s) & IN_SET(%s)' % (set_1.uid, set_3.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(0, len(variants))
+
+        QUERY_STRING = 'IN_SET(%s) & IN_SET(%s)' % (set_1.uid, set_2.uid)
+
+        # Sanity check.
+        var_in_set_1 = set(Variant.objects.filter(
+                varianttovariantset__variant_set__uid=set_1.uid))
+        var_in_set_2 = set(Variant.objects.filter(
+                varianttovariantset__variant_set__uid=set_2.uid))
+        self.assertEqual(6, len(var_in_set_1 & var_in_set_2))
+
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(6, len(variants))
 
 
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
@@ -587,14 +611,34 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
     def test_variant_filter_constructor__sets(self):
         """Test parsing out the set annotation.
         """
-        raw_filter_string = 'IN_SETS(1234)'
+        raw_filter_string = 'IN_SET(1234)'
         evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
         EXPECTED_SYMBOLIC_REP = sympify('A')
         self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation,
                 "Expected: %s. Actual: %s" % (EXPECTED_SYMBOLIC_REP,
                         evaluator.sympy_representation))
-        self.assertEqual('IN_SETS(1234)',
+        self.assertEqual('IN_SET(1234)',
                 evaluator.symbol_to_expression_map['A'])
+
+
+    def test_variant_filter_constructor__sets_combo(self):
+        raw_filter_string = 'IN_SET(1234) | IN_SET(5678)'
+        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('A | B')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation,
+                "Expected: %s. Actual: %s" % (EXPECTED_SYMBOLIC_REP,
+                        evaluator.sympy_representation))
+        self.assertEqual('IN_SET(1234)',
+                evaluator.symbol_to_expression_map['A'])
+        self.assertEqual('IN_SET(5678)',
+                evaluator.symbol_to_expression_map['B'])
+
+        raw_filter_string = 'IN_SET(1234) & IN_SET(5678)'
+        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('A & B')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation,
+                "Expected: %s. Actual: %s" % (EXPECTED_SYMBOLIC_REP,
+                        evaluator.sympy_representation))
 
 
 class TestSymbolGenerator(TestCase):
@@ -669,28 +713,27 @@ class TestExpressionRegex(TestCase):
 
 
     def test_set_regex(self):
-        QUERY_STRING = 'IN_SETS(1234)'
+        QUERY_STRING = 'IN_SET(1234)'
         self.assertTrue(SET_REGEX.match(QUERY_STRING))
 
-        QUERY_STRING = 'IN_SETS(1234, 5678)'
+        QUERY_STRING = 'IN_SET(5678abda)'
         self.assertTrue(SET_REGEX.match(QUERY_STRING))
 
-        QUERY_STRING = 'NOT_IN_SETS(1234, 5678)'
+        QUERY_STRING = 'NOT_IN_SET(1234)'
         self.assertTrue(SET_REGEX.match(QUERY_STRING))
+
+        # Match only the first part.
+        QUERY_STRING = 'IN_SET(1234) | IN_SET(5678)'
+        self.assertEqual('IN_SET(1234)', SET_REGEX.match(QUERY_STRING).group())
 
 
     def test_set_regex__named(self):
-        QUERY_STRING = 'IN_SETS(1234)'
+        QUERY_STRING = 'IN_SET(1234)'
         match = SET_REGEX_NAMED.match(QUERY_STRING)
         self.assertEqual('1234', match.group('sets'))
         self.assertFalse(match.group('maybe_not'))
 
-        QUERY_STRING = 'IN_SETS(1234, 5678)'
+        QUERY_STRING = 'NOT_IN_SET(5678)'
         match = SET_REGEX_NAMED.match(QUERY_STRING)
-        self.assertEqual('1234, 5678', match.group('sets'))
-        self.assertFalse(match.group('maybe_not'))
-
-        QUERY_STRING = 'NOT_IN_SETS(1234, 5678)'
-        match = SET_REGEX_NAMED.match(QUERY_STRING)
-        self.assertEqual('1234, 5678', match.group('sets'))
+        self.assertEqual('5678', match.group('sets'))
         self.assertTrue(match.group('maybe_not'))

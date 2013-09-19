@@ -37,6 +37,9 @@ input.gd-form-tall {
   margin: 5px 0 5px 0;
 }
 
+.gd-variant-set-view-dropdown {
+  margin-bottom: 20px;
+}
 
 /** Filter. */
 
