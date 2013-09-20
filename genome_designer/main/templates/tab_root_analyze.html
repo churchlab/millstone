@@ -1,5 +1,17 @@
 {% extends "tab_base.html" %}
 
-{% block content%}
-  <h1>Analyze</h1>
+{% block tab_content %}
+
+<div class="gd-analyze-dropdown dropdown btn-group">
+  <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+    Please Select Reference Genome
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu">
+    {% for ref_genome in project.referencegenome_set.all %}
+      <li><a href="#">{{ref_genome.label}}</a></li>
+    {% endfor %}
+  </ul>
+</div>
+
 {% endblock %}

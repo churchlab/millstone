@@ -17,19 +17,23 @@
     <script>alert("Missing tab root");</script>
   {% endif %}
 
-  <div class="tab-content">
+  <div class="tab-content gd-tab-content">
     <div class="tab-pane fade in active">
-      <div class="span3">
-        {% if project %}
-          {% include "side_nav_bar.html" %}
-        {% endif %}
-      </div><!--/.span3 -->
-      <div class="span9">
-        {% block content%}{% endblock %}
-      </div> <!--/.span9 -->
-    </div>
-    <div class="tab-pane fade in">
-      Other tab
+
+      <!-- Currently actively working on the analyze tab.
+          All others should be the same. -->
+      {% if tab_root != 'ANALYZE' %}
+        <div class="span3">
+          {% if project %}
+            {% include "side_nav_bar.html" %}
+          {% endif %}
+        </div><!--/.span3 -->
+        <div class="span9">
+          {% block content%}{% endblock %}
+        </div> <!--/.span9 -->
+      {% else %}
+        {% block tab_content%}{% endblock %}
+      {% endif %}
     </div>
   </div>
 </div> <!--/.row-fluid -->

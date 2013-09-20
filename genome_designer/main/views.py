@@ -411,7 +411,7 @@ def variant_set_list_view(request, project_uid):
 
     context = {
         'project': project,
-        'tab_root': TAB_ROOT__ANALYZE,
+        'tab_root': TAB_ROOT__DATA,
         'ref_genome_list': ref_genome_list,
         'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 {'reference_genome__project':project}),
@@ -483,7 +483,7 @@ def variant_set_view(request, project_uid, variant_set_uid):
 
     context = {
         'project': project,
-        'tab_root': TAB_ROOT__ANALYZE,
+        'tab_root': TAB_ROOT__DATA,
         'variant_set': variant_set,
         'variant_to_variant_set_json': adapt_model_to_frontend(
                 VariantToVariantSet,
@@ -569,7 +569,7 @@ def variant_list_view(request, project_uid, ref_genome_uid):
     else:
         context.update({
             'project': project,
-            'tab_root': TAB_ROOT__ANALYZE,
+            'tab_root': TAB_ROOT__DATA,
             'reference_genome': reference_genome,
             'manual_filter_string': manual_filter_string,
             'is_melted': is_melted,
@@ -594,7 +594,7 @@ def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
 
     context = {
         'project': project,
-        'tab_root': TAB_ROOT__ANALYZE,
+        'tab_root': TAB_ROOT__DATA,
         'variant': variant,
         'melted_variant_list': fe_melted_variant_list
     }
@@ -609,7 +609,7 @@ def gene_list_view(request, project_uid):
 
     context = {
         'project': project,
-        'tab_root': TAB_ROOT__ANALYZE,
+        'tab_root': TAB_ROOT__DATA,
     }
     return render(request, 'gene_list.html', context)
 
@@ -621,6 +621,6 @@ def goterm_list_view(request, project_uid):
 
     context = {
         'project': project,
-        'tab_root': TAB_ROOT__ANALYZE,
+        'tab_root': TAB_ROOT__DATA,
     }
     return render(request, 'goterm_list.html', context)
