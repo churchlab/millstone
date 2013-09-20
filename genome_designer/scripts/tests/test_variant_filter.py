@@ -17,6 +17,7 @@ from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import VariantToVariantSet
+from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.variant_filter import EXPRESSION_REGEX
 from scripts.variant_filter import SAMPLE_SCOPE_REGEX
 from scripts.variant_filter import SAMPLE_SCOPE_REGEX_NAMED
@@ -39,6 +40,8 @@ class BaseTestVariantFilterTestCase(TestCase):
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(project=self.project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
+        initialize_filter_key_map(self.ref_genome)
+
         self.vcf_dataset = Dataset.objects.create(
                 label='test_data_set',
                 type=Dataset.TYPE.VCF_FREEBAYES,

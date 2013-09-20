@@ -8,6 +8,14 @@ import os
 import os.path
 import subprocess
 import sys
+import vcf
+from collections import defaultdict
+from collections import OrderedDict
+import re
+from itertools import chain
+from string import Template
+from StringIO import StringIO
+
 
 from main.models import clean_filesystem_location
 from main.models import Project
@@ -27,6 +35,95 @@ VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
 # Dataset type to use for snp annotation.
 VCF_ANNOTATED_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 
+#Compile this SNPEFF parsing refex only once
+# Example:
+#   NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC||CODING
+#        |b3038|1|1)
+
+SNPEFF_FIELDS = OrderedDict([
+    ('EFFECT', {
+        'id':'EFFECT',
+        'type':'String',
+        'description':'Effect type of Variant.'}
+    ),
+    ('IMPACT', {
+        'id':'IMPACT',
+        'type':'String',
+        'description':'Effect impact {High, Moderate, Low, Modifier}.'}
+    ),
+    ('CLASS', {
+        'id':'CLASS',
+        'type':'String',
+        'description':'Functional class {NONE, SILENT, MISSENSE, NONSENSE}.'}
+    ),
+    ('CONTEXT', {
+        'id':'CONTEXT',
+        'type':'String',
+        'description':'old_codon/new_codon OR distance to transcript.'}
+    ),
+    ('AA', {
+        'id':'AA',
+        'type':'String',
+        'description':'Amino acid change: old_AA AA_position/new_AA.'}
+    ),
+    ('TRLEN', {
+        'id':'TRLEN',
+        'type':'Integer',
+        'description':'Length of protein in amino acids.'}
+    ),
+    ('GENE', {
+        'id':'TRLEN',
+        'type':'String',
+        'description':'Gene Name.'}
+    ),
+    ('BIOTYPE', {
+        'id':'BIOTYPE',
+        'type':'String',
+        'description':'Transcript bioType, if available.'}
+    ),
+    ('CODING', {
+        'id':'CODING',
+        'type':'String',
+        'description':'Either CODING or NONCODING.'}
+    ),
+    ('TR', {
+        'id':'TR',
+        'type':'String',
+        'description':'Transcript ID (usually ENSEMBL IDs).'}
+    ),
+    ('RANK', {
+        'id':'RANK',
+        'type':'String',
+        'description':'Exon rank or Intron rank.'}
+    ),
+    ('GT', {
+        'id':'GT',
+        'type':'String',
+        'description':'Genotype number corresponding to this effect.'}
+    ),
+    ('ERR', {
+        'id':'ERR',
+        'type':'String',
+        'description':'Any Errors.'}
+    ),
+    ('WARN', {
+        'id':'WARN',
+        'type':'String',
+        'description':'Any Warnings.'}
+    )]
+)
+
+SNPEFF_INFO_TEMPLATE = Template(','.join([
+        '##INFO=<ID=EFF_$id',
+        'Number=A',
+        'Type=$type',
+        'Description="$description">']))
+
+SNPEFF_ALT_RE = re.compile(r''.join([
+        r'(?P<{:s}>\w+)\((?P<{:s}>[^\|]*)',
+        r'\|(?P<{:s}>[^\|]*)' * (len(SNPEFF_FIELDS.keys())-4),
+        r'\|?(?P<{:s}>[^\|]*)\|?(?P<{:s}>[^\|]*)\)']
+        ).format(*SNPEFF_FIELDS.keys()))
 
 def build_snpeff(ref_genome, **kwargs):
     '''
@@ -201,19 +298,24 @@ def run_snpeff(alignment_group, alignment_type):
         'vcf',
         '-c', os.path.join(get_snpeff_config_path(ref_genome),'snpeff.config'),
         '-ud', str(settings.SNPEFF_UD_INTERVAL_LENGTH),
-#        '-q',
-#        '-noLog',
+        '-q',
+        '-noLog',
 #        '-t', str(settings.SNPEFF_THREADS),
         ref_genome_uid,
         vcf_input_filename
     ]
 
-    print snpeff_args
+    print ' '.join(snpeff_args)
 
     with open(vcf_output_filename, 'w') as fh_out:
-        snpeff_proc = subprocess.call(
+
+        #Create a stringIO buffer to hold the unedited snpeff vcf
+        raw_snpeff_vcf = StringIO()
+
+        snpeff_proc = subprocess.Popen(
             snpeff_args,
-            stdout=fh_out)
+            stdout=subprocess.PIPE)
+        convert_snpeff_info_fields(snpeff_proc.stdout, fh_out)
 
     #Add the snpeff VCF file to the dataset_set
     # If a Dataset already exists, delete it, might have been a bad run.
@@ -231,6 +333,116 @@ def run_snpeff(alignment_group, alignment_type):
             filesystem_location=clean_filesystem_location(vcf_output_filename),
     )
     alignment_group.dataset_set.add(dataset)
+
+    #clean up the snpEff_genes.txt and snpEff_summary.txt files in the home dir
+    for file in settings.SNPEFF_SUMMARY_FILES:
+        os.remove(os.path.join(os.getcwd(),file))
+
+def convert_snpeff_info_fields(vcf_input_fh, vcf_output_fh):
+    """This function takes a VCF file on an input stream, reads it in,
+    converts the single EFF field to a set of EFF fields, and then returns
+    the modified VCF file on an output stream.
+
+    The snpeff field starts out as a long string, consisting of many fields
+    each separated by pipes.
+
+    Effects information is added to the INFO field using an 'EFF' tag.
+    There can be multiple effects separated by comma. The format for each
+    effect is:
+
+    Effect ( Effect_Impact | Codon_Change | Amino_Acid_change | Gene_Name
+            | Gene_BioType | Coding | Transcript | Rank [ | ERRORS
+            | WARNINGS ] )
+
+    Details for each field are here:
+        http://snpeff.sourceforge.net/SnpEff_manual.html
+
+    We will pull out all of these fields separately into INFO_EFF_* and return
+    a new VCF file.
+    """
+
+    vcf_reader = vcf.Reader(vcf_input_fh)
+
+    # Generate extra header rows.
+    # TODO: This method is internal to pyVCF, so if they change it,
+    # this will break. Maybe we should copy their code?
+    parser = vcf.parser._vcf_metadata_parser()
+    for field, values in SNPEFF_FIELDS.items():
+
+        # Create a new header line from the new field.
+        print values
+        new_header_line = SNPEFF_INFO_TEMPLATE.substitute(values)
+
+        # Add this extra header line to the vcf reader.
+        vcf_reader._header_lines.append(new_header_line)
+
+        # Parse the header line as an Info obj, add it to the reader.
+        key, val = parser.read_info(new_header_line)
+        vcf_reader.infos[key] = val
+
+    vcf_writer = vcf.Writer(vcf_output_fh, vcf_reader)
+
+    # Write the old records with the new EFF INFO fields
+    for record in vcf_reader:
+        print record
+        vcf_writer.write_record(populate_record_eff(record))
+
+def populate_record_eff(vcf_record):
+    """This function takes a single VCF record and separates the EFF key
+    from snpEFF into a variety of individual keys.
+
+    The snpeff field starts out as a long string, consisting of many fields
+    each separated by pipes.
+
+    Effects information is added to the INFO field using an 'EFF' tag.
+    There can be multiple effects separated by comma. The format for each
+    effect is:
+
+    Effect ( Effect_Impact | Codon_Change | Amino_Acid_change | Gene_Name
+            | Gene_BioType | Coding | Transcript | Rank [ | ERRORS
+            | WARNINGS ] )
+
+    Example:
+    NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC||CODING
+        |b3038|1|1)
+
+    Details for each field are here:
+        http://snpeff.sourceforge.net/SnpEff_manual.html
+
+    NOTE: It is possible to have multiple values for each field if there are
+    multiple alts:
+
+    Example for REF=T;ALT=[C,G]:
+    NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC||CODING
+        |b3038|1|1),NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aGg|M239T
+        |386|ygiC||CODING|b3038|1|1)
+
+    In the code below, the above example would yield two re.groupdict() objs
+    from eff_group_iterators. These would be chained together and the values
+    would be 'zipped', so that the EFF_AA field would be a list of two values:
+    ['aTg/aCg','aTg/aGg'].
+    """
+
+    # Get the Eff field for this record.
+    eff_field_lists = defaultdict(list)
+    assert hasattr(vcf_record,'INFO'), 'No INFO attr, not a vcf record'
+    assert 'EFF' in vcf_record.INFO, 'VCF record has no EFF INFO field'
+    value = vcf_record.INFO['EFF']
+
+    # Find iter produces a separate set of groups for every comma-separated
+    # alt EFF field set
+    eff_group_iterator = (SNPEFF_ALT_RE.match(i) for i in value)
+
+    # This chains together a list of all EFF fields from all alts
+    eff_fields = list(chain.from_iterable(
+            (eff.groupdict().items() for eff in eff_group_iterator)))
+
+    for k, v in eff_fields:
+        eff_field_lists['EFF_'+k].append(v)
+
+    vcf_record.INFO.update(eff_field_lists)
+
+    return vcf_record
 
 def get_snpeff_config_path(ref_genome):
     """The parent directory of the snpeff model dir holds the config file, but

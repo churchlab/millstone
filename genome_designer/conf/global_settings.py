@@ -266,6 +266,9 @@ SNPEFF_THREADS = 2
 # If we're debugging snpeff, print the output
 SNPEFF_BUILD_DEBUG = True
 
+# Names of SnpEff summary files, which we want to delete after running.
+SNPEFF_SUMMARY_FILES = ['snpEff_genes.txt', 'snpEff_summary.html']
+
 ###############################################################################
 # Testing
 ###############################################################################
