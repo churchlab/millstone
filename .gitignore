@@ -52,3 +52,6 @@ conf/local_settings.py
 # TODO(dbg): Tests should clean these up.
 genome_designer/snpEff_genes.txt
 genome_designer/snpEff_summary.html
+
+# IDE config files
+*.sublime-project
