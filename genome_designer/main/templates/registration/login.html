@@ -1,6 +1,6 @@
-{% extends "tab_base.html" %}
+{% extends "base.html" %}
 
-{% block content%}
+{% block tabs_or_splash %}
   <h1>Login</h1>
   <form action="/accounts/login/" method="post">{% csrf_token %}
     {{ form.as_p }}
