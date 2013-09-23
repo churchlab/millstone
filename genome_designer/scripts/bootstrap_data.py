@@ -43,9 +43,6 @@ import settings
 from settings import PWD as GD_ROOT
 
 
-# This is the directory where this bootstrap script is located.
-PWD = os.path.dirname(os.path.realpath(__file__ ))
-
 # Test data.
 TEST_USERNAME = 'gmcdev'
 
@@ -294,11 +291,21 @@ def reset_database():
     """
     ### Delete the old database if it exists.
     print 'Deleting old database ...'
-    TEMP_DB_NAME = 'temp.db'
-    temp_db_name = settings.DATABASES['default']['NAME']
-    assert temp_db_name == TEMP_DB_NAME
-    tempdb_dir = os.path.split(PWD)[0]
-    tempdb_abs_path = os.path.join(tempdb_dir, TEMP_DB_NAME)
+
+    # Identify the proper absolute path.
+    temp_db_name_or_abs_path = settings.DATABASES['default']['NAME']
+    if os.path.isabs(temp_db_name_or_abs_path):
+        tempdb_abs_path = temp_db_name_or_abs_path
+    else:
+        tempdb_abs_path = os.path.join(GD_ROOT, temp_db_name_or_abs_path)
+
+    # Make sure the expect name is temp.
+    # TODO: Make it a bit harder for clients to accidentally delete their
+    # database.
+    EXPECTED_TEMP_DB_NAME = 'temp.db'
+    temp_db_name = os.path.split(tempdb_abs_path)[1]
+    assert temp_db_name == EXPECTED_TEMP_DB_NAME
+
     if os.path.exists(tempdb_abs_path):
         os.remove(tempdb_abs_path)
 
