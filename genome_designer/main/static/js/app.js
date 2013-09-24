@@ -69,6 +69,11 @@ gd.App.prototype.run = function() {
     case 'GOTERM':
       var view = new gd.GotermView();
       break;
+
+    case 'ANALYZE':
+      var model = new Backbone.Model(INIT_JS_DATA);
+      var view = new gd.TabAnalyzeBaseView({'model': model});
+      break;
   }
 };
 

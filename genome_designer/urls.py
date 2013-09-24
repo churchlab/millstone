@@ -99,4 +99,6 @@ urlpatterns = patterns('',
 
     url(r'^_/sets/exportcsv$',
             'genome_designer.main.xhr_handlers.export_variant_set_as_csv'),
+    url(r'^_/variants$',
+            'genome_designer.main.xhr_handlers.get_variant_list'),
 )

@@ -2,16 +2,27 @@
 
 {% block tab_content %}
 
-<div class="gd-analyze-dropdown dropdown btn-group">
-  <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-    Please Select Reference Genome
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu">
+  <select id="gd-analyze-select-ref-genome">
+    <option value=-1>Select reference genome</option>
     {% for ref_genome in project.referencegenome_set.all %}
-      <li><a href="#">{{ref_genome.label}}</a></li>
+      <option value="{{ref_genome.uid}}">{{ref_genome.label}}</option>
     {% endfor %}
-  </ul>
+  </select>
+
+  <select id="gd-analyze-select-search-entity" class="gd-analyze-select-search-entity"
+      style="display: none">
+    <option value="variants">Variants</option>
+    <option value="variant_sets">Variant Sets</option>
+  </select>
+
+<div id="gd-datatable-hook" style="box-sizing: border-box; padding: 50px">
 </div>
 
+<script type="text/javascript">
+  VIEW_TAG = 'ANALYZE';
+
+  {% autoescape off %}
+    INIT_JS_DATA = {{init_js_data}};
+  {% endautoescape %}
+</script>
 {% endblock %}

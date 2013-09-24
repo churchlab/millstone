@@ -11,6 +11,10 @@ from main.melt_util import variant_as_melted_list
 from scripts.variant_filter import get_variants_that_pass_filter
 
 
+# Key in the GET params containing the string for filtering the variants.
+VARIANT_FILTER_STRING_KEY = 'variant_filter_string'
+
+
 def lookup_variants(reference_genome, combined_filter_string, is_melted):
     """Lookup the Variants that match the filter specified in the params.
     """

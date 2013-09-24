@@ -15,6 +15,7 @@ from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.data_util import lookup_variants
+from main.data_util import VARIANT_FILTER_STRING_KEY
 from main.forms import ProjectForm
 from main.melt_util import variant_as_melted_list
 from main.models import AlignmentGroup
@@ -137,8 +138,14 @@ def tab_root_analyze(request, project_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
+    # Initial javascript data.
+    init_js_data = json.dumps({
+        'project': adapt_model_instance_to_frontend(project)
+    })
+
     context = {
         'project': project,
+        'init_js_data': init_js_data,
         'tab_root': TAB_ROOT__ANALYZE
     }
     return render(request, 'tab_root_analyze.html', context)
@@ -493,8 +500,6 @@ def variant_set_view(request, project_uid, variant_set_uid):
 
     return render(request, 'variant_set.html', context)
 
-
-VARIANT_FILTER_STRING_KEY = 'variant_filter_string'
 
 @login_required
 def variant_list_view(request, project_uid, ref_genome_uid):

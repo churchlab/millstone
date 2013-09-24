@@ -53,6 +53,9 @@ input.gd-form-tall {
   padding: 10px 0 10px 10px;
 }
 
+.gd-analyze-select-search-entity {
+  margin-left: 10px;
+}
 
 /* GD Checkboxes for Datatables, checkbox td changes color */
 
