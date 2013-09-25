@@ -632,7 +632,6 @@ class VariantFilterEvaluator(object):
 ###############################################################################
 
 def _get_delim_key_value_triple(raw_string, all_key_map):
-    print all_key_map
     """Attempt to parse a (delim, key, value) triple out of raw_string."""
     # Remove spaces from the string.
     raw_string = raw_string.replace(' ', '')
