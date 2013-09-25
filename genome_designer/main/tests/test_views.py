@@ -62,6 +62,14 @@ class TestViews(TestCase):
 
         # Urls for a specific entity.
         self.specific_entity_urls = [
+                # Tab base views.
+                reverse('genome_designer.main.views.project_view',
+                        args=(test_project.uid,)),
+                reverse('genome_designer.main.views.tab_root_align',
+                        args=(test_project.uid,)),
+                reverse('genome_designer.main.views.tab_root_analyze',
+                        args=(test_project.uid,)),
+
                 # Project-specific views
                 reverse('genome_designer.main.views.project_view',
                         args=(test_project.uid,)),
@@ -89,8 +97,6 @@ class TestViews(TestCase):
                         args=(test_project.uid,)),
 
                 # Variants
-                reverse('genome_designer.main.views.variant_list_view',
-                        args=(test_project.uid, ref_genome.uid)),
                 reverse('genome_designer.main.views.single_variant_view',
                         args=(test_project.uid, ref_genome.uid, variant.uid)),
 

@@ -55,8 +55,6 @@ urlpatterns = patterns('',
             'genome_designer.main.views.sample_list_view'),
 
     # Variants
-    url(r'^projects/([\w-]+)/refgenomes/([\w-]+)/variants$',
-            'genome_designer.main.views.variant_list_view'),
     url(r'^projects/([\w-]+)/refgenomes/([\w-]+)/variants/([\w-]+)$',
             'genome_designer.main.views.single_variant_view'),
 

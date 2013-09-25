@@ -16,7 +16,11 @@ def adapt_model_or_modelview_list_to_frontend(instance_list):
     """Adapts a list of model intances to the frontend represenation.
     """
     if len(instance_list) == 0:
-        return []
+        return json.dumps({
+            'obj_list': [],
+            'field_config': []
+        })
+
     instance_type = type(instance_list[0])
     return adapt_model_to_frontend(instance_type, obj_list=instance_list)
 

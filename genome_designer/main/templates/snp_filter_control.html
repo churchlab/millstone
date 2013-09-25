@@ -1,21 +1,19 @@
 <div id="gd-snp-filter-component" class="gd-filter-container">
   <div class="gd-manual-filter-input-container">
-    <form method="GET" class="form">
-      <input id="gd-new-filter-input" name="variant_filter_string" type="text"
-            class="input-large span6 gd-form-tall" placeholder="Enter new filter string"
-            {% if manual_filter_string %}
-              value="{{manual_filter_string}}"
-            {% endif %}
-            >
+    <input id="gd-new-filter-input" name="variant_filter_string" type="text"
+          class="input-large span6 gd-form-tall" placeholder="Enter new filter string"
+          {% if manual_filter_string %}
+            value="{{manual_filter_string}}"
+          {% endif %}
+          >
 
-      <input type="radio" name="melt" value=0 checked>Cast
-      <input type="radio" name="melt" value=1 {% if is_melted  %}checked{% endif %}>Melted
+    <input type="radio" name="melt" value=0 checked>Cast
+    <input type="radio" name="melt" value=1 {% if is_melted  %}checked{% endif %}>Melted
 
-      <div class="row gd-button-container">
-        <button type="submit" class="btn btn-success span2 offset5">
-          Apply Filter
-        </button>
-      </div>
-    </form>
+    <div class="row gd-button-container">
+      <button id="gd-filter-box-apply-btn" class="btn btn-success span2 offset5">
+        Apply Filter
+      </button>
+    </div>
   </div>
 </div>

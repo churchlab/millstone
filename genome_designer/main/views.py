@@ -1,4 +1,11 @@
+"""
+Views of pages.
+
+NOTE: Put new Ajax-only actions into main/xhr_handlers.py.
+"""
+
 import json
+import os
 
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
@@ -9,13 +16,10 @@ from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
-import os
 
 from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
-from main.data_util import lookup_variants
-from main.data_util import VARIANT_FILTER_STRING_KEY
 from main.forms import ProjectForm
 from main.melt_util import variant_as_melted_list
 from main.models import AlignmentGroup
@@ -31,7 +35,6 @@ from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
 from scripts.snp_callers import run_snp_calling_pipeline
-from scripts.variant_sets import add_or_remove_variants_from_set
 import settings
 
 # Tags used to indicate which tab we are on.
@@ -499,70 +502,6 @@ def variant_set_view(request, project_uid, variant_set_uid):
     }
 
     return render(request, 'variant_set.html', context)
-
-
-@login_required
-def variant_list_view(request, project_uid, ref_genome_uid):
-    # Get the project and verify that the requesting user has the
-    # right permissions.
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-    reference_genome = ReferenceGenome.objects.get(project=project,
-            uid=ref_genome_uid)
-
-    # Context to be passed to the template.
-    context = {}
-
-    # Get inputs to perform the query for Variants data.
-    if VARIANT_FILTER_STRING_KEY in request.GET:
-        manual_filter_string = request.GET.get(VARIANT_FILTER_STRING_KEY)
-    else:
-        manual_filter_string = ''
-    # TODO: Combine with saved filter string.
-    combined_filter_string = manual_filter_string
-    is_melted = request.GET.get('melt', 0) == '1'
-
-    # If we are returning data after a post and not redirecting.
-    if request.POST:
-        # Parse the data from the request body.
-        request_data = json.loads(request.body)
-
-        # Make sure the required keys are present.
-        REQUIRED_KEYS = [
-                'variantUidList',
-                'variantSetAction',
-                'variantSetUid']
-
-        if not all(key in request_data for key in REQUIRED_KEYS):
-            return HttpResponseBadRequest("Invalid request. Missing keys.")
-
-        # Add or remove the variants to the set, as variantSetAction.
-        context.update(add_or_remove_variants_from_set(**request_data))
-
-        # TODO: This code is repeated below. Really, this POST should
-        # probably be in its own method to reduce confusion.
-        context['variant_list_json'] = lookup_variants(reference_genome,
-            combined_filter_string, is_melted)
-        context['variant_set_list_json'] = adapt_model_to_frontend(VariantSet,
-                {'reference_genome__project': project})
-
-        return HttpResponse(
-                json.dumps(context),
-                content_type='application/json')
-
-    # Otherwise fill in the data to render the full page.
-    context.update({
-        'project': project,
-        'tab_root': TAB_ROOT__DATA,
-        'reference_genome': reference_genome,
-        'manual_filter_string': manual_filter_string,
-        'is_melted': is_melted,
-        'variant_list_json': lookup_variants(reference_genome,
-                combined_filter_string, is_melted),
-        'variant_set_list_json': adapt_model_to_frontend(VariantSet,
-                {'reference_genome__project': project}),
-    })
-    return render(request, 'variant_list.html', context)
 
 
 @login_required

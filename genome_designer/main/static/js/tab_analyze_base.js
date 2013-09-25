@@ -27,6 +27,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
   events: {
     'click #gd-analyze-select-ref-genome': 'handleRefGenomeSelect',
     'click .gd-variant-set-action': 'handleVariantSetClick',
+    'click #gd-filter-box-apply-btn': 'handleApplyFilterClick'
   },
 
 
@@ -38,17 +39,30 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
     // Show the entity select (i.e. Variants, VariantSets, etc.)
     // TODO: Implement support for switching among entities.
     $('#gd-analyze-select-search-entity').fadeIn();
+    $('#gd-analyze-variant-filter-container').fadeIn();
 
     // Kick off request to update the Variant data being displayed.
-    this.updateVariantList(refGenomeUid);
+    this.updateVariantList();
+  },
+
+
+  /** Handles a click on the 'Apply Filter' button. */
+  handleApplyFilterClick: function() {
+    // Update the UI to show that the new Variant list is loading.
+    $('#gd-datatable-hook-datatable_wrapper').css('opacity', 0.5);
+
+    // Kick off request to update the Variant data being displayed.
+    this.updateVariantList();
   },
 
 
   /** Kicks off the process for updating the list of displayed variants. */
-  updateVariantList: function(refGenomeUid) {
+  updateVariantList: function() {
     var requestData = {
       'projectUid': this.model.get('project').uid,
-      'refGenomeUid': refGenomeUid,
+      'refGenomeUid': this.model.get('refGenomeUid'),
+      'variantFilterString': $('#gd-new-filter-input').val(),
+      'melt': $('input:radio[name=melt]:checked').val()
     };
 
     $.get('/_/variants', requestData,
@@ -58,9 +72,17 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
 
   /** Handles the server response containing Variants data. */
   handleGetVariantListResponse: function(response) {
-    // Repopulate json data from response
-    this.variantList = JSON.parse(response.variant_list_json).obj_list;
-    this.fieldConfig = JSON.parse(response.variant_list_json).field_config;
+    // Parse Variant data.
+    var variantListData = JSON.parse(response.variant_list_json);
+    if (variantListData.obj_list.length) {
+      this.variantList = variantListData.obj_list;
+      this.fieldConfig = variantListData.field_config;
+    } else {
+      this.variantList = [],
+      this.field_config = {}
+    }
+
+    // Parse VariantSet data.
     this.variantSetList = JSON.parse(response.variant_set_list_json).obj_list;
 
     // TODO: Is there a cleaner way to create the instance but not necessarily
@@ -74,6 +96,9 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
 
     // Does this need to be called every time?
     this.drawDropdowns();
+
+    // Reset the loading view.
+    $('#gd-datatable-hook-datatable_wrapper').css('opacity', 1);
   },
 
 
