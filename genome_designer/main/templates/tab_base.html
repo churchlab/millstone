@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% block tabs_or_splash %}
-<div class="row-fluid">
   <ul class="nav nav-tabs">
     <li class="{% if tab_root == 'DATA' %}active{% endif %}">
       <a href="/projects/{{project.uid}}/data">Data</a>
@@ -36,5 +35,4 @@
       {% endif %}
     </div>
   </div>
-</div> <!--/.row-fluid -->
 {% endblock %}

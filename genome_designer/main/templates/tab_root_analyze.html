@@ -2,25 +2,29 @@
 
 {% block tab_content %}
 
-  <select id="gd-analyze-select-ref-genome">
-    <option value=-1>Select reference genome</option>
-    {% for ref_genome in project.referencegenome_set.all %}
-      <option value="{{ref_genome.uid}}">{{ref_genome.label}}</option>
-    {% endfor %}
-  </select>
+  <div class="row-fluid">
+    <select id="gd-analyze-select-ref-genome">
+      <option value=-1>Select reference genome</option>
+      {% for ref_genome in project.referencegenome_set.all %}
+        <option value="{{ref_genome.uid}}">{{ref_genome.label}}</option>
+      {% endfor %}
+    </select>
 
-  <select id="gd-analyze-select-search-entity" class="gd-analyze-select-search-entity"
-      style="display: none">
-    <option value="variants">Variants</option>
-    <option value="variant_sets">Variant Sets</option>
-  </select>
-
-  <div id="gd-analyze-variant-filter-container" style="display: none">
-    {% include "snp_filter_control.html" %}
+    <select id="gd-analyze-select-search-entity" class="gd-analyze-select-search-entity"
+        style="display: none">
+      <option value="variants">Variants</option>
+      <option value="variant_sets">Variant Sets</option>
+    </select>
   </div>
 
-<div id="gd-datatable-hook" style="box-sizing: border-box; padding: 50px">
-</div>
+  <div class="row-fluid">
+    <div id="gd-analyze-variant-filter-container" style="display: none">
+      {% include "snp_filter_control.html" %}
+    </div>
+  </div>
+
+  <div id="gd-datatable-hook">
+  </div>
 
 <script type="text/javascript">
   VIEW_TAG = 'ANALYZE';
