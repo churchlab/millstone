@@ -101,4 +101,6 @@ urlpatterns = patterns('',
             'genome_designer.main.xhr_handlers.export_variant_set_as_csv'),
     url(r'^_/variants$',
             'genome_designer.main.xhr_handlers.get_variant_list'),
+    url(r'^_/variants/modify_set_membership$',
+            'genome_designer.main.xhr_handlers.modify_variant_in_set_membership'),
 )

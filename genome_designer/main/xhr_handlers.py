@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_http_methods
 
 from main.adapters import adapt_model_to_frontend
 from main.data_util import lookup_variants
@@ -20,6 +21,7 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import VariantSet
 from scripts.variant_filter import get_variants_that_pass_filter
+from scripts.variant_sets import add_or_remove_variants_from_set
 
 
 @login_required
@@ -94,4 +96,59 @@ def get_variant_list(request):
     }
 
     return HttpResponse(json.dumps(response_data),
+            content_type='application/json')
+
+
+@require_http_methods(['POST'])
+def modify_variant_in_set_membership(request):
+    """Action that handles modifying the membership of a Variant in a
+    VariantSet.
+    """
+    request_data = json.loads(request.body)
+
+    # Parse the data from the request body.
+
+    # Make sure the required keys are present.
+    REQUIRED_KEYS = [
+            'variantUidList',
+            'variantSetAction',
+            'variantSetUid']
+
+    # Validate the request.
+    if not all(key in request_data for key in REQUIRED_KEYS):
+        return HttpResponseBadRequest("Invalid request. Missing keys.")
+
+    ref_genome_uid = request_data.get('refGenomeUid')
+    project_uid = request_data.get('projectUid')
+
+    # Get the project and verify that the requesting user has the
+    # right permissions.
+    # project = get_object_or_404(Project, owner=request.user.get_profile(),
+    #         uid=project_uid)
+    project = Project.objects.get(owner=request.user.get_profile(),
+            uid=project_uid)
+    reference_genome = ReferenceGenome.objects.get(project=project,
+            uid=ref_genome_uid)
+
+
+    context = {}
+
+    # Add or remove the variants to the set, as variantSetAction.
+    context.update(add_or_remove_variants_from_set(
+        request_data.get('variantUidList'),
+        request_data.get('variantSetAction'),
+        request_data.get('variantSetUid'),
+    ))
+
+    # TODO: Pass these from the frontend.
+    combined_filter_string = ''
+    is_melted = 0
+
+    context['variant_list_json'] = lookup_variants(reference_genome,
+        combined_filter_string, is_melted)
+    context['variant_set_list_json'] = adapt_model_to_frontend(VariantSet,
+            {'reference_genome__project': project})
+
+    return HttpResponse(
+            json.dumps(context),
             content_type='application/json')

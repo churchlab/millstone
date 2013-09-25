@@ -33,6 +33,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
   /** Handles a Reference Genome being selected from the dropdown menu. */
   handleRefGenomeSelect: function(e) {
     var refGenomeUid = $(e.target).val();
+    this.model.set('refGenomeUid', refGenomeUid);
 
     // Show the entity select (i.e. Variants, VariantSets, etc.)
     // TODO: Implement support for switching among entities.
@@ -138,10 +139,12 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
   /** Handles a click on a variant set action button. */
   handleVariantSetClick: function(ev) {
     // Post to this same view for now.
-    var postUrl = window.location.pathname;
+    var postUrl = '/_/variants/modify_set_membership';
 
     // Grab the selected rows.
     var postData = {
+        projectUid: this.model.get('project').uid,
+        refGenomeUid: this.model.get('refGenomeUid'),
         variantUidList: this.datatable.getCheckedRowUids(),
         variantSetAction: $(ev.target).data('variant-set-action'),
         variantSetUid: $(ev.target).data('variant-set-uid')
