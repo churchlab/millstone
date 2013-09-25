@@ -236,6 +236,7 @@ gd.DataTableComponent = Backbone.View.extend({
           'aaData': objList,
           'aoColumns': fieldConfig,
           'sDom': "<'row-fluid'<'span3'l><'span5'f><'span3'C><'gd-dt-cb master pull-right span1'>t<'row-fluid'<'span6'i><'span6'p>>",
+          'bFilter': false,
           'bSortClasses': false,
           'bAutoWidth': false,
           'iDisplayLength': 100,
