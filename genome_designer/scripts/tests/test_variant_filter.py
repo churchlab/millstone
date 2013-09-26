@@ -569,6 +569,41 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         self.assertEqual(6, len(variants))
 
 
+    def test_filter__key_missing_from_map(self):
+        """Tests that filtering using an unrecognized key fails when using an
+        improperly initialized key map.
+
+        This test would catch something like this:
+            https://github.com/churchlab/genome-designer-v2/issues/36
+        """
+        ref_genome_2 = ReferenceGenome.objects.create(project=self.project,
+                label='refgenome2', num_chromosomes=1, num_bases=1000)
+
+        # Initialize but don't update with source vcf, thus only global
+        # keys are available.
+        initialize_filter_key_map(ref_genome_2)
+
+        Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=ref_genome_2,
+                chromosome='chrom',
+                position=100,
+                ref_value='A',
+                alt_value='G')
+
+        # This query runs without errors.
+        QUERY_STRING = 'position < 1'
+        variants = get_variants_that_pass_filter(QUERY_STRING,
+                ref_genome_2).variant_set
+        self.assertEqual(0, len(variants))
+
+        # This throws an error since INFO_XRM is not a recognized key.
+        with self.assertRaises(ParseError):
+            QUERY_STRING = 'position < 1 & INFO_XRM > 0'
+            variants = get_variants_that_pass_filter(QUERY_STRING,
+                    ref_genome_2).variant_set
+
+
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
     """Tests for the object that encapsulates evaluation of the filter string.
     """
