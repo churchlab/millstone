@@ -25,6 +25,7 @@ The maps defined here specify:
     * the valid operations that can be performed on the types.
 """
 
+import copy
 import pprint
 
 import vcf
@@ -47,15 +48,14 @@ def initialize_filter_key_map(ref_genome):
     """Initialize the filter key map with hard-coded fields. This should
     run on a signal of new ref genome creation.
     """
-
-    ref_genome.variant_key_map = {}
-
-    ref_genome.variant_key_map[
-            'snp_caller_common_data'] = SNP_CALLER_COMMON_DATA_HARD_CODED
-    ref_genome.variant_key_map[
-            'snp_evidence_data'] = SNP_EVIDENCE_HARD_CODED
-
+    ref_genome.variant_key_map = {
+        'snp_caller_common_data': copy.deepcopy(
+                SNP_CALLER_COMMON_DATA_HARD_CODED),
+        'snp_evidence_data': copy.deepcopy(
+                SNP_EVIDENCE_HARD_CODED)
+    }
     ref_genome.save()
+
 
 def update_filter_key_map(ref_genome, source_vcf):
     """Updates a reference genome's variant key map dictionary with

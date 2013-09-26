@@ -2,6 +2,7 @@
 Tests for variant_filter.py.
 """
 
+import os
 import pickle
 
 from django.contrib.auth.models import User
@@ -18,6 +19,7 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
+from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from scripts.variant_filter import EXPRESSION_REGEX
 from scripts.variant_filter import SAMPLE_SCOPE_REGEX
 from scripts.variant_filter import SAMPLE_SCOPE_REGEX_NAMED
@@ -27,6 +29,11 @@ from scripts.variant_filter import get_variants_that_pass_filter
 from scripts.variant_filter import symbol_generator
 from scripts.variant_filter import ParseError
 from scripts.variant_filter import VariantFilterEvaluator
+from settings import PWD as GD_ROOT
+
+TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
+
+TEST_UNANNOTATED_VCF = os.path.join(TEST_DIR, 'bwa_align_unannotated.vcf')
 
 
 class BaseTestVariantFilterTestCase(TestCase):
@@ -40,13 +47,15 @@ class BaseTestVariantFilterTestCase(TestCase):
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(project=self.project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
+
+        # Make sure the reference genome has the required vcf keys.
         initialize_filter_key_map(self.ref_genome)
+        update_filter_key_map(self.ref_genome, TEST_UNANNOTATED_VCF)
 
         self.vcf_dataset = Dataset.objects.create(
                 label='test_data_set',
                 type=Dataset.TYPE.VCF_FREEBAYES,
-                filesystem_location='fake location')
-
+                filesystem_location=TEST_UNANNOTATED_VCF)
 
 
 class TestVariantFilter(BaseTestVariantFilterTestCase):
