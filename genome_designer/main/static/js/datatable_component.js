@@ -33,9 +33,10 @@ gd.DataTableComponent = Backbone.View.extend({
 
 
   /** Used for updating an already rendered datatable with new data. */
-  update: function(newObjList) {
+  update: function(newObjList, newFieldConfig) {
     this.displayableObjList = this.makeDisplayableObjectList(newObjList);
-    this.updateDatatable(this.displayableObjList, this.displayableFieldConfig);
+    this.displayableFieldConfig = this.makeDisplayableFieldConfig(newFieldConfig);
+    this.render();
   },
 
 
@@ -221,34 +222,32 @@ gd.DataTableComponent = Backbone.View.extend({
    *        sTitle: title for the column.
    */
   updateDatatable: function(objList, fieldConfig) {
-    if (this.datatable == null) {
-      // First time we are drawing this table.
-
-      // Create a unique id for the datatable.
-      this.datatableId = this.$el.attr('id') + '-datatable';
-      this.$el.html(
-          '<table cellpadding="0" cellspacing="0" border="0" '+
-              'class="table table-striped table-bordered"' +
-              'id=' + this.datatableId + '>' +
-          '</table>');
-
-      this.datatable = $('#' + this.datatableId).dataTable({
-          'aaData': objList,
-          'aoColumns': fieldConfig,
-          'sDom': "<'row-fluid'<'span3'l><'span5'f><'span3'C><'gd-dt-cb master pull-right span1'>t<'row-fluid'<'span6'i><'span6'p>>",
-          'bFilter': false,
-          'bSortClasses': false,
-          'bAutoWidth': false,
-          'iDisplayLength': 100,
-          'aLengthMenu': [[10, 50, 100, 500, -1], [10, 50, 100, 500, "All"]],
-          'sPaginationType': 'bootstrap',
-          'fnCreatedRow': this.listenToCheckboxes()
-      });
-    } else {
-      // We are redrawing an existing datatable.
+    // Clear the existing dattable.
+    if (this.datatable != null) {
       this.datatable.fnClearTable();
-      this.datatable.fnAddData(objList);
     }
+
+    // Draw the table.
+    // Create a unique id for the datatable.
+    this.datatableId = this.$el.attr('id') + '-datatable';
+    this.$el.html(
+        '<table cellpadding="0" cellspacing="0" border="0" '+
+            'class="table table-striped table-bordered"' +
+            'id=' + this.datatableId + '>' +
+        '</table>');
+
+    this.datatable = $('#' + this.datatableId).dataTable({
+        'aaData': objList,
+        'aoColumns': fieldConfig,
+        'sDom': "<'row-fluid'<'span3'l><'span5'f><'span3'C><'gd-dt-cb master pull-right span1'>t<'row-fluid'<'span6'i><'span6'p>>",
+        'bFilter': false,
+        'bSortClasses': false,
+        'bAutoWidth': false,
+        'iDisplayLength': 100,
+        'aLengthMenu': [[10, 50, 100, 500, -1], [10, 50, 100, 500, "All"]],
+        'sPaginationType': 'bootstrap',
+        'fnCreatedRow': this.listenToCheckboxes()
+    });
 
     // Initialize options for action dropdown menu (next to master checkbox).
     this.createMasterCheckbox();

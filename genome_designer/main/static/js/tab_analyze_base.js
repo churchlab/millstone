@@ -78,8 +78,8 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
       this.variantList = variantListData.obj_list;
       this.fieldConfig = variantListData.field_config;
     } else {
-      this.variantList = [],
-      this.field_config = {}
+      this.variantList = [];
+      this.fieldConfig = {};
     }
 
     // Parse VariantSet data.
@@ -92,7 +92,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
     }
 
     // Redraw the datatable.
-    this.datatable.update(this.variantList);
+    this.datatable.update(this.variantList, this.fieldConfig);
 
     // Does this need to be called every time?
     this.drawDropdowns();

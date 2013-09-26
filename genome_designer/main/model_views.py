@@ -26,7 +26,7 @@ class MeltedVariantView(BaseModelView):
     """View of a Variant when showing one row per VariantToExperimentSample.
     """
 
-    def __init__(self, variant, variant_caller_common_data, variant_evidence):
+    def __init__(self, variant, variant_caller_common_data=None, variant_evidence=None):
         self.variant = variant
         self.variant_caller_common_data = variant_caller_common_data
         self.variant_evidence = variant_evidence
@@ -38,12 +38,13 @@ class MeltedVariantView(BaseModelView):
                 self.variant_evidence
         ]
         for delegate in delegate_order:
-            if hasattr(delegate, attr):
-                return getattr(delegate, attr)
-            elif hasattr(delegate, 'data') and attr in delegate.data:
-                return delegate.data[attr]
-        raise AttributeError(
-            "MeltedVariantView object has no attribute %s" % attr)
+            if delegate is not None:
+                if hasattr(delegate, attr):
+                    return getattr(delegate, attr)
+                elif hasattr(delegate, 'data') and attr in delegate.data:
+                    return delegate.data[attr]
+        # Default.
+        return 'undefined'
 
     @classmethod
     def get_field_order(clazz):
