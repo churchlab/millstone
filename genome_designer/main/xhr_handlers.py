@@ -99,6 +99,7 @@ def get_variant_list(request):
             content_type='application/json')
 
 
+@login_required
 @require_http_methods(['POST'])
 def modify_variant_in_set_membership(request):
     """Action that handles modifying the membership of a Variant in a
