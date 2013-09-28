@@ -508,15 +508,17 @@ def variant_set_view(request, project_uid, variant_set_uid):
 def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
+    reference_genome = ReferenceGenome.objects.get(project=project,
+        uid=ref_genome_uid)
 
     variant = get_object_or_404(Variant,
             uid=variant_uid,
-            reference_genome__uid=ref_genome_uid,
-            reference_genome__project=project)
+            reference_genome=reference_genome)
 
     melted_variant_list = variant_as_melted_list(variant)
     fe_melted_variant_list = adapt_model_or_modelview_list_to_frontend(
-            melted_variant_list)
+            melted_variant_list,
+            variant_key_map=reference_genome.variant_key_map)
 
     context = {
         'project': project,

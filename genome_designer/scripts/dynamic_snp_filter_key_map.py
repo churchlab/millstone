@@ -43,15 +43,19 @@ SNP_EVIDENCE_HARD_CODED = {
     'is_het': {'type': 'Boolean', 'num': 1}
 }
 
+MAP_KEY__COMMON_DATA = 'snp_caller_common_data'
+
+MAP_KEY__EVIDENCE = 'snp_evidence_data'
+
 
 def initialize_filter_key_map(ref_genome):
     """Initialize the filter key map with hard-coded fields. This should
     run on a signal of new ref genome creation.
     """
     ref_genome.variant_key_map = {
-        'snp_caller_common_data': copy.deepcopy(
+        MAP_KEY__COMMON_DATA: copy.deepcopy(
                 SNP_CALLER_COMMON_DATA_HARD_CODED),
-        'snp_evidence_data': copy.deepcopy(
+        MAP_KEY__EVIDENCE: copy.deepcopy(
                 SNP_EVIDENCE_HARD_CODED)
     }
     ref_genome.save()
@@ -82,29 +86,22 @@ def update_filter_key_map(ref_genome, source_vcf):
         except:
             raise InputError('Bad source_vcf arg: not filename or vcf_reader')
 
-    # Write the map with the keys for SNPCallerCommonData
-    snp_caller_common_data_map = ref_genome.variant_key_map[
-            'snp_caller_common_data']
+    common_data_map = ref_genome.variant_key_map[MAP_KEY__COMMON_DATA]
     for orig_key, value in vcf_reader.infos.iteritems():
         key = 'INFO_' + orig_key
         inner_map = {}
         inner_map['type'] = value.type
         inner_map['num'] = value.num
-        snp_caller_common_data_map[key] = inner_map
+        common_data_map[key] = inner_map
+    ref_genome.variant_key_map[MAP_KEY__COMMON_DATA].update(common_data_map)
 
-    # Write the map with the keys for SNPEvidence
-    snp_evidence_data_map = ref_genome.variant_key_map[
-            'snp_evidence_data']
+    evidence_data_map = ref_genome.variant_key_map[MAP_KEY__EVIDENCE]
     for orig_key, value in vcf_reader.formats.iteritems():
         key = orig_key
         inner_map = {}
         inner_map['type'] = value.type
         inner_map['num'] = value.num
-        snp_evidence_data_map[key] = inner_map
+        evidence_data_map[key] = inner_map
+    ref_genome.variant_key_map[MAP_KEY__EVIDENCE].update(evidence_data_map)
 
-    # Test the generated file by running imports.
-    ref_genome.variant_key_map['snp_caller_common_data'].update(
-            snp_caller_common_data_map)
-    ref_genome.variant_key_map['snp_evidence_data'].update(
-           snp_evidence_data_map)
     ref_genome.save()

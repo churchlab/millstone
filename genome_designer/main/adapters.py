@@ -12,8 +12,10 @@ from django.db.models import ManyToManyField
 from django.db.models import Model
 
 
-def adapt_model_or_modelview_list_to_frontend(instance_list):
-    """Adapts a list of model intances to the frontend represenation.
+def adapt_model_or_modelview_list_to_frontend(instance_list, **kwargs):
+    """Adapts a list of model instances to the frontend represenation.
+
+    All instances in the list must be of the same type.
     """
     if len(instance_list) == 0:
         return json.dumps({
@@ -22,10 +24,11 @@ def adapt_model_or_modelview_list_to_frontend(instance_list):
         })
 
     instance_type = type(instance_list[0])
-    return adapt_model_to_frontend(instance_type, obj_list=instance_list)
+    return adapt_model_to_frontend(instance_type, obj_list=instance_list,
+            **kwargs)
 
 
-def adapt_model_to_frontend(model, filters={}, obj_list=None):
+def adapt_model_to_frontend(model, filters={}, obj_list=None, **kwargs):
     """Converts django models to frontend format.
 
     Calls on the model's get_field_order method to know which fields that
@@ -54,11 +57,13 @@ def adapt_model_to_frontend(model, filters={}, obj_list=None):
 
     # A list of dicts with object data, where each dict is one object
     # and all the fields required for front-end display.
-    fe_obj_list = [adapt_model_instance_to_frontend(obj) for obj in obj_list]
+    fe_obj_list = [
+            adapt_model_instance_to_frontend(obj, **kwargs)
+            for obj in obj_list]
 
     # Get a list of fields required for displaying the objects, in the order
     # in which they should be displayed.
-    field_dict_list = model.get_field_order()
+    field_dict_list = model.get_field_order(**kwargs)
 
     # Each field is a dict with two keys, 'field' for field name and 'verbose'
     # for display name. Get each. If 'verbose' is missing, then make verbose
@@ -86,7 +91,7 @@ def adapt_model_to_frontend(model, filters={}, obj_list=None):
     })
 
 
-def adapt_model_instance_to_frontend(model_instance, field_info={}):
+def adapt_model_instance_to_frontend(model_instance, field_info={}, **kwargs):
     """Adapts a single model instance to the frontend representation.
 
     Args:
@@ -107,14 +112,15 @@ def adapt_model_instance_to_frontend(model_instance, field_info={}):
     model_type = type(model_instance)
 
     # The visible fields of the model.
-    visible_field_list = [f['field'] for f in model_type.get_field_order()]
-    visible_field_dict = {f['field'] : f for f in model_type.get_field_order()}
-
+    visible_field_names = [f['field'] for f in model_type.get_field_order(**kwargs)]
+    visible_field_dict = {f['field'] : f for f in model_type.get_field_order(**kwargs)}
 
     # Get (key, value) pairs for visible fields.
-    visible_field_pairs = [(field, get_model_field_fe_representation(
-        model_instance, field, visible_field_dict[field])) for field
-        in visible_field_list]
+    visible_field_pairs = [
+            (field, get_model_field_fe_representation(
+                    model_instance, field, visible_field_dict[field],
+                    **kwargs))
+            for field in visible_field_names]
 
     # Other values.
     other_pairs = []
@@ -133,7 +139,8 @@ def adapt_model_instance_to_frontend(model_instance, field_info={}):
     return dict(visible_field_pairs + other_pairs)
 
 
-def get_model_field_fe_representation(model_obj, field, field_info={}):
+def get_model_field_fe_representation(model_obj, field, field_info={},
+        **kwargs):
     """Returns the best frontend representation for a model field that is
     implemented.
 

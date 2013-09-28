@@ -6,7 +6,6 @@ only pages, and xhr_handlers.py, which are intended to respond to AJAX
 requests.
 """
 
-from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.melt_util import variant_as_melted_list
 from scripts.variant_filter import get_variants_that_pass_filter
 
@@ -17,6 +16,9 @@ VARIANT_FILTER_STRING_KEY = 'variantFilterString'
 
 def lookup_variants(reference_genome, combined_filter_string, is_melted):
     """Lookup the Variants that match the filter specified in the params.
+
+    Returns:
+        List of Variant or MeltedVariantView objects.
     """
     # Apply the filters.
     filter_result = get_variants_that_pass_filter(
@@ -35,4 +37,4 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted):
     # TODO: I'm confused where we have sets and where we have lists.
     variant_list = list(variant_list)
 
-    return adapt_model_or_modelview_list_to_frontend(variant_list)
+    return variant_list

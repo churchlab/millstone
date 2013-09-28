@@ -20,6 +20,12 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
 
     // List of variant sets belonging to the user.
     this.variantSetList = null;
+
+    // Map of variant keys.
+    this.variantKeyMap = null;
+
+    // Keys that should be visible.
+    this.visibleKeyNames = null;
   },
 
 
@@ -27,13 +33,20 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
   events: {
     'click #gd-analyze-select-ref-genome': 'handleRefGenomeSelect',
     'click .gd-variant-set-action': 'handleVariantSetClick',
-    'click #gd-filter-box-apply-btn': 'handleApplyFilterClick'
+    'click #gd-filter-box-apply-btn': 'handleApplyFilterClick',
+    'click #gd-filter-field-select-btn': 'handleShowFieldSelect'
   },
 
 
-  /** Handles a Reference Genome being selected from the dropdown menu. */
-  handleRefGenomeSelect: function(e) {
-    var refGenomeUid = $(e.target).val();
+  /**
+   * Handles a Reference Genome being selected from the dropdown menu.
+   * @param {Event} e Event object if this is being called in response to an
+   *     event. Ignored if opt_refGenomeUid is provided.
+   * @param {string=} opt_refGenomeUid The variant set dictionary object from the
+   *     django adapter.
+   */
+  handleRefGenomeSelect: function(e, opt_refGenomeUid) {
+    var refGenomeUid = opt_refGenomeUid || $(e.target).val();
     this.model.set('refGenomeUid', refGenomeUid);
 
     // Show the entity select (i.e. Variants, VariantSets, etc.)
@@ -48,9 +61,6 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
 
   /** Handles a click on the 'Apply Filter' button. */
   handleApplyFilterClick: function() {
-    // Update the UI to show that the new Variant list is loading.
-    $('#gd-datatable-hook-datatable_wrapper').css('opacity', 0.5);
-
     // Kick off request to update the Variant data being displayed.
     this.updateVariantList();
   },
@@ -58,12 +68,19 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
 
   /** Kicks off the process for updating the list of displayed variants. */
   updateVariantList: function() {
+    // Update the UI to show that the new Variant list is loading.
+    $('#gd-datatable-hook-datatable_wrapper').css('opacity', 0.5);
+
     var requestData = {
       'projectUid': this.model.get('project').uid,
       'refGenomeUid': this.model.get('refGenomeUid'),
       'variantFilterString': $('#gd-new-filter-input').val(),
       'melt': $('input:radio[name=melt]:checked').val()
     };
+
+    if (this.visibleKeyNames) {
+      requestData['visibleKeyNames'] = JSON.stringify(this.visibleKeyNames);
+    }
 
     $.get('/_/variants', requestData,
         _.bind(this.handleGetVariantListResponse, this));
@@ -84,6 +101,9 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
 
     // Parse VariantSet data.
     this.variantSetList = JSON.parse(response.variant_set_list_json).obj_list;
+
+    // Grab the field key map data.
+    this.variantKeyMap = JSON.parse(response.variant_key_filter_map_json);
 
     // TODO: Is there a cleaner way to create the instance but not necessarily
     // draw it?
@@ -228,5 +248,28 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
         'alert-warn alert-info alert-error');
     $('#gd-variant-set-action-submit-alert').addClass('alert-' + alertType);
     $('#gd-variant-set-action-submit-alert').show();
+  },
+
+
+  /** Creates the component for selecting which fields are being displayed. */
+  handleShowFieldSelect: function() {
+    var variantFieldSelectModel = new Backbone.Model({
+        'variantKeyMap': this.variantKeyMap
+    });
+    this.variantFieldSelect = new gd.VariantFieldSelectComponent(
+        {'model': variantFieldSelectModel});
+    this.listenTo(this.variantFieldSelect, 'updateSelectedFields',
+        _.bind(this.handleUpdateSelectedFields, this));
+  },
+
+
+  /** Creates the component for selecting which fields are being displayed. */
+  handleUpdateSelectedFields: function(selectedKeyNames) {
+    this.variantFieldSelect.hide();
+
+    this.visibleKeyNames = selectedKeyNames;
+
+    // Kick off a request to update the view.
+    this.updateVariantList();
   }
 });

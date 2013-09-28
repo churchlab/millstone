@@ -320,7 +320,7 @@ class Project(Model):
             shutil.rmtree(data_dir)
 
     @classmethod
-    def get_field_order(clazz):
+    def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
@@ -443,7 +443,7 @@ class ReferenceGenome(Model):
             type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists()
 
     @classmethod
-    def get_field_order(clazz):
+    def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
@@ -504,7 +504,7 @@ class ExperimentSample(Model):
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
     @classmethod
-    def get_field_order(clazz):
+    def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
@@ -605,7 +605,7 @@ class AlignmentGroup(Model):
                 args=(self.reference_genome.project.uid, self.uid))
 
     @classmethod
-    def get_field_order(clazz):
+    def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
@@ -658,7 +658,7 @@ class ExperimentSampleToAlignment(Model):
                         '">error</a>')
 
     @classmethod
-    def get_field_order(clazz):
+    def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
@@ -724,7 +724,7 @@ class Variant(Model):
                         self.reference_genome.uid, self.uid))
 
     @classmethod
-    def get_field_order(clazz):
+    def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
@@ -763,6 +763,24 @@ class VariantCallerCommonData(Model):
     # Catch-all key-value data store.
     data = JSONField()
 
+    def __getattr__(self, name):
+        """Automatically called if an attribute is not found in the typical
+        place.
+
+        Our implementation checks the data dict, return the string 'undefined'
+        if the value is not found.
+
+        NOTE: Typically __getattr__ should raise an AttributeError if the value
+        cannot be found, but the noisy nature or our data means returning
+        'undefined' is more correct.
+
+        See: http://docs.python.org/2/reference/datamodel.html#object.__getattr__
+        """
+        try:
+            return pickle.loads(self.data[name])
+        except:
+            raise AttributeError
+
     def as_dict(self):
         """Converts a common data object into a dictionary from key to cleaned
         values.
@@ -781,9 +799,14 @@ class VariantCallerCommonData(Model):
         return get_flattened_unpickled_data(self.data)
 
     @classmethod
-    def get_field_order(clazz):
-        return []
+    def get_field_order(clazz, **kwargs):
+        field_list = []
 
+        if 'additional_field_list' in kwargs:
+            field_list.extend([
+                {'field': field} for field in kwargs['additional_field_list']])
+
+        return field_list
 
 
 class VariantEvidence(Model):
@@ -806,11 +829,23 @@ class VariantEvidence(Model):
     # TODO: Extract interesting keys (e.g. gt_type) into their own SQL fields.
     data = JSONField()
 
-    @property
-    def gt_type(self):
-        if 'gt_type' in self.data:
-            return pickle.loads(self.data['gt_type'])
-        return None
+    def __getattr__(self, name):
+        """Automatically called if an attribute is not found in the typical
+        place.
+
+        Our implementation checks the data dict, return the string 'undefined'
+        if the value is not found.
+
+        NOTE: Typically __getattr__ should raise an AttributeError if the value
+        cannot be found, but the noisy nature or our data means returning
+        'undefined' is more correct.
+
+        See: http://docs.python.org/2/reference/datamodel.html#object.__getattr__
+        """
+        try:
+            return pickle.loads(self.data[name])
+        except:
+            raise AttributeError
 
     @property
     def sample_uid(self):
@@ -823,8 +858,17 @@ class VariantEvidence(Model):
         return get_flattened_unpickled_data(self.data)
 
     @classmethod
-    def get_field_order(clazz):
-        return [{'field':'gt_type'}, {'field':'sample_uid'}]
+    def get_field_order(clazz, **kwargs):
+        field_list = [
+            {'field':'gt_type'},
+            {'field':'sample_uid'},
+        ]
+
+        if 'additional_field_list' in kwargs:
+            field_list.extend([
+                {'field': field} for field in kwargs['additional_field_list']])
+
+        return field_list
 
 
 ###############################################################################
@@ -847,7 +891,7 @@ class VariantToVariantSet(Model):
             blank=True, null=True)
 
     @classmethod
-    def get_field_order(clazz):
+    def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
@@ -894,7 +938,7 @@ class VariantSet(Model):
         return self.label
 
     @classmethod
-    def get_field_order(clazz):
+    def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
