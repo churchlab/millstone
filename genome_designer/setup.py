@@ -58,7 +58,7 @@ TOOLS_URLS = {
 }
 
 def setup():
-    #download_tools()
+    download_tools()
     setup_jbrowse()
 
 def download_tools():
@@ -153,7 +153,7 @@ def setup_jbrowse():
 if __name__ == '__main__':
 
     # Placeholder for a more comprehensive command line arg parsing:
-    if sys.argv[1] == 'jbrowse':
+    if len(sys.argv) and sys.argv[1] == 'jbrowse':
         setup_jbrowse()
     else:
         setup()
