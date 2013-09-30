@@ -26,12 +26,15 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
 
     // Keys that should be visible.
     this.visibleKeyNames = null;
+
+    // Manually listen to change events.
+    $('#gd-analyze-select-ref-genome').change(
+        _.bind(this.handleRefGenomeSelect, this));
   },
 
 
   /** Backbone sugar for registering event listeners. */
   events: {
-    'click #gd-analyze-select-ref-genome': 'handleRefGenomeSelect',
     'click .gd-variant-set-action': 'handleVariantSetClick',
     'click #gd-filter-box-apply-btn': 'handleApplyFilterClick',
     'click #gd-filter-field-select-btn': 'handleShowFieldSelect'
