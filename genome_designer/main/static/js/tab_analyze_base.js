@@ -9,6 +9,8 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
 
   /** Backbone initialize method. */
   initialize: function() {
+    alert("intitialize is being run now!")
+
     // The DataTableComponent currently in view.
     this.datatable = null;
 

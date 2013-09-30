@@ -6,7 +6,8 @@
     <select id="gd-analyze-select-ref-genome">
       <option value=-1>Select reference genome</option>
       {% for ref_genome in project.referencegenome_set.all %}
-        <option value="{{ref_genome.uid}}">{{ref_genome.label}}</option>
+        <option class="gd-id-ref-genome-option" value="{{ref_genome.uid}}">{{ref_genome.label}}</option>
+
       {% endfor %}
     </select>
 

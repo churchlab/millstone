@@ -29,11 +29,12 @@ from scripts.variant_filter import get_variants_that_pass_filter
 from scripts.variant_filter import symbol_generator
 from scripts.variant_filter import ParseError
 from scripts.variant_filter import VariantFilterEvaluator
+from scripts.variant_filter import _get_per_alt_dict
 from settings import PWD as GD_ROOT
 
 TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
 
-TEST_UNANNOTATED_VCF = os.path.join(TEST_DIR, 'bwa_align_unannotated.vcf')
+TEST_ANNOTATED_VCF = os.path.join(TEST_DIR, 'bwa_align_annotated.vcf')
 
 
 class BaseTestVariantFilterTestCase(TestCase):
@@ -50,12 +51,12 @@ class BaseTestVariantFilterTestCase(TestCase):
 
         # Make sure the reference genome has the required vcf keys.
         initialize_filter_key_map(self.ref_genome)
-        update_filter_key_map(self.ref_genome, TEST_UNANNOTATED_VCF)
+        update_filter_key_map(self.ref_genome, TEST_ANNOTATED_VCF)
 
         self.vcf_dataset = Dataset.objects.create(
                 label='test_data_set',
                 type=Dataset.TYPE.VCF_FREEBAYES,
-                filesystem_location=TEST_UNANNOTATED_VCF)
+                filesystem_location=TEST_ANNOTATED_VCF)
 
 
 class TestVariantFilter(BaseTestVariantFilterTestCase):
@@ -405,7 +406,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 alt_value='G')
 
         raw_common_data_dict = {
-                'INFO_XRM': pickle.dumps(0.12),
+                'INFO_XRM': pickle.dumps(0.12)
         }
         common_data_obj = VariantCallerCommonData.objects.create(
                 variant=variant,
@@ -491,6 +492,99 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         variants = result.variant_set
         self.assertEqual(1, len(variants))
 
+    def test_filter__common_data_per_alt(self):
+        """Test filtering for common data of type '-1', 
+        with different values for each alternate allele. 
+        """
+
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=2,
+                ref_value='A',
+                alt_value=['G','T'])
+        raw_common_data_dict = {
+                'INFO_XRM': pickle.dumps(0.12),
+                'INFO_EFF_EFFECT': pickle.dumps(['NON_SYNONYMOUS_CODING','NON_SYNONYMOUS_CODING'])
+        }
+        common_data_obj = VariantCallerCommonData.objects.create(
+                variant=variant,
+                source_dataset=self.vcf_dataset,
+                data=raw_common_data_dict
+        )
+        sample_obj = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample',
+                group='Plate 1',
+                well='A01',
+                num_reads=100,
+        )
+        raw_sample_data_dict = {
+                'called': True,
+                'gt_type': pickle.dumps(2),
+                'GT': pickle.dumps('1/1')
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+        sample_obj_2 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample 2',
+                group='Plate 1',
+                well='A02',
+                num_reads=100,
+        )
+        raw_sample_data_dict_2 = {
+                'called': True,
+                'gt_type': pickle.dumps(0),
+                'GT': pickle.dumps('0/0')
+        }
+        VariantEvidence.objects.create(
+                uid=1000,
+                experiment_sample=sample_obj_2,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict_2)
+
+        sample_obj_3 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample 3',
+                group='Plate 1',
+                well='A03',
+                num_reads=100
+        )
+        raw_sample_data_dict = {
+                'called': False,
+                'gt_type': pickle.dumps(1),
+                'GT': pickle.dumps('2/0')
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj_3,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+
+        per_alt_dict, per_alt_types = _get_per_alt_dict(
+                'INFO_EFF_EFFECT', variant, 
+                VariantEvidence.objects.get(uid=1000), 
+                self.ref_genome.variant_key_map['snp_caller_common_data'])
+
+        assert('INFO_EFF_EFFECT' in per_alt_dict.keys())
+        assert('NON_SYNONYMOUS_CODING' in per_alt_dict['INFO_EFF_EFFECT'])
+
+        QUERY_STRING = '(position < 5 & INFO_EFF_EFFECT = NON_SYNONYMOUS_CODING)'
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))  
+
+        passing_sample_ids = result.variant_id_to_metadata_dict[variant.id][
+                'passing_sample_ids']
+
+        #This should be 2 and not three, since one of our samples is wild type
+        #This is currently broken. 
+        self.assertEqual(2, len(passing_sample_ids))
 
     def test_filter__sets(self):
         """Test filtering relative to sets.
