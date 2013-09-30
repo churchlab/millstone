@@ -70,7 +70,16 @@ def update_filter_key_map(ref_genome, source_vcf):
 
     We store a map of these types in a JSONField object per reference-genome.
 
-    TODO: Handle potential INFO ID name collisions. Probably won't happen. ;)
+    TODO: Handle potential INFO ID name collisions (i.e. two different
+        vcf files that have two non-identical ID fields with the same name.
+        Probably won't happen. ;)
+
+    Note about 'num': it's handled by pyvcf in a dict called `field_counts`, and
+    'A' is stored as -1, which means that a single value is held for every
+    ALTERATE allele. 'G' is stored as -2, which means there is a different value
+    for every possible  genotype combination of alleles (which would be a choose
+    n where n is the called  ploidy and a is the number of alleles). 
+
     """
 
     #First try the source_vcf as a vcf file
