@@ -40,32 +40,6 @@ be necessary to install specific packages first.
 NOTE: Watch changes to requirements.txt and re-run the install command when
 collaborators add new dependencies.
 
-### Async Queue - Celery and RabbitMQ
-
-Asynchronous processing is necessary for many of the analysis tasks in this
-application.  We use the open source project celery since it is being actively
-developed and has a library for integrating with Django. Celery requires a
-message broker, for which we use RabbitMQ which is the default for Celery.
-
-1. Install Celery
-
-    The `celery` and `django-celery` packages are listed in
-    requirements.txt and should be installed in your virtualenv following the
-    instructions above.
-
-2. Install RabbitMQ - On Ubuntu, install using sudo:
-
-        $ sudo apt-get install rabbitmq-server
-
-    Full instructions are [here](http://www.rabbitmq.com/download.html).
-
-    On Mac, homebrew can be used:
-
-        $ sudo brew install rabbitmq
-
-    Mac instructions are [here](https://www.rabbitmq.com/install-standalone-mac.html).
-
-
 ### Git Submodules
 
 We currently submodule `jbrowse` and perhaps will do so with other tools in the
@@ -81,6 +55,8 @@ This will pull the submodules and also pull any of their submodules.
 
 After installing JBrowse via the Git submodule route described above, you
 need to do the following to get JBrowse up and running:
+
+*NOTE:* Only step 1 is necessary to get the tests to pass. The later steps need to be updated.
 
 1. Run the JBrowse setup script inside the `jbrowse` dir.
 
@@ -106,6 +82,7 @@ need to do the following to get JBrowse up and running:
         $ sudo service nginx restart
 
    Mac:
+
         $ ln -sfv /usr/local/opt/nginx/*.plist ~/Library/LaunchAgents
         $ launchctl load ~/Library/LaunchAgents/homebrew.mxcl.nginx.plist
 
@@ -117,6 +94,35 @@ If upon running the Genome Designer application or its tests you observe errors
 related to missing perl modules, you can install them with `cpanm`, e.g.:
 
         $ cpanm local::lib
+
+
+### Async Queue - RabbitMQ backend for Celery (optional for dev)
+
+*NOTE:* Tests sould pass without RabbitMQ setup so okay to skip this at first.
+
+Asynchronous processing is necessary for many of the analysis tasks in this
+application.  We use the open source project celery since it is being actively
+developed and has a library for integrating with Django. Celery requires a
+message broker, for which we use RabbitMQ which is the default for Celery.
+
+1. Install Celery
+
+    The `celery` and `django-celery` packages are listed in
+    requirements.txt and should be installed in your virtualenv following the
+    instructions above.
+
+2. Install RabbitMQ - On Ubuntu, install using sudo:
+
+        $ sudo apt-get install rabbitmq-server
+
+    Full instructions are [here](http://www.rabbitmq.com/download.html).
+
+    On Mac, homebrew can be used:
+
+        $ sudo brew install rabbitmq
+
+    Mac instructions are [here](https://www.rabbitmq.com/install-standalone-mac.html).
+
 
 
 ### Other third-party tools
