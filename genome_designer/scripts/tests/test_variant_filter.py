@@ -540,7 +540,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict_2 = {
                 'called': True,
                 'gt_type': pickle.dumps(0),
-                'GT': pickle.dumps('0/0')
+                'GT': pickle.dumps('1/1')
         }
         VariantEvidence.objects.create(
                 uid=1000,
@@ -558,7 +558,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict = {
                 'called': False,
                 'gt_type': pickle.dumps(1),
-                'GT': pickle.dumps('2/0')
+                'GT': pickle.dumps('0/0')
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj_3,
@@ -567,8 +567,8 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
 
         per_alt_dict, per_alt_types = _get_per_alt_dict(
-                'INFO_EFF_EFFECT', variant, 
-                VariantEvidence.objects.get(uid=1000), 
+                'INFO_EFF_EFFECT', variant,
+                VariantEvidence.objects.get(uid=1000),
                 self.ref_genome.variant_key_map['snp_caller_common_data'])
 
         assert('INFO_EFF_EFFECT' in per_alt_dict.keys())
@@ -577,14 +577,15 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         QUERY_STRING = '(position < 5 & INFO_EFF_EFFECT = NON_SYNONYMOUS_CODING)'
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
+
+        print result.variant_id_to_metadata_dict
+
         self.assertEqual(1, len(variants))  
 
         passing_sample_ids = result.variant_id_to_metadata_dict[variant.id][
                 'passing_sample_ids']
 
-        # TODO: This should be 2 and not three, since one of our samples is wild
-        # type This is currently broken, so commenting it out.
-        # self.assertEqual(2, len(passing_sample_ids))
+        self.assertEqual(2, len(passing_sample_ids))
 
     def test_filter__sets(self):
         """Test filtering relative to sets.

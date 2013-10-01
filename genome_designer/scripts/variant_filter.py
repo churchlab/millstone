@@ -527,15 +527,25 @@ class VariantFilterEvaluator(object):
         for triple in remaining_triples:
             (delim, key, value) = triple
 
-            # The only keys we want to evaluate for samples as well as 
-            # variants are the -1 keys - treat them almost as if they   
+            # The only keys we want to evaluate for samples as well as variants
+            # are the -1 per-alternate keys - treat them as if they
             # were in variant_evidence_map and all_common_data
             is_per_alt_key = (key in self.variant_caller_common_map 
-                and self.variant_caller_common_map[key]['num'] == '-1')
+                and self.variant_caller_common_map[key]['num'] == -1)
 
             passing_variant_list = []
             for variant in variant_list:
-                if key in self.variant_caller_common_map:
+
+                # TODO: "and not is_per_alt_key" means that we are treating -1
+                # per-alt keys ENTIRELY as if they were specific to samples.
+                # This fine EXCEPT in cases where there exists an INFO value
+                # which none of the samples have. The expected result would be
+                # to return the variant but no samples, which will not happen 
+                # if we do it this way. 
+                # That being said, that would be a really weird edge case which
+                # I'm not that worried about for now.
+
+                if key in self.variant_caller_common_map and not is_per_alt_key:
                     _assert_delim_for_key(self.variant_caller_common_map,
                             delim, key)
                     all_common_data_obj = (
@@ -552,14 +562,18 @@ class VariantFilterEvaluator(object):
                             # No need to update passing sample ids.
                             break                    
 
-                    # if this key isn't a per-alternate key, then we're done
-                    if not is_per_alt_key:
-                        continue
-
-                if key in self.variant_evidence_map or is_per_alt_key:
+                elif key in self.variant_evidence_map or is_per_alt_key:
 
                     samples_passing_for_variant = set()
-                    _assert_delim_for_key(self.variant_evidence_map, delim, key)
+
+                    #use the appropriate type map if this is a per-alt key
+                    if is_per_alt_key:
+                        type_map = self.variant_caller_common_map
+                    else:
+                        type_map = self.variant_evidence_map
+
+                    _assert_delim_for_key(type_map, delim, key)
+
                     all_variant_evidence_obj_list = (
                             VariantEvidence.objects.filter(
                                     variant_caller_common_data__in=(
@@ -580,22 +594,12 @@ class VariantFilterEvaluator(object):
                                     self.variant_caller_common_map)
                             data_dict = dict(data_dict.items() +
                                     per_alt_dict.items())
-                            combined_variant_evidence_map = dict(
-                                    self.variant_evidence_map +
-                                    per_alt_types)
-                        # If this is just a standard variant evidence object,
-                        # then the evidence type map is the same, no need to 
-                        # update anything.
-                        else:
-                            combined_variant_evidence_map = (
-                                    self.variant_evidence_map)
 
                         if not data_dict['called']:
                             continue
 
                         passing = _evaluate_condition_in_triple(
-                                data_dict, combined_variant_evidence_map,
-                                triple)
+                                data_dict, type_map, triple)
                         if passing:
                             samples_passing_for_variant.add(
                                     variant_evidence_obj.experiment_sample.id)
@@ -707,7 +711,12 @@ def _get_per_alt_dict(key, variant, variant_evidence_obj, type_map):
         'GT string is phased; this is not handled and should never happen...')
 
     gts = variant_evidence_obj.as_dict()['GT'].split('/')
-    gts = set([int(gt) for gt in gts])
+
+    # The -1 is because the reference allele is 0, we want the first alt to be 0
+    gt_set = set()
+    for gt in gts:
+        if int(gt) > 0:
+            gt_set.add(int(gt)-1)
 
     key_dict = {key: []}
     data_dicts = variant.variantcallercommondata_set.all()
@@ -719,10 +728,10 @@ def _get_per_alt_dict(key, variant, variant_evidence_obj, type_map):
         data_dict = data_obj.as_dict()
         if key in data_dict:
             evaled_list = data_dict[key]
-            for gt in gts:
+            for gt in gt_set:
                 key_dict[key].append(evaled_list[gt])
 
-    key_dict[key] = repr(key_dict[key])
+    #key_dict[key] = repr(key_dict[key])
     return(key_dict, type_map[key])
 
 def _get_delim_key_value_triple(raw_string, all_key_map):
@@ -829,36 +838,23 @@ def _evaluate_condition_in_triple(data_map, type_map, triple, idx=None):
     # (Number = 'A' in vcf, 'num' == -1 in pyvcf), then match if any of the
     # values is correct. This recursively calls the function with the extra idx
     # field.
-    print 'starting _evaluate_condition_in_triple!'
     if idx is None and 'num' in type_map[key] and type_map[key]['num'] == -1:
         evaluations = []
-        #print 'type map: ', type_map[key]
-        #print 'triple: ', triple
-        #print 'data_map: ', data_map
-        #print 'recursion: ', range(len(data_map[key]))
-        #print 'current idx: ', idx
         for recurse_idx in range(len(data_map[key])):
-            #print recurse_idx
             evaluations.append(_evaluate_condition_in_triple(
                     data_map,
                     type_map,
                     triple, 
                     idx=recurse_idx))
-        #print 'done recursing!'
-        #print evaluations
         return any(evaluations)
     else:
-        #if idx is not None: print 'idx: ', idx
-
         cast_type_string = type_map[key]['type']
         if cast_type_string == 'Boolean':
             return _evaluate_boolean_condition(data_map, key, value, idx)
         else:
             casted_value = _cast_value_to_type(value, cast_type_string)
-            #print casted_value
             if idx is not None:
                 evaled_list = data_map[key]
-                #print evaled_list[idx]
                 return eval('evaled_list[idx] ' + delim + ' casted_value')
             else:
                 return eval('data_map[key] ' + delim + ' casted_value')
