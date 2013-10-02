@@ -437,10 +437,16 @@ class ReferenceGenome(Model):
     def is_annotated(self):
         """For several steps (notably snpEff), we want to check that this
         ReferenceGenome is annotated (i.e. it has a genbank file associated
-            with it.) This function returns true if a genbank file is available.
+        with it). This function returns True if a genbank file is available.
         """
         return self.dataset_set.filter(
-            type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists()
+                type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists()
+
+    def get_variant_caller_common_map(self):
+        return self.variant_key_map['snp_caller_common_data']
+
+    def get_variant_evidence_map(self):
+        return self.variant_key_map['snp_evidence_data']
 
     @classmethod
     def get_field_order(clazz, **kwargs):

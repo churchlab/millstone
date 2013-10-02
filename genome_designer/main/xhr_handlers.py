@@ -27,6 +27,7 @@ from main.models import VariantSet
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from scripts.variant_sets import add_or_remove_variants_from_set
+from variants.common import extract_filter_keys
 from variants.variant_filter import get_variants_that_pass_filter
 
 
@@ -85,10 +86,6 @@ def get_variant_list(request):
     reference_genome = ReferenceGenome.objects.get(project=project,
             uid=ref_genome_uid)
 
-    if 'visibleKeyNames' in request.GET:
-        visible_key_names = json.loads(request.GET.get('visibleKeyNames'))
-    else:
-        visible_key_names = []
 
     # Get inputs to perform the query for Variants data.
     if VARIANT_FILTER_STRING_KEY in request.GET:
@@ -98,6 +95,10 @@ def get_variant_list(request):
     # TODO: Combine with saved filter string.
     combined_filter_string = manual_filter_string
     is_melted = request.GET.get('melt', 0) == '1'
+
+    # Determine the visible keys.
+    visible_key_names = _determine_visible_field_names(request,
+            combined_filter_string, reference_genome)
 
     # Get the list of Variants (or melted representation) to display.
     variant_list = lookup_variants(reference_genome, combined_filter_string,
@@ -128,6 +129,21 @@ def get_variant_list(request):
 
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
+
+
+def _determine_visible_field_names(request, filter_string, ref_genome):
+    """Determine which fields to show.
+    """
+    # Get visible keys explicitly marked in the UI by the user.
+    if 'visibleKeyNames' in request.GET:
+        visible_key_names = json.loads(request.GET.get('visibleKeyNames'))
+    else:
+        visible_key_names = []
+
+    # Also show keys in the filter string.
+    fields_from_filter_string = extract_filter_keys(filter_string, ref_genome)
+
+    return list(set(visible_key_names) | set(fields_from_filter_string))
 
 
 def _mark_active_keys_in_variant_key_map(variant_key_map):
