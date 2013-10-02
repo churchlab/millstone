@@ -304,9 +304,10 @@ class VariantFilterEvaluator(object):
     def get_scope_sample_id_set(self):
         """Returns the set of sample ids that the scope applies to.
         """
-        if self.scope:
-            return self.scope.sample_id_set
-        return None
+        assert self.scope is not None, (
+                "get_scope_sample_id_set() called on none-scoped " +
+                "evaluator instance.")
+        return self.scope.sample_id_set
 
 
     def _create_symbolic_representation(self):
@@ -403,19 +404,6 @@ class VariantFilterEvaluator(object):
         # after the SQL fetch. Order doesn't matter since this is a conjunction
         # clause.
 
-        def _single_symbol_helper(symbol, filter_eval_results, q_list,
-                remaining_triples):
-            """Helper method for evaluating a single symbol.
-            """
-            result = self.handle_single_symbol(symbol)
-            if isinstance(result, FilterEvalResult):
-                filter_eval_results.append(result)
-            elif isinstance(result, Q):
-                q_list.append(result)
-            else:
-                remaining_triples.append(result)
-            return (filter_eval_results, q_list, remaining_triples)
-
         filter_eval_results = []
         q_list = []
         remaining_triples = []
@@ -424,18 +412,18 @@ class VariantFilterEvaluator(object):
             # The conjunction may contain a single condition.
             if not conjunction_clause.is_Boolean:
                 (filter_eval_results, q_list, remaining_triples) = (
-                        _single_symbol_helper(
+                        self._single_symbol_mux(
                                 conjunction_clause, filter_eval_results, q_list,
                                 remaining_triples))
             else:
                 for symbol in conjunction_clause.args:
                     (filter_eval_results, q_list, remaining_triples) = (
-                            _single_symbol_helper(
+                            self._single_symbol_mux(
                                     symbol, filter_eval_results, q_list,
                                     remaining_triples))
 
-        ### Combine any filter results so far. These are probably results
-        ### of sub-clauses that are scoped expressions.
+        # Combine any filter results so far. These are probably results
+        # of sub-clauses that are scoped expressions.
         partial_result = None
         if len(filter_eval_results) > 0:
             partial_result = filter_eval_results[0]
@@ -446,9 +434,9 @@ class VariantFilterEvaluator(object):
 
         ### Now handle the Q list.
 
-        # NOTE: Previously, we were doing applying boolean operators
+        # NOTE: Previously, we were applying boolean operators
         # among Q objects, but the ORM mapping fails in cases where you
-        # want to logic among VariantSet membership.
+        # want to handle logic among VariantSet membership.
         if len(q_list) > 0:
             variant_list = self.ref_genome.variant_set.filter(q_list[0])
             for q_obj in q_list[1:]:
@@ -475,6 +463,20 @@ class VariantFilterEvaluator(object):
 
         return self.apply_non_sql_triples_to_query_set(partial_result,
                 remaining_triples)
+
+
+    def _single_symbol_mux(self, symbol, filter_eval_results, q_list,
+            remaining_triples):
+        """Helper method for evaluating a single symbol.
+        """
+        result = self.handle_single_symbol(symbol)
+        if isinstance(result, FilterEvalResult):
+            filter_eval_results.append(result)
+        elif isinstance(result, Q):
+            q_list.append(result)
+        else:
+            remaining_triples.append(result)
+        return (filter_eval_results, q_list, remaining_triples)
 
 
     def handle_single_symbol(self, symbol):
@@ -508,9 +510,14 @@ class VariantFilterEvaluator(object):
         # expression.
         (delim, key, value) = _get_delim_key_value_triple(condition_string,
                 self.all_key_map)
+
+        # If the key is supported for SQL queries, return the corresponding
+        # Q object.
         for key_map in ALL_SQL_KEY_MAP_LIST:
             if key in key_map:
                 return _get_django_q_object_for_triple((delim, key, value))
+
+        # Otherwise just return the triple to be evaluated separately.
         return (delim, key, value)
 
 
@@ -519,8 +526,8 @@ class VariantFilterEvaluator(object):
         """Applies the remaining condition triples to the query set and
         returns the trimmed down list.
         """
+        # Parse the given FilterEvalResult object.
         variant_list = filter_eval_result.variant_set
-
         variant_id_to_metadata_dict = (
                 filter_eval_result.variant_id_to_metadata_dict)
 
@@ -530,8 +537,8 @@ class VariantFilterEvaluator(object):
             # The only keys we want to evaluate for samples as well as variants
             # are the -1 per-alternate keys - treat them as if they
             # were in variant_evidence_map and all_common_data
-            is_per_alt_key = (key in self.variant_caller_common_map 
-                and self.variant_caller_common_map[key]['num'] == -1)
+            is_per_alt_key = (key in self.variant_caller_common_map and
+                    self.variant_caller_common_map[key]['num'] == -1)
 
             passing_variant_list = []
             for variant in variant_list:
@@ -540,10 +547,16 @@ class VariantFilterEvaluator(object):
                 # per-alt keys ENTIRELY as if they were specific to samples.
                 # This fine EXCEPT in cases where there exists an INFO value
                 # which none of the samples have. The expected result would be
-                # to return the variant but no samples, which will not happen 
-                # if we do it this way. 
+                # to return the variant but no samples, which will not happen
+                # if we do it this way.
                 # That being said, that would be a really weird edge case which
                 # I'm not that worried about for now.
+
+                # First make sure this is a valid key.
+                if not (key in self.variant_caller_common_map or
+                        key in self.variant_evidence_map or is_per_alt_key):
+                    raise ParseError(key, 'Unrecognized filter key.')
+
 
                 if key in self.variant_caller_common_map and not is_per_alt_key:
                     _assert_delim_for_key(self.variant_caller_common_map,
@@ -553,97 +566,30 @@ class VariantFilterEvaluator(object):
                     # TODO: Figure out semantics of having more than one common
                     # data object.
                     for common_data_obj in all_common_data_obj:
-                        data_dict = common_data_obj.as_dict()
-                        passing = _evaluate_condition_in_triple(
-                                data_dict, self.variant_caller_common_map,
-                                triple)
-                        if passing:
+                        if (_evaluate_condition_in_triple(
+                                common_data_obj.as_dict(),
+                                self.variant_caller_common_map,
+                                triple)):
                             passing_variant_list.append(variant)
                             # No need to update passing sample ids.
-                            break                    
+                            break
 
-                elif key in self.variant_evidence_map or is_per_alt_key:
-
-                    samples_passing_for_variant = set()
-
-                    #use the appropriate type map if this is a per-alt key
-                    if is_per_alt_key:
-                        type_map = self.variant_caller_common_map
-                    else:
-                        type_map = self.variant_evidence_map
-
-                    _assert_delim_for_key(type_map, delim, key)
-
-                    all_variant_evidence_obj_list = (
-                            VariantEvidence.objects.filter(
-                                    variant_caller_common_data__in=(
-                                    variant.variantcallercommondata_set.all())))
-
-                    for variant_evidence_obj in all_variant_evidence_obj_list:
-                        data_dict = variant_evidence_obj.as_dict()
-
-                        # For per-alt common data keys, map the sample's alleles
-                        # onto items in the list. For instance, if a sample has
-                        # a genotype of 1/1, then it's items will be the first
-                        # allele in the -1 list of INFO_EFF_* fields.
-                        if is_per_alt_key:
-                            per_alt_dict, per_alt_types = _get_per_alt_dict(
-                                    key,
-                                    variant,
-                                    variant_evidence_obj,
-                                    self.variant_caller_common_map)
-                            data_dict = dict(data_dict.items() +
-                                    per_alt_dict.items())
-
-                        if not data_dict['called']:
-                            continue
-
-                        passing = _evaluate_condition_in_triple(
-                                data_dict, type_map, triple)
-                        if passing:
-                            samples_passing_for_variant.add(
-                                    variant_evidence_obj.experiment_sample.id)
+                else:
+                    # key in self.variant_evidence_map or is_per_alt_key:
+                    samples_passing_for_variant = (
+                            self.get_samples_passing_for_evidence_or_per_alt_key(
+                                    variant, triple, is_per_alt_key))
 
                     # Determine whether the passing samples qualify this
                     # variant as passing the filter, accounting for scope if
                     # applicable.
                     if len(samples_passing_for_variant) > 0:
                         # Compare the passing results to the scope.
-                        if self.scope is not None:
-                            scope_type = self.get_scope_type()
-                            scope_sample_id_set = self.get_scope_sample_id_set()
-                            if scope_type == FILTER_SCOPE__ALL:
-                                # All passing sample ids must be in the
-                                # scope set.
-                                intersection = (samples_passing_for_variant &
-                                        scope_sample_id_set)
-                                if (intersection == scope_sample_id_set):
-                                    passing_variant_list.append(variant)
-                                    variant_id_to_metadata_dict[variant.id][
-                                            'passing_sample_ids'] &= (
-                                                    samples_passing_for_variant)
-                            elif scope_type == FILTER_SCOPE__ANY:
-                                # At least one passing sample id must be in
-                                # the scope set.
-                                if len(samples_passing_for_variant &
-                                        scope_sample_id_set) > 0:
-                                    passing_variant_list.append(variant)
-                                    variant_id_to_metadata_dict[variant.id][
-                                            'passing_sample_ids'] &= (
-                                                    samples_passing_for_variant)
-                            elif scope_type == FILTER_SCOPE__ONLY:
-                                # The passing sample id set must be exactly
-                                # the scope set.
-                                if (samples_passing_for_variant ==
-                                        scope_sample_id_set):
-                                    passing_variant_list.append(variant)
-                                    variant_id_to_metadata_dict[variant.id][
-                                            'passing_sample_ids'] &= (
-                                                    samples_passing_for_variant)
-                            else:
-                                raise AssertionError(
-                                        "Unknown scope %s" % scope_type)
-                        else:
+                        scope_type = self.get_scope_type()
+                        if (scope_type is None or
+                                self.do_passing_samples_satisfy_scope(
+                                        scope_type,
+                                        samples_passing_for_variant)):
                             passing_variant_list.append(variant)
                             variant_id_to_metadata_dict[variant.id][
                                     'passing_sample_ids'] &= (
@@ -652,14 +598,77 @@ class VariantFilterEvaluator(object):
                         variant_id_to_metadata_dict[variant.id][
                                 'passing_sample_ids'] = set()
 
-                else:
-                    raise ParseError(key, 'Unrecognized filter key.')
-
             # Since we are inside of a conjunction, we only need to check
             # the remaining variants on the next iteration.
             variant_list = passing_variant_list
 
         return FilterEvalResult(set(variant_list), variant_id_to_metadata_dict)
+
+
+    def do_passing_samples_satisfy_scope(self, scope_type,
+            samples_passing_for_variant):
+        assert scope_type in VALID_FILTER_SCOPES, (
+                "Unknown scope %s" % scope_type)
+        scope_sample_id_set = self.get_scope_sample_id_set()
+        if scope_type == FILTER_SCOPE__ALL:
+            # All passing sample ids must be in the
+            # scope set.
+            intersection = (samples_passing_for_variant &
+                    scope_sample_id_set)
+            if (intersection == scope_sample_id_set):
+                return True
+        elif scope_type == FILTER_SCOPE__ANY:
+            # At least one passing sample id must be in
+            # the scope set.
+            if len(samples_passing_for_variant &
+                    scope_sample_id_set) > 0:
+                return True
+        elif scope_type == FILTER_SCOPE__ONLY:
+            # The passing sample id set must be exactly
+            # the scope set.
+            if (samples_passing_for_variant ==
+                    scope_sample_id_set):
+                return True
+
+    def get_samples_passing_for_evidence_or_per_alt_key(self, variant, triple,
+            is_per_alt_key):
+        (delim, key, value) = triple
+        samples_passing_for_variant = set()
+
+        # Use the appropriate type map if this is a per-alt key.
+        if is_per_alt_key:
+            type_map = self.variant_caller_common_map
+        else:
+            type_map = self.variant_evidence_map
+        _assert_delim_for_key(type_map, delim, key)
+
+        # Check each VariantEvidence object.
+        all_variant_evidence_obj_list = (
+                VariantEvidence.objects.filter(
+                        variant_caller_common_data__variant=variant))
+        for variant_evidence_obj in all_variant_evidence_obj_list:
+            data_dict = variant_evidence_obj.as_dict()
+
+            if not data_dict['called']:
+                continue
+
+            # For per-alt common data keys, map the sample's alleles
+            # onto items in the list. For instance, if a sample has
+            # a genotype of 1/1, then it's items will be the first
+            # allele in the -1 list of INFO_EFF_* fields.
+            if is_per_alt_key:
+                per_alt_dict, per_alt_types = _get_per_alt_dict(
+                        key,
+                        variant,
+                        variant_evidence_obj,
+                        self.variant_caller_common_map)
+                data_dict = dict(data_dict.items() + per_alt_dict.items())
+
+            if (_evaluate_condition_in_triple(data_dict, type_map, triple)):
+                samples_passing_for_variant.add(
+                        variant_evidence_obj.experiment_sample.id)
+
+        return samples_passing_for_variant
 
 
     def get_sample_id_set_for_variant(self, variant):
