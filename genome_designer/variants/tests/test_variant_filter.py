@@ -20,17 +20,17 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
-from scripts.variant_filter import EXPRESSION_REGEX
-from scripts.variant_filter import SAMPLE_SCOPE_REGEX
-from scripts.variant_filter import SAMPLE_SCOPE_REGEX_NAMED
-from scripts.variant_filter import SET_REGEX
-from scripts.variant_filter import SET_REGEX_NAMED
-from scripts.variant_filter import get_variants_that_pass_filter
-from scripts.variant_filter import symbol_generator
-from scripts.variant_filter import ParseError
-from scripts.variant_filter import VariantFilterEvaluator
-from scripts.variant_filter import _get_per_alt_dict
 from settings import PWD as GD_ROOT
+from variants.variant_filter import EXPRESSION_REGEX
+from variants.variant_filter import SAMPLE_SCOPE_REGEX
+from variants.variant_filter import SAMPLE_SCOPE_REGEX_NAMED
+from variants.variant_filter import SET_REGEX
+from variants.variant_filter import SET_REGEX_NAMED
+from variants.variant_filter import get_variants_that_pass_filter
+from variants.variant_filter import symbol_generator
+from variants.variant_filter import ParseError
+from variants.variant_filter import VariantFilterEvaluator
+from variants.variant_filter import _get_per_alt_dict
 
 TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
 

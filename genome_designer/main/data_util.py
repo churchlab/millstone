@@ -7,7 +7,7 @@ requests.
 """
 
 from main.melt_util import variant_as_melted_list
-from scripts.variant_filter import get_variants_that_pass_filter
+from variants.variant_filter import get_variants_that_pass_filter
 
 
 # Key in the GET params containing the string for filtering the variants.
