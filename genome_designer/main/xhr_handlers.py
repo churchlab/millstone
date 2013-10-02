@@ -18,7 +18,6 @@ from django.views.decorators.http import require_http_methods
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.data_util import lookup_variants
-from main.data_util import VARIANT_FILTER_STRING_KEY
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import VariantCallerCommonData
@@ -70,6 +69,9 @@ def export_variant_set_as_csv(request):
     return response
 
 
+# Key in the GET params containing the string for filtering the variants.
+VARIANT_FILTER_STRING_KEY = 'variantFilterString'
+
 @login_required
 def get_variant_list(request):
     """Returns a list of Variants, filtered by any filter parameters contained
@@ -85,7 +87,6 @@ def get_variant_list(request):
             uid=project_uid)
     reference_genome = ReferenceGenome.objects.get(project=project,
             uid=ref_genome_uid)
-
 
     # Get inputs to perform the query for Variants data.
     if VARIANT_FILTER_STRING_KEY in request.GET:

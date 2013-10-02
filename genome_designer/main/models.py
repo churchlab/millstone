@@ -52,6 +52,30 @@ import settings
 # Utilities
 ###############################################################################
 
+class VisibleFieldMixin(object):
+    """Mixin that provides methods for controlling which fields are displayed.
+
+    NOTE(gleb): I'm not sure if this is general enough to apply to other
+        models.
+    """
+    @classmethod
+    def get_field_order(clazz, **kwargs):
+        if not hasattr(clazz, 'default_view_fields'):
+            return []
+
+        if not 'additional_field_list' in kwargs:
+            return clazz.default_view_fields()
+
+        # Otherwise, incorporate additional fields, without repetition.
+        default_field_names = set([field_obj['field'] for field_obj in
+                clazz.default_view_fields()])
+        additional_fields = [
+                {'field': field_name} for field_name
+                in kwargs['additional_field_list']
+                if not field_name in default_field_names]
+        return clazz.default_view_fields() + additional_fields
+
+
 def short_uuid(cls):
     """Generates a short uuid, repeating if necessary to maintain
     uniqueness.
@@ -746,7 +770,7 @@ class Variant(Model):
                     'classes':['label']}]
 
 
-class VariantCallerCommonData(Model):
+class VariantCallerCommonData(Model, VisibleFieldMixin):
     """Model that describes data provided by a specific caller about a
     particular Variant.
 
@@ -805,17 +829,11 @@ class VariantCallerCommonData(Model):
         return get_flattened_unpickled_data(self.data)
 
     @classmethod
-    def get_field_order(clazz, **kwargs):
-        field_list = []
-
-        if 'additional_field_list' in kwargs:
-            field_list.extend([
-                {'field': field} for field in kwargs['additional_field_list']])
-
-        return field_list
+    def default_view_fields(clazz):
+        return []
 
 
-class VariantEvidence(Model):
+class VariantEvidence(Model, VisibleFieldMixin):
     """Evidence for a particular variant occurring in a particular
     ExperimentSample.
     """
@@ -869,21 +887,6 @@ class VariantEvidence(Model):
             {'field':'gt_type'},
             {'field':'sample_uid'},
         ]
-
-    @classmethod
-    def get_field_order(clazz, **kwargs):
-        if not 'additional_field_list' in kwargs:
-            return clazz.default_view_fields()
-
-        # Otherwise, incorporate additional fields, without repetition.
-        default_field_names = set([field_obj['field'] for field_obj in
-                clazz.default_view_fields()])
-        additional_fields = [
-                {'field': field_name} for field_name
-                in kwargs['additional_field_list']
-                if not field_name in default_field_names]
-        return clazz.default_view_fields() + additional_fields
-
 
 
 ###############################################################################
