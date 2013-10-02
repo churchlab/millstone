@@ -32,5 +32,5 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted):
                             variant_id_to_metadata_dict))
         return melted_variant_list
     else:
-        return [CastVariantView(variant,
+        return [CastVariantView.variant_as_cast_view(variant,
                 variant_id_to_metadata_dict) for variant in variant_list]
