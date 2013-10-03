@@ -68,7 +68,8 @@ class TestAdapters(TestCase):
         for field in Variant.get_field_order():
             self.assertTrue(field['field'] in fe_variant)
 
-        self.assertTrue('reference_genome' in fe_variant)
-        for ref_genome_field in ReferenceGenome.get_field_order():
-            self.assertTrue(ref_genome_field['field'] in 
-                fe_variant['reference_genome'])
+        # self.assertTrue('reference_genome' in fe_variant)
+        
+        # for ref_genome_field in ReferenceGenome.get_field_order():
+        #     self.assertTrue(ref_genome_field['field'] in 
+        #         fe_variant['reference_genome'])

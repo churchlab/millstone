@@ -570,7 +570,7 @@ class VariantFilterEvaluator(object):
             # a genotype of 1/1, then it's items will be the first
             # allele in the -1 list of INFO_EFF_* fields.
             if is_per_alt_key:
-                per_alt_dict, per_alt_types = _get_per_alt_dict(
+                per_alt_dict, per_alt_types = get_per_alt_dict(
                         key,
                         variant,
                         variant_evidence_obj,
@@ -597,7 +597,7 @@ class VariantFilterEvaluator(object):
 # Helper methods
 ###############################################################################
 
-def _get_per_alt_dict(key, variant, variant_evidence_obj, type_map):
+def get_per_alt_dict(key, variant, variant_evidence_obj, type_map):
     """Returns a dictionary/type map tuple for one per-alt INFO field.  It is
     relevant to a single variant evidence object, corresponding to all of the
     alternate alleles that the variant evidence object might have.

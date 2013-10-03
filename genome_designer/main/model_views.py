@@ -9,7 +9,7 @@ from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-
+from variants.variant_filter import get_per_alt_dict
 
 class BaseVariantView(object):
     """Common methods for model views.
@@ -134,15 +134,42 @@ class MeltedVariantView(BaseVariantView):
                 self.variant_caller_common_data,
                 self.variant_evidence
         ]
+
+        variant_caller_common_data_map = (
+                self.variant.reference_genome.get_variant_caller_common_map())
+
+
+        is_per_alt_key = (attr in variant_caller_common_data_map and 
+                variant_caller_common_data_map[attr]['num'] == -1)
+
         for delegate in delegate_order:
+
+            result_list = []
+
             if delegate is not None:
                 if hasattr(delegate, attr):
-                    return getattr(delegate, attr)
+                    result_list.append(getattr(delegate, attr))
                 else:
                     try:
-                        return delegate.as_dict()[attr]
+                        if is_per_alt_key:
+                            key_dict = get_per_alt_dict(
+                                    attr,
+                                    self.variant,
+                                    self.variant_evidence,
+                                    variant_caller_common_data_map)[0]
+                            result_list.extend(key_dict.values())
+                        else:
+                            result_list.append(delegate.as_dict()[attr])
                     except:
                         pass
+
+                if len(result_list) == 1:
+                    # If one object, return it.
+                    return result_list[0]
+                elif len(result_list) > 1:
+                    # Else if more than one, return a '|'-separated string.
+                    return ' | '.join([str(res) for res in result_list])
+
         # Default.
         return '---'
 

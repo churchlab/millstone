@@ -30,7 +30,7 @@ from variants.variant_filter import get_variants_that_pass_filter
 from variants.variant_filter import symbol_generator
 from variants.variant_filter import ParseError
 from variants.variant_filter import VariantFilterEvaluator
-from variants.variant_filter import _get_per_alt_dict
+from variants.variant_filter import get_per_alt_dict
 
 TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
 
@@ -566,7 +566,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 data=raw_sample_data_dict)
 
 
-        per_alt_dict, per_alt_types = _get_per_alt_dict(
+        per_alt_dict, per_alt_types = get_per_alt_dict(
                 'INFO_EFF_EFFECT', variant,
                 VariantEvidence.objects.get(uid=1000),
                 self.ref_genome.variant_key_map['snp_caller_common_data'])

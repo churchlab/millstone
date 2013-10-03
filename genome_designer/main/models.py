@@ -759,7 +759,8 @@ class Variant(Model):
         Called by the adapter.
         """
         return [{'field':'label'},
-                {'field':'reference_genome'},
+                #In the new analyze tab this is redundant
+                #{'field':'reference_genome'}, 
                 {'field':'chromosome'},
                 {'field':'position'},
                 {'field':'type'},
