@@ -82,7 +82,6 @@ class CastVariantView(BaseVariantView):
             else:
                 delegate_list = [delegate]
 
-            print delegate_list
             # Iterate through the delegates.
             for delegate in delegate_list:
 
