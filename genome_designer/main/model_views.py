@@ -82,10 +82,15 @@ class CastVariantView(BaseVariantView):
             else:
                 delegate_list = [delegate]
 
+            print delegate_list
             # Iterate through the delegates.
             for delegate in delegate_list:
+
                 if hasattr(delegate, attr):
                     result_list.append(getattr(delegate, attr))
+                else:
+                    try: result_list.append(delegate.as_dict()[attr])
+                    except: pass
 
             if len(result_list) == 1:
                 # If one object, return it.
@@ -131,10 +136,16 @@ class MeltedVariantView(BaseVariantView):
                 self.variant_evidence
         ]
         for delegate in delegate_order:
-            if delegate is not None and hasattr(delegate, attr):
-                return getattr(delegate, attr)
+            if delegate is not None:
+                if hasattr(delegate, attr):
+                    return getattr(delegate, attr)
+                else:
+                    try:
+                        return delegate.as_dict()[attr]
+                    except:
+                        pass
         # Default.
-        return 'undefined'
+        return '---'
 
     @classmethod
     def variant_as_melted_list(clazz, variant_obj,
