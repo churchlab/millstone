@@ -11,7 +11,16 @@ from main.model_views import MeltedVariantView
 from variants.variant_filter import get_variants_that_pass_filter
 
 
-def lookup_variants(reference_genome, combined_filter_string, is_melted):
+class LookupVariantsResult(object):
+    """Result of a call to lookup_variants.
+    """
+    def __init__(self, result_list, num_total_variants):
+        self.result_list = result_list
+        self.num_total_variants = num_total_variants
+
+
+def lookup_variants(reference_genome, combined_filter_string, is_melted,
+        pagination_start, pagination_len):
     """Lookup the Variants that match the filter specified in the params.
 
     Returns:
@@ -25,12 +34,18 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted):
 
     # Convert to appropriate view objects.
     if is_melted:
-        melted_variant_list = []
+        result_list = []
         for variant in variant_list:
-            melted_variant_list.extend(
+            result_list.extend(
                     MeltedVariantView.variant_as_melted_list(variant,
                             variant_id_to_metadata_dict))
-        return melted_variant_list
     else:
-        return [CastVariantView.variant_as_cast_view(variant,
+        result_list = [CastVariantView.variant_as_cast_view(variant,
                 variant_id_to_metadata_dict) for variant in variant_list]
+
+    num_total_variants = len(result_list)
+    page_results = result_list[
+            pagination_start:pagination_start + pagination_len]
+
+    # Count the results and return just the page we are looking at now.
+    return LookupVariantsResult(page_results, num_total_variants)

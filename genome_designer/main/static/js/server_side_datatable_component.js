@@ -1,11 +1,17 @@
 /**
- * @fileoverview Component that takes raw json from the backend intended for
- *     display by jquery.datatable.js and turns the data into a form that
- *     can be rendered as an interactive table.
+ * @fileoverview Wrapper for the DataTables jQuery plugin whose primary purpose
+ *     is delegating pagination-handling to the server side. This is important
+ *     for our application because we may be dealing with Variants that number
+ *     in the tens and maybe hundreds of thousands so we can't reasonably
+ *     send all this data to the frontend.
+ *
+ * NOTE: This component was created by copying datatable_component.js at commit
+ *     7a070f0b7873d96b2cb5e4c54fb34b3c38d45afb and contains duplicated code at
+ *     the moment. These components will likely diverge further.
  */
 
 
-gd.DataTableComponent = Backbone.View.extend({
+gd.ServerSideDataTableComponent = Backbone.View.extend({
   // NOTE: Clients should pass in an element to decorate.
 
   /** Override. */
@@ -21,6 +27,12 @@ gd.DataTableComponent = Backbone.View.extend({
     this.displayableFieldConfig = this.makeDisplayableFieldConfig(
         this.options.fieldConfig);
 
+    // The server target for updates.
+    this.serverTarget = this.options.serverTarget;
+
+    // Function that injects additional params for the server-side request.
+    this.serverParamsInjector = this.options.serverParamsInjector;
+
     this.render();
   },
 
@@ -28,14 +40,17 @@ gd.DataTableComponent = Backbone.View.extend({
   /** Override. */
   render: function() {
     // Draw the Datatable.
-    this.updateDatatable(this.displayableObjList, this.displayableFieldConfig);
+    this.redrawDatable(this.displayableObjList, this.displayableFieldConfig,
+        this.numTotalVariants);
   },
 
 
   /** Used for updating an already rendered datatable with new data. */
-  update: function(newObjList, newFieldConfig) {
+  update: function(newObjList, newFieldConfig, numTotalVariants) {
     this.displayableObjList = this.makeDisplayableObjectList(newObjList);
-    this.displayableFieldConfig = this.makeDisplayableFieldConfig(newFieldConfig);
+    this.displayableFieldConfig = this.makeDisplayableFieldConfig(
+        newFieldConfig);
+    this.numTotalVariants = numTotalVariants;
     this.render();
   },
 
@@ -179,11 +194,8 @@ gd.DataTableComponent = Backbone.View.extend({
 
     this.master_cb = $('#' + this.datatableId + '-master-cb');
 
-    /**
-     * If the master checkbox is changed, toggle all checkboxes in the
-     * associated table with the following listener.
-     */
-
+    // If the master checkbox is changed, toggle all checkboxes in the
+    // associated table with the following listener.
     this.master_cb.change(_.bind(function(el) {
       // Find all checkboxes in the associated table
       var all_cbs = this.datatable.find('input:checkbox.gd-dt-cb');
@@ -221,7 +233,7 @@ gd.DataTableComponent = Backbone.View.extend({
    *        mData: key corresponding to key in data.
    *        sTitle: title for the column.
    */
-  updateDatatable: function(objList, fieldConfig) {
+  redrawDatable: function(objList, fieldConfig, numTotalVariants) {
     // Clear the existing dattable.
     if (this.datatable != null) {
       this.datatable.fnClearTable();
@@ -237,15 +249,44 @@ gd.DataTableComponent = Backbone.View.extend({
         '</table>');
 
     var datatableParams = {
+        /**********************************************************************
+         * Data
+         *********************************************************************/
         'aaData': objList,
         'aoColumns': fieldConfig,
+
+        /**********************************************************************
+         * Display
+         *********************************************************************/
+        // Custom positioning for DataTable control elements.
         'sDom': "<'row-fluid'<'span3'l><'span5'f><'span3'C><'gd-dt-cb master pull-right span1'>t<'row-fluid'<'span6'i><'span6'p>>",
+        // Don't show the client-side filter box.
         'bFilter': false,
+        // Don't add visual highlights to sorted classes.
         'bSortClasses': false,
+        // Don't automatically calculate optimal table and col widths.
         'bAutoWidth': false,
-        'iDisplayLength': 100,
-        'aLengthMenu': [[10, 50, 100, 500, -1], [10, 50, 100, 500, "All"]],
+
+        /**********************************************************************
+         * Pagination
+         *********************************************************************/
         'sPaginationType': 'bootstrap',
+        'bServerSide': true,
+        'sAjaxSource': this.serverTarget,
+        // Inject custom params to filter variants.
+        'fnServerParams': this.serverParamsInjector,
+        // Override the server function.
+        'fnServerData': _.bind(this.customServerDataFn, this),
+        // Locked pagination size for now.
+        'bLengthChange': false,
+        'iDisplayLength': 100,
+        // Defer initial load.
+        'iDeferLoading': numTotalVariants,
+
+        /**********************************************************************
+         * Misc
+         *********************************************************************/
+        // Called each time a new row is created.
         'fnCreatedRow': this.listenToCheckboxes()
     };
 
@@ -255,9 +296,72 @@ gd.DataTableComponent = Backbone.View.extend({
 
     this.datatable = $('#' + this.datatableId).dataTable(datatableParams);
 
-    // Initialize options for action dropdown menu (next to master checkbox).
+    // // Initialize options for action dropdown menu (next to master checkbox).
     this.createMasterCheckbox();
     this.listenToCheckboxes();
+  },
+
+
+  /**
+   * Custom function that the DataTable will call to get data from the
+   * server. This is mostly copied from the jquery.datatables.js source
+   * but modified at the callback point to prepare the data for display.
+   */
+  customServerDataFn: function(sUrl, aoData, fnCallback, oSettings) {
+    this.trigger('START_LOADING');
+
+    oSettings.jqXHR = $.ajax({
+      'url':  sUrl,
+      'data': aoData,
+      'success': _.bind(function (json) {
+        if ( json.sError ) {
+          oSettings.oApi._fnLog( oSettings, 0, json.sError );
+        }
+        $(oSettings.oInstance).trigger('xhr', [oSettings, json]);
+
+        // This is the change to the code copied from jquery.datatable.js.
+        // We convert the server json response to what is expected by
+        // the rest of the DataTables machinery.
+        fnCallback(this.cleanServerResponse(json, oSettings));
+
+        this.trigger('DONE_LOADING');
+      }, this),
+      'dataType': "json",
+      'cache': false,
+      'type': oSettings.sServerMethod,
+      'error': function(xhr, error, thrown) {
+        if (error == "parsererror") {
+          oSettings.oApi._fnLog(oSettings, 0,
+              "DataTables warning: JSON data from " +
+                  "server could not be parsed. This is caused by a " +
+                  "JSON formatting error.");
+        }
+      }
+    });
+  },
+
+
+  /**
+   * Takes the server response json and creates an object that Datatables
+   * can use to redraw itself.
+   *
+   * For expected format, see: http://datatables.net/usage/server-side
+   */
+  cleanServerResponse: function(json, oSettings) {
+    var aaData = [];
+
+    // Parse the variant data.
+    var variantListData = JSON.parse(json.variant_list_json);
+    if (variantListData.obj_list.length) {
+      aaData = this.makeDisplayableObjectList(variantListData.obj_list);
+    }
+
+    datatablesJson = {
+        iTotalRecords: Number(json.num_total_variants),
+        iTotalDisplayRecords: Number(json.num_total_variants),
+        aaData: aaData,
+    };
+    return datatablesJson;
   },
 
 

@@ -88,6 +88,10 @@ def get_variant_list(request):
     reference_genome = ReferenceGenome.objects.get(project=project,
             uid=ref_genome_uid)
 
+    # Pagination.
+    pagination_start = int(request.GET.get('iDisplayStart', 0))
+    pagination_len = int(request.GET.get('iDisplayLength', 100))
+
     # Get inputs to perform the query for Variants data.
     if VARIANT_FILTER_STRING_KEY in request.GET:
         manual_filter_string = request.GET.get(VARIANT_FILTER_STRING_KEY)
@@ -102,8 +106,10 @@ def get_variant_list(request):
             combined_filter_string, reference_genome)
 
     # Get the list of Variants (or melted representation) to display.
-    variant_list = lookup_variants(reference_genome, combined_filter_string,
-            is_melted)
+    lookup_variant_result = lookup_variants(reference_genome, combined_filter_string,
+            is_melted, pagination_start, pagination_len)
+    variant_list = lookup_variant_result.result_list
+    num_total_variants = lookup_variant_result.num_total_variants
     variant_list_json = adapt_model_or_modelview_list_to_frontend(variant_list,
             variant_key_map=reference_genome.variant_key_map,
             visible_key_names=visible_key_names)
@@ -122,6 +128,7 @@ def get_variant_list(request):
 
     response_data = {
         'variant_list_json': variant_list_json,
+        'num_total_variants': num_total_variants,
         'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 obj_list=variant_set_list),
         'variant_key_filter_map_json': json.dumps(

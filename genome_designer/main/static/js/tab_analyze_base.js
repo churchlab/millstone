@@ -2,7 +2,9 @@
  * @fileoverview Base object for views related to analysis.
  */
 
-gd.TabAnalyzeBaseView = Backbone.View.extend({
+gd.TabAnalyzeBaseView = Backbone.View.extend(
+/** Prototype properties */
+{
   /** Element that Backbone attches this component to. */
   el: '#gd-page-container',
 
@@ -10,7 +12,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
   /** Backbone initialize method. */
   initialize: function() {
     // The DataTableComponent currently in view.
-    this.datatable = null;
+    this.datatableComponent = null;
 
     // Current list of variants being displayed.
     this.variantList = null;
@@ -25,8 +27,14 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
     this.variantKeyMap = null;
 
     // Keys that should be visible.
+    // When null, we are just showing the default.
     this.visibleKeyNames = null;
 
+    // Perform rendering and registering listeners.
+    this.render();
+  },
+
+  render: function() {
     // Manually listen to change events.
     $('#gd-analyze-select-ref-genome').change(
         _.bind(this.handleRefGenomeSelect, this));
@@ -43,10 +51,16 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
 
   /**
    * Handles a Reference Genome being selected from the dropdown menu.
+   *
+   * This method does an initial fetch of the data, and (re)-draws the
+   * DataTable component. Subsequent requests given the same filter are
+   * handled through a pagination dance between the DataTables component
+   * and server-side support.
+   *
    * @param {Event} e Event object if this is being called in response to an
    *     event. Ignored if opt_refGenomeUid is provided.
-   * @param {string=} opt_refGenomeUid The variant set dictionary object from the
-   *     django adapter.
+   * @param {string=} opt_refGenomeUid Optional ref genome string explicitly
+   *     provided.  Useful for debug.
    */
   handleRefGenomeSelect: function(e, opt_refGenomeUid) {
     var refGenomeUid = opt_refGenomeUid || $(e.target).val();
@@ -57,22 +71,35 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
     $('#gd-analyze-select-search-entity').fadeIn();
     $('#gd-analyze-variant-filter-container').fadeIn();
 
+    // Recreate the initial DataTable.
+    this.drawDatatable();
+
     // Kick off request to update the Variant data being displayed.
     this.updateVariantList();
   },
 
 
-  /** Handles a click on the 'Apply Filter' button. */
-  handleApplyFilterClick: function() {
-    // Kick off request to update the Variant data being displayed.
-    this.updateVariantList();
+  /** Redraws the datatable based on the selection. */
+  drawDatatable: function() {
+    this.datatableComponent = new gd.ServerSideDataTableComponent({
+        el: $('#gd-datatable-hook'),
+        serverTarget: '/_/variants',
+        serverParamsInjector: _.bind(
+            this.addFilterDataToDataTableServerSideRequest, this)
+    });
+
+    // Listen to events from the DataTable to provide appropriate UI affordance.
+    this.listenTo(this.datatableComponent, 'START_LOADING',
+        _.bind(this.setUIStartLoadingState, this));
+    this.listenTo(this.datatableComponent, 'DONE_LOADING',
+        _.bind(this.setUIDoneLoadingState, this));
   },
 
 
   /** Kicks off the process for updating the list of displayed variants. */
   updateVariantList: function() {
     // Update the UI to show that the new Variant list is loading.
-    $('#gd-datatable-hook-datatable_wrapper').css('opacity', 0.5);
+    this.setUIStartLoadingState();
 
     var requestData = {
       'projectUid': this.model.get('project').uid,
@@ -102,36 +129,64 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
       this.fieldConfig = {};
     }
 
+    var numTotalVariants = Number(response.num_total_variants);
+
     // Parse VariantSet data.
     this.variantSetList = JSON.parse(response.variant_set_list_json).obj_list;
 
     // Grab the field key map data.
     this.variantKeyMap = JSON.parse(response.variant_key_filter_map_json);
 
-    // TODO: Is there a cleaner way to create the instance but not necessarily
-    // draw it?
-    if (!this.datatable) {
-      this.drawDatatable();
-    }
-
     // Redraw the datatable.
-    this.datatable.update(this.variantList, this.fieldConfig);
+    this.datatableComponent.update(this.variantList, this.fieldConfig,
+        numTotalVariants);
 
     // Does this need to be called every time?
     this.drawDropdowns();
 
-    // Reset the loading view.
+    // Reset the ui.
+    this.setUIDoneLoadingState();
+  },
+
+
+  /** Handles a click on the 'Apply Filter' button. */
+  handleApplyFilterClick: function() {
+    // Kick off request to update the Variant data being displayed.
+    this.updateVariantList();
+  },
+
+
+  /** Provide affordance while doing Variant query. */
+  setUIStartLoadingState: function() {
+    $('#gd-datatable-hook-datatable_wrapper').css('opacity', 0.5);
+  },
+
+
+  /** Reset UI changes after loading complete.. */
+  setUIDoneLoadingState: function() {
     $('#gd-datatable-hook-datatable_wrapper').css('opacity', 1);
   },
 
 
-  /** Redraws the datatable based on the selection. */
-  drawDatatable: function() {
-    this.datatable = new gd.DataTableComponent({
-        el: $('#gd-datatable-hook'),
-        objList: this.variantList,
-        fieldConfig: this.fieldConfig,
-    });
+  /**
+   * Updates the array of data representing GET params to be sent to the
+   * server by DataTables. See jquery.dataTables.js.
+   *
+   * @param {Array.<Object.<string, string>>} aoData Array of objects with keys
+   *     'name' and 'value'. The array is passed by reference so this method
+   *      must mutate this array.
+   */
+  addFilterDataToDataTableServerSideRequest: function(aoData) {
+    var requestData = {
+      'projectUid': this.model.get('project').uid,
+      'refGenomeUid': this.model.get('refGenomeUid'),
+      'variantFilterString': $('#gd-new-filter-input').val(),
+      'melt': $('input:radio[name=melt]:checked').val()
+    };
+
+    _.each(_.pairs(requestData), function(pair) {
+      aoData.push({'name': pair[0], 'value': pair[1]});
+    })
   },
 
 
@@ -164,7 +219,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
         '</ul>' +
       '</li>');
 
-    this.datatable.addDropdownOption(setListHTML, '');
+    this.datatableComponent.addDropdownOption(setListHTML, '');
   },
 
 
@@ -193,7 +248,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
     var postData = {
         projectUid: this.model.get('project').uid,
         refGenomeUid: this.model.get('refGenomeUid'),
-        variantUidList: this.datatable.getCheckedRowUids(),
+        variantUidList: this.datatableComponent.getCheckedRowUids(),
         variantSetAction: $(ev.target).data('variant-set-action'),
         variantSetUid: $(ev.target).data('variant-set-uid')
     };
@@ -213,7 +268,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
       this.showAlertMessage(response.alert_msg, response.alert_type);
 
       // Redraw the datatable.
-      this.datatable.update(this.variantList);
+      this.datatableComponent.update(this.variantList);
       this.drawDropdowns();
     }, this);
 
@@ -254,7 +309,10 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
   },
 
 
-  /** Creates the component for selecting which fields are being displayed. */
+  /**
+   * Creates the modal for selecting which fields are being displayed and
+   * shows it.
+   */
   handleShowFieldSelect: function() {
     var variantFieldSelectModel = new Backbone.Model({
         'variantKeyMap': this.variantKeyMap
@@ -266,13 +324,25 @@ gd.TabAnalyzeBaseView = Backbone.View.extend({
   },
 
 
-  /** Creates the component for selecting which fields are being displayed. */
+  /** Handles an update event from the field select component. */
   handleUpdateSelectedFields: function(selectedKeyNames) {
+    // Hide the modal.
     this.variantFieldSelect.hide();
 
+    // Update the attribute that stores the visible field names.
     this.visibleKeyNames = selectedKeyNames;
 
     // Kick off a request to update the view.
     this.updateVariantList();
   }
-});
+},
+
+/** Static properties */
+{
+  /**
+   * Default number of items to show in the DataTable at one time.
+   * @type {number}
+   */
+  DEFAULT_PAGE_SIZE: 100
+}
+);
