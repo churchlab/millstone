@@ -25,9 +25,9 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-from scripts.variant_sets import add_or_remove_variants_from_set
 from variants.common import extract_filter_keys
 from variants.variant_filter import get_variants_that_pass_filter
+from variants.variant_sets import add_or_remove_variants_from_set
 
 
 @login_required

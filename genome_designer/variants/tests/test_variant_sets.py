@@ -17,8 +17,8 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 from scripts.bootstrap_data import create_fake_variants_and_variant_sets
 from scripts.import_util import import_reference_genome_from_local_file
-from scripts.variant_sets import add_or_remove_variants_from_set
 import settings
+from variants.variant_sets import add_or_remove_variants_from_set
 
 
 TEST_USERNAME = 'gmcdev'
@@ -91,4 +91,3 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
                 self.var_set2_uid)
 
         self.assertEqual(response['alert_type'], 'info', str(response))
-
