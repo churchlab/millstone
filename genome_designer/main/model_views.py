@@ -4,6 +4,7 @@ Classes that describe how a particular model should be viewed.
 
 from django.db.models.query import QuerySet
 
+from main.constants import UNDEFINED_STRING
 from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
@@ -99,7 +100,7 @@ class CastVariantView(BaseVariantView):
                 return ' | '.join([str(res) for res in result_list])
 
         # Default.
-        return 'undefined'
+        return UNDEFINED_STRING
 
     @classmethod
     def variant_as_cast_view(clazz, variant_obj,
@@ -171,7 +172,7 @@ class MeltedVariantView(BaseVariantView):
                     return ' | '.join([str(res) for res in result_list])
 
         # Default.
-        return '---'
+        return UNDEFINED_STRING
 
     @classmethod
     def variant_as_melted_list(clazz, variant_obj,

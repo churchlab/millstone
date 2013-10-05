@@ -396,7 +396,8 @@ class ReferenceGenome(Model):
     def __unicode__(self):
         return self.label
 
-    def get_href(self):
+    @property
+    def href(self):
         """Link to url view for this model.
         """
         return reverse(
@@ -627,7 +628,8 @@ class AlignmentGroup(Model):
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
-    def get_href(self):
+    @property
+    def href(self):
         """Link to url view for this model.
         """
         return reverse(
@@ -745,7 +747,8 @@ class Variant(Model):
     def label(self):
         return str(self.position) + '_' + self.ref_value + '_' + self.alt_value
 
-    def get_href(self):
+    @property
+    def href(self):
         """Link to url view for this model.
         """
         return reverse(
@@ -964,7 +967,8 @@ class VariantSet(Model):
         return [{'field':'label'},
                 {'field':'reference_genome'}]
 
-    def get_href(self):
+    @property
+    def href(self):
         """Link to url view for this model.
         """
         return reverse(

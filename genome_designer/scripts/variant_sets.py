@@ -14,19 +14,17 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 
 
-def add_or_remove_variants_from_set(variantUidList, variantSetAction,
-        variantSetUid):
+def add_or_remove_variants_from_set(variant_uid_list, variant_set_action,
+        variant_set_uid):
     """Adds or remove variants to a set.
 
     Supports partial add or remove in the case where a requested variant
     add/remove doesn't make sense.
 
-    NOTE: Camel-case naming to match js params.
-
     Args:
-        variantUidList: List of variant UIDs to operate on.
-        variantSetAction: The action to perform.
-        variantSetUid: The set to the add the variant to.
+        variant_uid_list: List of variant UIDs to operate on.
+        variant_set_action: The action to perform.
+        variant_set_uid: The set to the add the variant to.
 
     Returns:
         A dictionary containing information about how the request was handled.
@@ -35,14 +33,13 @@ def add_or_remove_variants_from_set(variantUidList, variantSetAction,
             * alert_type: Type of message. Either 'info', 'error', or 'warn'.
             * alert_msg: Additional information shown to the user.
     """
-
     # Parse the data and look up the relevant model instances:
 
     # Variant list.
     variant_list = Variant.objects.filter(
-            uid__in=variantUidList)
-    assert len(variant_list) == len(variantUidList)
-    if not len(variantSetUid) > 0:
+            uid__in=variant_uid_list)
+    assert len(variant_list) == len(variant_uid_list)
+    if not len(variant_set_uid) > 0:
         response_json = {
                 'alert_type':'error',
                 'alert_msg':'At least one variant required.'
@@ -51,7 +48,7 @@ def add_or_remove_variants_from_set(variantUidList, variantSetAction,
 
     # Variant set.
     try:
-        variant_set = VariantSet.objects.get(uid=variantSetUid)
+        variant_set = VariantSet.objects.get(uid=variant_set_uid)
     except ObjectDoesNotExist as e:
         response_json = {
                 'alert_type' : 'error',
@@ -68,7 +65,7 @@ def add_or_remove_variants_from_set(variantUidList, variantSetAction,
     total_count = len(variant_list)
 
     # Perform the variant set action.
-    if variantSetAction == 'add':
+    if variant_set_action == 'add':
 
 
         # Identify existing relationships if any exist.
@@ -103,7 +100,7 @@ def add_or_remove_variants_from_set(variantUidList, variantSetAction,
         return response_json
 
     # Perform the variant remove action.
-    elif variantSetAction == 'remove':
+    elif variant_set_action == 'remove':
 
         if len(vvs_existing) == 0:
             response_json = {

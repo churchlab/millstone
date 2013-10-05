@@ -43,7 +43,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
 
   /** Backbone sugar for registering event listeners. */
   events: {
-    'click .gd-variant-set-action': 'handleVariantSetClick',
+    'click .gd-variant-set-action': 'handleVariantSetActionClick',
     'click #gd-filter-box-apply-btn': 'handleApplyFilterClick',
     'click #gd-filter-field-select-btn': 'handleShowFieldSelect'
   },
@@ -85,7 +85,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
         el: $('#gd-datatable-hook'),
         serverTarget: '/_/variants',
         serverParamsInjector: _.bind(
-            this.addFilterDataToDataTableServerSideRequest, this)
+            this.addFilterDataServerSideRequest, this)
     });
 
     // Listen to events from the DataTable to provide appropriate UI affordance.
@@ -176,7 +176,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
    *     'name' and 'value'. The array is passed by reference so this method
    *      must mutate this array.
    */
-  addFilterDataToDataTableServerSideRequest: function(aoData) {
+  addFilterDataServerSideRequest: function(aoData) {
     var requestData = {
       'projectUid': this.model.get('project').uid,
       'refGenomeUid': this.model.get('refGenomeUid'),
@@ -187,6 +187,34 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     _.each(_.pairs(requestData), function(pair) {
       aoData.push({'name': pair[0], 'value': pair[1]});
     })
+  },
+
+
+  /**
+   * Creates the modal for selecting which fields are being displayed and
+   * shows it.
+   */
+  handleShowFieldSelect: function() {
+    var variantFieldSelectModel = new Backbone.Model({
+        'variantKeyMap': this.variantKeyMap
+    });
+    this.variantFieldSelect = new gd.VariantFieldSelectComponent(
+        {'model': variantFieldSelectModel});
+    this.listenTo(this.variantFieldSelect, 'updateSelectedFields',
+        _.bind(this.handleUpdateSelectedFields, this));
+  },
+
+
+  /** Handles an update event from the field select component. */
+  handleUpdateSelectedFields: function(selectedKeyNames) {
+    // Hide the modal.
+    this.variantFieldSelect.hide();
+
+    // Update the attribute that stores the visible field names.
+    this.visibleKeyNames = selectedKeyNames;
+
+    // Kick off a request to update the view.
+    this.updateVariantList();
   },
 
 
@@ -240,8 +268,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
 
 
   /** Handles a click on a variant set action button. */
-  handleVariantSetClick: function(ev) {
-    // Post to this same view for now.
+  handleVariantSetActionClick: function(ev) {
     var postUrl = '/_/variants/modify_set_membership';
 
     // Grab the selected rows.
@@ -260,16 +287,9 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     }
 
     var onSuccess = _.bind(function(response) {
-      // Repopulate json data from response
-      this.variantList = JSON.parse(response.variant_list_json).obj_list;
-      this.variantSetList = JSON.parse(response.variant_set_list_json).obj_list;
+      window.location.reload();
 
-      // Show alert message based on response.
-      this.showAlertMessage(response.alert_msg, response.alert_type);
-
-      // Redraw the datatable.
-      this.datatableComponent.update(this.variantList);
-      this.drawDropdowns();
+      // TODO: Proper success handling.
     }, this);
 
     // Execute the post. Should return a redirect response.
@@ -307,34 +327,6 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     $('#gd-variant-set-action-submit-alert').addClass('alert-' + alertType);
     $('#gd-variant-set-action-submit-alert').show();
   },
-
-
-  /**
-   * Creates the modal for selecting which fields are being displayed and
-   * shows it.
-   */
-  handleShowFieldSelect: function() {
-    var variantFieldSelectModel = new Backbone.Model({
-        'variantKeyMap': this.variantKeyMap
-    });
-    this.variantFieldSelect = new gd.VariantFieldSelectComponent(
-        {'model': variantFieldSelectModel});
-    this.listenTo(this.variantFieldSelect, 'updateSelectedFields',
-        _.bind(this.handleUpdateSelectedFields, this));
-  },
-
-
-  /** Handles an update event from the field select component. */
-  handleUpdateSelectedFields: function(selectedKeyNames) {
-    // Hide the modal.
-    this.variantFieldSelect.hide();
-
-    // Update the attribute that stores the visible field names.
-    this.visibleKeyNames = selectedKeyNames;
-
-    // Kick off a request to update the view.
-    this.updateVariantList();
-  }
 },
 
 /** Static properties */

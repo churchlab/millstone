@@ -183,8 +183,6 @@ def modify_variant_in_set_membership(request):
     """
     request_data = json.loads(request.body)
 
-    # Parse the data from the request body.
-
     # Make sure the required keys are present.
     REQUIRED_KEYS = [
             'variantUidList',
@@ -200,13 +198,10 @@ def modify_variant_in_set_membership(request):
 
     # Get the project and verify that the requesting user has the
     # right permissions.
-    # project = get_object_or_404(Project, owner=request.user.get_profile(),
-    #         uid=project_uid)
-    project = Project.objects.get(owner=request.user.get_profile(),
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
-    reference_genome = ReferenceGenome.objects.get(project=project,
+    reference_genome = get_object_or_404(ReferenceGenome, project=project,
             uid=ref_genome_uid)
-
 
     context = {}
 
@@ -217,15 +212,6 @@ def modify_variant_in_set_membership(request):
         request_data.get('variantSetUid'),
     ))
 
-    # TODO: Pass these from the frontend.
-    combined_filter_string = ''
-    is_melted = 0
+    # TODO: Proper response and error handling.
 
-    context['variant_list_json'] = lookup_variants(reference_genome,
-        combined_filter_string, is_melted)
-    context['variant_set_list_json'] = adapt_model_to_frontend(VariantSet,
-            {'reference_genome__project': project})
-
-    return HttpResponse(
-            json.dumps(context),
-            content_type='application/json')
+    return HttpResponse('ok')

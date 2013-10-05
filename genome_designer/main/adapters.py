@@ -11,6 +11,17 @@ import string
 from django.db.models import ManyToManyField
 from django.db.models import Model
 
+from main.constants import UNDEFINED_STRING
+
+
+# Fields that are not explicitly displayed but are used on the frontend
+# to update views of particular columns.
+# TODO: Make each field encapsulate its own special display logic.
+HIDDEN_PAIR_FIELDS = [
+    'href',
+    'uid',
+]
+
 
 def adapt_model_or_modelview_list_to_frontend(instance_list, **kwargs):
     """Adapts a list of model instances to the frontend represenation.
@@ -124,10 +135,15 @@ def adapt_model_instance_to_frontend(model_instance, field_info={}, **kwargs):
 
     # Other values.
     other_pairs = []
-    if hasattr(model_instance, 'get_href'):
-        other_pairs.append(('href', model_instance.get_href()))
-    if hasattr(model_instance, 'uid'):
-        other_pairs.append(('uid', model_instance.uid))
+    for key in HIDDEN_PAIR_FIELDS:
+        if hasattr(model_instance, 'custom_getattr'):
+            hidden_value = model_instance.custom_getattr(key)
+            if hidden_value == UNDEFINED_STRING:
+                continue
+            other_pairs.append((key, hidden_value))
+        elif hasattr(model_instance, key):
+            other_pairs.append((key, getattr(model_instance, key)))
+
 
     # Add in keys from field_info, which are inherited from parent model, if
     # this function is called recursively from
@@ -145,7 +161,6 @@ def get_model_field_fe_representation(model_obj, field, field_info={},
     implemented.
 
     This method allows recursively diving into models.
-
     """
     if hasattr(model_obj, 'custom_getattr'):
         model_field = model_obj.custom_getattr(field)
