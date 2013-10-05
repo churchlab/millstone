@@ -55,3 +55,4 @@ genome_designer/snpEff_summary.html
 
 # IDE config files
 *.sublime-project
+*.sublime-workspace
