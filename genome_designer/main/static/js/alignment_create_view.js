@@ -17,6 +17,8 @@ gd.AlignmentCreateView = Backbone.View.extend({
   render: function() {
     $('#gd-sidenav-link-alignments').addClass('active');
 
+    this.nameInput = $('#gd-alignment-create-name-input');
+
     this.refGenomeDataTable = new gd.DataTableComponent({
         el: $('#gd-datatable-ref_genome-hook'),
         objList: REF_GENOME_LIST_DATA['obj_list'],
@@ -47,10 +49,12 @@ gd.AlignmentCreateView = Backbone.View.extend({
 
     // Grab the selected rows.
     var postData = {
+        name: this.nameInput.val(),
         refGenomeUidList: this.refGenomeDataTable.getCheckedRowUids(),
         sampleUidList: this.samplesDatatable.getCheckedRowUids()
     };
 
+    // Validate the data.
     var validationResult = this.validatePostData(postData);
     if (!validationResult.is_success) {
       $('#gd-align-create-submit-error-msg').text(validationResult.error_msg);
@@ -82,6 +86,13 @@ gd.AlignmentCreateView = Backbone.View.extend({
    *     * error_msg {string} Human-readable description of the error.
    */
   validatePostData: function(postData) {
+    if (!postData.name) {
+      return {
+          is_success: false,
+          error_msg: 'Name required.'
+      };
+    }
+
     if (!postData.refGenomeUidList.length) {
       return {
           is_success: false,

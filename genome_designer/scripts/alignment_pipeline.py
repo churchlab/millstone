@@ -28,7 +28,8 @@ from settings import PWD
 from settings import TOOLS_DIR
 
 
-def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
+def create_alignment_groups_and_start_alignments(
+        alignment_group_label, ref_genome_list, sample_list,
         test_models_only=False, concurrent=DEBUG_CONCURRENT):
     """Creates an AlignmentGroup and kicks off alignment for each one.
 
@@ -43,6 +44,7 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
             models.
         concurrent: If True, run alignments in parallel.
     """
+    assert len(alignment_group_label) > 0, "Name must be non-trivial string."
     assert len(ref_genome_list) > 0, (
             "Must provide at least one ReferenceGenome.")
     assert len(sample_list) > 0, (
@@ -58,7 +60,7 @@ def create_alignment_groups_and_start_alignments(ref_genome_list, sample_list,
 
     for ref_genome in ref_genome_list:
         alignment_group = AlignmentGroup.objects.create(
-                label='TODO_LABEL',
+                label=alignment_group_label + '_' + ref_genome.label,
                 reference_genome=ref_genome,
                 aligner=AlignmentGroup.ALIGNER.BWA)
 

@@ -308,11 +308,14 @@ def alignment_create_view(request, project_uid):
         request_data = json.loads(request.body)
 
         # Make sure the required keys are present.
-        REQUIRED_KEYS = ['refGenomeUidList', 'sampleUidList']
+        REQUIRED_KEYS = ['name', 'refGenomeUidList', 'sampleUidList']
         if not all(key in request_data for key in REQUIRED_KEYS):
             return HttpResponseBadRequest("Invalid request. Missing keys.")
 
         # Parse the data and look up the relevant model instances.
+        alignment_group_name = request_data['name']
+        if not len(alignment_group_name):
+            return HttpResponseBadRequest("Name required.")
 
         ref_genome_list = ReferenceGenome.objects.filter(
                 project=project,
@@ -331,8 +334,8 @@ def alignment_create_view(request, project_uid):
 
         # Kick off alignments.
         try:
-            create_alignment_groups_and_start_alignments(ref_genome_list,
-                    sample_list)
+            create_alignment_groups_and_start_alignments(alignment_group_name,
+                    ref_genome_list, sample_list)
 
             # Success. Return a redirect response.
             response_data = {

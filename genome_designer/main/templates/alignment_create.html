@@ -3,26 +3,31 @@
 {% block inner_tab_content %}
 <h1>Create Alignment</h1>
 <ul id="modalFromFileTab" class="nav nav-tabs">
-  <li class="active"><a href="#alignCreateTab_ref_genome" data-toggle="tab">1. Reference Genome</a></li>
-  <li><a href="#alignCreateTab_samples" data-toggle="tab">2. Samples</a></li>
-  <li><a href="#alignCreateTab_options" data-toggle="tab">3. Alignment Options</a></li>
-  <li><a href="#alignCreateTab_submit" data-toggle="tab">4. Submit</a></li>
+  <li class="active"><a href="#alignCreateTab_name" data-toggle="tab">1. Name</a></li>
+  <li><a href="#alignCreateTab_ref_genome" data-toggle="tab">2. Reference Genome</a></li>
+  <li><a href="#alignCreateTab_samples" data-toggle="tab">3. Samples</a></li>
+  <li><a href="#alignCreateTab_options" data-toggle="tab">4. Alignment Options</a></li>
+  <li><a href="#alignCreateTab_submit" data-toggle="tab">5. Submit</a></li>
 </ul>
 <div id="alignCreateTabs" class="tab-content">
-  <div class="tab-pane fade in active" id="alignCreateTab_ref_genome">
-    <h3>1. Choose Reference Genome</h3> 
+  <div class="tab-pane fade in active" id="alignCreateTab_name">
+    <h3>1. Choose a name</h3>
+    <input id="gd-alignment-create-name-input" type="text" name="alignment-name" placeholder="Name...">
+  </div>
+  <div class="tab-pane fade in" id="alignCreateTab_ref_genome">
+    <h3>2. Choose Reference Genome</h3>
     <p>Select a genome sequence to which the reads will be aligned.</p>
     <div id="gd-datatable-ref_genome-hook">
     </div>
   </div>
   <div class="tab-pane fade in" id="alignCreateTab_samples">
-    <h3>2. Choose Samples</h3>
+    <h3>3. Choose Samples</h3>
     <p>Select one or more samples whose FASTQ reads will be aligned. Variants for these samples will be called together in one VCF file.</p>
     <div id="gd-datatable-samples-hook">
-    </div>  
+    </div>
   </div>
   <div class="tab-pane fade in" id="alignCreateTab_options">
-    <h3>3. Choose Alignment Options</h3>
+    <h3>4. Choose Alignment Options</h3>
     <p>Select aligner to use and set the aligner's options.</p>
   </div>
   <div class="tab-pane fade in" id="alignCreateTab_submit">
@@ -32,7 +37,7 @@
       <span id="gd-align-create-submit-error-msg"></span>
     </div>
 
-    <h3>4. Submit</h3>
+    <h3>5. Submit</h3>
     <button class="btn" id="gd-align-create-submit-btn">Submit</button>
   </div>
 </div>
