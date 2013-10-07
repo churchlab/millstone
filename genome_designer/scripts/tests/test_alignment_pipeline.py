@@ -96,6 +96,14 @@ class TestAlignmentPipeline(TestCase):
                 if ('storeClass' in track and track['storeClass'] ==
                         'JBrowse/Store/SeqFeature/BAM'):
                     found_bam_track = True
+
+                    # Also check that the urlTemplate is correct.
+                    EXPECTED_URL_TEMPLATE = os.path.join(
+                            settings.JBROWSE_DATA_URL_ROOT,
+                            bwa_align_dataset.filesystem_location)
+                    self.assertEqual(EXPECTED_URL_TEMPLATE,
+                            track['urlTemplate'])
+
                     break
             self.assertTrue(found_bam_track)
 

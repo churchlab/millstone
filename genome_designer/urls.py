@@ -107,4 +107,4 @@ urlpatterns = patterns('',
 
 if settings.DEBUG:
     from django.conf.urls.static import static
-    urlpatterns += static('jbrowse', document_root=settings.JBROWSE_ROOT)
+    urlpatterns += static('jbrowse', document_root=settings.JBROWSE_ROOT, show_indexes=True)

@@ -227,25 +227,20 @@ def align_with_bwa(alignment_group, experiment_sample=None,
         # Add the resulting file to the dataset.
         bwa_dataset.filesystem_location = clean_filesystem_location(
                 result_bam_file)
+        bwa_dataset.save()
 
         # Add track to JBrowse.
         add_bam_file_track(alignment_group.reference_genome, sample_alignment,
                 Dataset.TYPE.BWA_ALIGN)
+
+        bwa_dataset.status = Dataset.STATUS.READY
+        bwa_dataset.save()
 
     except subprocess.CalledProcessError as e:
         error_output.write(str(e))
         bwa_dataset.status = Dataset.STATUS.FAILED
         bwa_dataset.save()
         return
-
-    else:
-        bwa_dataset.filesystem_location = result_bam_file
-        bwa_dataset.status = Dataset.STATUS.READY
-        bwa_dataset.save()
-
-        # Create a JBrowse track.
-        jbrowse_util.add_bam_file_track(
-                reference_genome, genome, Dataset.TYPE.BWA_ALIGN)
 
     finally:
         error_output.close()

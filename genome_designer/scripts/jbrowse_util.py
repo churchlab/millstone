@@ -68,15 +68,14 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     # keyed by the alignment_type.
     bam_dataset = get_dataset_with_type(sample_alignment, alignment_type)
 
-
     # Figure out the url that JBrowse would use to show the data, e.g.:
-    #     /jbrowse/gd_data/users/8fc1f831/projects/58a62c7d/genomes/8dc829ec/align.bam
+    #     /jbrowse/gd_data/projects/58a62c7d/genomes/8dc829ec/align.bam
     urlTemplate = os.path.join(JBROWSE_DATA_URL_ROOT,
             bam_dataset.filesystem_location)
 
     # Generic label for now.
     # TODO: Is there a better way to come up with a label?
-    label = str(sample_alignment.uid) + '_' + alignment_type
+    label = str(sample_alignment.experiment_sample.uid) + '_' + alignment_type
 
     # Build the JSON object.
     raw_dict_obj = {
