@@ -452,7 +452,7 @@ class ReferenceGenome(Model):
             '/jbrowse/?data=gd_data/abc/projects/xyz/ref_genomes/456/jbrowse/'
         """
         return os.path.join(
-                '/jbrowse/?data=gd_data/',
+                '/jbrowse/index.html?data=gd_data/',
                 'projects',
                 str(self.project.uid),
                 'ref_genomes',
@@ -748,6 +748,14 @@ class Variant(Model):
         return str(self.position) + '_' + self.ref_value + '_' + self.alt_value
 
     @property
+    def jbrowse_link(self):
+        ref_genome_jbrowse = self.reference_genome.get_client_jbrowse_link()
+        location_param = '&loc=' + str(self.position)
+        full_href = ref_genome_jbrowse + location_param
+        return '<a href="' + full_href + '">jbrowse</a>'
+
+
+    @property
     def href(self):
         """Link to url view for this model.
         """
@@ -762,8 +770,7 @@ class Variant(Model):
         Called by the adapter.
         """
         return [{'field':'label'},
-                #In the new analyze tab this is redundant
-                #{'field':'reference_genome'}, 
+                {'field':'jbrowse_link', 'verbose': 'JBrowse'},
                 {'field':'chromosome'},
                 {'field':'position'},
                 {'field':'type'},
