@@ -181,8 +181,8 @@ gd.ServerSideDataTableComponent = Backbone.View.extend({
    * and dropdown button that can toggles all checkboxes that are in its table
    */
   createMasterCheckbox: function() {
-    $(".gd-dt-cb.master").empty();
-    $(".gd-dt-cb.master").append(
+    this.$el.find(".gd-dt-cb.master").empty();
+    this.$el.find(".gd-dt-cb.master").append(
       '<div class="gd-dt-cb-div master pull-right btn-group">' +
         '<button class="btn"><input type="checkbox" class="gd-dt-cb master" id="' + this.datatableId + '-master-cb"></button>' +
         '<button class="btn dropdown-toggle" style="min-height: 26px" data-toggle="dropdown">' +
