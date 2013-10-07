@@ -3,6 +3,8 @@ from django.conf.urls import patterns
 from django.conf.urls import url
 from django.views.generic import RedirectView
 
+import settings
+
 urlpatterns = patterns('',
     url(r'^$', 'genome_designer.main.views.home_view'),
 
@@ -102,3 +104,7 @@ urlpatterns = patterns('',
     url(r'^_/variants/modify_set_membership$',
             'genome_designer.main.xhr_handlers.modify_variant_in_set_membership'),
 )
+
+if settings.DEBUG:
+    from django.conf.urls.static import static
+    urlpatterns += static('jbrowse', document_root=settings.JBROWSE_ROOT)
