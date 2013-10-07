@@ -1,29 +1,29 @@
-{% extends "tab_base.html" %}
+{% extends "tab_root_align.html" %}
 
-{% block content%}
-<div class="page-header">
-  <h1>Alignment {{alignment_group.label}}</h1>
-</div>
+{% block inner_tab_content %}
+  <div class="page-header">
+    <h1>Alignment {{alignment_group.label}}</h1>
+  </div>
 
-<div class="btn-toolbar">
-  <button class="btn btn-primary" href="#">
-    Go to Variants for this alignment&hellip;
-  </button>
-  <button id="gd-alignments-rerun-variants-btn" class="btn btn-primary">
-    Re-run&hellip;
-  </button>
-</div>
+  <div class="btn-toolbar">
+    <button class="btn btn-primary" href="#">
+      Go to Variants for this alignment&hellip;
+    </button>
+    <button id="gd-alignments-rerun-variants-btn" class="btn btn-primary">
+      Re-run&hellip;
+    </button>
+  </div>
 
-<div id="gd-alignment_view-datatable-hook" class="container-fluid">
-</div>
+  <div id="gd-alignment_view-datatable-hook">
+  </div>
 
-<script type="text/javascript">
-  VIEW_TAG = 'ALIGNMENT';
+  <script type="text/javascript">
+    VIEW_TAG = 'ALIGNMENT';
 
-  {% autoescape off %}
-    EXPERIMENT_TO_SAMPLE_DATA = {{experiment_sample_to_alignment_list_json}};
+    {% autoescape off %}
+      EXPERIMENT_TO_SAMPLE_DATA = {{experiment_sample_to_alignment_list_json}};
 
-    INIT_JS_DATA = {{init_js_data}};
-  {% endautoescape %}
-</script>
+      INIT_JS_DATA = {{init_js_data}};
+    {% endautoescape %}
+  </script>
 {% endblock %}

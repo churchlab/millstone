@@ -1,6 +1,6 @@
-{% extends "tab_base.html" %}
+{% extends "tab_root_align.html" %}
 
-{% block content%}
+{% block inner_tab_content %}
 <h1>Create Alignment</h1>
 <ul id="modalFromFileTab" class="nav nav-tabs">
   <li class="active"><a href="#alignCreateTab_ref_genome" data-toggle="tab">1. Reference Genome</a></li>
@@ -12,13 +12,13 @@
   <div class="tab-pane fade in active" id="alignCreateTab_ref_genome">
     <h3>1. Choose Reference Genome</h3> 
     <p>Select a genome sequence to which the reads will be aligned.</p>
-    <div id="gd-datatable-ref_genome-hook" style="box-sizing: border-box; padding: 50px">
+    <div id="gd-datatable-ref_genome-hook">
     </div>
   </div>
   <div class="tab-pane fade in" id="alignCreateTab_samples">
     <h3>2. Choose Samples</h3>
     <p>Select one or more samples whose FASTQ reads will be aligned. Variants for these samples will be called together in one VCF file.</p>
-    <div id="gd-datatable-samples-hook" style="box-sizing: border-box; padding: 50px">
+    <div id="gd-datatable-samples-hook">
     </div>  
   </div>
   <div class="tab-pane fade in" id="alignCreateTab_options">

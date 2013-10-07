@@ -1,5 +1,9 @@
 {% extends "tab_base.html" %}
 
-{% block content%}
-  <h1>Align</h1>
+{% block tab_content %}
+  {% block inner_tab_content %}
+    <a href="{% url 'main.views.alignment_create_view' project.uid %}">
+      <button type="submit" class="btn btn-primary">New Alignment...</button>
+    </a>
+  {% endblock %}
 {% endblock %}
