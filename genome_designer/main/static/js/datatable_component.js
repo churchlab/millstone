@@ -166,10 +166,11 @@ gd.DataTableComponent = Backbone.View.extend({
    * and dropdown button that can toggles all checkboxes that are in its table
    */
   createMasterCheckbox: function() {
-    $(".gd-dt-cb.master").empty();
-    $(".gd-dt-cb.master").append(
+    var masterCheckboxElId = this.datatableId + '-master-cb';
+    this.$el.find(".gd-dt-cb.master").empty();
+    this.$el.find(".gd-dt-cb.master").append(
       '<div class="gd-dt-cb-div master pull-right btn-group">' +
-        '<button class="btn"><input type="checkbox" class="gd-dt-cb master" id="' + this.datatableId + '-master-cb"></button>' +
+        '<button class="btn"><input type="checkbox" class="gd-dt-cb master" id="' + masterCheckboxElId + '"></button>' +
         '<button class="btn dropdown-toggle" style="min-height: 26px" data-toggle="dropdown">' +
           '<span><i class="icon-chevron-down"></i></span>' +
         '</button>' +
@@ -177,14 +178,12 @@ gd.DataTableComponent = Backbone.View.extend({
         '</ul>' +
       '</div>');
 
-    this.master_cb = $('#' + this.datatableId + '-master-cb');
-
     /**
      * If the master checkbox is changed, toggle all checkboxes in the
      * associated table with the following listener.
      */
 
-    this.master_cb.change(_.bind(function(el) {
+    $('#' + masterCheckboxElId).change(_.bind(function(el) {
       // Find all checkboxes in the associated table
       var all_cbs = this.datatable.find('input:checkbox.gd-dt-cb');
 
