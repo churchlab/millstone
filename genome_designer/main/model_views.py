@@ -8,6 +8,7 @@ from main.constants import UNDEFINED_STRING
 from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
+from main.models import VariantSet
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.variant_filter import get_per_alt_dict
@@ -130,6 +131,34 @@ class MeltedVariantView(BaseVariantView):
         self.variant_evidence = variant_evidence
 
     def custom_getattr(self, attr):
+        """Custom implementation of getting an attribute.
+
+        We need this since to make sure we delegate to the objects that compose
+        this object, in the correct order.
+        """
+        # Handle certain fields manually.
+        # TODO: Come up with more generic way of manually handling fields.
+        if attr == 'variantset_set':
+            # TODO(gleb): Make the queries below efficient. Right now I'm just
+            # trying to get it to work.
+            if self.variant_evidence is None:
+                # Return VariantSets which contain no ExperimentSample
+                # association.
+                no_sample_variant_sets = []
+                for vtvs in self.variant.varianttovariantset_set.all():
+                    if len(vtvs.sample_variant_set_association.all()) == 0:
+                        no_sample_variant_sets.append(vtvs.variant_set)
+                return no_sample_variant_sets
+
+            else:
+                # Only show sets associated with the VariantEvidence.
+                sample = self.variant_evidence.experiment_sample
+                variant_sets_for_this_sample = []
+                for vtvs in self.variant.varianttovariantset_set.all():
+                    if sample in vtvs.sample_variant_set_association.all():
+                        variant_sets_for_this_sample.append(vtvs.variant_set)
+                return variant_sets_for_this_sample
+
         delegate_order = [
                 self.variant,
                 self.variant_caller_common_data,

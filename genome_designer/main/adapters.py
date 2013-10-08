@@ -10,6 +10,7 @@ import string
 
 from django.db.models import ManyToManyField
 from django.db.models import Model
+from django.db.models.query import QuerySet
 
 from main.constants import UNDEFINED_STRING
 
@@ -82,10 +83,12 @@ def adapt_model_to_frontend(model, filters={}, obj_list=None, **kwargs):
     field_list = [fdict['field'] for fdict in field_dict_list]
 
     # Get the verbose field names, which will be used as column headers.
-    get_verbose= lambda fdict: (fdict['verbose'] if 'verbose' in fdict else
-        string.capwords(fdict['field'],'_').replace('_',' '))
-    field_verbose_names = [get_verbose(fdict) for fdict in field_dict_list]
-
+    def _get_verbose(fdict):
+        if 'verbose' in fdict:
+            return fdict['verbose']
+        else:
+            return string.capwords(fdict['field'],'_').replace('_',' ')
+    field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
 
     # A list of dicts containing the order of each column and the field titles
     # for each column, used for configuring jquery.datatables.js
@@ -170,6 +173,13 @@ def get_model_field_fe_representation(model_obj, field, field_info={},
     if isinstance(model_field, Model):
         return adapt_model_instance_to_frontend(model_field, field_info)
     elif model_field.__class__.__name__ ==  'ManyRelatedManager':
-        return [
-            adapt_model_instance_to_frontend(m, field_info) for m in model_field.all()]
+        return [adapt_model_instance_to_frontend(m, field_info)
+                for m in model_field.all()]
+    elif isinstance(model_field, QuerySet):
+        return [adapt_model_instance_to_frontend(m, field_info)
+                for m in model_field]
+    elif isinstance(model_field, list):
+        # TODO(gleb): Temp while developing. Probably get rid of this.
+        return [adapt_model_instance_to_frontend(m, field_info)
+                for m in model_field]
     return str(model_field)
