@@ -21,7 +21,7 @@ from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.forms import ProjectForm
-from main.melt_util import variant_as_melted_list
+from main.model_views import MeltedVariantView
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
@@ -518,7 +518,8 @@ def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
             uid=variant_uid,
             reference_genome=reference_genome)
 
-    melted_variant_list = variant_as_melted_list(variant)
+    melted_variant_list = MeltedVariantView.variant_as_melted_list(variant)
+
     fe_melted_variant_list = adapt_model_or_modelview_list_to_frontend(
             melted_variant_list,
             variant_key_map=reference_genome.variant_key_map)

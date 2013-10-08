@@ -215,6 +215,8 @@ class MeltedVariantView(BaseVariantView):
 
             for variant_evidence_obj in variant_evidence_list:
                 if passing_sample_ids is not None:
+                    # Don't add a row for VariantEvidence object if sample is
+                    # not present.
                     sample_id = variant_evidence_obj.experiment_sample.id
                     if not sample_id in passing_sample_ids:
                         continue
