@@ -116,7 +116,7 @@ def get_variant_list(request):
 
     # Grab the VariantSet data.
     variant_set_list = VariantSet.objects.filter(
-            reference_genome__project=project)
+            reference_genome=reference_genome)
 
     # Query the keys valid for ReferenceGenome, and mark the ones that
     # will be displayed so that the checkmarks are pre-filled in case
