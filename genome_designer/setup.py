@@ -153,7 +153,7 @@ def setup_jbrowse():
 if __name__ == '__main__':
 
     # Placeholder for a more comprehensive command line arg parsing:
-    if len(sys.argv) and sys.argv[1] == 'jbrowse':
+    if len(sys.argv) > 1 and sys.argv[1] == 'jbrowse':
         setup_jbrowse()
     else:
         setup()
