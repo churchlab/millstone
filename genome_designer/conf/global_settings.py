@@ -273,6 +273,6 @@ SNPEFF_SUMMARY_FILES = ['snpEff_genes.txt', 'snpEff_summary.html']
 # Testing
 ###############################################################################
 
-TEST_RUNNER = 'test_suite_runner.TempFilesystemTestSuiteRunner'
+TEST_RUNNER = 'test_suite_runner.CustomTestSuiteRunner'
 
 TEST_FILESYSTEM_DIR = os.path.join(PWD, 'temp_test_data')
