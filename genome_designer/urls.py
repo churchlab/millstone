@@ -26,6 +26,9 @@ urlpatterns = patterns('',
             'genome_designer.main.views.tab_root_align'),
     url(r'^projects/([\w-]+)/analyze$',
             'genome_designer.main.views.tab_root_analyze'),
+    url(r'^projects/([\w-]+)/analyze/([\w-]+)$',
+            'genome_designer.main.views.tab_root_analyze'),
+
 
 
     # Reference genomes

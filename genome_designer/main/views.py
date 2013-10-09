@@ -137,20 +137,30 @@ def tab_root_align(request, project_uid):
 
 
 @login_required
-def tab_root_analyze(request, project_uid):
+def tab_root_analyze(request, project_uid, ref_genome_uid=None):
+    context = {}
+
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
     # Initial javascript data.
-    init_js_data = json.dumps({
+    init_js_data = {
         'project': adapt_model_instance_to_frontend(project)
+    }
+
+    ref_genome = None
+    if ref_genome_uid is not None:
+        ref_genome = ReferenceGenome.objects.get(project=project,
+                uid=ref_genome_uid)
+        init_js_data['refGenome'] = adapt_model_instance_to_frontend(ref_genome)
+        context['selected_ref_genome_uid'] = ref_genome_uid
+
+    context.update({
+        'project': project,
+        'init_js_data': json.dumps(init_js_data),
+        'tab_root': TAB_ROOT__ANALYZE
     })
 
-    context = {
-        'project': project,
-        'init_js_data': init_js_data,
-        'tab_root': TAB_ROOT__ANALYZE
-    }
     return render(request, 'tab_root_analyze.html', context)
 
 

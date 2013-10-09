@@ -77,4 +77,5 @@ gd.App.prototype.run = function() {
 $(document).ready(function() {
   var app = new gd.App();
   app.run();
+  Backbone.history.start({pushState: true});
 });

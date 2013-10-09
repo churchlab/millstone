@@ -11,6 +11,11 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
 
   /** Backbone initialize method. */
   initialize: function() {
+    // Router object for synchronizing history.
+    this.router = new gd.TabAnalyzeRouter({
+        projectUid: this.model.get('project').uid
+    });
+
     // The DataTableComponent currently in view.
     this.datatableComponent = null;
 
@@ -32,6 +37,10 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
 
     // Perform rendering and registering listeners.
     this.render();
+
+    if (this.model.has('refGenome')) {
+      this.handleRefGenomeSelect(undefined, this.model.get('refGenome').uid);
+    }
   },
 
   render: function() {
@@ -60,11 +69,14 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
    * @param {Event} e Event object if this is being called in response to an
    *     event. Ignored if opt_refGenomeUid is provided.
    * @param {string=} opt_refGenomeUid Optional ref genome string explicitly
-   *     provided.  Useful for debug.
+   *     provided.
    */
   handleRefGenomeSelect: function(e, opt_refGenomeUid) {
     var refGenomeUid = opt_refGenomeUid || $(e.target).val();
     this.model.set('refGenomeUid', refGenomeUid);
+
+    // Update the url.
+    this.router.navOnRefGenomeSelect(refGenomeUid);
 
     // Show the entity select (i.e. Variants, VariantSets, etc.)
     // TODO: Implement support for switching among entities.
