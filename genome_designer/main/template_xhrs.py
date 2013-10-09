@@ -12,5 +12,10 @@ from django.template.loader import render_to_string
 def variant_filter_controls(request):
     """Returns the Variant filter control box.
     """
-    controls_html = render_to_string('snp_filter_control.html')
-    return HttpResponse(controls_html)
+    return HttpResponse(render_to_string('snp_filter_control.html'))
+
+
+def variant_set_controls(request):
+    """Returns the VariantSets control box.
+    """
+    return HttpResponse(render_to_string('variant_set_controls.html'))

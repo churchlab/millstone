@@ -14,6 +14,7 @@ from django.http import Http404
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_GET
 
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
@@ -213,3 +214,26 @@ def modify_variant_in_set_membership(request):
             request_data.get('variantSetUid'))
 
     return HttpResponse(json.dumps(update_memberships_result))
+
+
+@login_required
+@require_GET
+def get_variant_set_list(request):
+    # Parse the GET params.
+    ref_genome_uid = request.GET.get('refGenomeUid')
+
+    reference_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)
+
+    # Grab the VariantSet data.
+    variant_set_list = VariantSet.objects.filter(
+            reference_genome=reference_genome)
+
+    response_data = {
+        'variant_set_list_json': adapt_model_to_frontend(VariantSet,
+                obj_list=variant_set_list),
+    }
+
+    return HttpResponse(json.dumps(response_data),
+            content_type='application/json')

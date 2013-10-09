@@ -45,16 +45,15 @@ input.gd-form-tall {
   margin-bottom: 20px;
 }
 
-/** Filter. */
+.gd-analyze-select-search-entity {
+  margin-left: 10px;
+}
 
-.gd-filter-container {
+.gd-analyze-subview-controls-hook {
   border: 1px dotted black;
   margin-bottom: 10px;
   padding: 10px 0 10px 10px;
-}
 
-.gd-analyze-select-search-entity {
-  margin-left: 10px;
 }
 
 /* GD Checkboxes for Datatables, checkbox td changes color */

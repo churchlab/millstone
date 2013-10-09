@@ -30,7 +30,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
   },
 
 
-  /** Render the controls. Inheriting classes should override. */
+  /** @override */
   renderControls: function() {
     // Request the filter control html from the server for now.
     // TODO: Client-side template support.
@@ -47,7 +47,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
   },
 
 
-  /** Render the DataTable. Inheriting classes should override. */
+  /** @override */
   renderDatatable: function() {
     // Recreate the initial DataTable.
     this.createDatatableComponent();

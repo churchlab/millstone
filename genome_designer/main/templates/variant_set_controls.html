@@ -1,23 +1,12 @@
-{% extends "tab_base.html" %}
-
-{% block content%}
-<div class="page-header">
-  <h1>Variant Sets</h1>
-</div>
-
-<p>
-  {% if error_string %}
-  <div class="alert alert-error alert-block">
-    <button type="button" class="close" data-dismiss="alert">&times;</button>
-    <h4>Error</h4>
-    {{ error_string }}
-  </div>
-  {% endif %}
-
-  {% include "variant_set_controls.html" %}
-</p>
-
-<div id="gd-variant_set_list_view-datatable-hook" class="container-fluid">
+<div class="btn-group">
+  <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
+    Create New
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu">
+    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From File...</a></li>
+    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalEmpty" data-toggle="modal">Empty</a></li>
+  </ul>
 </div>
 
 <!-- From file modal -->
@@ -116,13 +105,3 @@
     <button class="btn btn-primary" id="gd-variant-set-form-empty-submit">Submit</button>
   </div>
 </div>
-
-
-<script type="text/javascript">
-  VIEW_TAG = 'VARIANT_SET_LIST';
-
-  {% autoescape off %}
-    VARIANT_SET_LIST_DATA = {{variant_set_list_json}};
-  {% endautoescape %}
-</script>
-{% endblock %}

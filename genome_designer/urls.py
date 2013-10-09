@@ -91,6 +91,8 @@ urlpatterns = patterns('',
     # XHR Actions
     ############################################################################
 
+    url(r'^_/sets$',
+            'genome_designer.main.xhr_handlers.get_variant_set_list'),
     url(r'^_/sets/exportcsv$',
             'genome_designer.main.xhr_handlers.export_variant_set_as_csv'),
     url(r'^_/variants$',
@@ -106,7 +108,8 @@ urlpatterns = patterns('',
 
     url(r'^_/templates/variant_filter_controls$',
             'genome_designer.main.template_xhrs.variant_filter_controls'),
-
+    url(r'^_/templates/variant_set_controls$',
+            'genome_designer.main.template_xhrs.variant_set_controls'),
 )
 
 if settings.DEBUG:
