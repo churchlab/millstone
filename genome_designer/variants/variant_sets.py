@@ -2,6 +2,8 @@
 Utility methods for manipulating variant sets.
 """
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from main.constants import UNDEFINED_STRING
 from main.models import ExperimentSample
 from main.models import Variant
