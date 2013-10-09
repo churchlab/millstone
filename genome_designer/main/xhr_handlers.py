@@ -27,7 +27,7 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import extract_filter_keys
 from variants.variant_filter import get_variants_that_pass_filter
-from variants.variant_sets import add_or_remove_variants_from_set
+from variants.variant_sets import update_variant_in_set_memberships
 
 
 @login_required
@@ -185,6 +185,8 @@ def modify_variant_in_set_membership(request):
 
     # Make sure the required keys are present.
     REQUIRED_KEYS = [
+            'refGenomeUid',
+            'projectUid',
             'variantUidList',
             'variantSetAction',
             'variantSetUid']
@@ -203,15 +205,11 @@ def modify_variant_in_set_membership(request):
     reference_genome = get_object_or_404(ReferenceGenome, project=project,
             uid=ref_genome_uid)
 
-    context = {}
+    # Add or remove the variants to the set, as per variantSetAction.
+    update_memberships_result = update_variant_in_set_memberships(
+            reference_genome,
+            request_data.get('variantUidList'),
+            request_data.get('variantSetAction'),
+            request_data.get('variantSetUid'))
 
-    # Add or remove the variants to the set, as variantSetAction.
-    context.update(add_or_remove_variants_from_set(
-        request_data.get('variantUidList'),
-        request_data.get('variantSetAction'),
-        request_data.get('variantSetUid'),
-    ))
-
-    # TODO: Proper response and error handling.
-
-    return HttpResponse('ok')
+    return HttpResponse(json.dumps(update_memberships_result))

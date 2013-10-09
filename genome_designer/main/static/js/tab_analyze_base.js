@@ -286,10 +286,14 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
       return;
     }
 
-    var onSuccess = _.bind(function(response) {
-      window.location.reload();
+    var onSuccess = _.bind(function(response_json) {
+      var response = JSON.parse(response_json);
+      if (response.alert_type == 'error') {
+        alert(response.alert_msg);
+        return;
+      }
 
-      // TODO: Proper success handling.
+      this.handleApplyFilterClick();
     }, this);
 
     // Execute the post. Should return a redirect response.

@@ -110,18 +110,34 @@ gd.ServerSideDataTableComponent = Backbone.View.extend({
       }
 
       // Add a checkbox.
-      var uid = 'undefined';
-      if ('uid' in displayableObj) {
-        uid = displayableObj['uid'];
-      }
-
+      var value = this.getCheckboxValueFromDisplayableObj(displayableObj);
       displayableObj['checkbox'] =
-          '<input type="checkbox" class="gd-dt-cb" name="gd-row-select" value="' + uid + '">';
+          '<input type="checkbox" class="gd-dt-cb" name="gd-row-select"' +
+              'value="' + value + '">';
 
       displayableObjList.push(displayableObj);
     }, this);
 
     return displayableObjList;
+  },
+
+
+  /**
+   * Helper method for preparing the checkbox value to be sent to the
+   * server.
+   *
+   * HACK: Hard-coded for the Variant view.
+   */
+  getCheckboxValueFromDisplayableObj: function(displayableObj) {
+    if (!('uid' in displayableObj)) {
+      return 'undefined';
+    }
+
+    var value = displayableObj.uid;
+    if ('sample_uid' in displayableObj) {
+      value += ',' + displayableObj.sample_uid;
+    }
+    return value;
   },
 
 

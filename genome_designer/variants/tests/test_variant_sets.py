@@ -18,7 +18,7 @@ from main.models import VariantToVariantSet
 from scripts.bootstrap_data import create_fake_variants_and_variant_sets
 from scripts.import_util import import_reference_genome_from_local_file
 import settings
-from variants.variant_sets import add_or_remove_variants_from_set
+from variants.variant_sets import update_variant_in_set_memberships
 
 
 TEST_USERNAME = 'gmcdev'
@@ -61,13 +61,16 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
 
 
     def test_add_variants_to_set(self):
-
-        variant_uids = Variant.objects.filter(
+        """Test add.
+        """
+        variant_obj_list = Variant.objects.filter(
                 reference_genome=self.ref_genome_1,
                 position__gt=25,
-                chromosome='chrom').values_list('uid')
+                chromosome='chrom')
+        variant_uids = [obj.uid for obj in variant_obj_list]
 
-        response = add_or_remove_variants_from_set(
+        response = update_variant_in_set_memberships(
+                self.ref_genome_1,
                 variant_uids,
                 'add',
                 self.var_set1_uid)
@@ -76,16 +79,16 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
 
 
     def test_remove_variant_from_set(self):
-
-        variant_uids = Variant.objects.filter(
+        """Test remove.
+        """
+        variant_obj_list = Variant.objects.filter(
                 reference_genome=self.ref_genome_1,
                 chromosome='chrom',
-                variantset__uid=self.var_set2_uid).values_list('uid')
+                variantset__uid=self.var_set2_uid)
+        variant_uids = [obj.uid for obj in variant_obj_list]
 
-        print self.var_set1_uid
-        print variant_uids
-
-        response = add_or_remove_variants_from_set(
+        response = update_variant_in_set_memberships(
+                self.ref_genome_1,
                 variant_uids,
                 'remove',
                 self.var_set2_uid)
