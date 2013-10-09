@@ -318,6 +318,15 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     $('#gd-variant-set-action-submit-alert').addClass('alert-' + alertType);
     $('#gd-variant-set-action-submit-alert').show();
   },
+
+
+  /** Properly clean up this component. Inheriting classes should override. */
+  destroy: function() {
+    if (this.datatableComponent) {
+      this.datatableComponent.destroy()
+    }
+    this.datatableComponent = null;
+  }
 },
 
 /** Static properties */

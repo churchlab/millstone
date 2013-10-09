@@ -91,10 +91,10 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
   updateSubview: function(newSubviewType) {
     // Get rid of the current view.
     $('#gd-analyze-subview-controls-hook').empty();
-    if (this.datatableComponent) {
-      this.datatableComponent.destroy();
+    if (this.currentSubView) {
+      this.currentSubView.destroy();
     }
-    this.datatableComponent = null;
+    this.currentSubView = null;
 
     // Remove anything left there.
     $('#gd-datatable-hook').empty();

@@ -29,4 +29,9 @@ gd.TabAnalyzeSubviewAbstractBase = Backbone.View.extend({
     $('#gd-datatable-hook').append(
         '<h3>Datatable goes here</h3>');
   },
+
+
+  /** Properly clean up this component. Inheriting classes should override. */
+  destroy: function() {
+  }
 });
