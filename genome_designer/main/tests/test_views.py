@@ -99,14 +99,6 @@ class TestViews(TestCase):
                 # Variants
                 reverse('genome_designer.main.views.single_variant_view',
                         args=(test_project.uid, ref_genome.uid, variant.uid)),
-
-                # Genes
-                reverse('genome_designer.main.views.gene_list_view',
-                        args=(test_project.uid,)),
-
-                # GO terms
-                reverse('genome_designer.main.views.goterm_list_view',
-                        args=(test_project.uid,)),
         ]
 
         # The fake web browser client used to make requests.

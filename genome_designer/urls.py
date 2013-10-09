@@ -61,15 +61,6 @@ urlpatterns = patterns('',
             'genome_designer.main.views.single_variant_view'),
 
 
-    # Genes
-    url(r'^projects/([\w-]+)/genes$',
-            'genome_designer.main.views.gene_list_view'),
-
-    # GO terms
-    url(r'^projects/([\w-]+)/goterms$',
-            'genome_designer.main.views.goterm_list_view'),
-
-
     ############################################################################
     # Templates
     ############################################################################

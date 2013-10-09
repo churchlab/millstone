@@ -532,27 +532,3 @@ def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
     }
 
     return render(request, 'single_variant_view.html', context)
-
-
-@login_required
-def gene_list_view(request, project_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-
-    context = {
-        'project': project,
-        'tab_root': TAB_ROOT__DATA,
-    }
-    return render(request, 'gene_list.html', context)
-
-
-@login_required
-def goterm_list_view(request, project_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-
-    context = {
-        'project': project,
-        'tab_root': TAB_ROOT__DATA,
-    }
-    return render(request, 'goterm_list.html', context)
