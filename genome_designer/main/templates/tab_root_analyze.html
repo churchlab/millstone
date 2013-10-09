@@ -15,12 +15,13 @@
 
     <select id="gd-analyze-select-search-entity" class="gd-analyze-select-search-entity"
         style="display: none">
-      <option value="variants">Variants</option>
-      <option value="variant_sets">Variant Sets</option>
+      <option value="VARIANTS" selected>Variants</option>
+      <option value="SETS">Variant Sets</option>
+      <option value="GENES">Genes</option>
     </select>
   </div>
 
-  <div class="row-fluid">
+  <div id="gd-analyze-subview-controls-hook" class="row-fluid">
     <div id="gd-analyze-variant-filter-container" style="display: none">
       {% include "snp_filter_control.html" %}
     </div>
@@ -29,11 +30,11 @@
   <div id="gd-datatable-hook">
   </div>
 
-<script type="text/javascript">
-  VIEW_TAG = 'ANALYZE';
+  <script type="text/javascript">
+    VIEW_TAG = 'ANALYZE';
 
-  {% autoescape off %}
-    INIT_JS_DATA = {{init_js_data}};
-  {% endautoescape %}
-</script>
+    {% autoescape off %}
+      INIT_JS_DATA = {{init_js_data}};
+    {% endautoescape %}
+  </script>
 {% endblock %}

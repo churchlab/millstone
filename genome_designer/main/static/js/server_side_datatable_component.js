@@ -45,6 +45,15 @@ gd.ServerSideDataTableComponent = Backbone.View.extend({
   },
 
 
+  /** Destroys the datable. */
+  destroy: function() {
+    if (this.datatable) {
+      this.datatable.fnDestroy(true);
+    }
+    this.datatable = null;
+  },
+
+
   /** Used for updating an already rendered datatable with new data. */
   update: function(newObjList, newFieldConfig, numTotalVariants) {
     this.displayableObjList = this.makeDisplayableObjectList(newObjList);
@@ -251,9 +260,7 @@ gd.ServerSideDataTableComponent = Backbone.View.extend({
    */
   redrawDatable: function(objList, fieldConfig, numTotalVariants) {
     // Clear the existing dattable.
-    if (this.datatable != null) {
-      this.datatable.fnClearTable();
-    }
+    this.destroy();
 
     // Draw the table.
     // Create a unique id for the datatable.

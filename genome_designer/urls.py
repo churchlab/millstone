@@ -97,6 +97,16 @@ urlpatterns = patterns('',
             'genome_designer.main.xhr_handlers.get_variant_list'),
     url(r'^_/variants/modify_set_membership$',
             'genome_designer.main.xhr_handlers.modify_variant_in_set_membership'),
+
+
+    ############################################################################
+    # Template XHR's
+    # TODO: Replace this with client-side templating.
+    ############################################################################
+
+    url(r'^_/templates/variant_filter_controls$',
+            'genome_designer.main.template_xhrs.variant_filter_controls'),
+
 )
 
 if settings.DEBUG:
