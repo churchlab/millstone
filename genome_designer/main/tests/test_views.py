@@ -12,6 +12,7 @@ from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
+from main.models import VariantAlternate
 
 TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
@@ -43,10 +44,11 @@ class TestViews(TestCase):
                 reference_genome=ref_genome,
                 chromosome='chrom',
                 position=10,
-                ref_value='A',
+                ref_value='A')
+
+        var_alt = VariantAlternate.objects.create(
+                variant=variant,
                 alt_value='G')
-
-
 
         # Urls that do not require the user to be logged in.
         self.no_login_required_urls = [

@@ -43,6 +43,8 @@ SNP_EVIDENCE_HARD_CODED = {
     'is_het': {'type': 'Boolean', 'num': 1}
 }
 
+MAP_KEY__VARIANT = 'variant_data'
+
 MAP_KEY__COMMON_DATA = 'snp_caller_common_data'
 
 MAP_KEY__EVIDENCE = 'snp_evidence_data'

@@ -11,6 +11,7 @@ from main.adapters import adapt_model_to_frontend
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
+from main.models import VariantAlternate
 
 class TestAdapters(TestCase):
 
@@ -57,7 +58,10 @@ class TestAdapters(TestCase):
                 reference_genome=self.ref_genome_1,
                 chromosome='chrom',
                 position=100,
-                ref_value='A',
+                ref_value='A')
+
+        var_alt = VariantAlternate.objects.create(
+                variant=variant,
                 alt_value='G')
 
         fe_variants = json.loads(adapt_model_to_frontend(Variant))

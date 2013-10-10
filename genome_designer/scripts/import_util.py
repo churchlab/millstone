@@ -269,11 +269,7 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
             """
             def __init__(self, **entries):
                 self.__dict__.update(entries)
-
-                # Currently, we are storing alts as a string representing
-                # the pickled/unpickled value parsed by pyvcf, so we
-                # match that here.
-                self.__dict__['ALT'] = '[' + self.__dict__['ALT'].strip() + ']'
+                self.__dict__['ALT'] = self.__dict__['ALT'].strip().split(',')
 
         for record in reader:
             record = PseudoVCF(**record)
@@ -282,7 +278,7 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
             raw_data_dict = extract_raw_data_dict(record)
 
             # Get or create the Variant for this record.
-            variant = get_or_create_variant(reference_genome, raw_data_dict)
+            variant, alts = get_or_create_variant(reference_genome, raw_data_dict)
 
             # Create a common data object for this variant.
             common_data_obj = VariantCallerCommonData.objects.create(

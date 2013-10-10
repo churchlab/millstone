@@ -14,6 +14,7 @@ from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
+from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
 from main.models import VariantSet
@@ -67,13 +68,17 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         # Create several Variants with positions:
         # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
         for pos in range(10):
-            Variant.objects.create(
+            var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=pos,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
 
         # Test querying Variants with position > 5.
         result = get_variants_that_pass_filter('position > 5', self.ref_genome)
@@ -95,23 +100,31 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         """
         CHROM_1 = 'chrom'
         for pos in range(6):
-            Variant.objects.create(
+            var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome=CHROM_1,
                 position=pos,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
 
         CHROM_2 = 'chrom2'
         for pos in range(9):
-            Variant.objects.create(
+            var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome=CHROM_2,
                 position=pos,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
 
         result = get_variants_that_pass_filter('chromosome = chrom',
                 self.ref_genome)
@@ -127,23 +140,33 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         """
         CHROM_1 = 'chrom'
         for pos in range(6):
-            Variant.objects.create(
+            var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome=CHROM_1,
                 position=pos,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
+
 
         CHROM_2 = 'chrom2'
         for pos in range(9):
-            Variant.objects.create(
+            var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome=CHROM_2,
                 position=pos,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
+
 
         QUERY_STRING = 'position > 4 & chromosome = chrom'
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
@@ -157,13 +180,17 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
     def test_filter__invalid_key(self):
         CHROM_1 = 'chrom'
         for pos in range(6):
-            Variant.objects.create(
+            var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome=CHROM_1,
                 position=pos,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))            
 
         QUERY_STRING = 'dinosaur > 4 & chromosome = chrom'
         with self.assertRaises(ParseError):
@@ -176,13 +203,17 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         # Create several Variants with positions:
         # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
         for pos in range(10):
-            Variant.objects.create(
+            var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=pos,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
 
         # Test AND case.
         QUERY_STRING = 'position < 1 & position > 7'
@@ -214,13 +245,17 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         # Create several Variants with positions:
         # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
         for pos in range(10):
-            Variant.objects.create(
+            var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=pos,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
 
         QUERY_STRING = 'position < 1 & INFO_XRM > 0'
         variants = get_variants_that_pass_filter(QUERY_STRING,
@@ -241,8 +276,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=2,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+        variant.variantalternate_set.add(
+                VariantAlternate.objects.create(
+                        variant=variant,
+                        alt_value='G'))
+
         raw_data_dict = {
                 'INFO_XRM': pickle.dumps(0.12),
         }
@@ -271,8 +311,12 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=2,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+        variant.variantalternate_set.add(
+                VariantAlternate.objects.create(
+                        variant=variant,
+                        alt_value='G'))
 
         raw_common_data_dict = {
                 'INFO_XRM': pickle.dumps(0.12),
@@ -293,6 +337,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict = {
                 'called': True,
                 'gt_type': pickle.dumps(2),
+                'gt_bases': pickle.dumps('G/G')
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj,
@@ -309,6 +354,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict_2 = {
                 'called': True,
                 'gt_type': pickle.dumps(0),
+                'gt_bases': pickle.dumps('A/A')
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj_2,
@@ -324,7 +370,9 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         )
         raw_sample_data_dict = {
                 'called': False,
-                'gt_type': 1,
+                'gt_type': pickle.dumps(None),
+                'gt_bases': pickle.dumps(None)
+
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj_3,
@@ -369,13 +417,18 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         # Create several Variants with positions:
         # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
         for pos in range(10):
-            Variant.objects.create(
+            var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=pos,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
+
 
         variants = get_variants_that_pass_filter('position == 5',
                 self.ref_genome).variant_set
@@ -402,8 +455,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=2,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+        variant.variantalternate_set.add(
+                VariantAlternate.objects.create(
+                        variant=variant,
+                        alt_value='G'))
+
 
         raw_common_data_dict = {
                 'INFO_XRM': pickle.dumps(0.12)
@@ -424,6 +482,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict = {
                 'called': True,
                 'gt_type': pickle.dumps(2),
+                'gt_bases': pickle.dumps('G/G')
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj,
@@ -440,6 +499,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict_2 = {
                 'called': True,
                 'gt_type': pickle.dumps(0),
+                'gt_bases': pickle.dumps('A/A')
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj_2,
@@ -456,6 +516,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict = {
                 'called': False,
                 'gt_type': pickle.dumps(1),
+                'gt_bases': pickle.dumps(None)
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj_3,
@@ -502,8 +563,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=2,
-                ref_value='A',
-                alt_value=['G','T'])
+                ref_value='A')
+
+        for alt_value in ['G','T']:
+            variant.variantalternate_set.add(VariantAlternate.objects.create(
+                    variant=variant,
+                    alt_value=alt_value))
+
         raw_common_data_dict = {
                 'INFO_XRM': pickle.dumps(0.12),
                 'INFO_EFF_EFFECT': pickle.dumps(['NON_SYNONYMOUS_CODING','NON_SYNONYMOUS_CODING'])
@@ -523,7 +589,8 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict = {
                 'called': True,
                 'gt_type': pickle.dumps(2),
-                'GT': pickle.dumps('1/1')
+                'GT': pickle.dumps('1/1'),
+                'gt_bases': pickle.dumps('G/G')
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj,
@@ -539,8 +606,9 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         )
         raw_sample_data_dict_2 = {
                 'called': True,
-                'gt_type': pickle.dumps(0),
-                'GT': pickle.dumps('1/1')
+                'gt_type': pickle.dumps(2),
+                'GT': pickle.dumps('1/2'),
+                'gt_bases': pickle.dumps('G/T')
         }
         VariantEvidence.objects.create(
                 uid=1000,
@@ -558,7 +626,8 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict = {
                 'called': False,
                 'gt_type': pickle.dumps(1),
-                'GT': pickle.dumps('0/0')
+                'GT': pickle.dumps('0/0'),
+                'gt_bases': pickle.dumps('A/A')
         }
         VariantEvidence.objects.create(
                 experiment_sample=sample_obj_3,
@@ -577,8 +646,6 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         QUERY_STRING = '(position < 5 & INFO_EFF_EFFECT = NON_SYNONYMOUS_CODING)'
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
-
-        print result.variant_id_to_metadata_dict
 
         self.assertEqual(1, len(variants))  
 
@@ -609,8 +676,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                     reference_genome=self.ref_genome,
                     chromosome='chrom',
                     position=pos,
-                    ref_value='A',
-                    alt_value='G')
+                    ref_value='A')
+
+                var.variantalternate_set.add(
+                        VariantAlternate.objects.create(
+                                variant=var,
+                                alt_value='G'))
+
                 for var_set in var_set_list:
                     if var_set is not None:
                         VariantToVariantSet.objects.create(variant=var,
@@ -678,13 +750,17 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         # keys are available.
         initialize_filter_key_map(ref_genome_2)
 
-        Variant.objects.create(
+        var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=ref_genome_2,
                 chromosome='chrom',
                 position=100,
-                ref_value='A',
-                alt_value='G')
+                ref_value='A')
+
+        var.variantalternate_set.add(
+            VariantAlternate.objects.create(
+                    variant=var,
+                    alt_value='G'))
 
         # This query runs without errors.
         QUERY_STRING = 'position < 1'

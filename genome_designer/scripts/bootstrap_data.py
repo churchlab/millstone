@@ -30,6 +30,7 @@ from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
+from main.models import VariantAlternate
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
@@ -94,13 +95,17 @@ def create_fake_variants_and_variant_sets(ref_genome):
     @transaction.commit_on_success
     def _create_fake_variants():
         for var_count in range(100):
-            Variant.objects.create(
-                type=Variant.TYPE.TRANSITION,
-                reference_genome=ref_genome,
-                chromosome='chrom',
-                position=random.randint(1,ref_genome.num_bases),
-                ref_value='A',
-                alt_value='G')
+            variant = Variant.objects.create(
+                    type=Variant.TYPE.TRANSITION,
+                    reference_genome=ref_genome,
+                    chromosome='chrom',
+                    position=random.randint(1,ref_genome.num_bases),
+                    ref_value='A')
+
+            variant.variantalternate_set.add(VariantAlternate.objects.create(
+                    variant=variant,
+                    alt_value='G'))
+
     _create_fake_variants()
 
     ### Add fake variants to a set

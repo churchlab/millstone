@@ -105,8 +105,8 @@ class TestImportVariantSetFromVCFFile(TestCase):
         # Spot-check a few variants.
         v_1128 = Variant.objects.get(reference_genome=self.ref_genome,
                 position=1128)
-        self.assertEqual('[C]', v_1128.alt_value)
+        self.assertEqual(['C'], v_1128.get_alternates())
 
         v_553 = Variant.objects.get(reference_genome=self.ref_genome,
                 position=553)
-        self.assertEqual('[C,G]', v_553.alt_value)
+        self.assertEqual(['C','G'], v_553.get_alternates())

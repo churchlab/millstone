@@ -11,6 +11,7 @@ from main.models import get_dataset_with_type
 from main.models import ExperimentSample
 from main.models import Variant
 from main.models import VariantCallerCommonData
+from main.models import VariantAlternate
 from main.models import VariantEvidence
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 
@@ -25,11 +26,13 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
         for record in vcf_reader:
+
             # Build a dictionary of data for this record.
             raw_data_dict = extract_raw_data_dict(record)
 
             # Get or create the Variant for this record.
-            variant = get_or_create_variant(reference_genome, raw_data_dict)
+            variant, alts = get_or_create_variant(reference_genome, 
+                    raw_data_dict)
 
             # Create a common data object for this variant.
             common_data_obj = VariantCallerCommonData.objects.create(
@@ -60,7 +63,7 @@ def extract_raw_data_dict(vcf_record):
         Dictionary representation of the record.
     """
     # Keys that we need to do extra work with in order to copy.
-    MANUAL_KEYS = ['INFO', 'samples']
+    MANUAL_KEYS = ['INFO', 'samples', 'ALT']
 
     data_dict = {}
 
@@ -71,6 +74,17 @@ def extract_raw_data_dict(vcf_record):
             # they come in different types, and we haven't figured out a good
             # way to deal with this quite yet.
             data_dict[str(key)] = pickle.dumps(value)
+
+    # The ALT key is a fancy _AltRecord object (or possibly subclassed 
+    # as a substitution or an SV, so for now, just pass its __str__()
+    data_dict['ALT'] = pickle.dumps(vcf_record.ALT)
+
+    # The TYPE is just a property of the record object.
+    # TODO: Do we care about the var_subtype()? (ts/tv/complex/sv type/etc?)
+    if hasattr(vcf_record, 'var_type'):
+        data_dict['TYPE'] = pickle.dumps(str(vcf_record.var_type))
+    else:
+        data_dict['TYPE'] =  'unknown'
 
     # Populate 'INFO'
     if hasattr(vcf_record, 'INFO'):
@@ -104,7 +118,7 @@ def get_or_create_variant(reference_genome, raw_data_dict):
     chromosome = pickle.loads(str(raw_data_dict['CHROM']))
     position = int(pickle.loads(str(raw_data_dict['POS'])))
     ref_value = pickle.loads(str(raw_data_dict['REF']))
-    alt_value = pickle.loads(str(raw_data_dict['ALT']))
+    alt_values = pickle.loads(raw_data_dict['ALT'])
 
     # Try to find an existing one, or create it.
     variant, created = Variant.objects.get_or_create(
@@ -112,12 +126,18 @@ def get_or_create_variant(reference_genome, raw_data_dict):
             type=type,
             chromosome=chromosome,
             position=position,
-            ref_value=ref_value,
-            alt_value=alt_value,
+            ref_value=ref_value
     )
 
-    return variant
+    alts = []
 
+    for alt_value in alt_values:
+        var_alt, va_created = VariantAlternate.objects.get_or_create(
+            variant=variant,
+            alt_value=alt_value)
+        alts.append(var_alt)
+
+    return (variant, alts)
 
 def extract_sample_data_dict(s):
     """Manually serializes a pyvcf _Call object because their internal use of

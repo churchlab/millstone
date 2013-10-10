@@ -65,7 +65,7 @@ def export_variant_set_as_csv(request):
         writer.writerow({
             'position': variant.position,
             'ref': variant.ref_value,
-            'alt': variant.alt_value,
+            'alt': variant.get_variants_as_string(),
         })
     return response
 

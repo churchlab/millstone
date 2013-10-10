@@ -741,11 +741,54 @@ class Variant(Model):
 
     ref_value = models.TextField('Ref')
 
-    alt_value = models.TextField('Alt')
+    def __init__(self, *args, **kwargs): 
+        """If we are passed an alt_value field, we need to get_or_create
+        VariantAlternate objects corresponding to them, and link them  up to
+        this new variant. We're ignoring the handling the rare situation when a
+        Variant has no alt_values, which we don't really want to happen. It is
+        difficult to handle because sometimes the VariantAlternate objects are
+        declared separately and added to the Variant after __init__()."""
+
+        alts = kwargs.get('alt_value', None)
+
+        # Here I'm mutating kwargs to get rid of alt_value, but I can't think
+        # of a reason why this would be a problem, since we've already saved it.
+        kwargs.pop('alt_value',None)
+
+        # call super's __init__ without the alt_value field if present
+        super(Variant, self).__init__(*args, **kwargs)
+
+        if alts is None: return
+
+        #handle case of one or multiple alt_values
+        if not isinstance(alts, basestring):
+            # alt_value is a list of alts
+            alt_values = alts
+        else:
+            # alt value is one alt
+            alt_values = [alts]
+
+        for alt_value in alt_values:
+            self.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=self,
+                            alt_value=alt_value
+                    )
+            )
 
     @property
     def label(self):
-        return str(self.position) + '_' + self.ref_value + '_' + self.alt_value
+        # NOTE: If adding a new VCCD object to a variant, this could change by
+        # the addition of new variants. Is that an issue?
+        return (
+                str(self.position) + 
+                '_' + self.ref_value + 
+                '_' + str(self.get_alternates()))
+
+    def get_alternates(self):
+        """ Return a base string for each alternate for this variant. """
+
+        return [alt.alt_value for alt in self.variantalternate_set.all()]
 
     @property
     def jbrowse_link(self):
@@ -773,12 +816,16 @@ class Variant(Model):
                 {'field':'jbrowse_link', 'verbose': 'JBrowse'},
                 {'field':'chromosome'},
                 {'field':'position'},
-                {'field':'type'},
-                {'field':'ref_value', 'verbose':'Reference'},
-                {'field':'alt_value', 'verbose':'Alternate(s)'},
+                # This is useless right now, always 'UNKNOWN'
+                #{'field':'type'},
+                # This field is now its own model
+                #{'field':'ref_value', 'verbose':'Reference'},
+                # This is going to be done via VariantCallerCommonData
+                #{'field':'alt_value', 'verbose':'Alternate(s)'},
                 {'field':'variantset_set',
                     'verbose':'Set Membership',
                     'classes':['label']}]
+
 
 
 class VariantCallerCommonData(Model, VisibleFieldMixin):
@@ -844,8 +891,31 @@ class VariantCallerCommonData(Model, VisibleFieldMixin):
         return []
 
 
+class VariantAlternate(Model, VisibleFieldMixin):
+    """A model listing alternate alleles for each variant."""
+
+    uid = models.CharField(max_length=36,
+        default=(lambda: short_uuid(VariantAlternate)))
+    
+    # Null is true here because we are adding this relationship during Variant's
+    # overloaded __init__() so it hasn't been saved() yet. Otherwise it throws
+    # an django.db.utils.IntegrityError: 
+    #    main_variantalternate.variant_id may not be NULL
+    variant = models.ForeignKey('Variant', null=True)
+
+    alt_value = models.TextField('Alt')
+
+    is_primary = models.BooleanField(default='False')
+
+    # TODO: Do we want to explicitly link each VariantAlternate to
+    # it's variant index in each VCCD object or VE object?
+    # Currently it's done implicitly through the VCCD's data['ALT']
+    # field and VE's data['gt_bases'] and data['GT'] fields, but these
+    # are not checked for consistency. 
+
 class VariantEvidence(Model, VisibleFieldMixin):
-    """Evidence for a particular variant occurring in a particular
+    """
+    Evidence for a particular variant occurring in a particular
     ExperimentSample.
     """
     # Maybe used in url for view of this entity.
@@ -859,6 +929,10 @@ class VariantEvidence(Model, VisibleFieldMixin):
 
     # The location of the common data for this call.
     variant_caller_common_data = models.ForeignKey('VariantCallerCommonData')
+
+    # One or more alternate alleles for this variant - 
+    # Multiple are possible if the allele is called for multiple alts
+    variantalternate_set = models.ManyToManyField('VariantAlternate')
 
     # Catch-all key-value set of data.
     # TODO: Extract interesting keys (e.g. gt_type) into their own SQL fields.

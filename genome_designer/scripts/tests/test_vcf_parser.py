@@ -93,7 +93,7 @@ class TestVCFParser(TestCase):
 
         v_453 = Variant.objects.get(reference_genome=self.reference_genome,
                 position=453)
-        self.assertEqual('[G]', v_453.alt_value)
+        self.assertEqual(['G'], v_453.get_alternates())
 
         # Check false negatives.
         self.assertEqual(0, len(Variant.objects.filter(

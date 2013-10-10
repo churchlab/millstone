@@ -641,17 +641,12 @@ def get_per_alt_dict(key, variant, variant_evidence_obj, type_map):
             gt_set.add(int(gt)-1)
 
     key_dict = {key: []}
-    data_dicts = variant.variantcallercommondata_set.all()
+    data_dict = variant_evidence_obj.variant_caller_common_data.as_dict()
 
-    # TODO: If we have  multiple common data, just take them all for now. Like
-    # Gleb mentions above, we need to think about a better way to handle this.
-    # It's possible if they're in the alternate order this could be a BAD THING.
-    for data_obj in data_dicts:
-        data_dict = data_obj.as_dict()
-        if key in data_dict:
-            evaled_list = data_dict[key]
-            for gt in gt_set:
-                key_dict[key].append(evaled_list[gt])
+    if key in data_dict:
+        evaled_list = data_dict[key]
+        for gt in gt_set:
+            key_dict[key].append(evaled_list[gt])
 
     #key_dict[key] = repr(key_dict[key])
     return(key_dict, type_map[key])
@@ -758,7 +753,7 @@ def _evaluate_boolean_condition(data_dict, key, value, idx=None):
 
 def _cast_value_to_type(value, cast_type_string):
     """Return the value casted to the type specified by the cast_type_string,
-    as defined in snp_filter_key_map.py
+    as defined in the type maps in the ReferenceGenome object's variant_key_map field
     """
     if cast_type_string == 'Integer':
         return int(value)

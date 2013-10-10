@@ -21,11 +21,6 @@ class BaseVariantView(object):
     def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
-
-        Args:
-            field_mask: A dictionary from field name to True/False that defines
-                whether to include that key. Otherwise, the default is
-                returned.
         """
         if 'visible_key_names' in kwargs:
             variant_key_map = kwargs['variant_key_map']
@@ -131,6 +126,7 @@ class MeltedVariantView(BaseVariantView):
         self.variant_evidence = variant_evidence
 
     def custom_getattr(self, attr):
+<<<<<<< HEAD
         """Custom implementation of getting an attribute.
 
         We need this since to make sure we delegate to the objects that compose
@@ -159,6 +155,17 @@ class MeltedVariantView(BaseVariantView):
                         variant_sets_for_this_sample.append(vtvs.variant_set)
                 return variant_sets_for_this_sample
 
+=======
+        """
+        For many-to-one relations, e.g. VariantCallerCommonData and
+        VariantEvidence, returns a '|'-separated list of values for
+        that attribute.
+
+        Returns:
+            A string representing the view for the attribute.
+
+        """
+>>>>>>> Implemented VariantAlternate model for ALT field.
         delegate_order = [
                 self.variant,
                 self.variant_caller_common_data,
@@ -167,7 +174,6 @@ class MeltedVariantView(BaseVariantView):
 
         variant_caller_common_data_map = (
                 self.variant.reference_genome.get_variant_caller_common_map())
-
 
         is_per_alt_key = (attr in variant_caller_common_data_map and 
                 variant_caller_common_data_map[attr]['num'] == -1)

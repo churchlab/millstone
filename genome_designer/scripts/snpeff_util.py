@@ -384,7 +384,6 @@ def convert_snpeff_info_fields(vcf_input_fh, vcf_output_fh):
 
     # Write the old records with the new EFF INFO fields
     for record in vcf_reader:
-        print record
         vcf_writer.write_record(populate_record_eff(record))
 
 def populate_record_eff(vcf_record):
