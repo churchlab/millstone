@@ -817,11 +817,8 @@ class Variant(Model):
                 {'field':'chromosome'},
                 {'field':'position'},
                 # This is useless right now, always 'UNKNOWN'
-                #{'field':'type'},
-                # This field is now its own model
-                #{'field':'ref_value', 'verbose':'Reference'},
-                # This is going to be done via VariantCallerCommonData
-                #{'field':'alt_value', 'verbose':'Alternate(s)'},
+                {'field':'type'},
+                {'field':'ref_value', 'verbose':'Ref'},
                 {'field':'variantset_set',
                     'verbose':'Set Membership',
                     'classes':['label']}]
@@ -917,7 +914,7 @@ class VariantAlternate(Model, VisibleFieldMixin):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
-        return [{'field':'alt_value', 'verbose':'Alternate(s)'}]
+        return [{'field':'alt_value', 'verbose':'Alt(s)'}]
 
     
 class VariantEvidence(Model, VisibleFieldMixin):
