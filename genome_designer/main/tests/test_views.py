@@ -14,9 +14,10 @@ from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantAlternate
 
-TEST_USERNAME = 'gmcdev'
-TEST_PASSWORD = 'g3n3d3z'
-TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
+
+TEST_USERNAME = 'testusername'
+TEST_PASSWORD = 'password'
+TEST_EMAIL = 'test@test.com'
 
 STATUS_CODE__SUCCESS = 200
 STATUS_CODE__NOT_LOGGED_IN = 302

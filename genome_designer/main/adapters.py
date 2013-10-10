@@ -14,6 +14,7 @@ from django.db.models.query import QuerySet
 
 from main.constants import UNDEFINED_STRING
 
+OBJ_LIST = 'obj_list'
 
 # Fields that are not explicitly displayed but are used on the frontend
 # to update views of particular columns.
@@ -31,7 +32,7 @@ def adapt_model_or_modelview_list_to_frontend(instance_list, **kwargs):
     """
     if len(instance_list) == 0:
         return json.dumps({
-            'obj_list': [],
+            OBJ_LIST: [],
             'field_config': []
         })
 
@@ -100,7 +101,7 @@ def adapt_model_to_frontend(model, filters={}, obj_list=None, **kwargs):
 
     # Package the result.
     return json.dumps({
-        'obj_list': fe_obj_list,
+        OBJ_LIST: fe_obj_list,
         'field_config': obj_field_config
     })
 
