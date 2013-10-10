@@ -783,7 +783,7 @@ class Variant(Model):
         return (
                 str(self.position) + 
                 '_' + self.ref_value + 
-                '_' + str(self.get_alternates()))
+                '_' + ','.join(self.get_alternates()))
 
     def get_alternates(self):
         """ Return a base string for each alternate for this variant. """
