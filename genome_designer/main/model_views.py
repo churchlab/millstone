@@ -7,6 +7,7 @@ from django.db.models.query import QuerySet
 from main.constants import UNDEFINED_STRING
 from main.models import Variant
 from main.models import VariantCallerCommonData
+from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
@@ -38,6 +39,7 @@ class BaseVariantView(object):
 
         # Sort the visible keys into appropriate buckets based on the map.
         return (Variant.get_field_order() +
+                VariantAlternate.get_field_order() + 
                 VariantCallerCommonData.get_field_order(
                         additional_field_list=additional_common_data_field_list) +
                 VariantEvidence.get_field_order(
@@ -50,6 +52,8 @@ class CastVariantView(BaseVariantView):
     """
     def __init__(self, variant):
         self.variant = variant
+        self.variantalternate_list = (
+                variant.variantalternate_set.all())
         self.variant_caller_common_data_list = (
                 variant.variantcallercommondata_set.all())
         self.variant_evidence_list = VariantEvidence.objects.filter(
@@ -67,6 +71,7 @@ class CastVariantView(BaseVariantView):
         """
         delegate_order = [
                 self.variant,
+                self.variantalternate_list,
                 self.variant_caller_common_data_list,
                 self.variant_evidence_list
         ]
@@ -122,6 +127,8 @@ class MeltedVariantView(BaseVariantView):
     def __init__(self, variant, variant_caller_common_data=None,
             variant_evidence=None):
         self.variant = variant
+        self.variantalternate_list = VariantAlternate.objects.filter(
+                variant=variant, variantevidence=variant_evidence)
         self.variant_caller_common_data = variant_caller_common_data
         self.variant_evidence = variant_evidence
 
@@ -156,6 +163,7 @@ class MeltedVariantView(BaseVariantView):
 
         delegate_order = [
                 self.variant,
+                self.variantalternate_list,
                 self.variant_caller_common_data,
                 self.variant_evidence
         ]
@@ -167,10 +175,17 @@ class MeltedVariantView(BaseVariantView):
                 variant_caller_common_data_map[attr]['num'] == -1)
 
         for delegate in delegate_order:
-
             result_list = []
 
-            if delegate is not None:
+            # Convert to list for next step.
+            if isinstance(delegate, QuerySet):
+                delegate_list = delegate
+            else:
+                delegate_list = [delegate]
+
+            # Iterate through the delegates.
+            for delegate in delegate_list:
+
                 if hasattr(delegate, attr):
                     result_list.append(getattr(delegate, attr))
                 else:
@@ -187,14 +202,13 @@ class MeltedVariantView(BaseVariantView):
                     except:
                         pass
 
-                if len(result_list) == 1:
-                    # If one object, return it.
-                    return result_list[0]
-                elif len(result_list) > 1:
-                    # Else if more than one, return a '|'-separated string.
-                    return ' | '.join([str(res) for res in result_list])
+            if len(result_list) == 1:
+                # If one object, return it.
+                return result_list[0]
+            elif len(result_list) > 1:
+                # Else if more than one, return a '|'-separated string.
+                return ' | '.join([str(res) for res in result_list])
 
-        # Default.
         return UNDEFINED_STRING
 
     @classmethod

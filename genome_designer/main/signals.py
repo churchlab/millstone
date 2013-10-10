@@ -90,7 +90,6 @@ def post_variant_set_create(sender, instance, created, **kwargs):
     if created:
         instance.ensure_model_data_dir_exists()
 
-
 # Run post-save commands after making a new ref genome object
 post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
         dispatch_uid='ref_genome_create')

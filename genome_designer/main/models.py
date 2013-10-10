@@ -912,7 +912,14 @@ class VariantAlternate(Model, VisibleFieldMixin):
     # Currently it's done implicitly through the VCCD's data['ALT']
     # field and VE's data['gt_bases'] and data['GT'] fields, but these
     # are not checked for consistency. 
+    @classmethod
+    def default_view_fields(clazz, **kwargs):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
+        """
+        return [{'field':'alt_value', 'verbose':'Alternate(s)'}]
 
+    
 class VariantEvidence(Model, VisibleFieldMixin):
     """
     Evidence for a particular variant occurring in a particular
