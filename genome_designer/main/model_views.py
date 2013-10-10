@@ -126,7 +126,6 @@ class MeltedVariantView(BaseVariantView):
         self.variant_evidence = variant_evidence
 
     def custom_getattr(self, attr):
-<<<<<<< HEAD
         """Custom implementation of getting an attribute.
 
         We need this since to make sure we delegate to the objects that compose
@@ -155,17 +154,6 @@ class MeltedVariantView(BaseVariantView):
                         variant_sets_for_this_sample.append(vtvs.variant_set)
                 return variant_sets_for_this_sample
 
-=======
-        """
-        For many-to-one relations, e.g. VariantCallerCommonData and
-        VariantEvidence, returns a '|'-separated list of values for
-        that attribute.
-
-        Returns:
-            A string representing the view for the attribute.
-
-        """
->>>>>>> Implemented VariantAlternate model for ALT field.
         delegate_order = [
                 self.variant,
                 self.variant_caller_common_data,
