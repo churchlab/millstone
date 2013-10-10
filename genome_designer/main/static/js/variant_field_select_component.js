@@ -23,30 +23,41 @@ gd.VariantFieldSelectComponent = Backbone.View.extend({
     $('#gd-filter-key-modal').modal();
 
     // Render all the key-value pairs.
-    this.renderKeyMapSection(this.model.get('variantKeyMap').snp_caller_common_data);
-    this.renderKeyMapSection(this.model.get('variantKeyMap').snp_evidence_data);
+    this.renderKeyMapSection(
+        this.model.get('variantKeyMap').snp_caller_common_data,
+        'gd-filter-key-modal-common-tbody');
+    this.renderKeyMapSection(
+        this.model.get('variantKeyMap').snp_evidence_data,
+        'gd-filter-key-modal-evidence-tbody');
 
     $('#gd-filter-key-modal-dismiss-btn').focus();
   },
 
 
-  renderKeyMapSection: function(key_map) {
-    _.each(_.pairs(key_map), function(pair) {
-        var maybeChecked = '';
-        if ('checked' in pair[1]) {
-          maybeChecked = ' checked';
-        }
+  /** Renders a table row for each filter key in the key map. */
+  renderKeyMapSection: function(key_map, targetElId) {
+    // First, put the keys in alphabetical order.
+    sorted_keys = _.keys(key_map).sort();
 
-        var rowHtmlString =
-            '<tr>' +
-              '<td>' + pair[0] + '</td>' +
-              '<td>' +
-                '<input class="gd-id-filter-key-modal-checkbox" ' +
-                    'type="checkbox" value="' + pair[0]+ '"' +
-                    maybeChecked + '>' +
-              '</td>' +
-            '</tr>';
-        $('#gd-filter-key-modal-tbody').append(rowHtmlString);
+    // Now render a table row for each.
+    _.each(sorted_keys, function(key) {
+      var value = key_map[key];
+
+      var maybeChecked = '';
+      if ('checked' in value) {
+        maybeChecked = ' checked';
+      }
+
+      var rowHtmlString =
+          '<tr>' +
+            '<td>' + key + '</td>' +
+            '<td>' +
+              '<input class="gd-id-filter-key-modal-checkbox" ' +
+                  'type="checkbox" value="' + key + '"' +
+                  maybeChecked + '>' +
+            '</td>' +
+          '</tr>';
+      $('#' + targetElId).append(rowHtmlString);
     });
   },
 
