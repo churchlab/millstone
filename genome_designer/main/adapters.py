@@ -178,8 +178,4 @@ def get_model_field_fe_representation(model_obj, field, field_info={},
     elif isinstance(model_field, QuerySet):
         return [adapt_model_instance_to_frontend(m, field_info)
                 for m in model_field]
-    elif isinstance(model_field, list):
-        # TODO(gleb): Temp while developing. Probably get rid of this.
-        return [adapt_model_instance_to_frontend(m, field_info)
-                for m in model_field]
     return str(model_field)
