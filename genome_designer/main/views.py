@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.urlresolvers import reverse
+from django.http import Http404
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
@@ -136,8 +137,14 @@ def tab_root_align(request, project_uid):
     return render(request, 'tab_root_align.html', context)
 
 
+VALID_ANALYZE_SUB_VIEWS = set([
+    'variants',
+    'sets',
+    'genes'
+])
+
 @login_required
-def tab_root_analyze(request, project_uid, ref_genome_uid=None):
+def tab_root_analyze(request, project_uid, ref_genome_uid=None, sub_view=None):
     context = {}
 
     project = get_object_or_404(Project, owner=request.user.get_profile(),
@@ -155,10 +162,16 @@ def tab_root_analyze(request, project_uid, ref_genome_uid=None):
         init_js_data['refGenome'] = adapt_model_instance_to_frontend(ref_genome)
         context['selected_ref_genome_uid'] = ref_genome_uid
 
+    if sub_view is not None:
+        if not sub_view in VALID_ANALYZE_SUB_VIEWS:
+            raise Http404
+        init_js_data['subView'] = sub_view
+        context['sub_view'] = sub_view
+
     context.update({
         'project': project,
         'init_js_data': json.dumps(init_js_data),
-        'tab_root': TAB_ROOT__ANALYZE
+        'tab_root': TAB_ROOT__ANALYZE,
     })
 
     return render(request, 'tab_root_analyze.html', context)
