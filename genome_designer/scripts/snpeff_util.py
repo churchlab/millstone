@@ -72,7 +72,7 @@ SNPEFF_FIELDS = OrderedDict([
         'description':'Length of protein in amino acids.'}
     ),
     ('GENE', {
-        'id':'TRLEN',
+        'id':'GENE',
         'type':'String',
         'description':'Gene Name.'}
     ),
@@ -437,6 +437,8 @@ def populate_record_eff(vcf_record):
             (eff.groupdict().items() for eff in eff_group_iterator)))
 
     for k, v in eff_fields:
+        # mark empty fields as 'bad'
+        if v == '': v = '.'
         eff_field_lists['EFF_'+k].append(v)
 
     vcf_record.INFO.update(eff_field_lists)

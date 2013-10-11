@@ -161,3 +161,6 @@ class TestSnpeff(TestCase):
 
         self.assertEqual(updated_test_record.INFO['EFF_CONTEXT'],
                 ['aTg/aCg','aTg/aGg'])
+
+        self.assertEqual(updated_test_record.INFO['EFF_GENE'],
+                ['ygiC','ygiC'])
