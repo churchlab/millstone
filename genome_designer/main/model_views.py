@@ -281,6 +281,11 @@ class GeneView(object):
         self.start = gene_interval.start
         self.end = gene_interval.end
 
+        # Count of Variants that occur in region.
+        self.variants = Variant.objects.filter(
+                reference_genome=region.reference_genome,
+                position__gte=self.start,
+                position__lt=self.end).count()
 
     @classmethod
     def get_field_order(clazz, **kwargs):
@@ -289,4 +294,5 @@ class GeneView(object):
             {'field':'label'},
             {'field':'start'},
             {'field':'end'},
+            {'field':'variants'},
         ]
