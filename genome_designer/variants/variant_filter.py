@@ -29,12 +29,15 @@ from django.db.models import Q
 from sympy.logic import boolalg
 
 from main.models import ExperimentSample
+from main.models import Region
 from main.models import VariantEvidence
 from variants.common import ALL_SQL_KEY_MAP_LIST
 from variants.common import DELIM_TO_Q_POSTFIX
 from variants.common import EXPRESSION_REGEX
 from variants.common import SAMPLE_SCOPE_REGEX
 from variants.common import SAMPLE_SCOPE_REGEX_NAMED
+from variants.common import GENE_REGEX
+from variants.common import GENE_REGEX_NAMED
 from variants.common import SET_REGEX
 from variants.common import SET_REGEX_NAMED
 from variants.common import TYPE_TO_SUPPORTED_OPERATIONS
@@ -232,7 +235,8 @@ class VariantFilterEvaluator(object):
         self.symbol_to_expression_map = {}
 
         symbolified_string = self.clean_filter_string
-        for regex in [SAMPLE_SCOPE_REGEX, EXPRESSION_REGEX, SET_REGEX]:
+        for regex in [SAMPLE_SCOPE_REGEX, EXPRESSION_REGEX, SET_REGEX,
+                GENE_REGEX]:
             symbolified_string = self._symbolify_string_for_regex(
                     symbolified_string, regex)
 
@@ -418,6 +422,12 @@ class VariantFilterEvaluator(object):
         set_match = SET_REGEX.match(condition_string)
         if set_match:
             return _get_django_q_object_for_set_restrict(condition_string)
+
+        # Next, check if this is a gene-related expression.
+        gene_match = GENE_REGEX.match(condition_string)
+        if gene_match:
+            return _get_django_q_object_for_gene_restrict(condition_string,
+                    self.ref_genome)
 
         # Finally, if here, then this should be a basic, delimiter-separated
         # expression.
@@ -690,6 +700,30 @@ def _get_django_q_object_for_set_restrict(set_restrict_string):
     # Maybe negate the result.
     if match.group('maybe_not'):
         return ~q_obj
+    return q_obj
+
+
+def _get_django_q_object_for_gene_restrict(gene_restrict_string, ref_genome):
+    """Returns the Q object to limit results to the gene.
+    """
+    match = GENE_REGEX_NAMED.match(gene_restrict_string)
+    gene_label = match.group('gene')
+
+    # Restrict to variants whose position fall between start and end of
+    # gene.
+
+    # First attempt, look up the Gene and get positions.
+    gene_region = Region.objects.get(
+            type=Region.TYPE.GENE,
+            reference_genome=ref_genome,
+            label=gene_label)
+
+    # Assume gene only has one interval.
+    gene_interval = gene_region.regioninterval_set.all()[0]
+
+    # Return a Q object bounding Variants by this position.
+    q_obj = (Q(position__gte=gene_interval.start) &
+            Q(position__lt=gene_interval.end))
     return q_obj
 
 
