@@ -1093,3 +1093,41 @@ class VariantFilter(Model):
     through Variants.
     """
     pass
+
+
+class Region(Model):
+    """Semantic annotation for a disjoint set of intervals in a
+    ReferenceGenome.
+
+    This allows the user to ask semantically deeper questions.
+    """
+    uid = models.CharField(max_length=36, unique=True,
+            default=(lambda: short_uuid(Region)))
+
+    reference_genome = models.ForeignKey('ReferenceGenome')
+
+    # Human-readable identifier.
+    # Depending on the type and how disciplined we are with development,
+    # this could further be semantically meaningful (e.g. gene name).
+    label = models.CharField('Sample Name', max_length=256)
+
+    class TYPE:
+        """The type of this dataset.
+
+        Limit to 40-chars as per Dataset.type field def.
+        """
+        GENE = 'g'
+    TYPE_CHOICES = make_choices_tuple(TYPE)
+    type = models.CharField(max_length=40, choices=TYPE_CHOICES)
+
+
+class RegionInterval(Model):
+    """One of possibly several intervals that describe a single region.
+    """
+    region = models.ForeignKey('Region')
+
+    # One-indexed.
+    start = models.BigIntegerField()
+
+    # One-indexed.
+    end = models.BigIntegerField()
