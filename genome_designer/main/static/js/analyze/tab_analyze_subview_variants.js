@@ -26,6 +26,14 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     // When null, we are just showing the default.
     this.visibleKeyNames = null;
 
+    // Check whether a filter is set on the view.
+    var paramObject = gd.Util.getQueryStringAsObject();
+    var maybeQueryString = window.location.search;
+    if ('filter' in paramObject) {
+      var filterString = paramObject['filter'];
+      this.model.set('filterString', filterString);
+    }
+
     gd.TabAnalyzeSubviewAbstractBase.prototype.initialize.call(this);
   },
 
@@ -37,6 +45,9 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     $.get('/_/templates/variant_filter_controls', _.bind(function(response) {
       // Append the DOM.
       $('#gd-analyze-subview-controls-hook').append(response);
+
+      // Fill in the filter if relevant.
+      $('#gd-new-filter-input').val(this.model.get('filterString'));
 
       // Register listeners.
       $('#gd-filter-box-apply-btn').click(
@@ -176,7 +187,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     var requestData = {
       'projectUid': this.model.get('project').uid,
       'refGenomeUid': this.model.get('refGenomeUid'),
-      'variantFilterString': $('#gd-new-filter-input').val(),
+      'variantFilterString': this.model.get('filterString'),
       'melt': $('input:radio[name=melt]:checked').val()
     };
 
@@ -191,6 +202,16 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
   /** Handles a click on the 'Apply Filter' button. */
   handleApplyFilterClick: function() {
+    // Update the model.
+    // NOTE: We are not being super consistent about this but can't hurt
+    //     to keep doing it where possible.
+    this.model.set('filterString', $('#gd-new-filter-input').val());
+
+    // Update the url with the filter.
+    var updatedPath = gd.Util.updateQueryStringParameter(
+        gd.Util.getFullPath(), 'filter', this.model.get('filterString'));
+    this.trigger('NAVIGATE', {'path': updatedPath});
+
     // Kick off request to update the Variant data being displayed.
     this.updateVariantList();
   },
