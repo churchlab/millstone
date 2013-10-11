@@ -116,6 +116,14 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     $('#gd-datatable-hook').empty();
 
     this.currentSubView = new newSubviewType({model: this.model});
+    this.listenTo(this.currentSubView, 'NAVIGATE',
+        _.bind(this.handleSubviewNav, this));
+  },
+
+
+  /** Handles a nav event triggered by a subview. */
+  handleSubviewNav: function(navParams) {
+    this.router.navigate(navParams.path);
   }
 },
 
