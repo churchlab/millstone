@@ -19,8 +19,10 @@ from django.views.decorators.http import require_GET
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.data_util import lookup_variants
+from main.model_views import GeneView
 from main.models import Project
 from main.models import ReferenceGenome
+from main.models import Region
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
 from main.models import VariantSet
@@ -71,9 +73,17 @@ def export_variant_set_as_csv(request):
 
 
 # Key in the GET params containing the string for filtering the variants.
-VARIANT_FILTER_STRING_KEY = 'variantFilterString'
+VARIANT_LIST_REQUEST_KEY__FILTER_STRING = 'variantFilterString'
+VARIANT_LIST_REQUEST_KEY__PROJECT_UID = 'projectUid'
+VARIANT_LIST_REQUEST_KEY__REF_GENOME_UID = 'refGenomeUid'
+
+VARIANT_LIST_RESPONSE_KEY__LIST = 'variant_list_json'
+VARIANT_LIST_RESPONSE_KEY__TOTAL = 'num_total_variants'
+VARIANT_LIST_RESPONSE_KEY__SET_LIST = 'variant_set_list_json'
+VARIANT_LIST_RESPONSE_KEY__KEY_MAP = 'variant_key_filter_map_json'
 
 @login_required
+@require_GET
 def get_variant_list(request):
     """Returns a list of Variants, filtered by any filter parameters contained
     in the request.
@@ -94,8 +104,9 @@ def get_variant_list(request):
     pagination_len = int(request.GET.get('iDisplayLength', 100))
 
     # Get inputs to perform the query for Variants data.
-    if VARIANT_FILTER_STRING_KEY in request.GET:
-        manual_filter_string = request.GET.get(VARIANT_FILTER_STRING_KEY)
+    if VARIANT_LIST_REQUEST_KEY__FILTER_STRING in request.GET:
+        manual_filter_string = request.GET.get(
+                VARIANT_LIST_REQUEST_KEY__FILTER_STRING)
     else:
         manual_filter_string = ''
     # TODO: Combine with saved filter string.
@@ -128,11 +139,11 @@ def get_variant_list(request):
             variant_key_map_with_active_fields_marked)
 
     response_data = {
-        'variant_list_json': variant_list_json,
-        'num_total_variants': num_total_variants,
-        'variant_set_list_json': adapt_model_to_frontend(VariantSet,
+        VARIANT_LIST_RESPONSE_KEY__LIST: variant_list_json,
+        VARIANT_LIST_RESPONSE_KEY__TOTAL: num_total_variants,
+        VARIANT_LIST_RESPONSE_KEY__SET_LIST: adapt_model_to_frontend(VariantSet,
                 obj_list=variant_set_list),
-        'variant_key_filter_map_json': json.dumps(
+        VARIANT_LIST_RESPONSE_KEY__KEY_MAP: json.dumps(
                 variant_key_map_with_active_fields_marked)
     }
 
@@ -140,12 +151,15 @@ def get_variant_list(request):
             content_type='application/json')
 
 
+VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS = 'visibleKeyNames'
+
 def _determine_visible_field_names(request, filter_string, ref_genome):
     """Determine which fields to show.
     """
     # Get visible keys explicitly marked in the UI by the user.
-    if 'visibleKeyNames' in request.GET:
-        visible_key_names = json.loads(request.GET.get('visibleKeyNames'))
+    if VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS in request.GET:
+        visible_key_names = json.loads(request.GET.get(
+                VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS))
     else:
         visible_key_names = []
 
@@ -233,6 +247,28 @@ def get_variant_set_list(request):
     response_data = {
         'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 obj_list=variant_set_list),
+    }
+
+    return HttpResponse(json.dumps(response_data),
+            content_type='application/json')
+
+
+@login_required
+@require_GET
+def get_gene_list(request):
+    ref_genome_uid = request.GET.get('refGenomeUid')
+
+    reference_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)
+
+    region_list = Region.objects.filter(
+            reference_genome=reference_genome,
+            type=Region.TYPE.GENE)
+    gene_view_list = [GeneView(region) for region in region_list]
+
+    response_data = {
+        'geneList': adapt_model_or_modelview_list_to_frontend(gene_view_list)
     }
 
     return HttpResponse(json.dumps(response_data),

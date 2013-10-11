@@ -143,6 +143,7 @@ class MeltedVariantView(BaseVariantView):
         if attr == 'variantset_set':
             # TODO(gleb): Make the queries below efficient. Right now I'm just
             # trying to get it to work.
+            variant_set_list = []
             if self.variant_evidence is None:
                 # Return VariantSets which contain no ExperimentSample
                 # association.
@@ -150,7 +151,7 @@ class MeltedVariantView(BaseVariantView):
                 for vtvs in self.variant.varianttovariantset_set.all():
                     if len(vtvs.sample_variant_set_association.all()) == 0:
                         no_sample_variant_sets.append(vtvs.variant_set)
-                return no_sample_variant_sets
+                variant_set_list = no_sample_variant_sets
 
             else:
                 # Only show sets associated with the VariantEvidence.
@@ -159,7 +160,10 @@ class MeltedVariantView(BaseVariantView):
                 for vtvs in self.variant.varianttovariantset_set.all():
                     if sample in vtvs.sample_variant_set_association.all():
                         variant_sets_for_this_sample.append(vtvs.variant_set)
-                return variant_sets_for_this_sample
+                variant_set_list = variant_sets_for_this_sample
+            # TODO: Return a QuerySet more efficiently. This is a temporary bug fix.
+            variant_set_uid_list = [vs.uid for vs in variant_set_list]
+            return VariantSet.objects.filter(uid__in=variant_set_uid_list)
 
         delegate_order = [
                 self.variant,
@@ -261,3 +265,34 @@ class MeltedVariantView(BaseVariantView):
                         variant_evidence_obj))
 
         return melted_list
+
+
+class GeneView(object):
+    """View of a Gene.
+    """
+
+    def __init__(self, region):
+        self.region = region
+        self.label = region.label
+        self.uid = region.uid
+
+        # Assume that GENE region is composed of single interval.
+        gene_interval = region.regioninterval_set.all()[0]
+        self.start = gene_interval.start
+        self.end = gene_interval.end
+
+        # Count of Variants that occur in region.
+        self.variants = Variant.objects.filter(
+                reference_genome=region.reference_genome,
+                position__gte=self.start,
+                position__lt=self.end).count()
+
+    @classmethod
+    def get_field_order(clazz, **kwargs):
+        return [
+            {'field':'uid'},
+            {'field':'label'},
+            {'field':'start'},
+            {'field':'end'},
+            {'field':'variants'},
+        ]

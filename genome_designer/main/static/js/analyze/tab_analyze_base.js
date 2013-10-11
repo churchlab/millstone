@@ -62,15 +62,22 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     var refGenomeUid = opt_refGenomeUid || $(e.target).val();
     this.model.set('refGenomeUid', refGenomeUid);
 
+    // Determine the subview.
+    var subViewKey = 'variants';
+    if (this.model.has('subView')) {
+      var subViewKey = this.model.get('subView');
+    }
+
     // Update the url.
-    this.router.navOnRefGenomeSelect(refGenomeUid);
+    this.router.navOnRefGenomeSelect(refGenomeUid, subViewKey);
 
     // Show the entity select (i.e. Variants, VariantSets, etc.)
-    // TODO: Implement support for switching among entities.
     $('#gd-analyze-select-search-entity').fadeIn();
 
-    this.updateSubview(
-        gd.TabAnalyzeBaseView.SUBVIEW_TYPE_TO_VIEW_CLASS.VARIANTS);
+    // Determine the sub-view to show from the key.
+    var subView = gd.TabAnalyzeBaseView.SUBVIEW_TYPE_TO_VIEW_CLASS[
+        subViewKey.toUpperCase()];
+    this.updateSubview(subView);
   },
 
 
@@ -81,9 +88,18 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
    *     event.
    */
   handleSearchEntitySelect: function(e) {
-    var newSubviewType = gd.TabAnalyzeBaseView.SUBVIEW_TYPE_TO_VIEW_CLASS[
-        $(e.target).val()];
-    this.updateSubview(newSubviewType);
+    // Get the view key from DOM.
+    var subViewOptionValue = $(e.target).val();
+
+    // Update the url.
+    var subViewUrlToken = subViewOptionValue.toLowerCase();
+    var refGenomeUid = this.model.get('refGenomeUid');
+    this.router.navOnRefGenomeSelect(refGenomeUid, subViewUrlToken);
+
+    // Update the view.
+    var newSubViewType = gd.TabAnalyzeBaseView.SUBVIEW_TYPE_TO_VIEW_CLASS[
+        subViewOptionValue];
+    this.updateSubview(newSubViewType);
   },
 
 

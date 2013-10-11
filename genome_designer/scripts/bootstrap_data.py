@@ -29,6 +29,8 @@ from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from main.models import ReferenceGenome
+from main.models import Region
+from main.models import RegionInterval
 from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantSet
@@ -287,6 +289,59 @@ def bootstrap_fake_data():
 
     # Run Freebayes. This should also kick off snpeff afterwards.
     run_snp_calling_pipeline(full_vcf_alignment_group, concurrent=False)
+
+    def _create_region_intervals(region, interval_tuple_list):
+        """Helper method to create RegionIntervals for a Region.
+
+        Args:
+            region: Region Model object.
+            interval_tuple_list: List of tuples of intervals to create.
+        """
+        for interval in interval_tuple_list:
+            RegionInterval.objects.create(
+                    region=region,
+                    start=interval[0],
+                    end=interval[1])
+
+    # Create some fake regions.
+    # TODO: Should not be much harder to replace this with real regions.
+    region_1 = Region.objects.create(
+        reference_genome=full_vcf_reference_genome,
+        label='region_1',
+        type=Region.TYPE.CALLABLE)
+    _create_region_intervals(region_1, [(1,150), (300, 400), (500, 900)])
+
+    region_2 = Region.objects.create(
+        reference_genome=full_vcf_reference_genome,
+        label='region_2',
+        type=Region.TYPE.CALLABLE)
+    _create_region_intervals(region_2, [(1000, 1500)])
+
+    region_3 = Region.objects.create(
+        reference_genome=full_vcf_reference_genome,
+        label='region_3',
+        type=Region.TYPE.CALLABLE)
+    _create_region_intervals(region_3, [(1800, 1900), (2150, 2300)])
+
+    # And some GENE regions.
+
+    gene_A = Region.objects.create(
+        reference_genome=full_vcf_reference_genome,
+        label='geneA',
+        type=Region.TYPE.GENE)
+    _create_region_intervals(gene_A, [(2000, 2400)])
+
+    gene_B = Region.objects.create(
+        reference_genome=full_vcf_reference_genome,
+        label='geneB',
+        type=Region.TYPE.GENE)
+    _create_region_intervals(gene_B, [(4800, 5200)])
+
+    gene_C = Region.objects.create(
+        reference_genome=full_vcf_reference_genome,
+        label='geneC',
+        type=Region.TYPE.GENE)
+    _create_region_intervals(gene_C, [(1, 500)])
 
 
 def reset_database():

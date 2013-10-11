@@ -15,7 +15,7 @@ gd.TabAnalyzeRouter = Backbone.Router.extend({
 
 
   /** Navigates to the ref genome uid. */
-  navOnRefGenomeSelect: function(refGenomeUid) {
-    this.navigate(this.rootUrl + '/' + refGenomeUid);
+  navOnRefGenomeSelect: function(refGenomeUid, subViewKey) {
+    this.navigate(this.rootUrl + '/' + refGenomeUid + '/' + subViewKey);
   }
 });

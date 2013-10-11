@@ -79,9 +79,10 @@ EXPRESSION_REGEX = re.compile('(\w+\s*[=><!]{1}[=]{0,1}\s*\w+)')
 
 # Recognizes statements about set.
 SET_REGEX = re.compile('((?:NOT_){0,1}IN_SET\([\w]+\))')
-
-# Recognizes statements about set.
 SET_REGEX_NAMED = re.compile('((?P<maybe_not>NOT_){0,1}IN_SET\((?P<sets>[\w]+)\))')
+
+GENE_REGEX = re.compile('(IN_GENE\([\w]+\))')
+GENE_REGEX_NAMED = re.compile('(IN_GENE\((?P<gene>[\w]+)\))')
 
 
 ###############################################################################

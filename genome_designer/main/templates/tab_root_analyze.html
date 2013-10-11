@@ -15,9 +15,9 @@
 
     <select id="gd-analyze-select-search-entity" class="gd-analyze-select-search-entity"
         style="display: none">
-      <option value="VARIANTS" selected>Variants</option>
-      <option value="SETS">Variant Sets</option>
-      <option value="GENES">Genes</option>
+        <option value="VARIANTS" selected>Variants</option>
+      <option value="SETS" {% if sub_view == 'sets' %}selected{% endif %}>Variant Sets</option>
+      <option value="GENES" {% if sub_view == 'genes' %}selected{% endif %}>Genes</option>
     </select>
   </div>
 

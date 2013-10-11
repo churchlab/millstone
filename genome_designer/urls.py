@@ -28,7 +28,8 @@ urlpatterns = patterns('',
             'genome_designer.main.views.tab_root_analyze'),
     url(r'^projects/([\w-]+)/analyze/([\w-]+)$',
             'genome_designer.main.views.tab_root_analyze'),
-
+    url(r'^projects/([\w-]+)/analyze/([\w-]+)/([\w-]+)$',
+            'genome_designer.main.views.tab_root_analyze'),
 
 
     # Reference genomes
@@ -99,6 +100,9 @@ urlpatterns = patterns('',
             'genome_designer.main.xhr_handlers.get_variant_list'),
     url(r'^_/variants/modify_set_membership$',
             'genome_designer.main.xhr_handlers.modify_variant_in_set_membership'),
+    url(r'^_/genes$',
+            'genome_designer.main.xhr_handlers.get_gene_list'),
+
 
 
     ############################################################################
