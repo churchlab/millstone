@@ -2,6 +2,7 @@
 Classes that describe how a particular model should be viewed.
 """
 
+from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
 from main.constants import UNDEFINED_STRING
@@ -286,6 +287,17 @@ class GeneView(object):
                 reference_genome=region.reference_genome,
                 position__gte=self.start,
                 position__lt=self.end).count()
+
+    @property
+    def href(self):
+        analyze_tab_part = reverse(
+                'genome_designer.main.views.tab_root_analyze',
+                args=(self.region.reference_genome.project.uid,
+                        self.region.reference_genome.uid,
+                        'variants'))
+        gene_filter_part = '?filter=IN_GENE(' + self.label + ')'
+        return analyze_tab_part + gene_filter_part
+
 
     @classmethod
     def get_field_order(clazz, **kwargs):
