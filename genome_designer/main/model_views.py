@@ -265,3 +265,28 @@ class MeltedVariantView(BaseVariantView):
                         variant_evidence_obj))
 
         return melted_list
+
+
+class GeneView(object):
+    """View of a Gene.
+    """
+
+    def __init__(self, region):
+        self.region = region
+        self.label = region.label
+        self.uid = region.uid
+
+        # Assume that GENE region is composed of single interval.
+        gene_interval = region.regioninterval_set.all()[0]
+        self.start = gene_interval.start
+        self.end = gene_interval.end
+
+
+    @classmethod
+    def get_field_order(clazz, **kwargs):
+        return [
+            {'field':'uid'},
+            {'field':'label'},
+            {'field':'start'},
+            {'field':'end'},
+        ]

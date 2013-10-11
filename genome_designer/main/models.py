@@ -1116,6 +1116,7 @@ class Region(Model):
 
         Limit to 40-chars as per Dataset.type field def.
         """
+        CALLABLE = 'c'
         GENE = 'g'
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)

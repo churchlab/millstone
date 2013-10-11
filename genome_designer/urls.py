@@ -99,6 +99,9 @@ urlpatterns = patterns('',
             'genome_designer.main.xhr_handlers.get_variant_list'),
     url(r'^_/variants/modify_set_membership$',
             'genome_designer.main.xhr_handlers.modify_variant_in_set_membership'),
+    url(r'^_/genes$',
+            'genome_designer.main.xhr_handlers.get_gene_list'),
+
 
 
     ############################################################################

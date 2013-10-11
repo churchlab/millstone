@@ -19,8 +19,10 @@ from django.views.decorators.http import require_GET
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.data_util import lookup_variants
+from main.model_views import GeneView
 from main.models import Project
 from main.models import ReferenceGenome
+from main.models import Region
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
 from main.models import VariantSet
@@ -245,6 +247,28 @@ def get_variant_set_list(request):
     response_data = {
         'variant_set_list_json': adapt_model_to_frontend(VariantSet,
                 obj_list=variant_set_list),
+    }
+
+    return HttpResponse(json.dumps(response_data),
+            content_type='application/json')
+
+
+@login_required
+@require_GET
+def get_gene_list(request):
+    ref_genome_uid = request.GET.get('refGenomeUid')
+
+    reference_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)
+
+    region_list = Region.objects.filter(
+            reference_genome=reference_genome,
+            type=Region.TYPE.GENE)
+    gene_view_list = [GeneView(region) for region in region_list]
+
+    response_data = {
+        'geneList': adapt_model_or_modelview_list_to_frontend(gene_view_list)
     }
 
     return HttpResponse(json.dumps(response_data),
