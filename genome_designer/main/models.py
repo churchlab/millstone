@@ -817,7 +817,7 @@ class Variant(Model):
                 {'field':'chromosome'},
                 {'field':'position'},
                 # This is useless right now, always 'UNKNOWN'
-                {'field':'type'},
+                #{'field':'type'},
                 {'field':'ref_value', 'verbose':'Ref'},
                 {'field':'variantset_set',
                     'verbose':'Set Membership',
