@@ -14,7 +14,6 @@ from main.models import VariantSet
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-from variants.variant_filter import get_per_alt_dict
 
 class BaseVariantView(object):
     """Common methods for model views.
