@@ -910,6 +910,9 @@ class VariantAlternate(Model, VisibleFieldMixin):
     # this json fields holds all PER ALT data (INFO data with num -1)
     data = JSONField()
 
+    def __unicode__(self):
+        return 'var: ' + str(self.variant) + ', alt:' + self.alt_value
+
     def as_dict(self):
         """Converts a alternate object into a dictionary from key to cleaned
         values.
