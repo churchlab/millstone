@@ -54,7 +54,8 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
 def post_variant_evidence_create(sender, instance, created, **kwargs):
     """Add existing VariantAlternates to this VariantEvidence Object."""
 
-    if not created: return
+    if not created or not 'gt_bases' in instance.data:
+        return
 
     gt_bases = pickle.loads(instance.data['gt_bases'])
 
