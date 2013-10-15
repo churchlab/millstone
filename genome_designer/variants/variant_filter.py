@@ -47,7 +47,8 @@ from variants.common import VARIANT_ALTERNATE_SQL_KEY_MAP
 from variants.common import get_all_key_map
 from variants.common import get_delim_key_value_triple
 from variants.common import ParseError
-
+from variants.filter_eval_result import FilterEvalResult
+from variants.filter_scope import FilterScope
 
 
 ###############################################################################
@@ -68,111 +69,6 @@ def symbol_generator():
         if next_ord > final_symbol_ord:
             raise StopIteration()
         current_char = chr(next_ord)
-
-
-class FilterEvalResult(object):
-    """Wraps the result of evaluating a filter condition.
-
-    Provides utility methods for combining results.
-    """
-
-    def __init__(self, variant_set, variant_id_to_metadata_dict):
-        if not isinstance(variant_set, set):
-            variant_set = set(variant_set)
-        self.variant_set = variant_set
-        self.variant_id_to_metadata_dict = variant_id_to_metadata_dict
-
-    def __or__(self, other):
-        return self.combine(other, '|')
-
-    def __and__(self, other):
-        return self.combine(other, '&')
-
-    def combine(self, other, op_string):
-        """Method that returns a new FilterEvalResult that is the combination
-        of this one and other.
-
-        Args:
-            other: The FilterEvalResult to combine with.
-            op_string: Either '&' or '|'.
-
-        Returns:
-            A new FilterEvalResult object.
-        """
-        assert isinstance(other, FilterEvalResult)
-        assert op_string in ['&', '|']
-
-        # Combine the Variant sets.
-        if op_string == '&':
-            new_variant_set = self.variant_set & other.variant_set
-        elif op_string == '|':
-            new_variant_set = self.variant_set | other.variant_set
-        else:
-            raise AssertionError("Unsupported op: %s" % op_string)
-
-        # Build up the new metadata map.
-        new_variant_id_to_metadata_dict = {}
-        for variant in new_variant_set:
-            merged_filter_metadata = {}
-
-            self_filter_metadata = self.variant_id_to_metadata_dict.get(
-                    variant.id, {})
-            other_filter_metadata = other.variant_id_to_metadata_dict.get(
-                    variant.id, {})
-
-            # Merge passing sample ids.
-            self_passing_genomes = self_filter_metadata.get(
-                    'passing_sample_ids', set())
-            other_passing_genomes = other_filter_metadata.get(
-                    'passing_sample_ids', set())
-            if op_string == '&':
-                merged_filter_metadata['passing_sample_ids'] = (
-                        self_passing_genomes & other_passing_genomes)
-            else:
-                merged_filter_metadata['passing_sample_ids'] = (
-                        self_passing_genomes | other_passing_genomes)
-
-            # Save the filter metadata.
-            new_variant_id_to_metadata_dict[variant.id] = merged_filter_metadata
-
-        return FilterEvalResult(new_variant_set,
-                new_variant_id_to_metadata_dict)
-
-
-FILTER_SCOPE__ALL = 'ALL'
-FILTER_SCOPE__ANY = 'ANY'
-FILTER_SCOPE__ONLY = 'ONLY'
-VALID_FILTER_SCOPES = set([
-    FILTER_SCOPE__ALL,
-    FILTER_SCOPE__ANY,
-    FILTER_SCOPE__ONLY
-])
-
-class FilterScope(object):
-    """Represents the scope that a filter should be applied over.
-    """
-
-    def __init__(self, scope_type, sample_ids):
-        """
-        Args:
-            sample_ids: Set of sample ids.
-            scope_type: A scope in VALID_FILTER_SCOPES.
-        """
-        assert scope_type in VALID_FILTER_SCOPES, "Invalid scope type."
-
-        self.sample_id_set = set(sample_ids)
-        self.scope_type = scope_type
-
-
-    @classmethod
-    def parse_sample_ids(clazz, sample_id_string):
-        """Turns a comma-separated list of sample uids or names into ids.
-        """
-        sample_uids_or_names = sample_id_string.split(',')
-        sample_uids_or_names = [s.strip() for s in sample_uids_or_names]
-        sample_ids = [ExperimentSample.objects.get(uid=uid).id for uid
-                in sample_uids_or_names]
-        return sample_ids
 
 
 class VariantFilterEvaluator(object):
@@ -214,23 +110,6 @@ class VariantFilterEvaluator(object):
             self.sympy_representation = ''
         else:
             self._create_symbolic_representation()
-
-
-    def get_scope_type(self):
-        """Returns the scope type.
-        """
-        if self.scope:
-            return self.scope.scope_type
-        return None
-
-
-    def get_scope_sample_id_set(self):
-        """Returns the set of sample ids that the scope applies to.
-        """
-        assert self.scope is not None, (
-                "get_scope_sample_id_set() called on none-scoped " +
-                "evaluator instance.")
-        return self.scope.sample_id_set
 
 
     def _create_symbolic_representation(self):
@@ -504,18 +383,17 @@ class VariantFilterEvaluator(object):
                     # variant as passing the filter, accounting for scope if
                     # applicable.
                     if len(samples_passing_for_variant) > 0:
-                        # Compare the passing results to the scope.
-                        scope_type = self.get_scope_type()
-                        if (scope_type is None or
-                                self.do_passing_samples_satisfy_scope(
-                                        scope_type,
+                        # Either there is no scope, or samples must pass
+                        # the scope.
+                        if (self.scope is None or
+                                self.scope.do_passing_samples_satisfy_scope(
                                         samples_passing_for_variant)):
                             passing_variant_list.append(variant)
                             variant_id_to_metadata_dict[variant.id][
                                     'passing_sample_ids'] &= (
                                             samples_passing_for_variant)
                     else:
-                        variant_id_to_metadata_dict[variant.id][
+                         variant_id_to_metadata_dict[variant.id][
                                 'passing_sample_ids'] = set()
 
             # Since we are inside of a conjunction, we only need to check
@@ -609,63 +487,6 @@ class VariantFilterEvaluator(object):
 ###############################################################################
 # Helper methods
 ###############################################################################
-
-def get_per_alt_dict(key, variant, variant_evidence_obj, type_map):
-    """Returns a dictionary/type map tuple for one per-alt INFO field.  It is
-    relevant to a single variant evidence object, corresponding to all of the
-    alternate alleles that the variant evidence object might have.
-
-    For example, given a key of INFO_EFF_SEVERITY, which has the value 
-        ['SEVERE','MODERATE']
-
-    corresponding to a SEVERE for alternate allele 1 and a MODERATE severity for
-    alternate allele 2.
-
-    Given a variant evidence object where the gt_num is 1/1, the returned
-    dictionary would be:
-
-            {'INFO_EFF_SEVERITY':['SEVERE']} 
-
-    If there is an evidene object that has the gt_num  1/2, then the returned
-    dictionary would be:
-
-            {'INFO_EFF_SEVERITY':['SEVERE','MODERATE']}
-
-    so that the variant evidence has two chances to match, one if the query
-    is looking for SEVERE, and another if it is looking for MODERATE. 
-
-    This function returns a tuple, where the first item is the dictionary
-    explained above and the second item is a type map for the particular key
-    for used when casting the key outside of its native common_data type map
-    dictionary.
-    """
-
-    gt_string = variant_evidence_obj.as_dict()['GT']
-
-    # TODO: Could we just ignore phased variants if they are found, and treat
-    # them as unphased?
-    assert ('|' not in gt_string), (
-        'GT string is phased; this is not handled and should never happen...')
-
-    gts = variant_evidence_obj.as_dict()['GT'].split('/')
-
-    # The -1 is because the reference allele is 0, we want the first alt to be 0
-    gt_set = set()
-    for gt in gts:
-        if int(gt) > 0:
-            gt_set.add(int(gt)-1)
-
-    key_dict = {key: []}
-    data_dict = variant_evidence_obj.variant_caller_common_data.as_dict()
-
-    if key in data_dict:
-        evaled_list = data_dict[key]
-        for gt in gt_set:
-            key_dict[key].append(evaled_list[gt])
-
-    #key_dict[key] = repr(key_dict[key])
-    return(key_dict, type_map[key])
-
 
 def _get_django_q_object_for_triple(delim_key_value_triple):
     """Returns a Django Q object for querying against the SNP model for
