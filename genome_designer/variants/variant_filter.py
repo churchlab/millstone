@@ -52,6 +52,16 @@ from variants.filter_scope import FilterScope
 
 
 ###############################################################################
+# Constants
+###############################################################################
+
+# Q-object types. This is used to determine whether we need to perform a
+# query per sample.
+Q_OBJECT_TYPE__GLOBAL = 'global'
+Q_OBJECT_TYPE__PER_SAMPLE = 'per_sample'
+
+
+###############################################################################
 # Helper objects.
 ###############################################################################
 
@@ -93,7 +103,6 @@ class VariantFilterEvaluator(object):
         self.clean_filter_string = raw_filter_string
         self.ref_genome = ref_genome
         self.all_key_map = get_all_key_map(self.ref_genome)
-        
         self.variant_caller_common_map = (
                 self.ref_genome.get_variant_caller_common_map())
         self.variant_alternate_map = (
@@ -238,24 +247,56 @@ class VariantFilterEvaluator(object):
         ### Now handle the Q list.
 
         # NOTE: Previously, we were applying boolean operators
-        # among Q objects, but the ORM mapping fails in cases where you
-        # want to handle logic among VariantSet membership.
+        #     among Q objects, but the ORM mapping fails in cases where you
+        #     want to handle logic among VariantSet membership. Thus we chain
+        #     filter() calls instead.
         if len(q_list) > 0:
-            variant_list = self.ref_genome.variant_set.filter(q_list[0])
-            for q_obj in q_list[1:]:
+            actual_q_obj_list = [el[1] for el in q_list]
+            variant_list = self.ref_genome.variant_set.filter(
+                    actual_q_obj_list[0])
+            for q_obj in actual_q_obj_list[1:]:
                 variant_list = variant_list.filter(q_obj)
         else:
             variant_list = self.ref_genome.variant_set.all()
 
-        # Make this into a FilterEvalResult object.
-        # For now, we just set all the genomes as passing for the conditions
-        # so far.
+        # Make this into a FilterEvalResult object, which requires creating the
+        # map from variant id to sample ids passing for that variant.
+
+        # First we set all samples passing.
         variant_id_to_metadata_dict = {}
         for variant in variant_list:
             variant_id_to_metadata_dict[variant.id] = {
-                'passing_sample_ids': (
-                        self.get_sample_id_set_for_variant(variant)),
+                'passing_sample_ids': get_sample_id_set_for_variant(variant),
             }
+
+        # Now, for the Q objects that may give different results per-sample,
+        # we need to test each specific sample against the query.
+        # NOTE: As a first stab, we are going to only make this work for
+        #     alt_values.
+        # TODO: Come up with a more general implementation that works for sets
+        #     and genes.
+        per_alt_q_obj_list = [el[1] for el in q_list
+                if el[0] == Q_OBJECT_TYPE__PER_SAMPLE]
+        if len(per_alt_q_obj_list) > 0:
+            assert len(per_alt_q_obj_list) == 1, "Only support 1 right now."
+            q_obj = per_alt_q_obj_list[0]
+            for variant in variant_list:
+                # HACK: This is super ghetto but just trying to get the test to pass
+                # for now.
+                per_sample_field_name = q_obj.children[0][0].split('__')[-1]
+                combined_q = eval('Q(variantalternate_set__' +
+                        per_sample_field_name + '=' + '"' +
+                        q_obj.children[0][1] + '"' + ')')
+                # For now, we only handle the alt_values key.
+                passing_evidence_obj_list = (
+                        VariantEvidence.objects.filter(combined_q))
+                passing_sample_id_set = set([evidence.experiment_sample.id for
+                        evidence in passing_evidence_obj_list])
+                variant_id_to_metadata_dict[variant.id] = {
+                    'passing_sample_ids': passing_sample_id_set,
+                }
+
+        # Now build the filter result object.
         q_part_result = FilterEvalResult(set(variant_list),
                 variant_id_to_metadata_dict)
 
@@ -275,7 +316,7 @@ class VariantFilterEvaluator(object):
         result = self.handle_single_symbol(symbol)
         if isinstance(result, FilterEvalResult):
             filter_eval_results.append(result)
-        elif isinstance(result, Q):
+        elif isinstance(result, tuple) and isinstance(result[1], Q):
             q_list.append(result)
         else:
             remaining_triples.append(result)
@@ -286,14 +327,17 @@ class VariantFilterEvaluator(object):
         """Returns one of:
             * A FilterEvalResult object if the symbol represents a scoped
                 filter condition.
-            * A Django Q object if the symbol represents a condition that
+            * A Tuple pair (Q_OBJ_TYPE, Django Q object), if the symbol
+                represents a condition that
             can be evaluated against the SQL database.
             * A triple of delim, key, value if the condition must be evaluated
                 in-memory.
         """
         condition_string = self.get_condition_string_for_symbol(symbol)
 
-        # First check whether this expression is contained within a scope.
+        ### First we check for complex expressions (e.g. scoped, set, etc.)
+
+        # First, check whether this expression is contained within a scope.
         scope_match = SAMPLE_SCOPE_REGEX_NAMED.match(condition_string)
         if scope_match:
             condition_string = scope_match.group('condition')
@@ -314,6 +358,9 @@ class VariantFilterEvaluator(object):
         if gene_match:
             return _get_django_q_object_for_gene_restrict(condition_string,
                     self.ref_genome)
+
+        ### If we're here, then the condition should be a basic,
+        ### delimiter-separated expression.
 
         # Finally, if here, then this should be a basic, delimiter-separated
         # expression.
@@ -393,8 +440,11 @@ class VariantFilterEvaluator(object):
                                     'passing_sample_ids'] &= (
                                             samples_passing_for_variant)
                     else:
-                         variant_id_to_metadata_dict[variant.id][
-                                'passing_sample_ids'] = set()
+                        # NOTE: The reason we still store the empty set is
+                        #     so that we can perform mergers of result objects
+                        #     (I think).
+                        variant_id_to_metadata_dict[variant.id][
+                            'passing_sample_ids'] = set()
 
             # Since we are inside of a conjunction, we only need to check
             # the remaining variants on the next iteration.
@@ -450,18 +500,18 @@ class VariantFilterEvaluator(object):
         return samples_passing_for_variant
 
 
-    def get_sample_id_set_for_variant(self, variant):
-        """Returns the set of all ExperimentSamples ids for which there exists a
-        relationship to the Variant
-        """
-        return set([ve.experiment_sample.id for ve in
-                VariantEvidence.objects.filter(
-                        variant_caller_common_data__variant=variant)])
-
-
 ###############################################################################
 # Helper methods
 ###############################################################################
+
+def get_sample_id_set_for_variant(variant):
+    """Returns the set of all ExperimentSamples ids for which there exists a
+    relationship to the Variant
+    """
+    return set([ve.experiment_sample.id for ve in
+            VariantEvidence.objects.filter(
+                    variant_caller_common_data__variant=variant)])
+
 
 def _get_django_q_object_for_triple(delim_key_value_triple):
     """Returns a Django Q object for querying against the SNP model for
@@ -475,11 +525,15 @@ def _get_django_q_object_for_triple(delim_key_value_triple):
     assert len(delim_key_value_triple) == 3
     (delim, key, value) = delim_key_value_triple
 
+    # Default type for this Q object.
+    q_object_type = Q_OBJECT_TYPE__GLOBAL
+
     # Figure out proper model to add a model prefix in the Q object, e.g.:
     #     Q(variantalternate__alt_value=A)
     model_prefix = ''
     if key in VARIANT_ALTERNATE_SQL_KEY_MAP:
         model_prefix = 'variantalternate__'
+        q_object_type = Q_OBJECT_TYPE__PER_SAMPLE
 
     # Special handling for != delim.
     if delim == '!=':
@@ -491,11 +545,12 @@ def _get_django_q_object_for_triple(delim_key_value_triple):
 
     eval_string = (maybe_not_prefix + 'Q(' + model_prefix + key + postfix +
             '=' + '"' + value + '"' + ')')
-    return eval(eval_string)
+    q_obj = eval(eval_string)
+    return (q_object_type, q_obj)
 
 
 def _get_django_q_object_for_set_restrict(set_restrict_string):
-    """Returns the Q object for the set restrict.
+    """Returns a tuple (Q_OBJECT_TYPE, Q object limiting reuslts to a set).
     """
     match = SET_REGEX_NAMED.match(set_restrict_string)
     variant_set_uid = match.group('sets')
@@ -506,12 +561,13 @@ def _get_django_q_object_for_set_restrict(set_restrict_string):
 
     # Maybe negate the result.
     if match.group('maybe_not'):
-        return ~q_obj
-    return q_obj
+        q_obj = ~q_obj
+
+    return (Q_OBJECT_TYPE__GLOBAL, q_obj)
 
 
 def _get_django_q_object_for_gene_restrict(gene_restrict_string, ref_genome):
-    """Returns the Q object to limit results to the gene.
+    """Returns a tuple (Q_OBJECT_TYPE, Q object to limit results to the gene).
     """
     match = GENE_REGEX_NAMED.match(gene_restrict_string)
     gene_label = match.group('gene')
@@ -531,7 +587,7 @@ def _get_django_q_object_for_gene_restrict(gene_restrict_string, ref_genome):
     # Return a Q object bounding Variants by this position.
     q_obj = (Q(position__gte=gene_interval.start) &
             Q(position__lt=gene_interval.end))
-    return q_obj
+    return (Q_OBJECT_TYPE__GLOBAL, q_obj)
 
 
 def _evaluate_condition_in_triple(data_map, type_map, triple, idx=None):

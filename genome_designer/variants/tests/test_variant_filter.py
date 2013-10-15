@@ -461,7 +461,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                         variant=variant,
                         alt_value='G'))
 
-
+        # Common data shared by all.
         raw_common_data_dict = {
                 'INFO_XRM': pickle.dumps(0.12)
         }
@@ -471,6 +471,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 data=raw_common_data_dict
         )
 
+        # Sample 1
         sample_obj = ExperimentSample.objects.create(
                 project=self.project,
                 label='fake sample',
@@ -488,6 +489,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict)
 
+        # Sample 2
         sample_obj_2 = ExperimentSample.objects.create(
                 project=self.project,
                 label='fake sample 2',
@@ -505,6 +507,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict_2)
 
+        # Sample 3
         sample_obj_3 = ExperimentSample.objects.create(
                 project=self.project,
                 label='fake sample 3',
@@ -521,6 +524,25 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 experiment_sample=sample_obj_3,
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict)
+
+        # Sample 4
+        sample_obj_4 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample 4',
+                group='Plate 1',
+                well='A04',
+                num_reads=100,
+        )
+        raw_sample_data_dict = {
+                'called': True,
+                'gt_type': pickle.dumps(2),
+                'gt_bases': pickle.dumps('G/G')
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj_4,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
 
         QUERY_STRING = '(position < 5 & gt_type = 2) in ANY(%s, %s, %s)' % (
                 sample_obj.uid, sample_obj_2.uid, sample_obj_3.uid)
@@ -546,11 +568,14 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         variants = result.variant_set
         self.assertEqual(0, len(variants))
 
+        # This should fail because condition passes for sample_obj and
+        # sample_obj_4.
         QUERY_STRING = '(position < 5 & gt_type = 2) in ONLY(%s)' % (
                 sample_obj.uid)
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
-        self.assertEqual(1, len(variants))
+        self.assertEqual(0, len(variants))
+
 
     def test_filter__common_data_per_alt(self):
         """Test filtering for common data of type '-1', 
@@ -774,6 +799,89 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
             QUERY_STRING = 'position < 1 & INFO_XRM > 0'
             variants = get_variants_that_pass_filter(QUERY_STRING,
                     ref_genome_2).variant_set
+
+
+    def test_filter__scoped__per_alt(self):
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=2,
+                ref_value='A')
+
+        alt_G = VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='G')
+        variant.variantalternate_set.add(alt_G)
+
+        alt_T = VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='T')
+        variant.variantalternate_set.add(alt_T)
+
+        # Asserts before adding samples.
+        query_and_num_expected_pairs = [
+                ('alt_value = A', 0),
+                ('alt_value = T', 1),
+                ('alt_value = G', 1)
+        ]
+        for query_string, num_expected in query_and_num_expected_pairs:
+            result = get_variants_that_pass_filter(query_string, self.ref_genome)
+            variants = result.variant_set
+            self.assertEqual(num_expected, len(variants))
+
+        # Create a common data object and samples with different alt_values.
+
+        common_data_obj = VariantCallerCommonData.objects.create(
+                variant=variant,
+                source_dataset=self.vcf_dataset,
+        )
+
+        sample_obj_1 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample',
+                group='Plate 1',
+                well='A01',
+                num_reads=100,
+        )
+        raw_sample_data_dict = {
+                'called': True,
+                'gt_type': pickle.dumps(2),
+                'gt_bases': pickle.dumps('G/G')
+        }
+        sample_1_evidence = VariantEvidence.objects.create(
+                experiment_sample=sample_obj_1,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+        sample_obj_2 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample 2',
+                group='Plate 1',
+                well='A02',
+                num_reads=100,
+        )
+        raw_sample_data_dict = {
+                'called': True,
+                'gt_type': pickle.dumps(2),
+                'gt_bases': pickle.dumps('T/T')
+        }
+        sample_2_evidence = VariantEvidence.objects.create(
+                experiment_sample=sample_obj_2,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+        print 'sample_1', sample_1_evidence.variantalternate_set.all()
+        print 'sample_2', sample_2_evidence.variantalternate_set.all()
+
+        QUERY_STRING = 'alt_value = T'
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+        passing_variant = list(variants)[0]
+        metadata = result.variant_id_to_metadata_dict
+        self.assertEqual(set([sample_obj_2.id]),
+                metadata[passing_variant.id]['passing_sample_ids'])
 
 
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
