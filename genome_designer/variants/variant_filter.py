@@ -25,11 +25,13 @@ Other implementation nuances to note:
       order to limit the number of independent hits of the SQL db.
 """
 
+from collections import defaultdict
 from django.db.models import Q
 from sympy.logic import boolalg
 
 from main.models import ExperimentSample
 from main.models import Region
+from main.models import VariantAlternate
 from main.models import VariantEvidence
 from variants.common import ALL_SQL_KEY_MAP_LIST
 from variants.common import DELIM_TO_Q_POSTFIX
@@ -44,6 +46,7 @@ from variants.common import TYPE_TO_SUPPORTED_OPERATIONS
 from variants.common import get_all_key_map
 from variants.common import get_delim_key_value_triple
 from variants.common import ParseError
+
 
 
 ###############################################################################
@@ -193,8 +196,11 @@ class VariantFilterEvaluator(object):
         self.clean_filter_string = raw_filter_string
         self.ref_genome = ref_genome
         self.all_key_map = get_all_key_map(self.ref_genome)
+        
         self.variant_caller_common_map = (
                 self.ref_genome.get_variant_caller_common_map())
+        self.variant_alternate_map = (
+                self.ref_genome.get_variant_alternate_map())
         self.variant_evidence_map = (
                 self.ref_genome.get_variant_evidence_map())
         self.scope = scope
@@ -457,31 +463,22 @@ class VariantFilterEvaluator(object):
         for triple in remaining_triples:
             (delim, key, value) = triple
 
-            # The only keys we want to evaluate for samples as well as variants
-            # are the -1 per-alternate keys - treat them as if they
-            # were in variant_evidence_map and all_common_data
-            is_per_alt_key = (key in self.variant_caller_common_map and
-                    self.variant_caller_common_map[key]['num'] == -1)
-
             passing_variant_list = []
             for variant in variant_list:
 
-                # TODO: "and not is_per_alt_key" means that we are treating -1
-                # per-alt keys ENTIRELY as if they were specific to samples.
-                # This fine EXCEPT in cases where there exists an INFO value
-                # which none of the samples have. The expected result would be
-                # to return the variant but no samples, which will not happen
-                # if we do it this way.
-                # That being said, that would be a really weird edge case which
-                # I'm not that worried about for now.
+                # TODO: Currently we are treating alternate keys ENTIRELY as if
+                # they were specific to samples. This fine EXCEPT in cases where
+                # there exists an INFO value which none of the samples have. The
+                # expected result would be to return the variant but no samples,
+                # which will not happen if we do it this way.
 
                 # First make sure this is a valid key.
                 if not (key in self.variant_caller_common_map or
-                        key in self.variant_evidence_map or is_per_alt_key):
+                        key in self.variant_alternate_map or 
+                        key in self.variant_evidence_map):
                     raise ParseError(key, 'Unrecognized filter key.')
 
-
-                if key in self.variant_caller_common_map and not is_per_alt_key:
+                if key in self.variant_caller_common_map:
                     _assert_delim_for_key(self.variant_caller_common_map,
                             delim, key)
                     all_common_data_obj = (
@@ -497,11 +494,10 @@ class VariantFilterEvaluator(object):
                             # No need to update passing sample ids.
                             break
 
-                else:
-                    # key in self.variant_evidence_map or is_per_alt_key:
+                else: # (if key is per-sample or per-alternate)
                     samples_passing_for_variant = (
-                            self.get_samples_passing_for_evidence_or_per_alt_key(
-                                    variant, triple, is_per_alt_key))
+                            self.get_samples_passing_for_evidence_or_alternate(
+                                    variant, triple))
 
                     # Determine whether the passing samples qualify this
                     # variant as passing the filter, accounting for scope if
@@ -553,39 +549,45 @@ class VariantFilterEvaluator(object):
                     scope_sample_id_set):
                 return True
 
-    def get_samples_passing_for_evidence_or_per_alt_key(self, variant, triple,
-            is_per_alt_key):
+    def get_samples_passing_for_evidence_or_alternate(self, variant, triple):
+
         (delim, key, value) = triple
         samples_passing_for_variant = set()
 
         # Use the appropriate type map if this is a per-alt key.
-        if is_per_alt_key:
-            type_map = self.variant_caller_common_map
-        else:
+        if key in self.variant_alternate_map:
+            type_map = self.variant_alternate_map
+        elif key in self.variant_evidence_map:
             type_map = self.variant_evidence_map
+        else:
+            raise InputError('Key passed is not in evidence or alternate map.')
+
         _assert_delim_for_key(type_map, delim, key)
 
         # Check each VariantEvidence object.
         all_variant_evidence_obj_list = (
                 VariantEvidence.objects.filter(
                         variant_caller_common_data__variant=variant))
+
         for variant_evidence_obj in all_variant_evidence_obj_list:
             data_dict = variant_evidence_obj.as_dict()
 
             if not data_dict['called']:
                 continue
 
-            # For per-alt common data keys, map the sample's alleles
+            # For VariantAlternate (per-alt) keys, map the sample's alleles
             # onto items in the list. For instance, if a sample has
             # a genotype of 1/1, then it's items will be the first
             # allele in the -1 list of INFO_EFF_* fields.
-            if is_per_alt_key:
-                per_alt_dict, per_alt_types = get_per_alt_dict(
-                        key,
-                        variant,
-                        variant_evidence_obj,
-                        self.variant_caller_common_map)
-                data_dict = dict(data_dict.items() + per_alt_dict.items())
+            if type_map == self.variant_alternate_map:
+                alts = VariantAlternate.objects.filter(
+                    variant=variant,
+                    variantevidence=variant_evidence_obj)
+
+                data_dict = defaultdict(list)
+                for alt in alts:
+                    alt_dict = alt.as_dict()
+                    [data_dict[k].append(alt_dict[k]) for k in alt_dict.keys()]
 
             if (_evaluate_condition_in_triple(data_dict, type_map, triple)):
                 samples_passing_for_variant.add(
@@ -639,6 +641,8 @@ def get_per_alt_dict(key, variant, variant_evidence_obj, type_map):
 
     gt_string = variant_evidence_obj.as_dict()['GT']
 
+    # TODO: Could we just ignore phased variants if they are found, and treat
+    # them as unphased?
     assert ('|' not in gt_string), (
         'GT string is phased; this is not handled and should never happen...')
 

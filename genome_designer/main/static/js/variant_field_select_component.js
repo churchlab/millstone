@@ -27,6 +27,9 @@ gd.VariantFieldSelectComponent = Backbone.View.extend({
         this.model.get('variantKeyMap').snp_caller_common_data,
         'gd-filter-key-modal-common-tbody');
     this.renderKeyMapSection(
+        this.model.get('variantKeyMap').snp_alternate_data,
+        'gd-filter-key-modal-alternate-tbody');
+    this.renderKeyMapSection(
         this.model.get('variantKeyMap').snp_evidence_data,
         'gd-filter-key-modal-evidence-tbody');
 

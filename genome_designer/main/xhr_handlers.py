@@ -24,9 +24,11 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Region
 from main.models import VariantCallerCommonData
+from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
+from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import extract_filter_keys
 from variants.variant_filter import get_variants_that_pass_filter
@@ -185,6 +187,9 @@ def _mark_active_keys_in_variant_key_map(variant_key_map):
 
     _update_model_class_key_map(VariantCallerCommonData,
             variant_key_map[MAP_KEY__COMMON_DATA])
+
+    _update_model_class_key_map(VariantAlternate,
+            variant_key_map[MAP_KEY__ALTERNATE])
 
     _update_model_class_key_map(VariantEvidence,
             variant_key_map[MAP_KEY__EVIDENCE])

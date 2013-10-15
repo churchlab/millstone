@@ -14,6 +14,7 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantSet
+from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
 from settings import PWD as GD_ROOT_PATH
@@ -78,6 +79,9 @@ class TestImportVariantSetFromVCFFile(TestCase):
         self.ref_genome = ReferenceGenome.objects.create(project=test_project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
 
+        initialize_filter_key_map(self.ref_genome)
+
+
 
     def test_import_variant_set(self):
         """Tests importing variant sets from a pared-down vcf file
@@ -92,7 +96,8 @@ class TestImportVariantSetFromVCFFile(TestCase):
 
         VARIANT_SET_NAME = 'Test Set'
 
-        import_variant_set_from_vcf(self.ref_genome, VARIANT_SET_NAME,
+        import_variant_set_from_vcf(
+                self.ref_genome, VARIANT_SET_NAME,
                 VARIANT_SET_VCF_FILEPATH)
 
         new_variant_set = VariantSet.objects.get(

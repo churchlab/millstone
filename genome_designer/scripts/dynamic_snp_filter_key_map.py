@@ -6,20 +6,21 @@ captured in VaiantCallerCommonData, or data describing the relationship between
 a single Variant and ExperimentSample, captured in VariantEvidence.
 
 
-Note that the fields are stored in a key-value
-field in the database, and because the values may be of different types,
-we just pickle the pyvcf object to store it.
+Note that the fields are stored in a key-value field in the database, and
+because the values may be of different types, we just pickle the pyvcf object
+to store it.
 
 Previously, we were using a static map that we defined once, in
 generate_filter_key_map.py. Now, because every VCF we import might have
 different fields, and because SnpEFF adds fields, we need to dynamically
-update all possible VCF fields per ReferenceGenome object. These fields
-will be stored in a JSONField in the ReferenceGenome called
-variant_key_map.
+update all possible VCF fields per ReferenceGenome object. These fields will
+be stored in a JSONField in the ReferenceGenome called variant_key_map.
 
 The maps defined here specify:
     * the valid keys that can be filtered agains
-    * which data object they are located in, SNPCallerCommonData or SNPEvidence
+    * which data object they are located in, SNPCallerCommonData, 
+        SNP_Alternate_Data,
+        and SNPEvidence
     * the type and number of the field (i.e. array or single, integer, float,
         or string)
     * the valid operations that can be performed on the types.
@@ -34,9 +35,11 @@ SNP_CALLER_COMMON_DATA_HARD_CODED = {
     'CHROM': {'type': 'String', 'num': 1},
     'POS': {'type': 'Integer', 'num': 1},
     'REF': {'type': 'String', 'num': 1},
-    'ALT': {'type': 'String', 'num': -1}
 }
 
+SNP_VARIANT_HARD_CODED = {
+    'ALT': {'type': 'String', 'num': -1}
+}
 
 SNP_EVIDENCE_HARD_CODED = {
     'gt_type': {'type': 'Integer', 'num': 1},
@@ -44,6 +47,8 @@ SNP_EVIDENCE_HARD_CODED = {
 }
 
 MAP_KEY__VARIANT = 'variant_data'
+
+MAP_KEY__ALTERNATE = 'snp_alternate_data'
 
 MAP_KEY__COMMON_DATA = 'snp_caller_common_data'
 
@@ -55,6 +60,8 @@ def initialize_filter_key_map(ref_genome):
     run on a signal of new ref genome creation.
     """
     ref_genome.variant_key_map = {
+        MAP_KEY__ALTERNATE: copy.deepcopy(
+                SNP_VARIANT_HARD_CODED),
         MAP_KEY__COMMON_DATA: copy.deepcopy(
                 SNP_CALLER_COMMON_DATA_HARD_CODED),
         MAP_KEY__EVIDENCE: copy.deepcopy(
@@ -82,6 +89,11 @@ def update_filter_key_map(ref_genome, source_vcf):
     for every possible  genotype combination of alleles (which would be a choose
     n where n is the called  ploidy and a is the number of alleles). 
 
+    All of the -1 fields are stored in a subdict corresponding to
+    MAP_KEY__ALTERNATE, and the JSONField data in the VariantEvidence object
+    stores the per-alt data after doing the equivalent of 'zip()ing' it per
+    object.
+
     """
 
     #First try the source_vcf as a vcf file
@@ -98,14 +110,25 @@ def update_filter_key_map(ref_genome, source_vcf):
             raise InputError('Bad source_vcf arg: not filename or vcf_reader')
 
     common_data_map = ref_genome.variant_key_map[MAP_KEY__COMMON_DATA]
+    alternate_map = ref_genome.variant_key_map[MAP_KEY__ALTERNATE]
     for orig_key, value in vcf_reader.infos.iteritems():
         key = 'INFO_' + orig_key
         inner_map = {}
         inner_map['type'] = value.type
         inner_map['num'] = value.num
-        common_data_map[key] = inner_map
-    ref_genome.variant_key_map[MAP_KEY__COMMON_DATA].update(common_data_map)
 
+        # If a field is per-alternate, then put it in a separate dictionary.
+        if value.num == -1:
+            alternate_map[key] = inner_map
+        else:
+            common_data_map[key] = inner_map
+
+    # Update the reference genome's variant key maps with these (ostensibly)
+    # new fields, overwriting previous data
+    ref_genome.variant_key_map[MAP_KEY__COMMON_DATA].update(common_data_map)
+    ref_genome.variant_key_map[MAP_KEY__ALTERNATE].update(alternate_map)
+
+    # Update all of the per-sample fields.
     evidence_data_map = ref_genome.variant_key_map[MAP_KEY__EVIDENCE]
     for orig_key, value in vcf_reader.formats.iteritems():
         key = orig_key
@@ -113,6 +136,7 @@ def update_filter_key_map(ref_genome, source_vcf):
         inner_map['type'] = value.type
         inner_map['num'] = value.num
         evidence_data_map[key] = inner_map
+
     ref_genome.variant_key_map[MAP_KEY__EVIDENCE].update(evidence_data_map)
 
     ref_genome.save()

@@ -470,6 +470,9 @@ class ReferenceGenome(Model):
     def get_variant_caller_common_map(self):
         return self.variant_key_map['snp_caller_common_data']
 
+    def get_variant_alternate_map(self):
+        return self.variant_key_map['snp_alternate_data']
+
     def get_variant_evidence_map(self):
         return self.variant_key_map['snp_evidence_data']
 
@@ -485,8 +488,8 @@ class ReferenceGenome(Model):
 class ExperimentSample(Model):
     """Model representing data for a particular experiment sample.
 
-    Usually this corresponds to a pair of fastq reads for a particular colony,
-    after de-multiplexing.
+    Usually this corresponds to a pair of fastq reads for a particular 
+    bacterial clone or colony, after barcode removal/de-multiplexing.
     """
     uid = models.CharField(max_length=36, unique=True,
             default=(lambda: short_uuid(ExperimentSample)))
@@ -904,6 +907,26 @@ class VariantAlternate(Model, VisibleFieldMixin):
 
     is_primary = models.BooleanField(default='False')
 
+    # this json fields holds all PER ALT data (INFO data with num -1)
+    data = JSONField()
+
+    def as_dict(self):
+        """Converts a alternate object into a dictionary from key to cleaned
+        values.
+
+        Cleaned generally means that fields that had to be pickled for storage
+        are unpickled.
+
+        Note that the original object had some SQL-level fields, but most of the
+        data pased from the vcf file is in a catch-all 'data' field.
+        This method flattens the structure so that all data is available on the
+        resulting top-level object.
+
+        Returns:
+            A flattened dictionary of cleaned data.
+        """
+        return get_flattened_unpickled_data(self.data)
+
     # TODO: Do we want to explicitly link each VariantAlternate to
     # it's variant index in each VCCD object or VE object?
     # Currently it's done implicitly through the VCCD's data['ALT']
@@ -953,7 +976,9 @@ class VariantEvidence(Model, VisibleFieldMixin):
         cannot be found, but the noisy nature or our data means returning
         'undefined' is more correct.
 
-        See: http://docs.python.org/2/reference/datamodel.html#object.__getattr__
+        See: 
+           http://docs.python.org/2/reference/datamodel.html#object.__getattr__
+
         """
         try:
             return pickle.loads(self.data[name])

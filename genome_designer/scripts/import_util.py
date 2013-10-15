@@ -270,22 +270,14 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
             def __init__(self, **entries):
                 self.__dict__.update(entries)
                 self.__dict__['ALT'] = self.__dict__['ALT'].strip().split(',')
+                self.__dict__['samples'] = []
 
         for record in reader:
             record = PseudoVCF(**record)
 
-            # Build a dictionary of data for this record.
-            raw_data_dict = extract_raw_data_dict(record)
-
             # Get or create the Variant for this record.
-            variant, alts = get_or_create_variant(reference_genome, raw_data_dict)
-
-            # Create a common data object for this variant.
-            common_data_obj = VariantCallerCommonData.objects.create(
-                    variant=variant,
-                    source_dataset=dataset,
-                    data=raw_data_dict
-            )
+            variant, alts = get_or_create_variant(
+                reference_genome, record, dataset)
 
             # Create a link between the Variant and the VariantSet if
             # it doesn't exist.

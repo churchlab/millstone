@@ -31,7 +31,6 @@ from variants.variant_filter import get_variants_that_pass_filter
 from variants.variant_filter import symbol_generator
 from variants.variant_filter import ParseError
 from variants.variant_filter import VariantFilterEvaluator
-from variants.variant_filter import get_per_alt_dict
 
 TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
 
@@ -565,19 +564,20 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 position=2,
                 ref_value='A')
 
-        for alt_value in ['G','T']:
-            variant.variantalternate_set.add(VariantAlternate.objects.create(
-                    variant=variant,
-                    alt_value=alt_value))
+        for alt_value, alt_eff in zip(['G','T'], ['NON_SYNONYMOUS_CODING',
+                        'SYNONYMOUS_CODING']):
 
-        raw_common_data_dict = {
-                'INFO_XRM': pickle.dumps(0.12),
-                'INFO_EFF_EFFECT': pickle.dumps(['NON_SYNONYMOUS_CODING','NON_SYNONYMOUS_CODING'])
-        }
+            alt = VariantAlternate.objects.create(
+                        variant=variant,
+                        alt_value=alt_value)
+            alt.data = {'INFO_EFF_EFFECT': alt_eff}
+
+            variant.variantalternate_set.add(alt)
+
         common_data_obj = VariantCallerCommonData.objects.create(
                 variant=variant,
                 source_dataset=self.vcf_dataset,
-                data=raw_common_data_dict
+                data=dict()
         )
         sample_obj = ExperimentSample.objects.create(
                 project=self.project,
@@ -635,15 +635,16 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 data=raw_sample_data_dict)
 
 
-        per_alt_dict, per_alt_types = get_per_alt_dict(
-                'INFO_EFF_EFFECT', variant,
-                VariantEvidence.objects.get(uid=1000),
-                self.ref_genome.variant_key_map['snp_caller_common_data'])
+        # per_alt_dict, per_alt_types = get_per_alt_dict(
+        #         'INFO_EFF_EFFECT', variant,
+        #         VariantEvidence.objects.get(uid=1000),
+        #         self.ref_genome.variant_key_map['snp_caller_common_data'])
 
-        assert('INFO_EFF_EFFECT' in per_alt_dict.keys())
-        assert('NON_SYNONYMOUS_CODING' in per_alt_dict['INFO_EFF_EFFECT'])
+        # assert('INFO_EFF_EFFECT' in per_alt_dict.keys())
+        # assert('NON_SYNONYMOUS_CODING' in per_alt_dict['INFO_EFF_EFFECT'])
 
-        QUERY_STRING = '(position < 5 & INFO_EFF_EFFECT = NON_SYNONYMOUS_CODING)'
+        QUERY_STRING = (
+                '(position < 5 & INFO_EFF_EFFECT = NON_SYNONYMOUS_CODING)')
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
 

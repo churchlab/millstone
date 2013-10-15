@@ -25,35 +25,18 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
 
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
-        for record in vcf_reader:
 
-            # Build a dictionary of data for this record.
-            raw_data_dict = extract_raw_data_dict(record)
-
-            # Get or create the Variant for this record.
-            variant, alts = get_or_create_variant(reference_genome, 
-                    raw_data_dict)
-
-            # Create a common data object for this variant.
-            common_data_obj = VariantCallerCommonData.objects.create(
-                    variant=variant,
-                    source_dataset=vcf_dataset,
-                    data=raw_data_dict
-            )
-
-            # Create a VariantEvidence object for each ExperimentSample.
-            for sample in record.samples:
-                sample_uid = sample.sample
-                sample_data_dict = extract_sample_data_dict(sample)
-                sample_obj = ExperimentSample.objects.get(uid=sample_uid)
-                VariantEvidence.objects.create(
-                        experiment_sample=sample_obj,
-                        variant_caller_common_data=common_data_obj,
-                        data=sample_data_dict)
-
-        # Finally, update the reference_genome's key list with any new
+        # First, update the reference_genome's key list with any new
         # keys from this VCF.
         update_filter_key_map(reference_genome, vcf_reader)
+
+        for record in vcf_reader:
+            # Get or create the Variant for this record. This step
+            # also generates the alternate objects and assigns their
+            # data fields as well.
+            variant, alts = get_or_create_variant(reference_genome, 
+                    record, vcf_dataset)
+
 
 
 def extract_raw_data_dict(vcf_record):
@@ -100,8 +83,10 @@ def populate_common_data_info(data_dict, vcf_record):
         effective_key = 'INFO_' + key
         data_dict[effective_key] = pickle.dumps(value)
 
-def get_or_create_variant(reference_genome, raw_data_dict):
-    """Create a variant if it doesn't already exist.
+def get_or_create_variant(reference_genome, vcf_record, vcf_dataset):
+    """Create a variant if it doesn't already exist, along with
+    its child VariantCallerCommonData object and VariantEvidencye
+    and VariantAlternate children.
 
     Right now this assumes we are always using Freebayes for alignment.
 
@@ -112,13 +97,20 @@ def get_or_create_variant(reference_genome, raw_data_dict):
             * POS
             * REF
             * ALT
+
+        Also go through all per-alt keys and add them as a json field
+        to the VariantAlternate object.
     """
+
+    # Build a dictionary of data for this record.
+    raw_data_dict = extract_raw_data_dict(vcf_record)
+
     # Extract the relevant fields from the common data object.
     type = 'UNKNOWN' # TODO: Get this from vcf data?
-    chromosome = pickle.loads(str(raw_data_dict['CHROM']))
-    position = int(pickle.loads(str(raw_data_dict['POS'])))
-    ref_value = pickle.loads(str(raw_data_dict['REF']))
-    alt_values = pickle.loads(raw_data_dict['ALT'])
+    chromosome = pickle.loads(str(raw_data_dict.pop('CHROM')))
+    position = int(pickle.loads(str(raw_data_dict.pop('POS'))))
+    ref_value = pickle.loads(str(raw_data_dict.pop('REF')))
+    alt_values = pickle.loads(str(raw_data_dict.pop('ALT')))
 
     # Try to find an existing one, or create it.
     variant, created = Variant.objects.get_or_create(
@@ -130,12 +122,53 @@ def get_or_create_variant(reference_genome, raw_data_dict):
     )
 
     alts = []
+    all_alt_keys = reference_genome.get_variant_alternate_map().keys()
+    raw_alt_keys = [k for k in raw_data_dict.keys() if k in all_alt_keys]
 
-    for alt_value in alt_values:
-        var_alt, va_created = VariantAlternate.objects.get_or_create(
-            variant=variant,
-            alt_value=alt_value)
+    for alt_idx, alt_value in enumerate(alt_values):
+
+        # Unpickle the list and then repickle the single index needed
+        alt_data = dict([
+                (k, pickle.dumps(pickle.loads(raw_data_dict[k])[alt_idx])) 
+                for k in raw_alt_keys])
+
+        var_alt, var_created = VariantAlternate.objects.get_or_create(
+                variant=variant,
+                alt_value=alt_value)
+
+        # If this is a new alternate, initialize the data dictionary
+        if var_created: var_alt.data = {}
+        # TODO: we are overwriting keys here; not sure this is desired behavior
+        var_alt.data.update(alt_data)
+        # Removing the ALT key since it is stored 
+        var_alt.save()
+
         alts.append(var_alt)
+
+    # Remove all per-alt keys from raw_data_dict before passing to VCC create
+    [raw_data_dict.pop(k, None) for k in raw_alt_keys]
+
+    # Create a common data object for this variant.
+    common_data_obj = VariantCallerCommonData.objects.create(
+            variant=variant,
+            source_dataset=vcf_dataset,
+            data=raw_data_dict 
+    )
+
+    # TODO: What about num -2 objects? I'm really not excited about
+    # creating a VariantGenotype object, nor do I think it will 
+    # be necessary, so skipping it for now, and keeping that data in 
+    # the VCC object.
+
+    # Create a VariantEvidence object for each ExperimentSample.
+    for sample in vcf_record.samples:
+        sample_uid = sample.sample
+        sample_data_dict = extract_sample_data_dict(sample)
+        sample_obj = ExperimentSample.objects.get(uid=sample_uid)
+        VariantEvidence.objects.create(
+                experiment_sample=sample_obj,
+                variant_caller_common_data=common_data_obj,
+                data=sample_data_dict)
 
     return (variant, alts)
 

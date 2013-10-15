@@ -12,6 +12,7 @@ from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
+from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.variant_filter import get_per_alt_dict
 
@@ -32,15 +33,21 @@ class BaseVariantView(object):
                     visible_key_names if field in
                     variant_key_map[MAP_KEY__COMMON_DATA]]
 
+            additional_alternate_field_list = [field for field in
+                    visible_key_names if field in
+                    variant_key_map[MAP_KEY__ALTERNATE]]
+
             additional_evidence_field_list = [field for field in visible_key_names
                     if field in variant_key_map[MAP_KEY__EVIDENCE]]
         else:
             additional_common_data_field_list = []
             additional_evidence_field_list = []
+            additional_alternate_field_list = []
 
         # Sort the visible keys into appropriate buckets based on the map.
         return (Variant.get_field_order() +
-                VariantAlternate.get_field_order() + 
+                VariantAlternate.get_field_order(
+                        additional_field_list=additional_alternate_field_list) + 
                 VariantCallerCommonData.get_field_order(
                         additional_field_list=additional_common_data_field_list) +
                 VariantEvidence.get_field_order(
@@ -176,9 +183,6 @@ class MeltedVariantView(BaseVariantView):
         variant_caller_common_data_map = (
                 self.variant.reference_genome.get_variant_caller_common_map())
 
-        is_per_alt_key = (attr in variant_caller_common_data_map and 
-                variant_caller_common_data_map[attr]['num'] == -1)
-
         for delegate in delegate_order:
             result_list = []
 
@@ -195,15 +199,7 @@ class MeltedVariantView(BaseVariantView):
                     result_list.append(getattr(delegate, attr))
                 else:
                     try:
-                        if is_per_alt_key:
-                            key_dict = get_per_alt_dict(
-                                    attr,
-                                    self.variant,
-                                    self.variant_evidence,
-                                    variant_caller_common_data_map)[0]
-                            result_list.extend(key_dict.values())
-                        else:
-                            result_list.append(delegate.as_dict()[attr])
+                        result_list.append(delegate.as_dict()[attr])
                     except:
                         pass
 
