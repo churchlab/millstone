@@ -43,6 +43,7 @@ from variants.common import GENE_REGEX_NAMED
 from variants.common import SET_REGEX
 from variants.common import SET_REGEX_NAMED
 from variants.common import TYPE_TO_SUPPORTED_OPERATIONS
+from variants.common import VARIANT_ALTERNATE_SQL_KEY_MAP
 from variants.common import get_all_key_map
 from variants.common import get_delim_key_value_triple
 from variants.common import ParseError
@@ -678,6 +679,12 @@ def _get_django_q_object_for_triple(delim_key_value_triple):
     assert len(delim_key_value_triple) == 3
     (delim, key, value) = delim_key_value_triple
 
+    # Figure out proper model to add a model prefix in the Q object, e.g.:
+    #     Q(variantalternate__alt_value=A)
+    model_prefix = ''
+    if key in VARIANT_ALTERNATE_SQL_KEY_MAP:
+        model_prefix = 'variantalternate__'
+
     # Special handling for != delim.
     if delim == '!=':
         postfix = ''
@@ -686,8 +693,8 @@ def _get_django_q_object_for_triple(delim_key_value_triple):
         postfix = DELIM_TO_Q_POSTFIX[delim]
         maybe_not_prefix = ''
 
-    eval_string = (maybe_not_prefix + 'Q(' + key + postfix + '=' + '"' + value +
-            '"' + ')')
+    eval_string = (maybe_not_prefix + 'Q(' + model_prefix + key + postfix +
+            '=' + '"' + value + '"' + ')')
     return eval(eval_string)
 
 

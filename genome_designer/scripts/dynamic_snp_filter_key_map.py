@@ -31,6 +31,11 @@ import pprint
 
 import vcf
 
+
+# Hard-coded keys to be used during parsing.
+# Differs from *_SQL_* maps in variants.common as those maps are used
+# for determining which keys are supported for SQL-lookups.
+
 SNP_CALLER_COMMON_DATA_HARD_CODED = {
     'CHROM': {'type': 'String', 'num': 1},
     'POS': {'type': 'Integer', 'num': 1},

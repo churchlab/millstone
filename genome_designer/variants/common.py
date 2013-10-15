@@ -18,6 +18,11 @@ VARIANT_SQL_KEY_MAP = {
     'position': {'type': 'Integer', 'num': 1},
 }
 
+# Keys corresponding to columns in the Variant model.
+VARIANT_ALTERNATE_SQL_KEY_MAP = {
+    'alt_value': {'type': 'String', 'num': 1},
+}
+
 # Keys corresponding to columns in the VariantCallerCommonData model.
 VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP = {
 }
@@ -28,6 +33,7 @@ VARIANT_EVIDENCE_SQL_KEY_MAP = {
 
 ALL_SQL_KEY_MAP_LIST = [
     VARIANT_SQL_KEY_MAP,
+    VARIANT_ALTERNATE_SQL_KEY_MAP,
     VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP,
     VARIANT_EVIDENCE_SQL_KEY_MAP,
 ]
