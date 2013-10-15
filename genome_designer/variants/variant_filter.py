@@ -403,31 +403,6 @@ class VariantFilterEvaluator(object):
         return FilterEvalResult(set(variant_list), variant_id_to_metadata_dict)
 
 
-    def do_passing_samples_satisfy_scope(self, scope_type,
-            samples_passing_for_variant):
-        assert scope_type in VALID_FILTER_SCOPES, (
-                "Unknown scope %s" % scope_type)
-        scope_sample_id_set = self.get_scope_sample_id_set()
-        if scope_type == FILTER_SCOPE__ALL:
-            # All passing sample ids must be in the
-            # scope set.
-            intersection = (samples_passing_for_variant &
-                    scope_sample_id_set)
-            if (intersection == scope_sample_id_set):
-                return True
-        elif scope_type == FILTER_SCOPE__ANY:
-            # At least one passing sample id must be in
-            # the scope set.
-            if len(samples_passing_for_variant &
-                    scope_sample_id_set) > 0:
-                return True
-        elif scope_type == FILTER_SCOPE__ONLY:
-            # The passing sample id set must be exactly
-            # the scope set.
-            if (samples_passing_for_variant ==
-                    scope_sample_id_set):
-                return True
-
     def get_samples_passing_for_evidence_or_alternate(self, variant, triple):
 
         (delim, key, value) = triple
