@@ -100,6 +100,9 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset):
 
         Also go through all per-alt keys and add them as a json field
         to the VariantAlternate object.
+
+    Returns:
+        Tuple (Variant, List<VariantAlt>)
     """
 
     # Build a dictionary of data for this record.
@@ -161,6 +164,9 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset):
     # the VCC object.
 
     # Create a VariantEvidence object for each ExperimentSample.
+    # NOTE: VariantEvidence are automatically linked to the correct
+    #     VariantAlternate after they are created in
+    #     main.signals.post_variant_evidence_create()
     for sample in vcf_record.samples:
         sample_uid = sample.sample
         sample_data_dict = extract_sample_data_dict(sample)
