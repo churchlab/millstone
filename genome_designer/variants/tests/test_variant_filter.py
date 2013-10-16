@@ -28,7 +28,7 @@ from variants.variant_filter import SAMPLE_SCOPE_REGEX_NAMED
 from variants.variant_filter import SET_REGEX
 from variants.variant_filter import SET_REGEX_NAMED
 from variants.variant_filter import get_variants_that_pass_filter
-from variants.variant_filter import symbol_generator
+from variants.variant_filter import SymbolGenerator
 from variants.variant_filter import ParseError
 from variants.variant_filter import VariantFilterEvaluator
 
@@ -973,7 +973,7 @@ class TestSymbolGenerator(TestCase):
     """
 
     def test_generator(self):
-        symbol_maker = symbol_generator()
+        symbol_maker = SymbolGenerator()
         self.assertEqual('A', symbol_maker.next())
         self.assertEqual('B', symbol_maker.next())
         self.assertEqual('C', symbol_maker.next())
