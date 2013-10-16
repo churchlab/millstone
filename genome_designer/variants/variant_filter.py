@@ -31,6 +31,7 @@ from sympy.logic import boolalg
 
 from main.models import ExperimentSample
 from main.models import Region
+from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantEvidence
 from variants.common import ALL_SQL_KEY_MAP_LIST
@@ -56,6 +57,7 @@ from variants.common import get_sample_id_set_for_variant
 from variants.common import SymbolGenerator
 from variants.common import ParseError
 from variants.filter_eval_result import FilterEvalResult
+from variants.filter_eval_result import metadata_default_dict_factory_fn
 from variants.filter_scope import FilterScope
 
 
@@ -245,11 +247,25 @@ class VariantFilterEvaluator(object):
         # map from variant id to sample ids passing for that variant.
 
         # First we set all samples passing.
-        variant_id_to_metadata_dict = {}
+        variant_id_to_metadata_dict = defaultdict(
+                metadata_default_dict_factory_fn)
         for variant in variant_list:
             variant_id_to_metadata_dict[variant.id] = {
                 'passing_sample_ids': get_sample_id_set_for_variant(variant),
             }
+
+        # The initial result.
+        q_part_result = FilterEvalResult(set(variant_list),
+                variant_id_to_metadata_dict)
+
+        # Now join all the tables we need to properly indicate Variant to
+        # Sample relationships for the filter query.
+        # TODO: Generalize. Repeat for relevant fields.
+        joined_variant_data_list = Variant.objects.filter(
+                id__in=variant_list).values(
+                        'id',
+                        'variantalternate__alt_value',
+                        'variantalternate__variantevidence__experiment_sample')
 
         # Now, for the Q objects that may give different results per-sample,
         # we need to test each specific sample against the query.
@@ -262,25 +278,19 @@ class VariantFilterEvaluator(object):
         if len(per_alt_q_obj_list) > 0:
             assert len(per_alt_q_obj_list) == 1, "Only support 1 right now."
             q_obj = per_alt_q_obj_list[0]
-            for variant in variant_list:
-                # HACK: This is super ghetto but just trying to get the test to pass
-                # for now.
-                per_sample_field_name = q_obj.children[0][0].split('__')[-1]
-                combined_q = eval('Q(variantalternate_set__' +
-                        per_sample_field_name + '=' + '"' +
-                        q_obj.children[0][1] + '"' + ')')
-                # For now, we only handle the alt_values key.
-                passing_evidence_obj_list = (
-                        VariantEvidence.objects.filter(combined_q))
-                passing_sample_id_set = set([evidence.experiment_sample.id for
-                        evidence in passing_evidence_obj_list])
-                variant_id_to_metadata_dict[variant.id] = {
-                    'passing_sample_ids': passing_sample_id_set,
-                }
-
-        # Now build the filter result object.
-        q_part_result = FilterEvalResult(set(variant_list),
-                variant_id_to_metadata_dict)
+            per_sample_field_name = q_obj.children[0][0].split('__')[-1]
+            assert per_sample_field_name == 'alt_value', (
+                    "Only 'alt_value' field supported right now.")
+            value = q_obj.children[0][1]
+            updated_variant_id_to_metadata_dict = defaultdict(
+                    metadata_default_dict_factory_fn)
+            for variant in joined_variant_data_list:
+                if variant['variantalternate__alt_value'] == value:
+                    updated_variant_id_to_metadata_dict[variant['id']][
+                            'passing_sample_ids'].add(variant[
+                                    'variantalternate__variantevidence__experiment_sample'])
+            q_part_result &= FilterEvalResult(set(variant_list),
+                    updated_variant_id_to_metadata_dict)
 
         if partial_result is not None:
             partial_result &= q_part_result

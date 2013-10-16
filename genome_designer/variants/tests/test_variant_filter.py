@@ -871,9 +871,6 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict)
 
-        print 'sample_1', sample_1_evidence.variantalternate_set.all()
-        print 'sample_2', sample_2_evidence.variantalternate_set.all()
-
         QUERY_STRING = 'alt_value = T'
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set

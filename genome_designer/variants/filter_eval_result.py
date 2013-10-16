@@ -3,6 +3,13 @@ Object that stores the results of a filter being applied to a
 Variant query and provides convenience methods for combining results.
 """
 
+def metadata_default_dict_factory_fn():
+    """Factory function that can be passed to defaultdict to provide default
+    values for
+    """
+    return {'passing_sample_ids': set()}
+
+
 class FilterEvalResult(object):
     """Wraps the result of evaluating a filter condition.
 
