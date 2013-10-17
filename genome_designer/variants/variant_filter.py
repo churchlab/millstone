@@ -5,7 +5,7 @@ The fields that we allow querying against vary across different models,
 and for each model, the field may either be a column in the SQL database, a key
 in the catch-all serialized key-value dictionary.
 
-A naive implementation would pull all Variant objects from the SQl database
+A naive implementation would pull all Variant objects from the SQL database
 (limited to the ReferenceGenome provided) into memory, and then iterate over
 all these objects for each condition in the query. However, we could reduce
 the number of objects pulled into memory by extracting the parts of the query
@@ -44,8 +44,11 @@ from variants.common import GENE_REGEX_NAMED
 from variants.common import SET_REGEX
 from variants.common import SET_REGEX_NAMED
 from variants.common import TYPE_TO_SUPPORTED_OPERATIONS
+from variants.common import Q_OBJECT_TYPE__GLOBAL
 from variants.common import Q_OBJECT_TYPE__PER_SAMPLE
 from variants.common import VARIANT_ALTERNATE_SQL_KEY_MAP
+from variants.common import VARIANT_TABLE_KEY__ID
+from variants.common import VARIANT_TABLE_KEY__SAMPLE
 from variants.common import assert_delim_for_key
 from variants.common import evaluate_condition_in_triple
 from variants.common import get_all_key_map
@@ -54,6 +57,8 @@ from variants.common import get_django_q_object_for_gene_restrict
 from variants.common import get_django_q_object_for_set_restrict
 from variants.common import get_django_q_object_for_triple
 from variants.common import get_sample_id_set_for_variant
+from variants.common import get_variant_table_column_for_sql_key
+from variants.common import SqlReadySymbol
 from variants.common import SymbolGenerator
 from variants.common import ParseError
 from variants.filter_eval_result import FilterEvalResult
@@ -187,6 +192,8 @@ class VariantFilterEvaluator(object):
     def evaluate_conjunction(self, conjunction_clause):
         """Evaluate a conjunction condition. That is all symbols are ANDed.
 
+        This is where the meat of the filtering computation happens.
+
         Args:
             disjunction_clause: sympy.logic.boolalg.And clause, or equivalent.
             scope: FilterScope object.
@@ -194,104 +201,135 @@ class VariantFilterEvaluator(object):
         Returns:
             A FilterEvalResult object.
         """
-        # Iterate through the conditions corresponding to the symbols in the
-        # clause and either create Q objects out of them, relative to the
-        # Variant model, or save them as key-value models to evaluate in memory
-        # after the SQL fetch. Order doesn't matter since this is a conjunction
-        # clause.
+        # On a high level, the algorithm breaks down into doing as much
+        # filtering on the SQL side, and then doing the rest in application
+        # memory. Fields that we currently handle in memory include those that
+        # are part of the catch-all serialized data field, as well as SQL
+        # fields which we must then use to establish the specific relationship
+        # between Variants and ExperimentSamples.
 
+        # First we bin the individual symbols in the clause according to how
+        # they should be handled. The binning decision works according to:
+        #     * Symbols that can be handled in SQL are picked out.
+        #         * They are all turned into Q objects.
+        #         * Those that are relevant to per-sample filtering are saved
+        #           for further analysis along with remaining triples below.
+        #     * Symbols that are a scoped expression are handled recursively
+        #       and the FilterEvalResult object returned.
+        #     * Non-SQL triples (part of serialized string) are saved for
+        #       for processing in-memory at the end.
+        #
+        # Order doesn't matter since this is a conjunction (AND) clause.
+
+        # Store the results of binning in these data structures.
         filter_eval_results = []
-        q_list = []
+        sql_ready_symbol_list = []
         remaining_triples = []
 
+        # Perform binning.
         if not conjunction_clause == '':
-            # The conjunction may contain a single condition.
+            # Handle the case where a conjunction might be a single condition.
             if not conjunction_clause.is_Boolean:
-                (filter_eval_results, q_list, remaining_triples) = (
-                        self._single_symbol_mux(
-                                conjunction_clause, filter_eval_results, q_list,
-                                remaining_triples))
+                symbol_list = [conjunction_clause]
             else:
-                for symbol in conjunction_clause.args:
-                    (filter_eval_results, q_list, remaining_triples) = (
-                            self._single_symbol_mux(
-                                    symbol, filter_eval_results, q_list,
-                                    remaining_triples))
+                symbol_list = conjunction_clause.args
+            for symbol in symbol_list:
+                updated_structs = self._single_symbol_mux(
+                        symbol, filter_eval_results, sql_ready_symbol_list,
+                        remaining_triples)
+                (filter_eval_results, sql_ready_symbol_list,
+                        remaining_triples) = updated_structs
 
-        # Combine any filter results so far. These are probably results
-        # of sub-clauses that are scoped expressions.
-        partial_result = None
+        # Combine any FilterEvalResults obtained through recursive creation
+        # and evaluation of evaluators. These are typically results
+        # of sub-clauses that are sample-scoped expressions.
         if len(filter_eval_results) > 0:
-            partial_result = filter_eval_results[0]
-            for result in filter_eval_results[1:]:
-                partial_result &= result
+            partial_result = reduce(lambda accum, iter_val: accum & iter_val,
+                    filter_eval_results)
+        else:
+            partial_result = None
 
-        # TODO: Handle evaluating sets for melted view.
-
-        ### Now handle the Q list.
-
-        # NOTE: Previously, we were applying boolean operators
-        #     among Q objects, but the ORM mapping fails in cases where you
-        #     want to handle logic among VariantSet membership. Thus we chain
-        #     filter() calls instead.
-        if len(q_list) > 0:
-            actual_q_obj_list = [el[1] for el in q_list]
+        # Perform the initial SQL query to constrain the set of Variants
+        # that possibly satisfy the query.
+        # NOTE: We chain filter calls rather than AND Q objects intentionally.
+        #     It is not equivalent to do either.
+        global_q_obj_list = [el.q_obj for el in sql_ready_symbol_list
+                    if el.semantic_type == Q_OBJECT_TYPE__GLOBAL]
+        if len(global_q_obj_list) > 0:
             variant_list = self.ref_genome.variant_set.filter(
-                    actual_q_obj_list[0])
-            for q_obj in actual_q_obj_list[1:]:
+                    global_q_obj_list[0])
+            for q_obj in global_q_obj_list[1:]:
                 variant_list = variant_list.filter(q_obj)
         else:
             variant_list = self.ref_genome.variant_set.all()
 
-        # Make this into a FilterEvalResult object, which requires creating the
-        # map from variant id to sample ids passing for that variant.
-
-        # First we set all samples passing.
+        # Create a FilterEvalResult object capturing the results so far.
         variant_id_to_metadata_dict = defaultdict(
                 metadata_default_dict_factory_fn)
         for variant in variant_list:
             variant_id_to_metadata_dict[variant.id] = {
                 'passing_sample_ids': get_sample_id_set_for_variant(variant),
             }
-
-        # The initial result.
         q_part_result = FilterEvalResult(set(variant_list),
                 variant_id_to_metadata_dict)
 
-        # Now join all the tables we need to properly indicate Variant to
-        # Sample relationships for the filter query.
+        # Now we need to properly handle identify how each ExperimentSample is
+        # related to each Variant, if applicable.
         # TODO: Generalize. Repeat for relevant fields.
-        joined_variant_data_list = Variant.objects.filter(
-                id__in=variant_list).values(
-                        'id',
-                        'variantalternate__alt_value',
-                        'variantalternate__variantevidence__experiment_sample')
+        relevant_sql_ready_symbol_list = [el for el in sql_ready_symbol_list
+                if el.semantic_type == Q_OBJECT_TYPE__PER_SAMPLE]
+        if len(relevant_sql_ready_symbol_list):
+            ### First, create a joined table with all the data we need.
 
-        # Now, for the Q objects that may give different results per-sample,
-        # we need to test each specific sample against the query.
-        # NOTE: As a first stab, we are going to only make this work for
-        #     alt_values.
-        # TODO: Come up with a more general implementation that works for sets
-        #     and genes.
-        per_alt_q_obj_list = [el[1] for el in q_list
-                if el[0] == Q_OBJECT_TYPE__PER_SAMPLE]
-        if len(per_alt_q_obj_list) > 0:
-            assert len(per_alt_q_obj_list) == 1, "Only support 1 right now."
-            q_obj = per_alt_q_obj_list[0]
-            per_sample_field_name = q_obj.children[0][0].split('__')[-1]
-            assert per_sample_field_name == 'alt_value', (
-                    "Only 'alt_value' field supported right now.")
-            value = q_obj.children[0][1]
-            updated_variant_id_to_metadata_dict = defaultdict(
-                    metadata_default_dict_factory_fn)
-            for variant in joined_variant_data_list:
-                if variant['variantalternate__alt_value'] == value:
-                    updated_variant_id_to_metadata_dict[variant['id']][
-                            'passing_sample_ids'].add(variant[
-                                    'variantalternate__variantevidence__experiment_sample'])
-            q_part_result &= FilterEvalResult(set(variant_list),
-                    updated_variant_id_to_metadata_dict)
+            # At the least we need the Variant ids, and samples.
+            columns_to_get = [
+                    VARIANT_TABLE_KEY__ID,
+                    VARIANT_TABLE_KEY__SAMPLE]
 
+            # Also request the relevant columns depending on what we are
+            # filtering over.
+            additional_relevant_column_keys = [
+                    get_variant_table_column_for_sql_key(
+                            el.delim_key_value_triple[1])
+                    for el in relevant_sql_ready_symbol_list]
+            columns_to_get += additional_relevant_column_keys
+
+            # Pull the table into memory.
+            joined_variant_data_list = Variant.objects.filter(
+                    id__in=variant_list).values(*columns_to_get)
+
+            ### Now iterate over the relevant SQL objects and figure out
+            ### Variant to ExperimentSample relations.
+
+            for sql_ready_obj in relevant_sql_ready_symbol_list:
+                updated_variant_id_to_metadata_dict = defaultdict(
+                        metadata_default_dict_factory_fn)
+
+                (delim, key, value) =  sql_ready_obj.delim_key_value_triple
+
+                variant_table_col = get_variant_table_column_for_sql_key(key)
+
+                for variant in joined_variant_data_list:
+                    condition_str = (
+                            'variant[variant_table_col]' + delim + 'value')
+                    if eval(condition_str):
+                        updated_variant_id_to_metadata_dict[variant[
+                                VARIANT_TABLE_KEY__ID]][
+                                        'passing_sample_ids'].add(variant[
+                                                VARIANT_TABLE_KEY__SAMPLE])
+
+                # Any variants with 0 associated samples should be removed.
+                filtered_variant_list = []
+                for variant in variant_list:
+                    passing_samples_id_list = updated_variant_id_to_metadata_dict[
+                            variant.id]['passing_sample_ids']
+                    if len(passing_samples_id_list):
+                        filtered_variant_list.append(variant)
+
+                q_part_result &= FilterEvalResult(set(filtered_variant_list),
+                        updated_variant_id_to_metadata_dict)
+
+        # Combined with the partial result from above.
         if partial_result is not None:
             partial_result &= q_part_result
         else:
@@ -308,7 +346,7 @@ class VariantFilterEvaluator(object):
         result = self.handle_single_symbol(symbol)
         if isinstance(result, FilterEvalResult):
             filter_eval_results.append(result)
-        elif isinstance(result, tuple) and isinstance(result[1], Q):
+        elif isinstance(result, SqlReadySymbol):
             q_list.append(result)
         else:
             remaining_triples.append(result)

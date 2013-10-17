@@ -19,21 +19,39 @@ from main.models import VariantEvidence
 Q_OBJECT_TYPE__GLOBAL = 'global'
 Q_OBJECT_TYPE__PER_SAMPLE = 'per_sample'
 
+# SQL key constants
+VARIANT_TABLE_KEY__ID = 'id'
+VARIANT_TABLE_KEY__SAMPLE = (
+        'variantalternate__variantevidence__experiment_sample')
+
 
 ###############################################################################
 # Hard-coded query keys.
 # These are hard-coded to the model definitions in main/models.py.
+#     * sql_key is relative to Variant model.
 ###############################################################################
 
 # Keys corresponding to columns in the Variant model.
 VARIANT_SQL_KEY_MAP = {
-    'chromosome': {'type': 'String', 'num': 1},
-    'position': {'type': 'Integer', 'num': 1},
+    'chromosome': {
+        'type': 'String',
+        'num': 1,
+        'variant_table_col': 'chromosome'
+    },
+    'position': {
+        'type': 'Integer',
+        'num': 1,
+        'variant_table_col': 'position'
+    },
 }
 
 # Keys corresponding to columns in the Variant model.
 VARIANT_ALTERNATE_SQL_KEY_MAP = {
-    'alt_value': {'type': 'String', 'num': 1},
+    'alt_value': {
+        'type': 'String',
+        'num': 1,
+        'variant_table_col': 'variantalternate__alt_value'
+    },
 }
 
 # Keys corresponding to columns in the VariantCallerCommonData model.
@@ -140,6 +158,21 @@ def SymbolGenerator():
         current_char = chr(next_ord)
 
 
+class SqlReadySymbol(object):
+    """An object that packages a representation of a symbol that is supported
+    for SQL queries into an object that provides the Django Q object as well
+    as the raw (delim, key, value) representation for in-memory processing.
+    """
+
+    def __init__(self, semantic_type, q_obj, delim_key_value_triple=None):
+        self.semantic_type = semantic_type
+        self.q_obj = q_obj
+
+        # TODO: This is not consistently useful for all semantic types.
+        # Figure out more robust common solution.
+        self.delim_key_value_triple = delim_key_value_triple
+
+
 ################################################################################
 # Utility Methods
 ################################################################################
@@ -238,7 +271,8 @@ def get_django_q_object_for_triple(delim_key_value_triple):
     eval_string = (maybe_not_prefix + 'Q(' + model_prefix + key + postfix +
             '=' + '"' + value + '"' + ')')
     q_obj = eval(eval_string)
-    return (q_object_type, q_obj)
+    return SqlReadySymbol(q_object_type, q_obj,
+            delim_key_value_triple=delim_key_value_triple)
 
 
 def get_django_q_object_for_set_restrict(set_restrict_string):
@@ -255,7 +289,7 @@ def get_django_q_object_for_set_restrict(set_restrict_string):
     if match.group('maybe_not'):
         q_obj = ~q_obj
 
-    return (Q_OBJECT_TYPE__GLOBAL, q_obj)
+    return SqlReadySymbol(Q_OBJECT_TYPE__GLOBAL, q_obj)
 
 
 def get_django_q_object_for_gene_restrict(gene_restrict_string, ref_genome):
@@ -279,7 +313,7 @@ def get_django_q_object_for_gene_restrict(gene_restrict_string, ref_genome):
     # Return a Q object bounding Variants by this position.
     q_obj = (Q(position__gte=gene_interval.start) &
             Q(position__lt=gene_interval.end))
-    return (Q_OBJECT_TYPE__GLOBAL, q_obj)
+    return SqlReadySymbol(Q_OBJECT_TYPE__GLOBAL, q_obj)
 
 
 def evaluate_condition_in_triple(data_map, type_map, triple, idx=None):
@@ -362,3 +396,15 @@ def assert_delim_for_key(type_map, delim, key):
     if not delim in TYPE_TO_SUPPORTED_OPERATIONS[data_type]:
         raise ParseError(str(key) + str(delim),
                 'Invalid delim for type indicated by key.')
+
+
+def get_variant_table_column_for_sql_key(sql_key):
+    """Returns the name of the column in the Variant table for the sql key.
+
+    Raises:
+        AssertionError if key is not recognized.
+    """
+    for sql_key_map in ALL_SQL_KEY_MAP_LIST:
+        if sql_key in sql_key_map:
+            return sql_key_map[sql_key]['variant_table_col']
+    raise AssertionError("Invalid sql_key: %s" % sql_key)

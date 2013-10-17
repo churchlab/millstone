@@ -828,7 +828,9 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         for query_string, num_expected in query_and_num_expected_pairs:
             result = get_variants_that_pass_filter(query_string, self.ref_genome)
             variants = result.variant_set
-            self.assertEqual(num_expected, len(variants))
+            self.assertEqual(num_expected, len(variants),
+                    "Expected: %d, Actual: %d, Query: %s" % (
+                            num_expected, len(variants), query_string))
 
         # Create a common data object and samples with different alt_values.
 
@@ -878,6 +880,15 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         passing_variant = list(variants)[0]
         metadata = result.variant_id_to_metadata_dict
         self.assertEqual(set([sample_obj_2.id]),
+                metadata[passing_variant.id]['passing_sample_ids'])
+
+        QUERY_STRING = 'alt_value != T'
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+        passing_variant = list(variants)[0]
+        metadata = result.variant_id_to_metadata_dict
+        self.assertEqual(set([sample_obj_1.id]),
                 metadata[passing_variant.id]['passing_sample_ids'])
 
 
