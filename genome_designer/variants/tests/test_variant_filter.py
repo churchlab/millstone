@@ -683,7 +683,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
     def test_filter__sets(self):
         """Test filtering relative to sets.
         """
-        # Some variant sets for testing.
+        # We create 3 VariantSets.
         set_1 = VariantSet.objects.create(
                 reference_genome=self.ref_genome,
                 label='set1')
@@ -722,22 +722,26 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         # We have 19 total variants.
         self.assertEqual(19, len(Variant.objects.all()))
 
+        # 3 + 6 = 9 in set_1
         QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
         self.assertEqual(9, len(variants))
 
+        # 3 + 6 + 3 = 12 between set_1 and set_2
         QUERY_STRING = 'IN_SET(%s) | IN_SET(%s)' % (set_1.uid, set_2.uid)
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
         self.assertEqual(12, len(variants))
 
+        # All but 4, so 15, in any set.
         QUERY_STRING = 'IN_SET(%s) | IN_SET(%s) | IN_SET(%s)' % (
                 set_1.uid, set_2.uid, set_3.uid)
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
         self.assertEqual(15, len(variants))
 
+        # All but 9, or 10 not in set_1.
         QUERY_STRING = 'NOT_IN_SET(%s)' % (set_1.uid)
         result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
         variants = result.variant_set
