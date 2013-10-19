@@ -22,6 +22,7 @@ from main.models import VariantToVariantSet
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
+from variants.common import eval_variant_set_filter_expr
 from variants.variant_filter import EXPRESSION_REGEX
 from variants.variant_filter import SAMPLE_SCOPE_REGEX
 from variants.variant_filter import SAMPLE_SCOPE_REGEX_NAMED
@@ -58,9 +59,24 @@ class BaseTestVariantFilterTestCase(TestCase):
                 type=Dataset.TYPE.VCF_FREEBAYES,
                 filesystem_location=TEST_ANNOTATED_VCF)
 
+        self.sample_obj_1 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample',
+                group='Plate 1',
+                well='A01',
+                num_reads=100,
+        )
+
+        self.sample_obj_2 = ExperimentSample.objects.create(
+                project=self.project,
+                label='fake sample 2',
+                group='Plate 1',
+                well='A02',
+                num_reads=100,
+        )
+
 
 class TestVariantFilter(BaseTestVariantFilterTestCase):
-
     def test_filter__by_position(self):
         """Test filtering by position.
         """
@@ -766,6 +782,64 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         self.assertEqual(6, len(variants))
 
 
+    def test_filter__sets_per_sample(self):
+        """Test filtering over sets when associated with samples.
+        """
+        set_1 = VariantSet.objects.create(
+                reference_genome=self.ref_genome,
+                label='set1')
+
+        QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(0, len(variants))
+
+        var = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=1,
+                ref_value='A')
+
+        QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(0, len(variants))
+
+        common_data_obj = VariantCallerCommonData.objects.create(
+                variant=var,
+                source_dataset=self.vcf_dataset)
+
+        sample_1_evidence = VariantEvidence.objects.create(
+                experiment_sample=self.sample_obj_1,
+                variant_caller_common_data=common_data_obj)
+
+        vtvs = VariantToVariantSet.objects.create(
+                variant=var, variant_set=set_1)
+
+        QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+        passing_variant = list(variants)[0]
+        metadata = result.variant_id_to_metadata_dict
+        self.assertEqual(set(),
+                metadata[passing_variant.id]['passing_sample_ids'])
+
+        # Add a sample association.
+        vtvs.sample_variant_set_association.add(self.sample_obj_1)
+        vtvs.sample_variant_set_association.add(self.sample_obj_2)
+
+        QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
+        result = get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+        passing_variant = list(variants)[0]
+        metadata = result.variant_id_to_metadata_dict
+        self.assertEqual(set([self.sample_obj_1.id]),
+                metadata[passing_variant.id]['passing_sample_ids'])
+
+
     def test_filter__key_missing_from_map(self):
         """Tests that filtering using an unrecognized key fails when using an
         improperly initialized key map.
@@ -1076,3 +1150,101 @@ class TestExpressionRegex(TestCase):
         match = SET_REGEX_NAMED.match(QUERY_STRING)
         self.assertEqual('5678', match.group('sets'))
         self.assertTrue(match.group('maybe_not'))
+
+
+class TestFilterVariantSets(BaseTestVariantFilterTestCase):
+    """Tests for filtering relative to VariantSets.
+    """
+
+    def test_filter_sets(self):
+        self.assertTrue(True)
+
+        # 2 different VariantSets.
+        set_1 = VariantSet.objects.create(
+                reference_genome=self.ref_genome,
+                label='set1')
+
+        set_2 = VariantSet.objects.create(
+                reference_genome=self.ref_genome,
+                label='set2')
+
+        # 1 Variant.
+        var = Variant.objects.create(
+                 type=Variant.TYPE.TRANSITION,
+                 reference_genome=self.ref_genome,
+                 chromosome='chrom',
+                 position=1,
+                 ref_value='A')
+
+        # Not added to set yet, so no results expected.
+        QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
+        result = eval_variant_set_filter_expr(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(0, len(variants))
+
+        # Now we add the Variant to the set, but don't associate it with a
+        # sample yet.
+        common_data_obj = VariantCallerCommonData.objects.create(
+                variant=var,
+                source_dataset=self.vcf_dataset)
+
+        sample_1_evidence = VariantEvidence.objects.create(
+                experiment_sample=self.sample_obj_1,
+                variant_caller_common_data=common_data_obj)
+
+        vtvs = VariantToVariantSet.objects.create(
+                variant=var, variant_set=set_1)
+
+        QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
+        result = eval_variant_set_filter_expr(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+        passing_variant = list(variants)[0]
+        metadata = result.variant_id_to_metadata_dict
+        self.assertEqual(set(),
+                metadata[passing_variant.id]['passing_sample_ids'])
+
+        # Add a sample association.
+        vtvs.sample_variant_set_association.add(self.sample_obj_1)
+
+        QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
+        result = eval_variant_set_filter_expr(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+        passing_variant = list(variants)[0]
+        metadata = result.variant_id_to_metadata_dict
+        self.assertEqual(set([self.sample_obj_1.id]),
+                metadata[passing_variant.id]['passing_sample_ids'])
+
+        # Add another sample association.
+        sample_2_evidence = VariantEvidence.objects.create(
+                experiment_sample=self.sample_obj_2,
+                variant_caller_common_data=common_data_obj)
+
+        vtvs.sample_variant_set_association.add(self.sample_obj_2)
+
+        QUERY_STRING = 'IN_SET(%s)' % (set_1.uid)
+        result = eval_variant_set_filter_expr(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+        passing_variant = list(variants)[0]
+        metadata = result.variant_id_to_metadata_dict
+        self.assertEqual(set([self.sample_obj_1.id, self.sample_obj_2.id]),
+                metadata[passing_variant.id]['passing_sample_ids'])
+
+        # Test the negative case.
+        # Both Samples have the Variant in Set1 so there should be no results.
+        QUERY_STRING = 'NOT_IN_SET(%s)' % (set_1.uid)
+        result = eval_variant_set_filter_expr(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(0, len(variants))
+
+        # Now we test the NOT IN case when there is no association, use set_2.
+        QUERY_STRING = 'NOT_IN_SET(%s)' % (set_2.uid)
+        result = eval_variant_set_filter_expr(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+        passing_variant = list(variants)[0]
+        metadata = result.variant_id_to_metadata_dict
+        self.assertEqual(set([self.sample_obj_1.id, self.sample_obj_2.id]),
+                metadata[passing_variant.id]['passing_sample_ids'])

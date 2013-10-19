@@ -2,12 +2,19 @@
 Helpers and utils for working with Variants.
 """
 
+from collections import defaultdict
 from collections import OrderedDict
 import re
 
+from django.db import connection
 from django.db.models import Q
 
+from main.models import Variant
 from main.models import VariantEvidence
+from main.models import VariantSet
+from main.models import VariantToVariantSet
+from variants.filter_eval_result import metadata_default_dict_factory_fn
+from variants.filter_eval_result import FilterEvalResult
 
 
 ###############################################################################
@@ -24,6 +31,9 @@ VARIANT_TABLE_KEY__ID = 'id'
 VARIANT_TABLE_KEY__SAMPLE = (
         'variantalternate__variantevidence__experiment_sample')
 
+# SQL fields describing a Variant
+VARIANT_MODEL_FIELDS = ('id', 'uid', 'type', 'reference_genome_id',
+        'chromosome', 'position', 'ref_value')
 
 ###############################################################################
 # Hard-coded query keys.
@@ -275,23 +285,6 @@ def get_django_q_object_for_triple(delim_key_value_triple):
             delim_key_value_triple=delim_key_value_triple)
 
 
-def get_django_q_object_for_set_restrict(set_restrict_string):
-    """Returns a tuple (Q_OBJECT_TYPE, Q object limiting reuslts to a set).
-    """
-    match = SET_REGEX_NAMED.match(set_restrict_string)
-    variant_set_uid = match.group('sets')
-    assert len(variant_set_uid) > 0, (
-            "No actual set provided in set filter.")
-
-    q_obj = Q(varianttovariantset__variant_set__uid=variant_set_uid)
-
-    # Maybe negate the result.
-    if match.group('maybe_not'):
-        q_obj = ~q_obj
-
-    return SqlReadySymbol(Q_OBJECT_TYPE__GLOBAL, q_obj)
-
-
 def get_django_q_object_for_gene_restrict(gene_restrict_string, ref_genome):
     """Returns a tuple (Q_OBJECT_TYPE, Q object to limit results to the gene).
     """
@@ -408,3 +401,246 @@ def get_variant_table_column_for_sql_key(sql_key):
         if sql_key in sql_key_map:
             return sql_key_map[sql_key]['variant_table_col']
     raise AssertionError("Invalid sql_key: %s" % sql_key)
+
+
+def dictfetchall(cursor):
+    """Returns all rows from a cursor as a dict.
+
+    Source: https://docs.djangoproject.com/en/dev/topics/db/sql/
+    """
+    desc = cursor.description
+    return [
+        dict(zip([col[0] for col in desc], row))
+        for row in cursor.fetchall()
+    ]
+
+
+def eval_variant_set_filter_expr(set_restrict_string, ref_genome):
+    """Returns a FilterEvalResult containing Variants and per-sample metadata
+    that satisfy the passed in set filter.
+
+    Args:
+        set_restrict_string: Valid expression for a set.
+
+    Returns:
+        A FilterEvalResult object.
+    """
+    return _eval_variant_set_filter_expr__brute_force(
+            set_restrict_string, ref_genome)
+
+
+def _eval_variant_set_filter_expr__brute_force(set_restrict_string, ref_genome):
+    """Dumb implementation that is easy to understad but not at all efficient.
+
+    This will help us come up with a bunch of tests for when we implement the
+    optimized version.
+
+    Raises:
+        DoesNotExist: If VariantSet with request uid doesn't exist.
+
+    Returns:
+        A FilterEvalResult object.
+    """
+    # Extract the relevant part of the query.
+    match = SET_REGEX_NAMED.match(set_restrict_string)
+    variant_set_uid = match.group('sets')
+    assert len(variant_set_uid) > 0, (
+            "No actual set provided in set filter.")
+
+    # Look up the VariantSet.
+    variant_set = VariantSet.objects.get(
+            uid=variant_set_uid,
+            reference_genome=ref_genome)
+
+    # Store the results in these data structures.
+    passing_variant_set = set()
+    variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
+
+    # Determine whether this is a NOT query.
+    is_negative_query = bool(match.group('maybe_not'))
+
+    # Identify the Variants that pass the filter.
+    for variant in Variant.objects.filter(reference_genome=ref_genome):
+
+        # Handle positive and negative separately to ensure correctness, though
+        # possibly a dumb implementation.
+        if not is_negative_query:
+            # Try to find a relevant VariantToVariantSet object.
+            matching_vtvs = VariantToVariantSet.objects.filter(
+                    variant=variant,
+                    variant_set=variant_set)
+            if len(matching_vtvs) > 0:
+                assert len(matching_vtvs) == 1, (
+                        "Multiple VariantToVariantSet objects found for "
+                        "Variant.uid=%s, VariantSet.uid=%s" % (
+                                variant.uid, variant_set.uid))
+                vtvs = matching_vtvs[0]
+                passing_variant_set.add(variant)
+                passing_sample_ids = set([sample.id for sample in
+                        vtvs.sample_variant_set_association.all()])
+                variant_id_to_metadata_dict[variant.id][
+                        'passing_sample_ids'] = passing_sample_ids
+        else:
+            # Add an entry only if at least one passes the filter (of not
+            # being in this set).
+            passing_sample_ids = set()
+            has_at_least_one_evidence_obj = False
+            for common_data_obj in variant.variantcallercommondata_set.all():
+                for variant_evidence in common_data_obj.variantevidence_set.all():
+                    has_at_least_one_evidence_obj = True
+                    experiment_sample = variant_evidence.experiment_sample
+                    matching_vtvs = VariantToVariantSet.objects.filter(
+                            variant=variant,
+                            variant_set=variant_set,
+                            sample_variant_set_association__id=experiment_sample.id)
+                    if not len(matching_vtvs):
+                        passing_sample_ids.add(experiment_sample.id)
+            if passing_sample_ids:
+                passing_variant_set.add(variant)
+                variant_id_to_metadata_dict[variant.id][
+                        'passing_sample_ids'] = passing_sample_ids
+            elif not has_at_least_one_evidence_obj:
+                # Another way for this Variant to pass is if no VariantEvidence
+                # objects exist for the Variant in which case we do a simpler
+                # query.
+                matching_vtvs = VariantToVariantSet.objects.filter(
+                        variant=variant, variant_set=variant_set)
+                if not len(matching_vtvs):
+                    passing_variant_set.add(variant)
+
+    return FilterEvalResult(passing_variant_set, variant_id_to_metadata_dict)
+
+
+def _eval_variant_set_filter_expr__optimized(set_restrict_string, ref_genome):
+    """Optimized SQL implementation.
+
+    TODO: Finish.
+    """
+    # Extract the relevant part of the query.
+    match = SET_REGEX_NAMED.match(set_restrict_string)
+    variant_set_uid = match.group('sets')
+    assert len(variant_set_uid) > 0, (
+            "No actual set provided in set filter.")
+
+    # We need to perform a custom SQL statement to get all the INNER JOINs
+    # right. As far as we can tell, there is not a clear way to do this using
+    # Django's ORM.
+    cursor = connection.cursor()
+
+    if not match.group('maybe_not'):
+        sql_statement = (
+            'SELECT '
+                # SELECT Variant fields
+                '"main_variant"."id", "main_variant"."uid", '
+                '"main_variant"."type", "main_variant"."reference_genome_id", '
+                '"main_variant"."chromosome", "main_variant"."position", '
+                '"main_variant"."ref_value", '
+
+                # SELECT ExperimentSample.id
+                '"main_varianttovariantset_sample_variant_set_association"."experimentsample_id" AS "sample_id" '
+
+            # FROM a bunch of JOINed tables
+            'FROM "main_variant"'
+                'INNER JOIN "main_varianttovariantset" '
+                    'ON ("main_variant"."id" = "main_varianttovariantset"."variant_id") '
+                'INNER JOIN "main_variantset" '
+                    'ON ("main_varianttovariantset"."variant_set_id" = "main_variantset"."id") '
+                'LEFT OUTER JOIN "main_varianttovariantset_sample_variant_set_association" '
+                    'ON ("main_varianttovariantset"."id" = "main_varianttovariantset_sample_variant_set_association"."varianttovariantset_id") '
+
+
+
+            # WHERE VariantSet.uid is what is in the filter expr
+            'WHERE "main_variantset"."uid" = "%s"'
+
+            % variant_set_uid
+        )
+    else:
+        # SELECT Variant.id that are in the VariantSet with requested uid.
+        inner_select_statement = (
+            'SELECT '
+                '"main_varianttovariantset"."id" AS "vtvs_id", '
+                '"main_varianttovariantset"."variant_id" AS "variant_id", '
+                '"main_variantset"."uid" AS "variant_set_uid", '
+                '"main_varianttovariantset_sample_variant_set_association"."experimentsample_id" AS "sample_id" '
+
+
+            'FROM "main_varianttovariantset" '
+                'INNER JOIN "main_variantset" '
+                    'ON ("main_varianttovariantset"."variant_set_id" = "main_variantset"."id") '
+                'LEFT OUTER JOIN "main_varianttovariantset_sample_variant_set_association" '
+                    'ON ("main_varianttovariantset"."id" = "main_varianttovariantset_sample_variant_set_association"."varianttovariantset_id") '
+
+            'WHERE "main_variantset"."uid" = "%s"'
+
+            % variant_set_uid
+        )
+
+        # # DEBUG
+        data_dict_list = dictfetchall(cursor.execute(inner_select_statement))
+        print 'INNER_SELECT', len(data_dict_list)
+        for row in data_dict_list:
+            print row
+        # assert False, "STOP"
+
+        sql_statement = (
+            'SELECT '
+                # SELECT Variant fields
+                '"main_variant"."id", "main_variant"."uid", '
+                '"main_variant"."type", "main_variant"."reference_genome_id", '
+                '"main_variant"."chromosome", "main_variant"."position", '
+                '"main_variant"."ref_value", '
+
+                # SELECT ExperimentSample.id
+                'U1."sample_id" AS "sample_id" '
+
+            # FROM a bunch of JOINed tables
+            'FROM "main_variant" '
+                'LEFT OUTER JOIN (' + inner_select_statement + ') U1 '
+                    'ON ("main_variant"."id" = U1."variant_id") '
+                # 'LEFT OUTER JOIN "main_varianttovariantset_sample_variant_set_association" '
+                #     'ON (U1."vtvs_id" = "main_varianttovariantset_sample_variant_set_association"."varianttovariantset_id") '
+
+
+            'WHERE U1."variant_set_uid" IS NULL'
+        )
+
+        # DEBUG
+        data_dict_list = dictfetchall(cursor.execute(sql_statement))
+        print 'NUM_RESULTS', len(data_dict_list)
+        for row in data_dict_list:
+            print row
+
+    data_dict_list = dictfetchall(cursor.execute(sql_statement))
+
+    # Gather the Variant objects from the data.
+    variant_set = set()
+    variant_ids_visited = set()
+    for row in data_dict_list:
+        if row['id'] in variant_ids_visited:
+            continue
+        variant_set.add(Variant(**get_subdict(row, VARIANT_MODEL_FIELDS)))
+        variant_ids_visited.add(row['id'])
+
+    # Build the metadata dictionary.
+    variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
+    for row in data_dict_list:
+        if row['sample_id']:
+            variant_id_to_metadata_dict[row['id']]['passing_sample_ids'].add(
+                row['sample_id'])
+
+    return FilterEvalResult(variant_set, variant_id_to_metadata_dict)
+
+
+def get_subdict(big_dict, fields):
+    """Returns a dict that is the subset of the dict with only the specified
+    fields.
+
+    Args:
+        big_dict: Dictionary with keys that are superset of fields.
+        fields: Iterable of field keys.
+
+    Raises:
+        TypeError if field missing from big_dict.
+    """
+    return {k: big_dict[k] for k in fields}

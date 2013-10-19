@@ -50,11 +50,11 @@ from variants.common import VARIANT_ALTERNATE_SQL_KEY_MAP
 from variants.common import VARIANT_TABLE_KEY__ID
 from variants.common import VARIANT_TABLE_KEY__SAMPLE
 from variants.common import assert_delim_for_key
+from variants.common import eval_variant_set_filter_expr
 from variants.common import evaluate_condition_in_triple
 from variants.common import get_all_key_map
 from variants.common import get_delim_key_value_triple
 from variants.common import get_django_q_object_for_gene_restrict
-from variants.common import get_django_q_object_for_set_restrict
 from variants.common import get_django_q_object_for_triple
 from variants.common import get_sample_id_set_for_variant
 from variants.common import get_variant_table_column_for_sql_key
@@ -249,8 +249,8 @@ class VariantFilterEvaluator(object):
         else:
             partial_result = None
 
-        # Perform the initial SQL query to constrain the set of Variants
-        # that possibly satisfy the query.
+        # Handle global SQL keys. Perform the initial SQL query to constrain
+        # the set of Variants that possibly satisfy the query.
         # NOTE: We chain filter calls rather than AND Q objects intentionally.
         #     It is not equivalent to do either.
         global_q_obj_list = [el.q_obj for el in sql_ready_symbol_list
@@ -381,7 +381,8 @@ class VariantFilterEvaluator(object):
         # Next, check if this is a set-related expression.
         set_match = SET_REGEX.match(condition_string)
         if set_match:
-            return get_django_q_object_for_set_restrict(condition_string)
+            return eval_variant_set_filter_expr(condition_string,
+                    self.ref_genome)
 
         # Next, check if this is a gene-related expression.
         gene_match = GENE_REGEX.match(condition_string)
