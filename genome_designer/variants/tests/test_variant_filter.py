@@ -1248,3 +1248,17 @@ class TestFilterVariantSets(BaseTestVariantFilterTestCase):
         metadata = result.variant_id_to_metadata_dict
         self.assertEqual(set([self.sample_obj_1.id, self.sample_obj_2.id]),
                 metadata[passing_variant.id]['passing_sample_ids'])
+
+        # Now create an association with just one sample and test it out.
+        vtvs_set_2 = VariantToVariantSet.objects.create(
+                variant=var, variant_set=set_2)
+        vtvs_set_2.sample_variant_set_association.add(self.sample_obj_1)
+
+        QUERY_STRING = 'NOT_IN_SET(%s)' % (set_2.uid)
+        result = eval_variant_set_filter_expr(QUERY_STRING, self.ref_genome)
+        variants = result.variant_set
+        self.assertEqual(1, len(variants))
+        passing_variant = list(variants)[0]
+        metadata = result.variant_id_to_metadata_dict
+        self.assertEqual(set([self.sample_obj_2.id]),
+                metadata[passing_variant.id]['passing_sample_ids'])
