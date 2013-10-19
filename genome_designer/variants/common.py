@@ -425,21 +425,26 @@ def eval_variant_set_filter_expr(set_restrict_string, ref_genome):
     Returns:
         A FilterEvalResult object.
     """
-    return _eval_variant_set_filter_expr__brute_force(
+    return _eval_variant_set_filter_expr__brute_force_on_negative(
             set_restrict_string, ref_genome)
 
 
-def _eval_variant_set_filter_expr__brute_force(set_restrict_string, ref_genome):
-    """Dumb implementation that is easy to understad but not at all efficient.
+def _eval_variant_set_filter_expr__brute_force_on_negative(
+        set_restrict_string, ref_genome):
+    """Implementation that uses brute force on negative case.
 
     This will help us come up with a bunch of tests for when we implement the
-    optimized version.
+    fully optimized version.
 
-    Raises:
-        DoesNotExist: If VariantSet with request uid doesn't exist.
+    Args:
+        set_restrict_string: The filter token (e.g. 'IN_SET(abcd1234)').
+        ref_genome: ReferenceGenome this search is relative to.
 
     Returns:
         A FilterEvalResult object.
+
+    Raises:
+        DoesNotExist: If VariantSet with request uid doesn't exist.
     """
     # Extract the relevant part of the query.
     match = SET_REGEX_NAMED.match(set_restrict_string)
@@ -452,18 +457,19 @@ def _eval_variant_set_filter_expr__brute_force(set_restrict_string, ref_genome):
             uid=variant_set_uid,
             reference_genome=ref_genome)
 
-    # Store the results in these data structures.
-    passing_variant_set = set()
-    variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
-
     # Determine whether this is a NOT query.
     is_negative_query = bool(match.group('maybe_not'))
 
+    # If forward-case, use optimized implementation.
     if not is_negative_query:
         return _eval_variant_set_filter_expr__optimized__positive(
                 variant_set.id, ref_genome)
 
-    # Identify the Variants that pass the filter.
+    # Store the results in these data structures.
+    passing_variant_set = set()
+    variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
+
+    # Otherwise, do brute force solution that
     for variant in Variant.objects.filter(reference_genome=ref_genome):
         # Add an entry only if at least one passes the filter (of not
         # being in this set).
@@ -495,7 +501,65 @@ def _eval_variant_set_filter_expr__brute_force(set_restrict_string, ref_genome):
     return FilterEvalResult(passing_variant_set, variant_id_to_metadata_dict)
 
 
-def _eval_variant_set_filter_expr__optimized(set_restrict_string, ref_genome):
+def _eval_variant_set_filter_expr__optimized__positive(variant_set_id,
+        ref_genome):
+    """Supports positive queries in a more optimal fashion.
+    """
+    # We need to perform a custom SQL statement to get all the INNER JOINs
+    # right. As far as we can tell, there is not a clear way to do this using
+    # Django's ORM.
+    cursor = connection.cursor()
+
+    sql_statement = (
+        'SELECT '
+            # SELECT Variant fields
+            '"main_variant"."id", "main_variant"."uid", '
+            '"main_variant"."type", "main_variant"."reference_genome_id", '
+            '"main_variant"."chromosome", "main_variant"."position", '
+            '"main_variant"."ref_value", '
+
+            # SELECT ExperimentSample.id
+            '"main_varianttovariantset_sample_variant_set_association"."experimentsample_id" AS "sample_id" '
+
+        # FROM a bunch of JOINed tables
+        'FROM "main_variant"'
+            'INNER JOIN "main_varianttovariantset" '
+                'ON ("main_variant"."id" = "main_varianttovariantset"."variant_id") '
+            'INNER JOIN "main_variantset" '
+                'ON ("main_varianttovariantset"."variant_set_id" = "main_variantset"."id") '
+            'LEFT OUTER JOIN "main_varianttovariantset_sample_variant_set_association" '
+                'ON ("main_varianttovariantset"."id" = "main_varianttovariantset_sample_variant_set_association"."varianttovariantset_id") '
+
+        # WHERE VariantSet.uid is what is in the filter expr
+        'WHERE ("main_variant"."reference_genome_id" = %s AND '
+            '"main_variantset"."id" = "%s")'
+
+        % (ref_genome.id, variant_set_id)
+    )
+
+    data_dict_list = dictfetchall(cursor.execute(sql_statement))
+
+    # Gather the Variant objects from the data.
+    passing_variant_set = set()
+    variant_ids_visited = set()
+    for row in data_dict_list:
+        if row['id'] in variant_ids_visited:
+            continue
+        passing_variant_set.add(Variant(**get_subdict(row, VARIANT_MODEL_FIELDS)))
+        variant_ids_visited.add(row['id'])
+
+    # Build the metadata dictionary.
+    variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
+    for row in data_dict_list:
+        if row['sample_id']:
+            variant_id_to_metadata_dict[row['id']]['passing_sample_ids'].add(
+                row['sample_id'])
+
+    return FilterEvalResult(passing_variant_set, variant_id_to_metadata_dict)
+
+
+def _eval_variant_set_filter_expr__optimized_full_not_working(
+        set_restrict_string, ref_genome):
     """Optimized SQL implementation.
 
     TODO: Finish.
@@ -574,63 +638,6 @@ def _eval_variant_set_filter_expr__optimized(set_restrict_string, ref_genome):
         print 'NUM_RESULTS', len(data_dict_list)
         for row in data_dict_list:
             print row
-
-    data_dict_list = dictfetchall(cursor.execute(sql_statement))
-
-    # Gather the Variant objects from the data.
-    passing_variant_set = set()
-    variant_ids_visited = set()
-    for row in data_dict_list:
-        if row['id'] in variant_ids_visited:
-            continue
-        passing_variant_set.add(Variant(**get_subdict(row, VARIANT_MODEL_FIELDS)))
-        variant_ids_visited.add(row['id'])
-
-    # Build the metadata dictionary.
-    variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
-    for row in data_dict_list:
-        if row['sample_id']:
-            variant_id_to_metadata_dict[row['id']]['passing_sample_ids'].add(
-                row['sample_id'])
-
-    return FilterEvalResult(passing_variant_set, variant_id_to_metadata_dict)
-
-
-def _eval_variant_set_filter_expr__optimized__positive(variant_set_id,
-        ref_genome):
-    """Supports positive queries in a more optimal fashion.
-    """
-    # We need to perform a custom SQL statement to get all the INNER JOINs
-    # right. As far as we can tell, there is not a clear way to do this using
-    # Django's ORM.
-    cursor = connection.cursor()
-
-    sql_statement = (
-        'SELECT '
-            # SELECT Variant fields
-            '"main_variant"."id", "main_variant"."uid", '
-            '"main_variant"."type", "main_variant"."reference_genome_id", '
-            '"main_variant"."chromosome", "main_variant"."position", '
-            '"main_variant"."ref_value", '
-
-            # SELECT ExperimentSample.id
-            '"main_varianttovariantset_sample_variant_set_association"."experimentsample_id" AS "sample_id" '
-
-        # FROM a bunch of JOINed tables
-        'FROM "main_variant"'
-            'INNER JOIN "main_varianttovariantset" '
-                'ON ("main_variant"."id" = "main_varianttovariantset"."variant_id") '
-            'INNER JOIN "main_variantset" '
-                'ON ("main_varianttovariantset"."variant_set_id" = "main_variantset"."id") '
-            'LEFT OUTER JOIN "main_varianttovariantset_sample_variant_set_association" '
-                'ON ("main_varianttovariantset"."id" = "main_varianttovariantset_sample_variant_set_association"."varianttovariantset_id") '
-
-        # WHERE VariantSet.uid is what is in the filter expr
-        'WHERE ("main_variant"."reference_genome_id" = %s AND '
-            '"main_variantset"."id" = "%s")'
-
-        % (ref_genome.id, variant_set_id)
-    )
 
     data_dict_list = dictfetchall(cursor.execute(sql_statement))
 
