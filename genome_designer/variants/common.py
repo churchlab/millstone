@@ -532,7 +532,7 @@ def _eval_variant_set_filter_expr__optimized(set_restrict_string, ref_genome):
             'FROM "main_varianttovariantset" '
                 'INNER JOIN "main_variantset" '
                     'ON ("main_varianttovariantset"."variant_set_id" = "main_variantset"."id") '
-                'LEFT OUTER JOIN "main_varianttovariantset_sample_variant_set_association" '
+                'INNER JOIN "main_varianttovariantset_sample_variant_set_association" '
                     'ON ("main_varianttovariantset"."id" = "main_varianttovariantset_sample_variant_set_association"."varianttovariantset_id") '
 
             'WHERE "main_variantset"."uid" = "%s"'
