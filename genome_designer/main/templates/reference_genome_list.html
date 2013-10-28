@@ -22,6 +22,7 @@
     <ul class="dropdown-menu">
       <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From Variant Set...</a></li>
       <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>
+       <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">Upload to S3...</a></li>
     </ul>
   </div>
 </p>
@@ -56,6 +57,15 @@
   </div>
 </div>
 
+<div id="modalUpload" class="modal hide fade" tabindex="-1" role="dialog">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Upload</h3>
+  </div>
+  <div class="modal-body" id="uploadDiv">
+  </div>
+</div>
+
 <script type="text/javascript">
   VIEW_TAG = 'REF_GENOME_LIST';
 
@@ -63,5 +73,64 @@
     REF_GENOME_LIST_DATA = {{ref_genome_list_json}};
   {% endautoescape %}
 
+  $(function() {
+    var uploader = $("#uploadDiv").fineUploaderS3({
+      debug: true,
+      request: {
+        endpoint: '{{ S3_BUCKET }}.s3.amazonaws.com',
+        accessKey: '{{ AWS_SERVER_PUBLIC_KEY }}'
+      },
+      signature: {
+        endpoint: '{% url "s3_signature" %}'
+      },
+      uploadSuccess: {
+        endpoint: '{% url "s3_success" %}'
+      },
+      retry: {
+        enableAuto: true
+      },
+      chunking: {
+        enabled: true
+      },
+      deleteFile: {
+         endpoint: '{% url "s3_delete" %}',
+         enabled: true,
+         forceConfirm: true
+      },
+      callbacks: {
+        onError: function(id, name, reason) {
+          alert(reason);
+        }
+      }
+    });
+  });
+
+</script>
+
+<script type="text/template" id="qq-template">
+<div class="qq-uploader-selector qq-uploader span12">
+  <div class="qq-upload-drop-area-selector qq-upload-drop-area span12" qq-hide-dropzone>
+    <span>Drop files here to upload</span>
+  </div>
+  <div class="qq-upload-button-selector qq-upload-button btn btn-success" style="width: auto;">
+    <div><i class="icon-upload icon-white"></i> Test me now and upload a file</div>
+  </div>
+  <span class="qq-drop-processing-selector qq-drop-processing">
+    <span>Processing dropped files...</span>
+    <span class="qq-drop-processing-spinner-selector qq-drop-processing-spinner"></span>
+  </span>
+  <ul class="qq-upload-list-selector qq-upload-list" style="margin-top: 10px; text-align: center;">
+    <li>
+      <div class="qq-progress-bar-container-selector progress-striped">
+          <div class="qq-progress-bar-selector qq-progress-bar bar"></div>
+      </div>
+      <span class="qq-upload-spinner-selector qq-upload-spinner"></span>
+      <span class="qq-upload-file-selector qq-upload-file"></span>
+      <span class="qq-upload-size-selector qq-upload-size"></span>
+      <a class="qq-upload-cancel-selector qq-upload-cancel" href="#">Cancel</a>
+      <span class="qq-upload-status-text-selector qq-upload-status-text"></span>
+    </li>
+  </ul>
+</div>
 </script>
 {% endblock %}

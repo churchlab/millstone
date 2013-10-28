@@ -114,6 +114,10 @@ urlpatterns = patterns('',
             'genome_designer.main.template_xhrs.variant_filter_controls'),
     url(r'^_/templates/variant_set_controls$',
             'genome_designer.main.template_xhrs.variant_set_controls'),
+
+    url(r'^s3/signature', 'genome_designer.main.xhr_uploader.handle_s3', name="s3_signature"),
+    url(r'^s3/delete', 'genome_designer.main.xhr_uploader.handle_s3', name='s3_delete'),
+    url(r'^s3/success', 'genome_designer.main.xhr_uploader.success_redirect_endpoint', name="s3_success")
 )
 
 if settings.DEBUG:

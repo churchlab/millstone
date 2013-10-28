@@ -188,6 +188,7 @@ AUTH_PROFILE_MODULE = 'main.UserProfile'
 # Custom template context processors.
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
     'main.context_processors.common_data',
+    'main.context_processors.aws_settings'
 )
 
 ###############################################################################

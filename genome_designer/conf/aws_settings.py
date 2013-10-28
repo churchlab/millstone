@@ -1,0 +1,8 @@
+import os.path
+
+AWS_CLIENT_SECRET_KEY = os.getenv("AWS_CLIENT_SECRET_KEY") 
+AWS_SERVER_PUBLIC_KEY = os.getenv("AWS_SERVER_PUBLIC_KEY")
+AWS_SERVER_SECRET_KEY = os.getenv("AWS_SERVER_SECRET_KEY")
+
+AWS_EXPECTED_BUCKET = 'genome-designer-upload'
+AWS_MAX_SIZE = 1024 ** 3  # 1GB
