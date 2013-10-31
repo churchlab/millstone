@@ -27,6 +27,7 @@ from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
+from main.models import S3File
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
@@ -278,3 +279,11 @@ def get_gene_list(request):
 
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
+
+@login_required
+def import_reference_genome_s3(request, project_uid):
+    if request.method == 'POST':
+        s3file_id = request.POST['s3file_id']
+        s3file = S3File.objects.get(pk=s3file_id)
+        
+    return HttpResponse("", content_type='text/plain')

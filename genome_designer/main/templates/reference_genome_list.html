@@ -93,27 +93,34 @@
         enabled: true
       },
       deleteFile: {
-         endpoint: '{% url "s3_delete" %}',
-         enabled: true,
-         forceConfirm: true
+        endpoint: '{% url "s3_delete" %}',
+        enabled: true,
+        forceConfirm: true
       },
       callbacks: {
         onError: function(id, name, reason) {
           alert(reason);
         }
       }
-    });
+    }).on('complete', function(id, name, response, xhr) {
+      var sid = xhr.s3file_id;
+      $.post('{% url "import_reference_genome_s3" project.uid %}', 
+              {'s3file_id': sid},
+              function(data) {
+                alert("Uploaded. Awaiting processing...");
+              });
+      });
   });
 
 </script>
 
 <script type="text/template" id="qq-template">
-<div class="qq-uploader-selector qq-uploader span12">
-  <div class="qq-upload-drop-area-selector qq-upload-drop-area span12" qq-hide-dropzone>
+<div class="qq-uploader-selector qq-uploader">
+  <div class="qq-upload-drop-area-selector qq-upload-drop-area" qq-hide-dropzone>
     <span>Drop files here to upload</span>
   </div>
   <div class="qq-upload-button-selector qq-upload-button btn btn-success" style="width: auto;">
-    <div><i class="icon-upload icon-white"></i> Test me now and upload a file</div>
+    <div><i class="icon-upload icon-white"></i> Choose files...</div>
   </div>
   <span class="qq-drop-processing-selector qq-drop-processing">
     <span>Processing dropped files...</span>

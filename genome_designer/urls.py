@@ -102,6 +102,9 @@ urlpatterns = patterns('',
             'genome_designer.main.xhr_handlers.modify_variant_in_set_membership'),
     url(r'^_/genes$',
             'genome_designer.main.xhr_handlers.get_gene_list'),
+    url(r'^_/projects/([\w-]+)/refgenomes/import_s3$',
+            'genome_designer.main.xhr_handlers.import_reference_genome_s3',
+            name="import_reference_genome_s3"),
 
 
 
@@ -117,7 +120,7 @@ urlpatterns = patterns('',
 
     url(r'^s3/signature', 'genome_designer.main.xhr_uploader.handle_s3', name="s3_signature"),
     url(r'^s3/delete', 'genome_designer.main.xhr_uploader.handle_s3', name='s3_delete'),
-    url(r'^s3/success', 'genome_designer.main.xhr_uploader.success_redirect_endpoint', name="s3_success")
+    url(r'^s3/success', 'genome_designer.main.xhr_uploader.success', name="s3_success")
 )
 
 if settings.DEBUG:

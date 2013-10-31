@@ -1160,3 +1160,19 @@ class RegionInterval(Model):
 
     # One-indexed.
     end = models.BigIntegerField()
+
+
+class S3File(Model):
+    """Model for keeping track of all files in S3 bucket.
+    """
+    bucket = models.CharField(max_length=200)
+
+    # key is the actually name of the file stored in S3 bucket.
+    key = models.CharField(max_length=200)
+
+    # name is the original name of the file on uploader's machine
+    name = models.CharField(max_length=200, null=True)
+    created_at = models.DateTimeField(auto_now_add = True)
+
+    def __unicode__(self):
+        return u"s3://%s/%s" % (self.bucket, self.key)

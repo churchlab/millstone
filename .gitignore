@@ -59,3 +59,5 @@ genome_designer/snpEff_summary.html
 
 # Virtualenv
 venv
+
+.DS_Store

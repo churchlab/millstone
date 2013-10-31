@@ -1,21 +1,14 @@
 from django.conf import settings
 from django.http import HttpResponse, HttpRequest
 from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from main.models import S3File
+
+from s3 import s3_delete
 
 import base64, hmac, hashlib, json, sys
-
-try:
-    import boto
-    from boto.s3.connection import Key, S3Connection
-    boto.set_stream_logger('boto')
-    S3 = S3Connection(settings.AWS_SERVER_PUBLIC_KEY, settings.AWS_SERVER_SECRET_KEY)
-except ImportError, e:
-    print("Could not import boto, the Amazon SDK for Python.")
-    print("Deleting files will not work.")
-    print("Install boto with")
-    print("$ pip install boto")
 
 
 def home(request):
@@ -25,11 +18,15 @@ def home(request):
     return render(request, "index.html")
 
 @csrf_exempt
-def success_redirect_endpoint(request):
-    """ This is where the upload will snd a POST request after the 
+def success(request):
+    """ This is where the upload will send a POST request after the 
     file has been stored in S3.
     """
-    return make_response(200)
+
+    sfile, created = S3File.objects.get_or_create(bucket=request.POST['bucket'],
+        key=request.POST['key'], name=request.POST['name'])
+
+    return make_response(content=json.dumps({'s3file_id': sfile.id}))
 
 @csrf_exempt
 def handle_s3(request):
@@ -70,9 +67,7 @@ def handle_DELETE(request):
     if boto:
         bucket_name = request.REQUEST.get('bucket')
         key_name = request.REQUEST.get('key')
-        aws_bucket = S3.get_bucket(bucket_name, validate=False)
-        aws_key = Key(aws_bucket, key_name)
-        aws_key.delete()
+        s3_delete(bucket_name, key_name)
         return make_response(200)
     else:
         return make_response(500)
