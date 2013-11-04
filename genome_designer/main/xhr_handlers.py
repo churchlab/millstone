@@ -31,6 +31,7 @@ from main.models import S3File
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from scripts.import_util import import_reference_genome_from_s3
 from variants.common import extract_filter_keys
 from variants.variant_filter import get_variants_that_pass_filter
 from variants.variant_sets import update_variant_in_set_memberships
@@ -283,7 +284,14 @@ def get_gene_list(request):
 @login_required
 def import_reference_genome_s3(request, project_uid):
     if request.method == 'POST':
+        project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
         s3file_id = request.POST['s3file_id']
         s3file = S3File.objects.get(pk=s3file_id)
+        import_reference_genome_from_s3(
+                    project,
+                    request.POST['refGenomeLabel'],
+                    s3file,
+                    request.POST['importFileFormat'])
         
     return HttpResponse("", content_type='text/plain')

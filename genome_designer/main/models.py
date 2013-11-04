@@ -308,8 +308,16 @@ class Project(Model):
     # The human-readable title of the project.
     title = models.CharField(max_length=256)
 
+    s3_backed = models.BooleanField(default=True)
+
     def __unicode__(self):
         return self.title + '-' + str(self.owner)
+
+    def is_s3_backed(self):
+        return self.s3_backed
+
+    def get_s3_model_data_dir(self):
+        return os.path.join("projects", str(self.uid))
 
     def get_model_data_root(self):
         """Get the absolute location where all project data is stored.
@@ -444,6 +452,24 @@ class ReferenceGenome(Model):
         """Ensures that the snpeff data dir exists."""
         return ensure_exists_0775_dir(self.get_snpeff_directory_path())
 
+    def get_client_jbrowse_data_path(self):
+        if self.project.is_s3_backed():
+            return os.path.join(
+                    'http://%s.s3.amazonaws.com/' % settings.AWS_EXPECTED_BUCKET,
+                    'projects',
+                    str(self.project.uid),
+                    'ref_genomes',
+                    str(self.uid),
+                    'jbrowse')
+        else:
+            return os.path.join(
+                'gd_data/',
+                'projects',
+                str(self.project.uid),
+                'ref_genomes',
+                str(self.uid),
+                'jbrowse')
+
     def get_client_jbrowse_link(self):
         """Returns the link to jbrowse for this ReferenceGenome.
 
@@ -451,13 +477,7 @@ class ReferenceGenome(Model):
         refgenome id 456:
             '/jbrowse/?data=gd_data/abc/projects/xyz/ref_genomes/456/jbrowse/'
         """
-        return os.path.join(
-                '/jbrowse/index.html?data=gd_data/',
-                'projects',
-                str(self.project.uid),
-                'ref_genomes',
-                str(self.uid),
-                'jbrowse')
+        return '/jbrowse/index.html?data=' + self.get_client_jbrowse_data_path()
 
     def is_annotated(self):
         """For several steps (notably snpEff), we want to check that this
@@ -1174,5 +1194,8 @@ class S3File(Model):
     name = models.CharField(max_length=200, null=True)
     created_at = models.DateTimeField(auto_now_add = True)
 
+    def url(self):
+        return "s3://%s/%s" % (self.bucket, self.key)
+
     def __unicode__(self):
-        return u"s3://%s/%s" % (self.bucket, self.key)
+        return unicode(self.url())

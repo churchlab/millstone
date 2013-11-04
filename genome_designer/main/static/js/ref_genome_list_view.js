@@ -19,5 +19,50 @@ gd.RefGenomeListView = Backbone.View.extend({
         fieldConfig: REF_GENOME_LIST_DATA['field_config']
     });
 
+    this.uploader = this.$("#uploadDiv").fineUploaderS3({
+      debug: true,
+      request: {
+        endpoint: this.$("#uploadDiv").data("endpoint"),
+        accessKey: this.$("#uploadDiv").data("accesskey")
+      },
+      signature: {
+        endpoint: this.$("#uploadDiv").data("signature")
+      },
+      uploadSuccess: {
+        endpoint: this.$("#uploadDiv").data("success")
+      },
+      objectProperties: {
+        key: $.proxy(function(fileId) {
+          var filename = this.uploader.fineUploader("getName", fileId);
+          return "uploads/" + qq.getUniqueId() + "-" + filename;
+        }, this)
+      },
+      retry: {
+        enableAuto: true
+      },
+      chunking: {
+        enabled: true
+      },
+      deleteFile: {
+        endpoint: this.$("#uploadDiv").data("delete"),
+        enabled: true,
+        forceConfirm: true
+      },
+      callbacks: {
+        onError: function(id, name, reason) {
+          alert(reason);
+        }
+      }
+    }).on('complete', $.proxy(function(id, name, response, xhr) {
+      var sid = xhr.s3file_id;
+      $.post(this.$("#uploadDiv").data("import"), 
+            {
+              's3file_id': sid,
+              'refGenomeLabel': this.$("#uploadDiv").find("#refGenomeLabel").val(),
+              'importFileFormat': $("#uploadDiv").find("input[name=importFileFormat]:checked").val(),
+            },
+            function(data) {
+            }
+      );}, this));
   }
 });

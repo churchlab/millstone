@@ -45,7 +45,6 @@ from scripts.import_util import import_reference_genome_from_local_file
 import settings
 from settings import PWD as GD_ROOT
 
-
 # Test data.
 TEST_USERNAME = 'gmcdev'
 

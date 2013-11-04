@@ -173,6 +173,11 @@ LOGGING = {
             'level':'INFO',
             'propagate': True,
         },
+        's3': {
+            'handlers':['console'],
+            'level':'INFO',
+            'propagate': True,
+        },
     }
 }
 

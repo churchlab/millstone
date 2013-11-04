@@ -62,7 +62,7 @@
     <button type="button" class="close" data-dismiss="modal">×</button>
     <h3>Upload</h3>
   </div>
-  <div class="modal-body" id="uploadDiv">
+  <div class="modal-body" id="uploadDiv" data-signature="{% url 's3_signature' %}" data-success="{% url 's3_success' %}" data-delete="{% url 's3_delete' %}" data-import="{% url 'import_reference_genome_s3' project.uid %}" data-endpoint="{{ S3_BUCKET }}.s3.amazonaws.com" data-accesskey="{{ AWS_SERVER_PUBLIC_KEY }}">
   </div>
 </div>
 
@@ -73,49 +73,21 @@
     REF_GENOME_LIST_DATA = {{ref_genome_list_json}};
   {% endautoescape %}
 
-  $(function() {
-    var uploader = $("#uploadDiv").fineUploaderS3({
-      debug: true,
-      request: {
-        endpoint: '{{ S3_BUCKET }}.s3.amazonaws.com',
-        accessKey: '{{ AWS_SERVER_PUBLIC_KEY }}'
-      },
-      signature: {
-        endpoint: '{% url "s3_signature" %}'
-      },
-      uploadSuccess: {
-        endpoint: '{% url "s3_success" %}'
-      },
-      retry: {
-        enableAuto: true
-      },
-      chunking: {
-        enabled: true
-      },
-      deleteFile: {
-        endpoint: '{% url "s3_delete" %}',
-        enabled: true,
-        forceConfirm: true
-      },
-      callbacks: {
-        onError: function(id, name, reason) {
-          alert(reason);
-        }
-      }
-    }).on('complete', function(id, name, response, xhr) {
-      var sid = xhr.s3file_id;
-      $.post('{% url "import_reference_genome_s3" project.uid %}', 
-              {'s3file_id': sid},
-              function(data) {
-                alert("Uploaded. Awaiting processing...");
-              });
-      });
-  });
-
 </script>
 
 <script type="text/template" id="qq-template">
 <div class="qq-uploader-selector qq-uploader">
+  <div>
+    <input type="text" name="refGenomeLabel" id="refGenomeLabel" placeholder="Reference Genome Name">
+    <label class="radio">
+      <input type="radio" name="importFileFormat" id="optionsRadios1" value="genbank" checked>
+      Genbank File
+    </label>
+    <label class="radio">
+      <input type="radio" name="importFileFormat" id="optionsRadios2" value="fasta">
+      FASTA File <i>(No Gene/Effect Annotations)</i>
+    </label>
+  </div>
   <div class="qq-upload-drop-area-selector qq-upload-drop-area" qq-hide-dropzone>
     <span>Drop files here to upload</span>
   </div>

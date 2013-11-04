@@ -20,11 +20,16 @@ from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantSet
 from main.models import VariantToVariantSet
+from main.models import get_dataset_with_type
 from scripts.vcf_parser import extract_raw_data_dict
 from scripts.vcf_parser import get_or_create_variant
 from settings import PWD
 
 from Bio import SeqIO
+import tempfile
+import traceback
+import shutil
+from main.s3 import project_files_needed, s3_temp_get
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
@@ -33,6 +38,12 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
     'vcfu': Dataset.TYPE.VCF_USERINPUT
 }
 
+@project_files_needed
+def import_reference_genome_from_s3(project, label, s3file, import_format):
+    with s3_temp_get(s3file) as f:
+        return import_reference_genome_from_local_file(project, label, f, import_format)
+
+@project_files_needed
 def import_reference_genome_from_local_file(project, label, file_location,
         import_format):
     """Creates a ReferenceGenome associated with the given Project.
@@ -71,6 +82,7 @@ def import_reference_genome_from_local_file(project, label, file_location,
             dataset_type, file_location)
 
     return reference_genome
+
 
 def generate_fasta_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a FASTA, generate

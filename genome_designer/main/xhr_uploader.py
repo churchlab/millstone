@@ -67,7 +67,7 @@ def handle_DELETE(request):
     if boto:
         bucket_name = request.REQUEST.get('bucket')
         key_name = request.REQUEST.get('key')
-        s3_delete(bucket_name, key_name)
+        s3_delete(key_name)
         return make_response(200)
     else:
         return make_response(500)
