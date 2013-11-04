@@ -243,6 +243,9 @@ class VariantFilterEvaluator(object):
         # Combine any FilterEvalResults obtained through recursive creation
         # and evaluation of evaluators. These are typically results
         # of sub-clauses that are sample-scoped expressions.
+        # TODO: We are also evaluating per-sample SQL queries above, while
+        # we should really wait until we apply the global SQL filters, so that
+        # it may be possible to search over a smaller Variant space.
         if len(filter_eval_results) > 0:
             partial_result = reduce(lambda accum, iter_val: accum & iter_val,
                     filter_eval_results)
