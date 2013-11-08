@@ -11,6 +11,9 @@ from models import Dataset
 from models import VariantSet
 from models import VariantAlternate
 from models import VariantEvidence
+from models import ExperimentSample
+from models import AlignmentGroup
+from models import ExperimentSampleToAlignment
 
 # When a new ReferenceGenome is created, create its data dir.
 def post_ref_genome_create(sender, instance, created, **kwargs):
@@ -19,6 +22,9 @@ def post_ref_genome_create(sender, instance, created, **kwargs):
         instance.ensure_model_data_dir_exists()
         instance.ensure_snpeff_dir()
         instance.ensure_jbrowse_dir()
+# Run post-save commands after making a new ref genome object
+post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
+        dispatch_uid='ref_genome_create')
 
 def post_add_seq_to_ref_genome(sender, instance, **kwargs):
     """ When a dataset gets added to a ref_genome, we need to do some things
@@ -50,6 +56,11 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
 
     #Initialize variant key map field
     initialize_filter_key_map(instance)
+# Run snpeff and jbrowse housekeeping after linking seq file dataset to a
+#   reference genome obj
+m2m_changed.connect(post_add_seq_to_ref_genome,
+        sender=ReferenceGenome.dataset_set.through,
+        dispatch_uid='add_seq_to_ref_genome')
 
 def post_variant_evidence_create(sender, instance, created, **kwargs):
     """Add existing VariantAlternates to this VariantEvidence Object."""
@@ -86,27 +97,35 @@ def post_variant_evidence_create(sender, instance, created, **kwargs):
             print ('Attempt to add a SampleEvidence with an alternate ' +
                     'allele that is not present for this variant!')
             raise
-
-def post_variant_set_create(sender, instance, created, **kwargs):
-    if created:
-        instance.ensure_model_data_dir_exists()
-
-# Run post-save commands after making a new ref genome object
-post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
-        dispatch_uid='ref_genome_create')
-
 # Run post-save commands after making a new variant evidence object
 post_save.connect(post_variant_evidence_create, sender=VariantEvidence,
         dispatch_uid='variant_evidence_create')
 
-# Run snpeff and jbrowse housekeeping after linking seq file dataset to a
-#   reference genome obj
-m2m_changed.connect(post_add_seq_to_ref_genome,
-        sender=ReferenceGenome.dataset_set.through,
-        dispatch_uid='add_seq_to_ref_genome')
-
+def post_variant_set_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
 # When a new VariantSet is created, create the data directory.
 post_save.connect(post_variant_set_create, sender=VariantSet,
         dispatch_uid='variant_set_create')
+
+def post_sample_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_sample_create, sender=ExperimentSample,
+        dispatch_uid='post_sample_create')
+
+def post_sample_align_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_sample_create, sender=ExperimentSampleToAlignment,
+        dispatch_uid='post_sample_create')
+
+# We'll store freebayes and such under this location.
+def post_alignment_group_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_alignment_group_create, sender=AlignmentGroup,
+        dispatch_uid='alignment_group_create')
+
 
 

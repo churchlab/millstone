@@ -394,7 +394,7 @@ def sample_alignment_error_view(request, project_uid, alignment_group_uid,
             alignment_group__reference_genome__project__uid=project_uid)
 
     # Get the path of the error file.
-    data_dir = sample_alignment.experiment_sample.get_model_data_dir()
+    data_dir = sample_alignment.get_model_data_dir()
     error_file_dir = os.path.join(data_dir, 'bwa_align.error')
     if os.path.exists(error_file_dir):
         with open(error_file_dir) as fh:

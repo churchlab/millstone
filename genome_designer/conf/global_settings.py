@@ -18,7 +18,7 @@ TEMPLATE_DEBUG = DEBUG
 
 # Default True, requiring celery server to be running.
 # Set this to False to force synchronous behavior.
-DEBUG_CONCURRENT = True
+DEBUG_CONCURRENT = False
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -217,7 +217,7 @@ BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 ###############################################################################
 
 TOOLS_DIR = 'tools'
-
+BASH_PATH = '/bin/bash'
 
 ###############################################################################
 # JBrowse
