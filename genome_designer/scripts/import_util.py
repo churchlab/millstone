@@ -42,6 +42,21 @@ def import_reference_genome_from_s3(project, label, s3file, import_format):
     with s3_temp_get(s3file) as f:
         return import_reference_genome_from_local_file(project, label, f, import_format)
 
+class DataImportError(Exception):
+    """Exception thrown when there are errors in imported data.
+
+    Attributes:
+        expr -- input expression in which the error occurred
+        msg  -- explanation of the error
+    """
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return 'DataImportError: ' + str(self.msg)
+
+
 @project_files_needed
 def import_reference_genome_from_local_file(project, label, file_location,
         import_format):
@@ -68,6 +83,10 @@ def import_reference_genome_from_local_file(project, label, file_location,
         num_chromosomes += 1
         num_bases += len(genome_record)
 
+    # Make sure sequence exists.
+    if not num_bases > 0:
+        raise DataImportError("No sequence in file.")
+
     # Create the ReferenceGenome object.
     reference_genome = ReferenceGenome.objects.create(
             project=project,
@@ -85,7 +104,8 @@ def import_reference_genome_from_local_file(project, label, file_location,
 
 def generate_fasta_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a FASTA, generate
-    a FASTA from the genbank. """
+    a FASTA from the genbank.
+    """
 
     # If a FASTA already exists, then just return.
     if ref_genome.dataset_set.filter(
@@ -116,6 +136,13 @@ def generate_fasta_from_genbank(ref_genome):
             dataset_type, fasta_filename)
 
     return
+
+def import_ref_genome_from_genbank():
+    """
+    Pull a reference genome by accession from NCBI using efetch. 
+    """
+    raise NotImplementedError
+
 
 def sanitize_record_id(record_id_string):
     """We want to grab only the first word-only part of each seqrecord in a
@@ -272,7 +299,7 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
     """
 
     with open(variant_set_file) as fh:
-        # Use this wrapper to skip the header lines
+         # Use this wrapper to skip the header lines
         # Double ##s are part of the header, but single #s are column
         # headings and must be stripped and kept.
         def remove_vcf_header(iterable):
