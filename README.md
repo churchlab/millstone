@@ -121,7 +121,11 @@ message broker, for which we use RabbitMQ which is the default for Celery.
 
         $ sudo brew install rabbitmq
 
-    Mac instructions are [here](https://www.rabbitmq.com/install-standalone-mac.html).
+    After install, you can run the server with:
+
+        $ sudo /usr/local/sbin/rabbitmq-server
+
+    Further Mac instructions are [here](http://www.rabbitmq.com/install-homebrew.html).
 
 
 

@@ -10,9 +10,14 @@ from main.models import auto_generate_short_name
 from main.models import clean_filesystem_location
 from main.models import Project
 from main.models import User
+from main.models import Dataset
 from scripts.import_util import import_reference_genome_from_local_file
+import subprocess
 
+from settings import PWD as GD_ROOT_PATH
+from settings import BASH_PATH
 import settings
+
 
 TEST_PROJECT_NAME = 'testModels_project'
 TEST_REF_GENOME_NAME = 'mg1655_partial'
@@ -71,3 +76,29 @@ class TestModels(TestCase):
         assert os.path.exists(os.path.join(
                 self.test_ref_genome.get_snpeff_directory_path(),
                 'snpEffectPredictor.bin'))
+
+    def testDataSetCompression(self):
+        """Make sure data set compression behaves correctly.
+        """
+        dataset = Dataset.objects.create(
+                label='test_dataset', 
+                type=Dataset.TYPE.FASTQ1)
+
+        GZIPPED_FASTQ_FILEPATH = os.path.join(GD_ROOT_PATH, 'test_data',
+                'compressed_fastq', 'sample0.simLibrary.1.fq.gz')
+
+        dataset.filesystem_location = clean_filesystem_location(
+                    GZIPPED_FASTQ_FILEPATH)
+
+        assert dataset.is_compressed()
+
+        process = subprocess.Popen(
+                ('head '+dataset.wrap_if_compressed()+' | wc -l'), 
+                shell=True, executable= BASH_PATH, stdout=subprocess.PIPE)
+
+        wc_output, _ = process.communicate()
+        assert int(wc_output) == 10
+
+
+            
+

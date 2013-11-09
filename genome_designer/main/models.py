@@ -35,6 +35,8 @@ import re
 import shutil
 import stat
 from uuid import uuid4
+from contextlib import contextmanager
+import tempfile
 
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
@@ -275,6 +277,14 @@ class Dataset(Model):
     status = models.CharField(max_length=40, choices=STATUS_CHOICES,
             default=STATUS.READY)
 
+    # Dictionary of compression suffixes and programs to use to decompress
+    # to a pipe
+    COMPRESSION_TYPES = {
+        '.gz': ('gzcat'),
+        '.bz2': ('bzcat'),
+        '.zip': ('unzip','-p')
+    }
+
     def __unicode__(self):
         return self.label
 
@@ -284,9 +294,60 @@ class Dataset(Model):
         return os.path.join(settings.PWD, settings.MEDIA_ROOT,
                 self.filesystem_location)
 
+    def is_compressed(self):
+        """
+        Checks file path for .bz2 or .gz ending, and if so, returns true.
+        """
+        return self.filesystem_location.endswith(
+                tuple(self.COMPRESSION_TYPES.keys()))
+
+    def wrap_if_compressed(self):
+        """ This helper function returns a process substitution string
+        to be used by /bin/bash if the fastq read file is compressed, otherwise
+        it just returns get_absolute_location().
+        """
+        absolute_location = self.get_absolute_location()
+        if self.is_compressed():
+            extension = os.path.splitext(self.filesystem_location)[1]
+            program = self.COMPRESSION_TYPES[extension]
+            return '<({:s} {:s})'.format(
+                    program, absolute_location)
+        else:
+            return absolute_location
+
+    @contextmanager
+    def stream(self):
+        """
+        If dataset is compressed, return a named pipe that decompressed the
+        file, else just return the absolute location.
+        """
+
+        raise NotImplementedError
+        # Currently the below isn't working; the mkfifo blocks itself so I can't
+        # seem to read and write to it at the same time. For now, we've decided
+        # to go for process substitution in Bash (see wrap_if_compressed(),
+        # although this requires the use of Shell=True.
+
+        # dirname = tempfile.mkdtemp()
+        # p = None
+
+        # try:
+        #     if not self.is_compressed():
+        #         return self.get_absolute_location()
+
+        #     path = os.path.join(dirname, 'named_pipe')
+        #     os.mkfifo(path)
+        #     extension = os.path.splitext(self.filesystem_location)[1]
+        #     program = self.COMPRESSION_TYPES[extension]
+        #     with open(path, 'w') as wpipe:
+        #         p = Popen(program.append(path)) # write to path
+        #         return path
+        # finally:
+        #     shutil.rmtree(dirname)
+        #     if p: p.close()
+
 # Make sure the Dataset types are unique. This runs once at startup.
 assert_unique_types(Dataset.TYPE)
-
 
 ###############################################################################
 # Project models
@@ -566,12 +627,6 @@ class ExperimentSample(Model):
                 {'field':'group'},
                 {'field':'well'}]
 
-def post_sample_create(sender, instance, created, **kwargs):
-    if created:
-        instance.ensure_model_data_dir_exists()
-post_save.connect(post_sample_create, sender=ExperimentSample,
-        dispatch_uid='post_sample_create')
-
 
 class AlignmentGroup(Model):
     """Collection of alignments of several related ExperimentSamples to the
@@ -671,13 +726,6 @@ class AlignmentGroup(Model):
                 {'field':'start_time'},
                 {'field':'end_time'}]
 
-# We'll store freebayes and such under this location.
-def post_alignment_group_create(sender, instance, created, **kwargs):
-    if created:
-        instance.ensure_model_data_dir_exists()
-post_save.connect(post_alignment_group_create, sender=AlignmentGroup,
-        dispatch_uid='alignment_group_create')
-
 
 class ExperimentSampleToAlignment(Model):
     """Model that describes the alignment of a single ExperimentSample
@@ -723,6 +771,25 @@ class ExperimentSampleToAlignment(Model):
             {'field':'error_link', 'verbose': 'Error output', 'is_href': True},
         ]
 
+    def get_model_data_root(self):
+        """Get the root location for all data of this type in the project.
+        """
+        return os.path.join(self.alignment_group.get_model_data_dir(),
+                'sample_alignments')
+
+    def get_model_data_dir(self):
+        """Get the full path to the location of this model's data.
+        """
+        return os.path.join(self.get_model_data_root(), str(self.uid))
+
+    def ensure_model_data_dir_exists(self):
+        """Ensure that a data directory exists for this model.
+        """
+        # Make sure the root exists.
+        ensure_exists_0775_dir(self.get_model_data_root())
+
+        # Check whether the data dir exists, and create it if not.
+        return ensure_exists_0775_dir(self.get_model_data_dir())
 
 
 ###############################################################################
