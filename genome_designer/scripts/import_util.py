@@ -106,6 +106,13 @@ def generate_fasta_from_genbank(ref_genome):
 
     return
 
+def import_ref_genome_from_genbank():
+    """
+    Pull a reference genome by accession from NCBI using efetch. 
+    """
+    raise NotImplementedError
+
+
 def sanitize_record_id(record_id_string):
     """We want to grab only the first word-only part of each seqrecord in a
     FASTA/Genbank file, and use that as a consistent and readable id between
@@ -241,7 +248,7 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
     """
 
     with open(variant_set_file) as fh:
-        # Use this wrapper to skip the header lines
+         # Use this wrapper to skip the header lines
         # Double ##s are part of the header, but single #s are column
         # headings and must be stripped and kept.
         def remove_vcf_header(iterable):

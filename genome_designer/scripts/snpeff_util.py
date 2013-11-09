@@ -196,6 +196,8 @@ def build_snpeff(ref_genome, **kwargs):
         # TODO: Do we want to check seqrecords for sane/sanitized names?
         templ_data['chromosomes'].append(seq_record.id)
 
+    templ_data['chrs_string'] = ','.join(templ_data['chromosomes'])
+
     # Render snpEff config template
     render_snpeff_config(templ_data, os.path.join(snpeff_path,'snpeff.config'))
 
