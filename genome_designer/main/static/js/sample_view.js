@@ -68,10 +68,10 @@ gd.SampleView = Backbone.View.extend({
         console.log("Missing " + not_uploaded.length + " sample files.");
         if (not_uploaded.length == 0) {
           $.post(this.$("#uploadDiv").data("finalize"), 
-              {
+              JSON.stringify({
                 'sample_files': this.sample_files,
                 'targets_file_rows': this.targets_file_rows
-              },
+              }),
               $.proxy(function(data) {
                 alert(data);
               }, this)

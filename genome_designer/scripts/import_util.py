@@ -29,7 +29,7 @@ from Bio import SeqIO
 import tempfile
 import traceback
 import shutil
-from main.s3 import project_files_needed, s3_temp_get
+from main.s3 import project_files_needed, s3_temp_get, s3_get
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
@@ -124,8 +124,25 @@ def sanitize_record_id(record_id_string):
     """
     return re.match( r'^\w{1,20}', record_id_string).group()
 
-def import_samples_from_s3(project, label, s3file, import_format):
-    pass
+@project_files_needed
+def import_samples_from_s3(project, targets_file_rows, s3files):
+    tmp_dir = tempfile.mkdtemp()
+    local_s3files_map = {}
+    for s3file in s3files:
+        filepath = os.path.join(tmp_dir, s3file.name)
+        s3_get(s3file.key, filepath)
+        local_s3files_map[s3file.name] = filepath
+
+    for row in targets_file_rows:
+        sample_label = row['Sample_Name']
+        experiment_sample = ExperimentSample.objects.create(
+                project=project, label=sample_label)
+        copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1, local_s3files_map[row['Read_1_Path']])
+        if 'Read_2_Path' in row and row['Read_2_Path']:
+            copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ2,
+                    Dataset.TYPE.FASTQ2, local_s3files_map[row['Read_2_Path']])
+    shutil.rmtree(tmp_dir)
 
 @project_files_needed
 def import_samples_from_targets_file(project, targets_file):

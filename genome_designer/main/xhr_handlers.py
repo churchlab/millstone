@@ -34,7 +34,7 @@ from main.models import S3File
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-from scripts.import_util import import_reference_genome_from_s3
+from scripts.import_util import import_reference_genome_from_s3, import_samples_from_s3
 from variants.common import extract_filter_keys
 from variants.variant_filter import get_variants_that_pass_filter
 from variants.variant_sets import update_variant_in_set_memberships
@@ -368,6 +368,11 @@ def parse_targets_file_s3(request, project_uid):
                 'error': traceback.format_exc()
             }), content_type='application/json')
 
+    if len(list(set(sample_filenames))) != len(sample_filenames):
+        return HttpResponse(json.dumps({
+                'error': "Targets file contains sample files with same names."
+            }), content_type='application/json')
+
     return HttpResponse(json.dumps({
             'targets_file_rows': valid_rows,
             'sample_filenames': sample_filenames
@@ -377,7 +382,16 @@ def parse_targets_file_s3(request, project_uid):
 @login_required
 @require_POST
 def process_sample_files_s3(request, project_uid):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+        uid=project_uid)
+    data = json.loads(request.raw_post_data)
+    s3files = []
+    for f in data['sample_files'].values():
+        s3files.append(S3File.objects.get(pk=int(f['sid'])))
+
+    import_samples_from_s3(project, data['targets_file_rows'], s3files)
+
     return HttpResponse(json.dumps({
-            'targets_file_rows': valid_rows,
-            'sample_filenames': sample_filenames
+            'targets_file_rows': data['targets_file_rows'],
+            'sample_files': data['sample_files']
         }), content_type='application/json')

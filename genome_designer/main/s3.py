@@ -69,6 +69,11 @@ def s3_get_string(key):
     aws_key = aws_bucket.get_key(key)
     return aws_key.get_contents_as_string()
 
+def s3_get(key, location):
+    aws_key = aws_bucket.get_key(key)
+    return aws_key.get_contents_to_filename(location)
+
+
 @contextmanager
 def s3_temp_get(s3file):
     aws_key = aws_bucket.get_key(s3file.key)
