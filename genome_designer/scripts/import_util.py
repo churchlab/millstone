@@ -33,6 +33,22 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
     'vcfu': Dataset.TYPE.VCF_USERINPUT
 }
 
+class DataImportError(Exception):
+    """Exception thrown when there are errors in imported data.
+
+    Attributes:
+        expr -- input expression in which the error occurred
+        msg  -- explanation of the error
+    """
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return 'DataImportError: ' + str(self.msg)
+
+
+
 def import_reference_genome_from_local_file(project, label, file_location,
         import_format):
     """Creates a ReferenceGenome associated with the given Project.
@@ -58,6 +74,10 @@ def import_reference_genome_from_local_file(project, label, file_location,
         num_chromosomes += 1
         num_bases += len(genome_record)
 
+    # Make sure sequence exists.
+    if not num_bases > 0:
+        raise DataImportError("No sequence in file.")
+
     # Create the ReferenceGenome object.
     reference_genome = ReferenceGenome.objects.create(
             project=project,
@@ -74,7 +94,8 @@ def import_reference_genome_from_local_file(project, label, file_location,
 
 def generate_fasta_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a FASTA, generate
-    a FASTA from the genbank. """
+    a FASTA from the genbank.
+    """
 
     # If a FASTA already exists, then just return.
     if ref_genome.dataset_set.filter(
