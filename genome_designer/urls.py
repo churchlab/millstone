@@ -105,6 +105,12 @@ urlpatterns = patterns('',
     url(r'^_/projects/([\w-]+)/refgenomes/import_s3$',
             'genome_designer.main.xhr_handlers.import_reference_genome_s3',
             name="import_reference_genome_s3"),
+    url(r'^_/projects/([\w-]+)/samples/parse_targets_file_s3$',
+            'genome_designer.main.xhr_handlers.parse_targets_file_s3',
+            name="parse_targets_file_s3"),
+    url(r'^_/projects/([\w-]+)/samples/process_sample_files_s3$',
+            'genome_designer.main.xhr_handlers.process_sample_files_s3',
+            name="process_sample_files_s3"),
 
 
 

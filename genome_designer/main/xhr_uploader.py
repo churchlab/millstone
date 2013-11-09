@@ -26,7 +26,8 @@ def success(request):
     sfile, created = S3File.objects.get_or_create(bucket=request.POST['bucket'],
         key=request.POST['key'], name=request.POST['name'])
 
-    return make_response(content=json.dumps({'s3file_id': sfile.id}))
+    return make_response(content=json.dumps({'s3file_id': sfile.id,
+                                             's3file_name': sfile.name}))
 
 @csrf_exempt
 def handle_s3(request):

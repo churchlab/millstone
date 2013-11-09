@@ -58,9 +58,9 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
 
     #Initialize variant key map field
     initialize_filter_key_map(instance)
-# Run snpeff and jbrowse housekeeping after linking seq file dataset to a
-#   reference genome obj
-m2m_changed.connect(post_add_seq_to_ref_genome,
+    # Run snpeff and jbrowse housekeeping after linking seq file dataset to a
+    #   reference genome obj
+    m2m_changed.connect(post_add_seq_to_ref_genome,
         sender=ReferenceGenome.dataset_set.through,
         dispatch_uid='add_seq_to_ref_genome')
 

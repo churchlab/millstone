@@ -65,6 +65,10 @@ def s3_delete(key):
     aws_key = aws_bucket.get_key(key)
     aws_key.delete()
 
+def s3_get_string(key):
+    aws_key = aws_bucket.get_key(key)
+    return aws_key.get_contents_as_string()
+
 @contextmanager
 def s3_temp_get(s3file):
     aws_key = aws_bucket.get_key(s3file.key)

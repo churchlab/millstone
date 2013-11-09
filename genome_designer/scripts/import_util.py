@@ -38,7 +38,6 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
     'vcfu': Dataset.TYPE.VCF_USERINPUT
 }
 
-@project_files_needed
 def import_reference_genome_from_s3(project, label, s3file, import_format):
     with s3_temp_get(s3file) as f:
         return import_reference_genome_from_local_file(project, label, f, import_format)
@@ -125,7 +124,10 @@ def sanitize_record_id(record_id_string):
     """
     return re.match( r'^\w{1,20}', record_id_string).group()
 
+def import_samples_from_s3(project, label, s3file, import_format):
+    pass
 
+@project_files_needed
 def import_samples_from_targets_file(project, targets_file):
     """Uses the uploaded targets file to add a set of samples to the project.
     We need to check each line of the targets file for consistency before we

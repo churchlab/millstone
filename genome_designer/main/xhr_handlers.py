@@ -7,14 +7,17 @@ reasonable separation point is to separate page actions from Ajax actions.
 
 import copy
 import csv
+import os.path
 import json
+import re
+from StringIO import StringIO
 
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
@@ -35,6 +38,7 @@ from scripts.import_util import import_reference_genome_from_s3
 from variants.common import extract_filter_keys
 from variants.variant_filter import get_variants_that_pass_filter
 from variants.variant_sets import update_variant_in_set_memberships
+from s3 import s3_get_string
 
 
 @login_required
@@ -295,3 +299,85 @@ def import_reference_genome_s3(request, project_uid):
                     request.POST['importFileFormat'])
         
     return HttpResponse("", content_type='text/plain')
+
+@login_required
+@require_POST
+def parse_targets_file_s3(request, project_uid):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+        uid=project_uid)
+    s3file_id = request.POST['s3file_id']
+    s3file = S3File.objects.get(pk=s3file_id)
+
+    csv_data = s3_get_string(s3file.key)
+    csv_io = StringIO(csv_data)
+    reader = csv.DictReader(csv_io, delimiter='\t')
+    sample_filenames = []
+
+    try:
+        # Validate the header.
+        targets_file_header = reader.fieldnames
+
+        assert len(targets_file_header) >= 6, "Bad header. Were columns removed?"
+
+        REQUIRED_HEADER_PART = ['Sample_Name', 'Plate_or_Group', 'Well',
+                'Read_1_Path', 'Read_2_Path','Parent_Samples']
+        for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
+                REQUIRED_HEADER_PART):
+            assert col == check, (
+                "Header column '%s' is missing or out of order." % check)
+
+        # Validate all the rows.
+        valid_rows = []
+        for row_num, row in enumerate(reader):
+
+            # Make a copy of the row so we can clean up the data for further
+            # processing.
+            clean_row = copy.copy(row)
+
+            #TODO: Every row seems to have an empty K/V pair {None:''}, not sure
+            #why. Here I remove it by hand:
+            row = dict([(k, v) for k, v in row.iteritems() if k is not None])
+
+            # Make sure the row has all the fields
+            assert len(targets_file_header) == len(row.keys()), (
+                    "Row %d has the wrong number of fields." % row_num)
+
+            for field_name, field_value in row.iteritems():
+                if 'Path' not in field_name:
+                    #make sure each field is alphanumeric only
+                    assert re.match('^[\. \w-]*$', field_value) is not None, (
+                            'Only alphanumeric characters and spaces are allowed, '
+                            'except for the paths.\n(Row %d, "%s")' % (
+                                    row_num, field_name))
+                else:
+                    # NOTE: different from import_util.import_samples_from_targets_file
+                    # If it is a path, take the filename from path and return them as a list.
+                    clean_field_value = os.path.basename(field_value)
+                    sample_filenames.append(clean_field_value)
+                    clean_row[field_name] = clean_field_value
+
+            # Save this row.
+            valid_rows.append(clean_row)
+    except AssertionError as e:
+        return HttpResponse(json.dumps({
+                'error': str(e)
+            }), content_type='application/json')
+    except:
+        import traceback
+        return HttpResponse(json.dumps({
+                'error': traceback.format_exc()
+            }), content_type='application/json')
+
+    return HttpResponse(json.dumps({
+            'targets_file_rows': valid_rows,
+            'sample_filenames': sample_filenames
+        }), content_type='application/json')
+
+
+@login_required
+@require_POST
+def process_sample_files_s3(request, project_uid):
+    return HttpResponse(json.dumps({
+            'targets_file_rows': valid_rows,
+            'sample_filenames': sample_filenames
+        }), content_type='application/json')
