@@ -10,6 +10,12 @@
     <input type="radio" name="melt" value=0 checked>Cast
     <input type="radio" name="melt" value=1 {% if is_melted  %}checked{% endif %}>Melted
 
+    <div id="gd-snp-filter-error" class="alert alert-error alert-block" style="display:none">
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+      <h4>Error</h4>
+      <span id="gd-snp-filter-error-msg"></span>
+    </div>
+
     <div class="row gd-button-container">
       <button id="gd-filter-box-apply-btn" class="btn btn-success span2 offset5">
         Apply Filter

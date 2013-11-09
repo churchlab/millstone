@@ -121,6 +121,11 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
   /** Handles the server response containing Variants data. */
   handleGetVariantListResponse: function(response) {
+    if ('error' in response) {
+      this.handleGetVariantListError(response.error);
+      return;
+    }
+
     // Parse Variant data.
     var variantListData = JSON.parse(response.variant_list_json);
     if (variantListData.obj_list.length) {
@@ -148,6 +153,12 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     // Reset the ui.
     this.setUIDoneLoadingState();
+  },
+
+
+  handleGetVariantListError: function(errorMsg) {
+    $('#gd-snp-filter-error-msg').text(errorMsg);
+    $('#gd-snp-filter-error').show();
   },
 
 
