@@ -33,6 +33,7 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
 from scripts.import_util import import_reference_genome_from_local_file
+from scripts.import_util import import_reference_genome_from_ncbi
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
 from scripts.snp_callers import run_snp_calling_pipeline
@@ -191,13 +192,23 @@ def reference_genome_list_view(request, project_uid):
     if request.method == 'POST':
         # TODO: Add more inforative error handling.
         try:
-            import_reference_genome_from_local_file(
-                    project,
-                    request.POST['refGenomeLabel'],
-                    request.POST['refGenomeFileLocation'],
-                    request.POST['importFileFormat'])
+            if request.POST['postType'] == 'modalFromFile':
+                import_reference_genome_from_local_file(
+                        project,
+                        request.POST['refGenomeLabel'],
+                        request.POST['refGenomeFileLocation'],
+                        request.POST['importFileFormat'])
+            if request.POST['postType'] == 'modalFromNCBI':
+                import_reference_genome_from_ncbi(
+                        project,
+                        request.POST['refGenomeLabel'],
+                        request.POST['refGenomeAccession'],
+                        request.POST['importFileFormat'])
+            else:
+                raise InputError('POST has invalid or missing postType')
         except Exception as e:
             error_string = 'Import error: ' + str(e)
+            raise e
 
     context = {
         'project': project,

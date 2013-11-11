@@ -15,50 +15,34 @@ from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantSet
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
-from scripts.import_util import DataImportError
-from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
+from scripts.import_util import import_reference_genome_from_ncbi
 from settings import PWD as GD_ROOT_PATH
-
+from scripts.util import internet_on
 
 TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
-
-class TestImportReferenceGenome(TestCase):
-    """Tests importing a ReferenceGenome.
+class TestImportRefGenomeFromEntrez(TestCase):
+    """Test grabbing a genome from teh interweb. Requires internet access.
     """
 
     def setUp(self):
         # Test models.
         user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
                 email=TEST_EMAIL)
-        self.project = Project.objects.create(owner=user.get_profile(),
+        self.test_project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
 
-
-    def test_import_reference_genome_from_local_file(self):
-        """Tests importing reference genome.
-        """
-        TEST_GENBANK_FILE = os.path.join(GD_ROOT_PATH,
-                'test_data', 'import_util_test_data', 'mini_mg1655.genbank')
-
-        import_reference_genome_from_local_file(self.project, 'a label',
-                TEST_GENBANK_FILE, 'genbank')
-
-
-    def test_import_reference_genome_from_local_file__fail_if_no_seq(self):
-        """Should fail if no sequence in file.
-        """
-        TEST_GENBANK_FILE__NO_SEQ = os.path.join(GD_ROOT_PATH,
-                'test_data', 'import_util_test_data', 'mg1655_no_seq.genbank')
-
-        with self.assertRaises(DataImportError):
-            import_reference_genome_from_local_file(self.project, 'a label',
-                    TEST_GENBANK_FILE__NO_SEQ, 'genbank')
-
+    def test_import_entrez(self):
+        TEST_RECORD_ID = "6273291"
+        TEST_RECORD_LABEL = "testRecord"
+        if internet_on():
+            import_reference_genome_from_ncbi(
+                    self.test_project, TEST_RECORD_LABEL, TEST_RECORD_ID, 
+                    'genbank')
 
 class TestImportSamplesFromTargetsFile(TestCase):
     """Tests for scripts.import_util.import_samples_from_targets_file().

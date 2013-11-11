@@ -4,6 +4,9 @@ import os
 
 from django.conf import global_settings
 
+# EntrezGene wants an email to use it's API.
+EMAIL = "millstone_user@gmail.com"
+
 # The absolute path of the settings.py file's directory.
 # Useful for settings that require absolute paths like templates.
 PWD = os.path.join(os.path.dirname(os.path.realpath(__file__ )), '../')

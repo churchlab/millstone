@@ -9,6 +9,7 @@ import shutil
 import re
 import vcf
 from collections import namedtuple
+from tempfile import NamedTemporaryFile
 
 from django.db import transaction
 from main.models import clean_filesystem_location
@@ -23,8 +24,10 @@ from main.models import VariantToVariantSet
 from scripts.vcf_parser import extract_raw_data_dict
 from scripts.vcf_parser import get_or_create_variant
 from settings import PWD
+from settings import EMAIL
 
 from Bio import SeqIO
+from Bio import Entrez
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
@@ -33,24 +36,8 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
     'vcfu': Dataset.TYPE.VCF_USERINPUT
 }
 
-class DataImportError(Exception):
-    """Exception thrown when there are errors in imported data.
-
-    Attributes:
-        expr -- input expression in which the error occurred
-        msg  -- explanation of the error
-    """
-
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return 'DataImportError: ' + str(self.msg)
-
-
-
 def import_reference_genome_from_local_file(project, label, file_location,
-        import_format):
+        import_format, move=False):
     """Creates a ReferenceGenome associated with the given Project.
 
     Args:
@@ -58,6 +45,9 @@ def import_reference_genome_from_local_file(project, label, file_location,
         label: The human-readable label for the ReferenceGenome.
         file_location: Location of the genome on the server.
         import_format: Must be 'fasta' or 'genbank'.
+        move: move instead of copy the original file_location - for instance,
+        if we saved it to a temporary file. Moving is of course faster than
+        copying. 
     """
     # Validate the input.
     assert import_format in ['fasta', 'genbank']
@@ -73,10 +63,6 @@ def import_reference_genome_from_local_file(project, label, file_location,
     for genome_record in SeqIO.parse(file_location, import_format):
         num_chromosomes += 1
         num_bases += len(genome_record)
-
-    # Make sure sequence exists.
-    if not num_bases > 0:
-        raise DataImportError("No sequence in file.")
 
     # Create the ReferenceGenome object.
     reference_genome = ReferenceGenome.objects.create(
@@ -94,8 +80,7 @@ def import_reference_genome_from_local_file(project, label, file_location,
 
 def generate_fasta_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a FASTA, generate
-    a FASTA from the genbank.
-    """
+    a FASTA from the genbank. """
 
     # If a FASTA already exists, then just return.
     if ref_genome.dataset_set.filter(
@@ -127,12 +112,37 @@ def generate_fasta_from_genbank(ref_genome):
 
     return
 
-def import_ref_genome_from_genbank():
+def import_reference_genome_from_ncbi(project, label, record_id, import_format):
     """
-    Pull a reference genome by accession from NCBI using efetch. 
+    Pull a reference genome by accession from NCBI using efetch.
     """
-    raise NotImplementedError
+    # Validate the input.
+    assert import_format in ['fasta', 'genbank']
 
+    # Format keys for Efetch.
+    # More info here: 
+    # http://www.ncbi.nlm.nih.gov/
+    #       books/NBK25499/table/chapter4.chapter4_table1/?report=objectonly
+    CONVERT_FORMAT = {'fasta':'fa', 'genbank':'gbwithparts'}
+
+    Entrez.email = EMAIL
+    handle = Entrez.efetch(
+            db="nuccore", 
+            id=record_id, 
+            rettype=CONVERT_FORMAT[import_format], 
+            retmode="text")
+
+    temp = NamedTemporaryFile(delete=False)
+    temp.write(handle.read())
+    handle.close()
+    temp.close()
+    reference_genome = import_reference_genome_from_local_file(
+        project, label, temp.name, import_format, move=True)
+
+    if os.path.isfile(temp.name):
+        os.remove(temp.name)
+
+    return reference_genome
 
 def sanitize_record_id(record_id_string):
     """We want to grab only the first word-only part of each seqrecord in a
@@ -256,7 +266,6 @@ def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file):
     _read_variant_set_file_as_csv(variant_set_file, ref_genome, dataset,
             variant_set)
 
-
 def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
         dataset, variant_set):
     """If reading the variant set file as a vcf fails (because we arent using
@@ -315,25 +324,32 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
 
 
 def copy_and_add_dataset_source(entity, dataset_label, dataset_type,
-        original_source_location):
+        original_source_location, move=False):
     """Copies the dataset to the entity location and then adds as
-    Dataset.
+    Dataset. If the original_source_location is a file object, then
+    it just read()s from the handle and writes to destination. 
 
     The model entity must satisfy the following interface:
         * property dataset_set
         * method get_model_data_dir()
 
     Returns the Dataset object.
+
+    If move is true, move instead of copying it. Good for files downloaded
+    to a temp directory, since copying is slower.
     """
-    dest = copy_dataset_to_entity_data_dir(entity, original_source_location)
+    dest = copy_dataset_to_entity_data_dir(entity, original_source_location,
+        move)
     dataset = add_dataset_to_entity(entity, dataset_label, dataset_type,
         dest)
 
     return dataset
 
 
-def copy_dataset_to_entity_data_dir(entity, original_source_location):
-    """Copies the data to the entity model data dir.
+def copy_dataset_to_entity_data_dir(entity, original_source_location,
+        move=False):
+    """If a file path, copy the data to the entity model data dir.
+       If a handle, then just write it to the data dir.
 
     Returns:
         The destination to which the file was copied.
@@ -341,8 +357,17 @@ def copy_dataset_to_entity_data_dir(entity, original_source_location):
     assert hasattr(entity, 'get_model_data_dir')
     source_name = os.path.split(original_source_location)[1]
     dest = os.path.join(entity.get_model_data_dir(), source_name)
+
+
     if not original_source_location == dest:
-        shutil.copy(original_source_location, dest)
+        try: #first try path
+            if move:
+                shutil.move(original_source_location, dest)
+            else:
+                shutil.copy(original_source_location, dest)
+        except TypeError: #then try a handle
+            open(dest,'w').write(
+                original_source_location.read())
     return dest
 
 

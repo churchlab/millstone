@@ -1,7 +1,7 @@
-LOCUS       NC_000913               5652 bp    DNA     linear   UNA 06-SEP-2013
+LOCUS       NC_000913.1             5652 bp    DNA     linear   UNA 06-SEP-2013
 DEFINITION  Escherichia coli str. K-12 substr. MG1655, complete genome.
-ACCESSION   NC_000913
-VERSION     NC_000913
+ACCESSION   NC_000913.1
+VERSION     NC_000913.1
 KEYWORDS    .
 SOURCE      Escherichia coli str. K-12 substr. MG1655
   ORGANISM  Escherichia coli str. K-12 substr. MG1655
