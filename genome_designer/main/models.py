@@ -512,8 +512,13 @@ class ReferenceGenome(Model):
         refgenome id 456:
             '/jbrowse/?data=gd_data/abc/projects/xyz/ref_genomes/456/jbrowse/'
         """
+        # Allow forcing through nginx (dev only).
+        maybe_force_nginx = ''
+        if settings.DEBUG_FORCE_JBROWSE_NGINX:
+            maybe_force_nginx = 'http://localhost'
+
         return os.path.join(
-                '/jbrowse/index.html?data=gd_data/',
+                maybe_force_nginx + '/jbrowse/index.html?data=gd_data/',
                 'projects',
                 str(self.project.uid),
                 'ref_genomes',
