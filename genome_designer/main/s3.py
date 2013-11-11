@@ -19,9 +19,11 @@ aws_bucket = S3.get_bucket(settings.AWS_EXPECTED_BUCKET)
 
 
 def calc_file_md5(filepath):
-    with open(filepath) as f:
-        h = hashlib.md5(f.read()).hexdigest()
-    return h
+    md5 = hashlib.md5()
+    with open(filepath,'rb') as f: 
+        for chunk in iter(lambda: f.read(128*md5.block_size), b''): 
+            md5.update(chunk)
+    return md5.hexdigest()
 
 def s3_get_directory(s3_dir, local_dir):
     rs = aws_bucket.list(s3_dir)
