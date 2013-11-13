@@ -104,6 +104,12 @@ def generate_fasta_from_genbank(ref_genome):
     # Get the individual records, each corresponding to a chromosome.
     genome_records = list(SeqIO.parse(genbank_path, 'genbank'))
 
+    # SnpEFF takes the name attr, but the BioPython uses the id attr to make its
+    # fasta file, so overwrite the id with the name when converting to fasta.
+    
+    for genome_record in genome_records:
+        genome_record.id = genome_record.name
+
     SeqIO.write(genome_records, fasta_filename, 'fasta')
 
     dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE['fasta']
@@ -120,10 +126,12 @@ def import_reference_genome_from_ncbi(project, label, record_id, import_format):
     assert import_format in ['fasta', 'genbank']
 
     # Format keys for Efetch.
-    # More info here: 
-    # http://www.ncbi.nlm.nih.gov/
+    # More info at:  http://www.ncbi.nlm.nih.gov/
     #       books/NBK25499/table/chapter4.chapter4_table1/?report=objectonly
     CONVERT_FORMAT = {'fasta':'fa', 'genbank':'gbwithparts'}
+    # What suffix to use for each input format
+    # TODO: Should this be a property of the Dataset TYPE?
+    FORMAT_SUFFIX = {'fasta':'.fa', 'genbank':'.gb'}
 
     Entrez.email = EMAIL
     handle = Entrez.efetch(
@@ -132,7 +140,8 @@ def import_reference_genome_from_ncbi(project, label, record_id, import_format):
             rettype=CONVERT_FORMAT[import_format], 
             retmode="text")
 
-    temp = NamedTemporaryFile(delete=False)
+    temp = NamedTemporaryFile(delete=False, prefix=label+'_', 
+            suffix=FORMAT_SUFFIX[import_format])
     temp.write(handle.read())
     handle.close()
     temp.close()

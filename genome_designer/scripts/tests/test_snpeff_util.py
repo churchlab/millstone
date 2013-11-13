@@ -120,13 +120,13 @@ class TestSnpeff(TestCase):
 
         # Make sure the vcf is valid by reading it using pyvcf.
         with open(vcf_dataset.get_absolute_location()) as vcf_fh:
-            #try:
             reader = vcf.Reader(vcf_fh)
             record = reader.next()
-            #except:
-                #self.fail("Not valid vcf")
             assert 'EFF' in record.INFO, (
                     'No EFF INFO field found in snpeff VCF file.')
+            assert not 'ERROR' in record.INFO['EFF']
+            for record in reader:
+                assert not 'ERROR' in record.INFO['EFF']
 
     def test_populate_record_eff(self):
         """ Test the regex on a few snpeff field examples.
