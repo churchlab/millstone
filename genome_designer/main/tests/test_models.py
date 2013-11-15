@@ -94,9 +94,16 @@ class TestModels(TestCase):
 
         process = subprocess.Popen(
                 ('head '+dataset.wrap_if_compressed()+' | wc -l'), 
-                shell=True, executable= BASH_PATH, stdout=subprocess.PIPE)
+                shell=True, executable= BASH_PATH, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
 
-        wc_output, _ = process.communicate()
+        wc_output, errmsg = process.communicate()
+        rc = process.returncode
+
+        assert rc == 0, (
+                "Compression process returned non-zero exit status: %s" % (
+                        errmsg))
+
         assert int(wc_output) == 10
 
 
