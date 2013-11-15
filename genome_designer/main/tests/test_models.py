@@ -104,7 +104,9 @@ class TestModels(TestCase):
                 "Compression process returned non-zero exit status: %s" % (
                         errmsg))
 
-        assert int(wc_output) == 10
+        assert int(wc_output) == 10, (
+                "Compression failed: %s" % (errmsg))
+
 
 
             

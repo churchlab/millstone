@@ -280,7 +280,7 @@ class Dataset(Model):
     # Dictionary of compression suffixes and programs to use to decompress
     # to a pipe
     COMPRESSION_TYPES = {
-        '.gz': ('gzcat'),
+        '.gz': ('gzip', '-dc'),
         '.bz2': ('bzcat'),
         '.zip': ('unzip','-p')
     }
@@ -309,7 +309,7 @@ class Dataset(Model):
         absolute_location = self.get_absolute_location()
         if self.is_compressed():
             extension = os.path.splitext(self.filesystem_location)[1]
-            program = self.COMPRESSION_TYPES[extension]
+            program = ' '.join(self.COMPRESSION_TYPES[extension])
             return '<({:s} {:s})'.format(
                     program, absolute_location)
         else:
