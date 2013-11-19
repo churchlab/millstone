@@ -174,7 +174,8 @@ def import_samples_from_targets_file(project, targets_file):
             in .tsv format.
     """
     # The targets file shouldn't be over 1 Mb ( that would be ~3,000 genomes)
-    assert targets_file.size < 1000000, "Targets file is too large."
+    assert targets_file.size < 1000000, (
+            "Targets file is too large: %d" % targets_file.size)
 
     # Detect the format.
     reader = csv.DictReader(targets_file, delimiter='\t')
@@ -182,10 +183,12 @@ def import_samples_from_targets_file(project, targets_file):
     # Validate the header.
     targets_file_header = reader.fieldnames
 
-    assert len(targets_file_header) >= 6, "Bad header. Were columns removed?"
-
     REQUIRED_HEADER_PART = ['Sample_Name', 'Plate_or_Group', 'Well',
-            'Read_1_Path', 'Read_2_Path','Parent_Samples']
+            'Read_1_Path', 'Read_2_Path']
+
+    assert len(targets_file_header) >= len(REQUIRED_HEADER_PART), (
+            "Bad header. Were columns removed?")
+
     for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
             REQUIRED_HEADER_PART):
         assert col == check, (

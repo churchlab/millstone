@@ -25,6 +25,9 @@ TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
+TEST_DATA_ROOT = os.path.join(GD_ROOT_PATH, 'test_data')
+IMPORT_UTIL_TEST_DATA = os.path.join(TEST_DATA_ROOT, 'import_util_test_data')
+
 class TestImportRefGenomeFromEntrez(TestCase):
     """Test grabbing a genome from teh interweb. Requires internet access.
     """
@@ -84,6 +87,23 @@ class TestImportSamplesFromTargetsFile(TestCase):
                 num_datasets_after - num_datasets_before)
 
         # TODO: Check the filepaths as well.
+
+
+    def test_import_samples__no_extra_cols(self):
+        """Tests importing samples from a template file that doesn't have
+        extra column data filled in.
+        """
+        TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'sample_list_targets_template_no_extra_col.tsv')
+
+        # Grab any project from the database.
+        project = Project.objects.all()[0]
+
+        # Perform the import.
+        with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
+            import_samples_from_targets_file(project,
+                    UploadedFile(targets_file_fh))
+
 
 class TestImportVariantSetFromVCFFile(TestCase):
     """Tests for scripts.import_util.import_samples_from_targets_file().
