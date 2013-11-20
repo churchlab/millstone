@@ -73,7 +73,11 @@ def create_alignment_groups_and_start_alignments(
             args = [alignment_group, sample, None, test_models_only]
             alignment_tasks.append(fn_runner(align_with_bwa_mem,
                 alignment_group.reference_genome.project, args, concurrent))
+
             #alignment_tasks.append(fn_runner(align_with_bwa, args, concurrent))
+            # TODO(DBG): Uncomment once bwa_mem works correctly.
+            # See: https://github.com/churchlab/genome-designer-v2/issues/93
+            # alignment_tasks.append(fn_runner(align_with_bwa_mem, args, concurrent))
 
     # Return a dictionary of all alignment groups indexed by ref_genome uid.
     return alignment_groups

@@ -9,6 +9,7 @@ import shutil
 import re
 import vcf
 from collections import namedtuple
+from tempfile import NamedTemporaryFile
 
 from django.db import transaction
 from main.models import clean_filesystem_location
@@ -24,12 +25,14 @@ from main.models import get_dataset_with_type
 from scripts.vcf_parser import extract_raw_data_dict
 from scripts.vcf_parser import get_or_create_variant
 from settings import PWD
+from settings import EMAIL
 
 from Bio import SeqIO
 import tempfile
 import traceback
 import shutil
 from main.s3 import project_files_needed, s3_temp_get, s3_get
+from Bio import Entrez
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
@@ -59,7 +62,7 @@ class DataImportError(Exception):
 
 @project_files_needed
 def import_reference_genome_from_local_file(project, label, file_location,
-        import_format):
+        import_format, move=False):
     """Creates a ReferenceGenome associated with the given Project.
 
     Args:
@@ -67,6 +70,9 @@ def import_reference_genome_from_local_file(project, label, file_location,
         label: The human-readable label for the ReferenceGenome.
         file_location: Location of the genome on the server.
         import_format: Must be 'fasta' or 'genbank'.
+        move: move instead of copy the original file_location - for instance,
+        if we saved it to a temporary file. Moving is of course faster than
+        copying. 
     """
     # Validate the input.
     assert import_format in ['fasta', 'genbank']
@@ -82,10 +88,6 @@ def import_reference_genome_from_local_file(project, label, file_location,
     for genome_record in SeqIO.parse(file_location, import_format):
         num_chromosomes += 1
         num_bases += len(genome_record)
-
-    # Make sure sequence exists.
-    if not num_bases > 0:
-        raise DataImportError("No sequence in file.")
 
     # Create the ReferenceGenome object.
     reference_genome = ReferenceGenome.objects.create(
@@ -104,8 +106,7 @@ def import_reference_genome_from_local_file(project, label, file_location,
 
 def generate_fasta_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a FASTA, generate
-    a FASTA from the genbank.
-    """
+    a FASTA from the genbank. """
 
     # If a FASTA already exists, then just return.
     if ref_genome.dataset_set.filter(
@@ -129,6 +130,12 @@ def generate_fasta_from_genbank(ref_genome):
     # Get the individual records, each corresponding to a chromosome.
     genome_records = list(SeqIO.parse(genbank_path, 'genbank'))
 
+    # SnpEFF takes the name attr, but the BioPython uses the id attr to make its
+    # fasta file, so overwrite the id with the name when converting to fasta.
+    
+    for genome_record in genome_records:
+        genome_record.id = genome_record.name
+
     SeqIO.write(genome_records, fasta_filename, 'fasta')
 
     dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE['fasta']
@@ -137,12 +144,40 @@ def generate_fasta_from_genbank(ref_genome):
 
     return
 
-def import_ref_genome_from_genbank():
+def import_reference_genome_from_ncbi(project, label, record_id, import_format):
     """
-    Pull a reference genome by accession from NCBI using efetch. 
+    Pull a reference genome by accession from NCBI using efetch.
     """
-    raise NotImplementedError
+    # Validate the input.
+    assert import_format in ['fasta', 'genbank']
 
+    # Format keys for Efetch.
+    # More info at:  http://www.ncbi.nlm.nih.gov/
+    #       books/NBK25499/table/chapter4.chapter4_table1/?report=objectonly
+    CONVERT_FORMAT = {'fasta':'fa', 'genbank':'gbwithparts'}
+    # What suffix to use for each input format
+    # TODO: Should this be a property of the Dataset TYPE?
+    FORMAT_SUFFIX = {'fasta':'.fa', 'genbank':'.gb'}
+
+    Entrez.email = EMAIL
+    handle = Entrez.efetch(
+            db="nuccore", 
+            id=record_id, 
+            rettype=CONVERT_FORMAT[import_format], 
+            retmode="text")
+
+    temp = NamedTemporaryFile(delete=False, prefix=label+'_', 
+            suffix=FORMAT_SUFFIX[import_format])
+    temp.write(handle.read())
+    handle.close()
+    temp.close()
+    reference_genome = import_reference_genome_from_local_file(
+        project, label, temp.name, import_format, move=True)
+
+    if os.path.isfile(temp.name):
+        os.remove(temp.name)
+
+    return reference_genome
 
 def sanitize_record_id(record_id_string):
     """We want to grab only the first word-only part of each seqrecord in a
@@ -185,7 +220,8 @@ def import_samples_from_targets_file(project, targets_file):
             in .tsv format.
     """
     # The targets file shouldn't be over 1 Mb ( that would be ~3,000 genomes)
-    assert targets_file.size < 1000000, "Targets file is too large."
+    assert targets_file.size < 1000000, (
+            "Targets file is too large: %d" % targets_file.size)
 
     # Detect the format.
     reader = csv.DictReader(targets_file, delimiter='\t')
@@ -193,10 +229,12 @@ def import_samples_from_targets_file(project, targets_file):
     # Validate the header.
     targets_file_header = reader.fieldnames
 
-    assert len(targets_file_header) >= 6, "Bad header. Were columns removed?"
-
     REQUIRED_HEADER_PART = ['Sample_Name', 'Plate_or_Group', 'Well',
-            'Read_1_Path', 'Read_2_Path','Parent_Samples']
+            'Read_1_Path', 'Read_2_Path']
+
+    assert len(targets_file_header) >= len(REQUIRED_HEADER_PART), (
+            "Bad header. Were columns removed?")
+
     for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
             REQUIRED_HEADER_PART):
         assert col == check, (
@@ -286,7 +324,6 @@ def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file):
     _read_variant_set_file_as_csv(variant_set_file, ref_genome, dataset,
             variant_set)
 
-
 def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
         dataset, variant_set):
     """If reading the variant set file as a vcf fails (because we arent using
@@ -345,25 +382,32 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
 
 
 def copy_and_add_dataset_source(entity, dataset_label, dataset_type,
-        original_source_location):
+        original_source_location, move=False):
     """Copies the dataset to the entity location and then adds as
-    Dataset.
+    Dataset. If the original_source_location is a file object, then
+    it just read()s from the handle and writes to destination. 
 
     The model entity must satisfy the following interface:
         * property dataset_set
         * method get_model_data_dir()
 
     Returns the Dataset object.
+
+    If move is true, move instead of copying it. Good for files downloaded
+    to a temp directory, since copying is slower.
     """
-    dest = copy_dataset_to_entity_data_dir(entity, original_source_location)
+    dest = copy_dataset_to_entity_data_dir(entity, original_source_location,
+        move)
     dataset = add_dataset_to_entity(entity, dataset_label, dataset_type,
         dest)
 
     return dataset
 
 
-def copy_dataset_to_entity_data_dir(entity, original_source_location):
-    """Copies the data to the entity model data dir.
+def copy_dataset_to_entity_data_dir(entity, original_source_location,
+        move=False):
+    """If a file path, copy the data to the entity model data dir.
+       If a handle, then just write it to the data dir.
 
     Returns:
         The destination to which the file was copied.
@@ -371,8 +415,17 @@ def copy_dataset_to_entity_data_dir(entity, original_source_location):
     assert hasattr(entity, 'get_model_data_dir')
     source_name = os.path.split(original_source_location)[1]
     dest = os.path.join(entity.get_model_data_dir(), source_name)
+
+
     if not original_source_location == dest:
-        shutil.copy(original_source_location, dest)
+        try: #first try path
+            if move:
+                shutil.move(original_source_location, dest)
+            else:
+                shutil.copy(original_source_location, dest)
+        except TypeError: #then try a handle
+            open(dest,'w').write(
+                original_source_location.read())
     return dest
 
 

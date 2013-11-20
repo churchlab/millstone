@@ -280,7 +280,7 @@ class Dataset(Model):
     # Dictionary of compression suffixes and programs to use to decompress
     # to a pipe
     COMPRESSION_TYPES = {
-        '.gz': ('gzcat'),
+        '.gz': ('gzip', '-dc'),
         '.bz2': ('bzcat'),
         '.zip': ('unzip','-p')
     }
@@ -309,7 +309,7 @@ class Dataset(Model):
         absolute_location = self.get_absolute_location()
         if self.is_compressed():
             extension = os.path.splitext(self.filesystem_location)[1]
-            program = self.COMPRESSION_TYPES[extension]
+            program = ' '.join(self.COMPRESSION_TYPES[extension])
             return '<({:s} {:s})'.format(
                     program, absolute_location)
         else:
@@ -523,13 +523,18 @@ class ReferenceGenome(Model):
                     str(self.uid),
                     'jbrowse')
         else:
+            # Allow forcing through nginx (dev only).
+            maybe_force_nginx = ''
+            if settings.DEBUG_FORCE_JBROWSE_NGINX:
+                maybe_force_nginx = 'http://localhost'
+
             return os.path.join(
-                'gd_data/',
-                'projects',
-                str(self.project.uid),
-                'ref_genomes',
-                str(self.uid),
-                'jbrowse')
+                    maybe_force_nginx + '/jbrowse/index.html?data=gd_data/',
+                    'projects',
+                    str(self.project.uid),
+                    'ref_genomes',
+                    str(self.uid),
+                    'jbrowse')
 
     def get_client_jbrowse_link(self):
         """Returns the link to jbrowse for this ReferenceGenome.

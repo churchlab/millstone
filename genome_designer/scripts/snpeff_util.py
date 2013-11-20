@@ -23,6 +23,7 @@ from main.models import ReferenceGenome
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
+from scripts.util import ensure_line_lengths
 from scripts.import_util import sanitize_record_id
 import settings
 
@@ -171,30 +172,47 @@ def build_snpeff(ref_genome, **kwargs):
             type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).get_absolute_location()
     assert ref_genome_path is not None, "No reference source genbank."
 
-    snpeff_genbank_symlink = os.path.join(snpeff_uid_path,'genes.gb')
+    snpeff_genbank_filename = os.path.join(snpeff_uid_path,'genes.gb')
 
-    # Unlink if there was a link and then create a new link.
-    try:
-        os.unlink(snpeff_genbank_symlink)
-    except OSError:
-        # There was no symlink. That's fine.
-        pass
-    # Re-create the link.
-    os.symlink(ref_genome_path, snpeff_genbank_symlink)
+    # TODO: The symlink below doesn't work - we need to now directly modify
+    # the Genbank for it to work with SnpEFF, so we'll keep a modified copy in
+    # the Ref Genome's SnpEFF directory. We have to modify it to ensure that
+    # the name and ID are the same and to ensure minimum line lengths.
+
+#    # Unlink if there was a link and then create a new link.
+#    try:
+#        os.unlink(snpeff_genbank_filename)
+#    except OSError:
+#        # There was no symlink. That's fine.
+#        pass
+#    # Re-create the link.
+#    os.symlink(ref_genome_path, snpeff_genbank_filename)
 
     # Fill in uid and chromosome data
     templ_data['uid'] = ref_genome.uid
     templ_data['chromosomes'] = []
     templ_data['label'] = ref_genome.label
 
+    new_gb = []
 
     # Each record is a chromosome in the ref genome
     for seq_record in SeqIO.parse(
             open(ref_genome_path, "r"), "genbank"):
 
+        # Set the ACCESSION/LOCUS/VERSION to all be the same for this
+        # new modified genbank
+        seq_record.id = seq_record.name
+        new_gb.append(seq_record)
+
         # Add this record as a chromosome to this ref genome
         # TODO: Do we want to check seqrecords for sane/sanitized names?
-        templ_data['chromosomes'].append(seq_record.id)
+        templ_data['chromosomes'].append(seq_record.name)
+
+    # Save a modified copy of the genbank for snpEff
+    # with open(snpeff_genbank_symlink, 'w') as snpeff_gbk_file:
+    SeqIO.write(new_gb, snpeff_genbank_filename, "genbank")
+    # Stop-gap fix to ensure line lengths in GENbANK to appease SNPEFF
+    ensure_line_lengths(snpeff_genbank_filename)
 
     templ_data['chrs_string'] = ','.join(templ_data['chromosomes'])
 
@@ -240,6 +258,8 @@ def build_snpeff_db(snpeff_config_path, ref_genome_uid):
         '-q',
         '-noLog'
     ]
+
+    print >> sys.stderr, ' '.join(snpeff_args)
 
     # TODO: this redirect breaks nose tests, so
     # # If we need to debug the build step, don't throw away the output here

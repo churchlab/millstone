@@ -4,6 +4,9 @@ import os
 
 from django.conf import global_settings
 
+# EntrezGene wants an email to use it's API.
+EMAIL = "millstone_user@gmail.com"
+
 # The absolute path of the settings.py file's directory.
 # Useful for settings that require absolute paths like templates.
 PWD = os.path.join(os.path.dirname(os.path.realpath(__file__ )), '../')
@@ -249,6 +252,11 @@ JBROWSE_DATA_SYMLINK_PATH = os.path.join(JBROWSE_ROOT,
 # files is configuring the trackList.json file with a track with the following
 # key-value: "urlTemplate" : "/jbrowse/gd_data/users/8fc1f831/projects/58a62c7d/genomes/8dc829ec/align.bam"
 JBROWSE_DATA_URL_ROOT= '/jbrowse/' + JBROWSE_DATA_SYMLINK_NAME + '/'
+
+# Set to True if you want to force JBrowse links to be from localhost and thus
+# go through nginx. Default of False causes JBrowse to serve through Django in
+# dev.
+DEBUG_FORCE_JBROWSE_NGINX = False
 
 ###############################################################################
 # Snp Calling
