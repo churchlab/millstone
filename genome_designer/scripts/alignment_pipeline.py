@@ -28,6 +28,10 @@ from settings import PWD
 from settings import TOOLS_DIR
 from settings import BASH_PATH
 
+
+SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
+
+
 def create_alignment_groups_and_start_alignments(
         alignment_group_label, ref_genome_list, sample_list,
         test_models_only=False, concurrent=DEBUG_CONCURRENT):
@@ -191,7 +195,7 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
 
         # To skip saving the SAM file to disk directly, pipe output directly to 
         # make a BAM file.
-        align_input_args += ' | samtools view -bS -'
+        align_input_args += ' | ' + SAMTOOLS_BINARY + ' view -bS -'
 
         # 2. Generate SAM output.
         output_bam = os.path.join(sample_alignment.get_model_data_dir(),
@@ -459,7 +463,7 @@ def ensure_bwa_index(ref_genome_fasta, error_output=None):
     # Also build the fasta index.
     if not os.path.exists(ref_genome_fasta + '.fai'):
         subprocess.check_call([
-            '%s/samtools/samtools' % TOOLS_DIR,
+            SAMTOOLS_BINARY,
             'faidx',
             ref_genome_fasta
         ], stderr=error_output)
@@ -529,7 +533,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
         if effective_mask['make_bam']:
             fh = open(bam_file_location, 'w')
             subprocess.check_call([
-                '%s/samtools/samtools' % TOOLS_DIR,
+                SAMTOOLS_BINARY,
                 'view',
                 '-bS',
                 sam_file_location
@@ -547,7 +551,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
     if effective_mask['sort']:
         # 2a. Perform the actual sorting.
         subprocess.check_call([
-            '%s/samtools/samtools' % TOOLS_DIR,
+            SAMTOOLS_BINARY,
             'sort',
             bam_file_location,
             sorted_output_name
@@ -555,7 +559,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
 
         # 2b. Index the sorted result.
         subprocess.check_call([
-            '%s/samtools/samtools' % TOOLS_DIR,
+            SAMTOOLS_BINARY,
             'index',
             sorted_bam_file_location,
         ], stderr=error_output)
@@ -577,7 +581,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
     if effective_mask['indel_realigner']:
         # Make sure the previous result is indexed.
         subprocess.check_call([
-                '%s/samtools/samtools' % TOOLS_DIR,
+                SAMTOOLS_BINARY,
                 'index',
                 grouped_bam_file_location,
         ], stderr=error_output)
@@ -597,7 +601,7 @@ def process_sam_bam_file(experiment_sample, reference_genome, sam_bam_file_locat
     # 5. Create index.
     if effective_mask['index']:
         subprocess.check_call([
-            '%s/samtools/samtools' % TOOLS_DIR,
+            SAMTOOLS_BINARY,
             'index',
             realigned_bam_file_location,
         ], stderr=error_output)
