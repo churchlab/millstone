@@ -36,6 +36,18 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
     'vcfu': Dataset.TYPE.VCF_USERINPUT
 }
 
+
+class DataImportError(Exception):
+    """Exception thrown when there are errors in imported data.
+    """
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return 'DataImportError: ' + str(self.msg)
+
+
 def import_reference_genome_from_local_file(project, label, file_location,
         import_format, move=False):
     """Creates a ReferenceGenome associated with the given Project.
@@ -63,6 +75,11 @@ def import_reference_genome_from_local_file(project, label, file_location,
     for genome_record in SeqIO.parse(file_location, import_format):
         num_chromosomes += 1
         num_bases += len(genome_record)
+
+
+    # Make sure sequence exists.
+    if not num_bases > 0:
+        raise DataImportError("No sequence in file.")
 
     # Create the ReferenceGenome object.
     reference_genome = ReferenceGenome.objects.create(
