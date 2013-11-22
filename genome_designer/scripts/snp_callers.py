@@ -39,7 +39,7 @@ def run_snp_calling_pipeline(alignment_group, concurrent=DEBUG_CONCURRENT):
                 celery_status[CELERY_ERROR_KEY])
 
     args = [alignment_group]
-    fn_runner(run_snp_calling_pipeline_internal, args, concurrent)
+    fn_runner(run_snp_calling_pipeline_internal, alignment_group.reference_genome.project, args, concurrent)
 
 
 def run_snp_calling_pipeline_internal(alignment_group):

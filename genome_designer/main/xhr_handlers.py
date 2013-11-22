@@ -7,14 +7,18 @@ reasonable separation point is to separate page actions from Ajax actions.
 
 import copy
 import csv
+import os.path
 import json
+import re
+from StringIO import StringIO
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
@@ -27,12 +31,17 @@ from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
+from main.models import S3File
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import extract_filter_keys
 from variants.variant_filter import get_variants_that_pass_filter
 from variants.variant_sets import update_variant_in_set_memberships
+
+if settings.S3_ENABLED:
+    from scripts.import_util import parse_targets_file, import_reference_genome_from_s3, import_samples_from_s3
+    from s3 import s3_get_string
 
 
 @login_required
@@ -292,3 +301,73 @@ def get_gene_list(request):
 
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
+
+if settings.S3_ENABLED:
+    @login_required
+    def import_reference_genome_s3(request, project_uid):
+        if request.method == 'POST':
+            project = get_object_or_404(Project, owner=request.user.get_profile(),
+                uid=project_uid)
+            s3file_id = request.POST['s3file_id']
+            s3file = S3File.objects.get(pk=s3file_id)
+            import_reference_genome_from_s3(
+                        project,
+                        request.POST['refGenomeLabel'],
+                        s3file,
+                        request.POST['importFileFormat'])
+            
+        return HttpResponse("", content_type='text/plain')
+
+    @login_required
+    @require_POST
+    def parse_targets_file_s3(request, project_uid):
+        project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+        s3file_id = request.POST['s3file_id']
+        s3file = S3File.objects.get(pk=s3file_id)
+
+        csv_data = s3_get_string(s3file.key)
+        csv_io = StringIO(csv_data)
+        sample_filenames = []
+
+        try:
+            valid_rows = parse_targets_file(csv_io)
+            for field_name, field_value in valid_rows.iteritems():
+                if 'Path' in field_name:
+                    sample_filenames.append(field_value)
+        except AssertionError as e:
+            return HttpResponse(json.dumps({
+                    'error': str(e)
+                }), content_type='application/json')
+        except:
+            import traceback
+            return HttpResponse(json.dumps({
+                    'error': traceback.format_exc()
+                }), content_type='application/json')
+
+        if len(list(set(sample_filenames))) != len(sample_filenames):
+            return HttpResponse(json.dumps({
+                    'error': "Targets file contains sample files with same names."
+                }), content_type='application/json')
+
+        return HttpResponse(json.dumps({
+                'targets_file_rows': valid_rows,
+                'sample_filenames': sample_filenames
+            }), content_type='application/json')
+
+    @login_required
+    @require_POST
+    def process_sample_files_s3(request, project_uid):
+        project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+        data = json.loads(request.raw_post_data)
+        s3files = []
+        for f in data['sample_files'].values():
+            s3files.append(S3File.objects.get(pk=int(f['sid'])))
+
+        import_samples_from_s3(project, data['targets_file_rows'], s3files)
+
+        return HttpResponse(json.dumps({
+                'targets_file_rows': data['targets_file_rows'],
+                'sample_files': data['sample_files']
+            }), content_type='application/json')

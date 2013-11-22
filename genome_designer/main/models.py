@@ -38,6 +38,7 @@ from uuid import uuid4
 from contextlib import contextmanager
 import tempfile
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db import models
@@ -45,9 +46,6 @@ from django.db.models import Model
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
 from jsonfield import JSONField
-
-import settings
-
 
 
 ###############################################################################
@@ -369,8 +367,16 @@ class Project(Model):
     # The human-readable title of the project.
     title = models.CharField(max_length=256)
 
+    s3_backed = models.BooleanField(default=False)
+
     def __unicode__(self):
         return self.title + '-' + str(self.owner)
+
+    def is_s3_backed(self):
+        return self.s3_backed
+
+    def get_s3_model_data_dir(self):
+        return os.path.join("projects", str(self.uid))
 
     def get_model_data_root(self):
         """Get the absolute location where all project data is stored.
@@ -505,6 +511,29 @@ class ReferenceGenome(Model):
         """Ensures that the snpeff data dir exists."""
         return ensure_exists_0775_dir(self.get_snpeff_directory_path())
 
+    def get_client_jbrowse_data_path(self):
+        if self.project.is_s3_backed():
+            return os.path.join(
+                    'http://%s.s3.amazonaws.com/' % settings.S3_BUCKET,
+                    'projects',
+                    str(self.project.uid),
+                    'ref_genomes',
+                    str(self.uid),
+                    'jbrowse')
+        else:
+            # Allow forcing through nginx (dev only).
+            maybe_force_nginx = ''
+            if settings.DEBUG_FORCE_JBROWSE_NGINX:
+                maybe_force_nginx = 'http://localhost'
+
+            return os.path.join(
+                    maybe_force_nginx + '/jbrowse/index.html?data=gd_data/',
+                    'projects',
+                    str(self.project.uid),
+                    'ref_genomes',
+                    str(self.uid),
+                    'jbrowse')
+
     def get_client_jbrowse_link(self):
         """Returns the link to jbrowse for this ReferenceGenome.
 
@@ -512,18 +541,7 @@ class ReferenceGenome(Model):
         refgenome id 456:
             '/jbrowse/?data=gd_data/abc/projects/xyz/ref_genomes/456/jbrowse/'
         """
-        # Allow forcing through nginx (dev only).
-        maybe_force_nginx = ''
-        if settings.DEBUG_FORCE_JBROWSE_NGINX:
-            maybe_force_nginx = 'http://localhost'
-
-        return os.path.join(
-                maybe_force_nginx + '/jbrowse/index.html?data=gd_data/',
-                'projects',
-                str(self.project.uid),
-                'ref_genomes',
-                str(self.uid),
-                'jbrowse')
+        return '/jbrowse/index.html?data=' + self.get_client_jbrowse_data_path()
 
     def is_annotated(self):
         """For several steps (notably snpEff), we want to check that this
@@ -1232,3 +1250,22 @@ class RegionInterval(Model):
 
     # One-indexed.
     end = models.BigIntegerField()
+
+
+class S3File(Model):
+    """Model for keeping track of all files in S3 bucket.
+    """
+    bucket = models.CharField(max_length=200)
+
+    # key is the actually name of the file stored in S3 bucket.
+    key = models.CharField(max_length=200)
+
+    # name is the original name of the file on uploader's machine
+    name = models.CharField(max_length=200, null=True)
+    created_at = models.DateTimeField(auto_now_add = True)
+
+    def url(self):
+        return "s3://%s/%s" % (self.bucket, self.key)
+
+    def __unicode__(self):
+        return unicode(self.url())

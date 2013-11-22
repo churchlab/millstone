@@ -176,6 +176,11 @@ LOGGING = {
             'level':'INFO',
             'propagate': True,
         },
+        's3': {
+            'handlers':['console'],
+            'level':'INFO',
+            'propagate': True,
+        },
     }
 }
 
@@ -191,6 +196,7 @@ AUTH_PROFILE_MODULE = 'main.UserProfile'
 # Custom template context processors.
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
     'main.context_processors.common_data',
+    'main.context_processors.aws_settings'
 )
 
 ###############################################################################
@@ -278,9 +284,36 @@ SNPEFF_BUILD_DEBUG = True
 SNPEFF_SUMMARY_FILES = ['snpEff_genes.txt', 'snpEff_summary.html']
 
 ###############################################################################
+# S3
+###############################################################################
+
+# Allows user to create an S3 backed project. 
+S3_ENABLED = True
+
+# Don't perform any API call that changes anything on S3. 
+S3_DRY_RUN = False
+
+# Get them from https://console.aws.amazon.com/iam/home?#security_credential
+AWS_CLIENT_SECRET_KEY = '69kDz9o8VzD1Avf981R40Yf+zioz2dwnY5g94UK4'
+AWS_SERVER_PUBLIC_KEY = 'AKIAJERCJ7K6W7F7VE7A'
+AWS_SERVER_SECRET_KEY = '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'
+
+# Name of S3 bucket to which all files will be uploaded
+S3_BUCKET = 'genome-designer-upload'
+
+# Run S3 tests on S3_TEST_BUCKET; fine to use S3_BUCKET for S3_TEST_BUCKET, for
+# all test operations will run inside s3://S3_TEST_BUCKET/__tests__
+S3_TEST_BUCKET = S3_BUCKET
+
+# Maximum file size for user upload
+S3_FILE_MAX_SIZE = 1024 ** 3  # 1GB
+
+###############################################################################
 # Testing
 ###############################################################################
 
 TEST_RUNNER = 'test_suite_runner.CustomTestSuiteRunner'
 
 TEST_FILESYSTEM_DIR = os.path.join(PWD, 'temp_test_data')
+
+TEST_S3 = S3_ENABLED

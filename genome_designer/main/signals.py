@@ -2,9 +2,11 @@ from django.db.models.signals import post_save
 from django.db.models.signals import m2m_changed
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
 from scripts.snpeff_util import build_snpeff
-from scripts.import_util import generate_fasta_from_genbank
+from scripts.import_util import generate_fasta_from_genbank, get_dataset_with_type
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
+from scripts.alignment_pipeline import ensure_bwa_index
 import pickle
+
 
 from models import ReferenceGenome
 from models import Dataset
@@ -36,7 +38,6 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
         return
 
     model = kwargs['model']
-
     for pk in kwargs['pk_set']:
         dataset = model.objects.get(pk=pk)
         if dataset.type == Dataset.TYPE.REFERENCE_GENOME_FASTA:
@@ -56,11 +57,18 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
 
     #Initialize variant key map field
     initialize_filter_key_map(instance)
-# Run snpeff and jbrowse housekeeping after linking seq file dataset to a
-#   reference genome obj
+    # Run snpeff and jbrowse housekeeping after linking seq file dataset to a
+    #   reference genome obj
+
+    # Create the bwa index before perfoming the alignments in parallel. 
+    ref_genome_fasta = get_dataset_with_type(
+        instance,
+        Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    ensure_bwa_index(ref_genome_fasta)
+
 m2m_changed.connect(post_add_seq_to_ref_genome,
-        sender=ReferenceGenome.dataset_set.through,
-        dispatch_uid='add_seq_to_ref_genome')
+    sender=ReferenceGenome.dataset_set.through,
+    dispatch_uid='add_seq_to_ref_genome')
 
 def post_variant_evidence_create(sender, instance, created, **kwargs):
     """Add existing VariantAlternates to this VariantEvidence Object."""

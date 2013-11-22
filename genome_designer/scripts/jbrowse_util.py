@@ -15,7 +15,7 @@ from main.models import ReferenceGenome
 from settings import JBROWSE_BIN_PATH
 from settings import JBROWSE_DATA_SYMLINK_PATH
 from settings import JBROWSE_DATA_URL_ROOT
-
+from settings import S3_BUCKET
 
 # TODO: Figure out better place to put this.
 # JBrowse requires the symlink path to exist. See settings.py
@@ -70,7 +70,16 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
 
     # Figure out the url that JBrowse would use to show the data, e.g.:
     #     /jbrowse/gd_data/projects/58a62c7d/genomes/8dc829ec/align.bam
-    urlTemplate = os.path.join(JBROWSE_DATA_URL_ROOT,
+    # urlTemplate = os.path.join(JBROWSE_DATA_URL_ROOT,
+    #         bam_dataset.filesystem_location)
+
+    # NOTE: We should construct bam file urls using project.get_client_jbrowse_link()
+    #       rather than checking S3 flag here. 
+    if reference_genome.project.is_s3_backed():
+        urlTemplate = os.path.join('http://%s.s3.amazonaws.com/' % S3_BUCKET,
+            bam_dataset.filesystem_location.strip("/jbrowse"))
+    else:
+        urlTemplate = os.path.join(JBROWSE_DATA_URL_ROOT,
             bam_dataset.filesystem_location)
 
     # Generic label for now.

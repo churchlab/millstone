@@ -12,6 +12,7 @@ from collections import namedtuple
 from tempfile import NamedTemporaryFile
 
 from django.db import transaction
+from django.conf import settings
 from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ExperimentSample
@@ -21,13 +22,18 @@ from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantSet
 from main.models import VariantToVariantSet
+from main.models import get_dataset_with_type
 from scripts.vcf_parser import extract_raw_data_dict
 from scripts.vcf_parser import get_or_create_variant
 from settings import PWD
 from settings import EMAIL
 
 from Bio import SeqIO
+import tempfile
+import traceback
+import shutil
 from Bio import Entrez
+from main.s3 import project_files_needed
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
@@ -36,9 +42,39 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
     'vcfu': Dataset.TYPE.VCF_USERINPUT
 }
 
+if settings.S3_ENABLED:
+    from main.s3 import s3_temp_get, s3_get
+
+    def import_reference_genome_from_s3(project, label, s3file, import_format):
+        with s3_temp_get(s3file) as f:
+            return import_reference_genome_from_local_file(project, label, f, import_format)
+
+    @project_files_needed
+    def import_samples_from_s3(project, targets_file_rows, s3files):
+        tmp_dir = tempfile.mkdtemp()
+        local_s3files_map = {}
+        for s3file in s3files:
+            filepath = os.path.join(tmp_dir, s3file.name)
+            s3_get(s3file.key, filepath)
+            local_s3files_map[s3file.name] = filepath
+
+        for row in targets_file_rows:
+            sample_label = row['Sample_Name']
+            experiment_sample = ExperimentSample.objects.create(
+                    project=project, label=sample_label)
+            copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ1,
+                    Dataset.TYPE.FASTQ1, local_s3files_map[row['Read_1_Path']])
+            if 'Read_2_Path' in row and row['Read_2_Path']:
+                copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ2,
+                        Dataset.TYPE.FASTQ2, local_s3files_map[row['Read_2_Path']])
+        shutil.rmtree(tmp_dir)
 
 class DataImportError(Exception):
     """Exception thrown when there are errors in imported data.
+
+    Attributes:
+        expr -- input expression in which the error occurred
+        msg  -- explanation of the error
     """
 
     def __init__(self, msg):
@@ -48,6 +84,7 @@ class DataImportError(Exception):
         return 'DataImportError: ' + str(self.msg)
 
 
+@project_files_needed
 def import_reference_genome_from_local_file(project, label, file_location,
         import_format, move=False):
     """Creates a ReferenceGenome associated with the given Project.
@@ -94,6 +131,7 @@ def import_reference_genome_from_local_file(project, label, file_location,
             dataset_type, file_location)
 
     return reference_genome
+
 
 def generate_fasta_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a FASTA, generate
@@ -178,34 +216,21 @@ def sanitize_record_id(record_id_string):
     return re.match( r'^\w{1,20}', record_id_string).group()
 
 
-def import_samples_from_targets_file(project, targets_file):
-    """Uses the uploaded targets file to add a set of samples to the project.
-    We need to check each line of the targets file for consistency before we
-    do anything, however.
-
-    It writes a copy of the uploaded targets file to a temporary file
-
-    Args:
-        project: The project we're storing everything relative to>
-        targets_file: The UploadedFile django object that holds the targets
-            in .tsv format.
-    """
+def parse_targets_file(targets_file):
     # The targets file shouldn't be over 1 Mb ( that would be ~3,000 genomes)
-    assert targets_file.size < 1000000, (
-            "Targets file is too large: %d" % targets_file.size)
+    if hasattr(targets_file, "size"):
+        assert targets_file.size < 1000000, (
+                "Targets file is too large: %d" % targets_file.size)
 
     # Detect the format.
     reader = csv.DictReader(targets_file, delimiter='\t')
 
-    # Validate the header.
     targets_file_header = reader.fieldnames
 
+    assert len(targets_file_header) >= 6, "Bad header. Were columns removed?"
+
     REQUIRED_HEADER_PART = ['Sample_Name', 'Plate_or_Group', 'Well',
-            'Read_1_Path', 'Read_2_Path']
-
-    assert len(targets_file_header) >= len(REQUIRED_HEADER_PART), (
-            "Bad header. Were columns removed?")
-
+            'Read_1_Path', 'Read_2_Path','Parent_Samples']
     for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
             REQUIRED_HEADER_PART):
         assert col == check, (
@@ -235,21 +260,32 @@ def import_samples_from_targets_file(project, targets_file):
                         'except for the paths.\n(Row %d, "%s")' % (
                                 row_num, field_name))
             else:
-                # If it is a path, then try to open the file and read one byte.
-                # Replace the string '$GD_ROOT with the project path, so we
-                # can use the test data
-                clean_field_value = field_value.replace('$GD_ROOT', PWD)
-                with open(clean_field_value, 'rb') as test_file:
-                    try:
-                        test_file.read(8)
-                    except:
-                        raise Exception("Cannot read file at %s" %
-                                clean_field_value)
-
+                # NOTE: different from import_util.import_samples_from_targets_file
+                # If it is a path, take the filename from path and return them as a list.
+                clean_field_value = os.path.basename(field_value)
                 clean_row[field_name] = clean_field_value
 
         # Save this row.
         valid_rows.append(clean_row)
+    return valid_rows
+
+
+@project_files_needed
+def import_samples_from_targets_file(project, targets_file):
+    """Uses the uploaded targets file to add a set of samples to the project.
+    We need to check each line of the targets file for consistency before we
+    do anything, however. Checking is moved to parse_targets_file() which parses
+    targets_file and returns valid rows. parse_targets_file() will also be
+    called from parse_targets_file_s3 in xhr_handlers in case of S3 uploading.
+
+    It writes a copy of the uploaded targets file to a temporary file
+
+    Args:
+        project: The project we're storing everything relative to>
+        targets_file: The UploadedFile django object that holds the targets
+            in .tsv format.
+    """
+    valid_rows = parse_targets_file(targets_file)
 
     # Now create ExperimentSample objects along with their respective Datasets.
     # The data is copied to the entity location.

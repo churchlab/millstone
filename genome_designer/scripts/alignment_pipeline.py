@@ -71,17 +71,12 @@ def create_alignment_groups_and_start_alignments(
 
         alignment_groups[ref_genome.uid] = alignment_group
 
-        # Create the bwa index before perfoming the alignments in parallel.
-        ref_genome_fasta = get_dataset_with_type(
-            alignment_group.reference_genome,
-            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-        ensure_bwa_index(ref_genome_fasta)
-
         # Kick of the alignments concurrently.
         alignment_tasks = []
         for sample in sample_list:
             args = [alignment_group, sample, None, test_models_only]
-            alignment_tasks.append(fn_runner(align_with_bwa, args, concurrent))
+            alignment_tasks.append(fn_runner(align_with_bwa,
+                alignment_group.reference_genome.project, args, concurrent))
 
             # TODO(DBG): Uncomment once bwa_mem works correctly.
             # See: https://github.com/churchlab/genome-designer-v2/issues/93
