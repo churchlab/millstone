@@ -44,6 +44,19 @@ TAB_ROOT__DATA = 'DATA'
 TAB_ROOT__ALIGN = 'ALIGN'
 TAB_ROOT__ANALYZE = 'ANALYZE'
 
+
+class InputError(Exception):
+    """Exception raised for errors in the input.
+
+    I assume this is what DBG wanted in d922023e8a1d4e7757bfa3e68aba3ace89f2a749.
+
+    Attributes:
+        msg  -- explanation of the error
+    """
+    def __init__(self, msg):
+        self.msg = msg
+
+
 def home_view(request):
     """The main landing page.
     """
@@ -198,7 +211,7 @@ def reference_genome_list_view(request, project_uid):
                         request.POST['refGenomeLabel'],
                         request.POST['refGenomeFileLocation'],
                         request.POST['importFileFormat'])
-            if request.POST['postType'] == 'modalFromNCBI':
+            elif request.POST['postType'] == 'modalFromNCBI':
                 import_reference_genome_from_ncbi(
                         project,
                         request.POST['refGenomeLabel'],
@@ -208,7 +221,6 @@ def reference_genome_list_view(request, project_uid):
                 raise InputError('POST has invalid or missing postType')
         except Exception as e:
             error_string = 'Import error: ' + str(e)
-            raise e
 
     context = {
         'project': project,
