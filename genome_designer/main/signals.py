@@ -38,7 +38,6 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
         return
 
     model = kwargs['model']
-
     for pk in kwargs['pk_set']:
         dataset = model.objects.get(pk=pk)
         if dataset.type == Dataset.TYPE.REFERENCE_GENOME_FASTA:
@@ -60,15 +59,16 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
     initialize_filter_key_map(instance)
     # Run snpeff and jbrowse housekeeping after linking seq file dataset to a
     #   reference genome obj
-    m2m_changed.connect(post_add_seq_to_ref_genome,
-        sender=ReferenceGenome.dataset_set.through,
-        dispatch_uid='add_seq_to_ref_genome')
 
     # Create the bwa index before perfoming the alignments in parallel. 
     ref_genome_fasta = get_dataset_with_type(
         instance,
         Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
     ensure_bwa_index(ref_genome_fasta)
+
+m2m_changed.connect(post_add_seq_to_ref_genome,
+    sender=ReferenceGenome.dataset_set.through,
+    dispatch_uid='add_seq_to_ref_genome')
 
 def post_variant_evidence_create(sender, instance, created, **kwargs):
     """Add existing VariantAlternates to this VariantEvidence Object."""
