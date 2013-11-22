@@ -113,6 +113,11 @@ def import_reference_genome_from_local_file(project, label, file_location,
         num_chromosomes += 1
         num_bases += len(genome_record)
 
+
+    # Make sure sequence exists.
+    if not num_bases > 0:
+        raise DataImportError("No sequence in file.")
+
     # Create the ReferenceGenome object.
     reference_genome = ReferenceGenome.objects.create(
             project=project,
