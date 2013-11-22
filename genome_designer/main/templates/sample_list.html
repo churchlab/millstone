@@ -22,7 +22,9 @@
     <ul class="dropdown-menu">
       <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From URL...</a></li>
       <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>
+      {% if project.is_s3_backed %}
       <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">Upload To S3...</a></li>
+      {% endif %}
     </ul>
   </div>
   <input type="text" class="input-medium search-query">
@@ -150,6 +152,11 @@
   </div>
 </div>
 
+<script type="text/javascript">
+  VIEW_TAG = 'SAMPLE';
+</script>
+
+{% if project.is_s3_backed %}
 <div id="modalUpload" class="modal hide fade" tabindex="-1" role="dialog">
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal">×</button>
@@ -166,10 +173,6 @@
     <button class="btn btn-primary" type="submit" id="submitFormFromFile">Submit</button>
   </div>
 </div>
-
-<script type="text/javascript">
-  VIEW_TAG = 'SAMPLE';
-</script>
 
 <script type="text/template" id="samples-s3-uploader-template">
 <div class="qq-uploader-selector qq-uploader">
@@ -197,4 +200,5 @@
   </ul>
 </div>
 </script>
+{% endif %}
 {% endblock %}

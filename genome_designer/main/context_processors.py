@@ -21,5 +21,5 @@ def common_data(request):
 def aws_settings(request):
     return {
         'AWS_SERVER_PUBLIC_KEY': settings.AWS_SERVER_PUBLIC_KEY,
-        'S3_BUCKET': settings.AWS_EXPECTED_BUCKET,
+        'S3_BUCKET': settings.S3_BUCKET,
     }

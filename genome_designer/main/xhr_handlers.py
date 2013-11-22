@@ -12,6 +12,7 @@ import json
 import re
 from StringIO import StringIO
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.http import HttpResponse
@@ -34,11 +35,13 @@ from main.models import S3File
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-from scripts.import_util import import_reference_genome_from_s3, import_samples_from_s3
 from variants.common import extract_filter_keys
 from variants.variant_filter import get_variants_that_pass_filter
 from variants.variant_sets import update_variant_in_set_memberships
-from s3 import s3_get_string
+
+if settings.S3_ENABLED:
+    from scripts.import_util import parse_targets_file, import_reference_genome_from_s3, import_samples_from_s3
+    from s3 import s3_get_string
 
 
 @login_required
@@ -299,113 +302,72 @@ def get_gene_list(request):
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
 
-@login_required
-def import_reference_genome_s3(request, project_uid):
-    if request.method == 'POST':
+if settings.S3_ENABLED:
+    @login_required
+    def import_reference_genome_s3(request, project_uid):
+        if request.method == 'POST':
+            project = get_object_or_404(Project, owner=request.user.get_profile(),
+                uid=project_uid)
+            s3file_id = request.POST['s3file_id']
+            s3file = S3File.objects.get(pk=s3file_id)
+            import_reference_genome_from_s3(
+                        project,
+                        request.POST['refGenomeLabel'],
+                        s3file,
+                        request.POST['importFileFormat'])
+            
+        return HttpResponse("", content_type='text/plain')
+
+    @login_required
+    @require_POST
+    def parse_targets_file_s3(request, project_uid):
         project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
         s3file_id = request.POST['s3file_id']
         s3file = S3File.objects.get(pk=s3file_id)
-        import_reference_genome_from_s3(
-                    project,
-                    request.POST['refGenomeLabel'],
-                    s3file,
-                    request.POST['importFileFormat'])
-        
-    return HttpResponse("", content_type='text/plain')
 
-@login_required
-@require_POST
-def parse_targets_file_s3(request, project_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-        uid=project_uid)
-    s3file_id = request.POST['s3file_id']
-    s3file = S3File.objects.get(pk=s3file_id)
+        csv_data = s3_get_string(s3file.key)
+        csv_io = StringIO(csv_data)
+        sample_filenames = []
 
-    csv_data = s3_get_string(s3file.key)
-    csv_io = StringIO(csv_data)
-    reader = csv.DictReader(csv_io, delimiter='\t')
-    sample_filenames = []
+        try:
+            valid_rows = parse_targets_file(csv_io)
+            for field_name, field_value in valid_rows.iteritems():
+                if 'Path' in field_name:
+                    sample_filenames.append(field_value)
+        except AssertionError as e:
+            return HttpResponse(json.dumps({
+                    'error': str(e)
+                }), content_type='application/json')
+        except:
+            import traceback
+            return HttpResponse(json.dumps({
+                    'error': traceback.format_exc()
+                }), content_type='application/json')
 
-    try:
-        # Validate the header.
-        targets_file_header = reader.fieldnames
+        if len(list(set(sample_filenames))) != len(sample_filenames):
+            return HttpResponse(json.dumps({
+                    'error': "Targets file contains sample files with same names."
+                }), content_type='application/json')
 
-        assert len(targets_file_header) >= 6, "Bad header. Were columns removed?"
-
-        REQUIRED_HEADER_PART = ['Sample_Name', 'Plate_or_Group', 'Well',
-                'Read_1_Path', 'Read_2_Path','Parent_Samples']
-        for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
-                REQUIRED_HEADER_PART):
-            assert col == check, (
-                "Header column '%s' is missing or out of order." % check)
-
-        # Validate all the rows.
-        valid_rows = []
-        for row_num, row in enumerate(reader):
-
-            # Make a copy of the row so we can clean up the data for further
-            # processing.
-            clean_row = copy.copy(row)
-
-            #TODO: Every row seems to have an empty K/V pair {None:''}, not sure
-            #why. Here I remove it by hand:
-            row = dict([(k, v) for k, v in row.iteritems() if k is not None])
-
-            # Make sure the row has all the fields
-            assert len(targets_file_header) == len(row.keys()), (
-                    "Row %d has the wrong number of fields." % row_num)
-
-            for field_name, field_value in row.iteritems():
-                if 'Path' not in field_name:
-                    #make sure each field is alphanumeric only
-                    assert re.match('^[\. \w-]*$', field_value) is not None, (
-                            'Only alphanumeric characters and spaces are allowed, '
-                            'except for the paths.\n(Row %d, "%s")' % (
-                                    row_num, field_name))
-                else:
-                    # NOTE: different from import_util.import_samples_from_targets_file
-                    # If it is a path, take the filename from path and return them as a list.
-                    clean_field_value = os.path.basename(field_value)
-                    sample_filenames.append(clean_field_value)
-                    clean_row[field_name] = clean_field_value
-
-            # Save this row.
-            valid_rows.append(clean_row)
-    except AssertionError as e:
         return HttpResponse(json.dumps({
-                'error': str(e)
-            }), content_type='application/json')
-    except:
-        import traceback
-        return HttpResponse(json.dumps({
-                'error': traceback.format_exc()
+                'targets_file_rows': valid_rows,
+                'sample_filenames': sample_filenames
             }), content_type='application/json')
 
-    if len(list(set(sample_filenames))) != len(sample_filenames):
+    @login_required
+    @require_POST
+    def process_sample_files_s3(request, project_uid):
+        project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+        data = json.loads(request.raw_post_data)
+        s3files = []
+        for f in data['sample_files'].values():
+            s3files.append(S3File.objects.get(pk=int(f['sid'])))
+
+        import_samples_from_s3(project, data['targets_file_rows'], s3files)
+
         return HttpResponse(json.dumps({
-                'error': "Targets file contains sample files with same names."
+                'targets_file_rows': data['targets_file_rows'],
+                'sample_files': data['sample_files']
             }), content_type='application/json')
-
-    return HttpResponse(json.dumps({
-            'targets_file_rows': valid_rows,
-            'sample_filenames': sample_filenames
-        }), content_type='application/json')
-
-
-@login_required
-@require_POST
-def process_sample_files_s3(request, project_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-        uid=project_uid)
-    data = json.loads(request.raw_post_data)
-    s3files = []
-    for f in data['sample_files'].values():
-        s3files.append(S3File.objects.get(pk=int(f['sid'])))
-
-    import_samples_from_s3(project, data['targets_file_rows'], s3files)
-
-    return HttpResponse(json.dumps({
-            'targets_file_rows': data['targets_file_rows'],
-            'sample_files': data['sample_files']
-        }), content_type='application/json')

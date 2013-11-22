@@ -86,8 +86,8 @@ def is_valid_policy(policy_document):
     """ Verify the policy document has not been tampered with client-side
     before sending it off. 
     """
-    #bucket = settings.AWS_EXPECTED_BUCKET
-    #parsed_max_size = settings.AWS_MAX_SIZE
+    #bucket = settings.S3_BUCKET
+    #parsed_max_size = settings.S3_FILE_MAX_SIZE
     bucket = ''
     parsed_max_size = 0
 
@@ -98,7 +98,7 @@ def is_valid_policy(policy_document):
             if condition.get('bucket', None):
                 bucket = condition['bucket']
 
-    return bucket == settings.AWS_EXPECTED_BUCKET and parsed_max_size == settings.AWS_MAX_SIZE
+    return bucket == settings.S3_BUCKET and parsed_max_size == settings.S3_FILE_MAX_SIZE
 
 def sign_policy_document(policy_document):
     """ Sign and return the policy doucument for a simple upload.

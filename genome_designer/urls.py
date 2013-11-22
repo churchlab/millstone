@@ -100,17 +100,6 @@ urlpatterns = patterns('',
             'genome_designer.main.xhr_handlers.get_variant_list'),
     url(r'^_/variants/modify_set_membership$',
             'genome_designer.main.xhr_handlers.modify_variant_in_set_membership'),
-    url(r'^_/genes$',
-            'genome_designer.main.xhr_handlers.get_gene_list'),
-    url(r'^_/projects/([\w-]+)/refgenomes/import_s3$',
-            'genome_designer.main.xhr_handlers.import_reference_genome_s3',
-            name="import_reference_genome_s3"),
-    url(r'^_/projects/([\w-]+)/samples/parse_targets_file_s3$',
-            'genome_designer.main.xhr_handlers.parse_targets_file_s3',
-            name="parse_targets_file_s3"),
-    url(r'^_/projects/([\w-]+)/samples/process_sample_files_s3$',
-            'genome_designer.main.xhr_handlers.process_sample_files_s3',
-            name="process_sample_files_s3"),
 
 
 
@@ -124,10 +113,25 @@ urlpatterns = patterns('',
     url(r'^_/templates/variant_set_controls$',
             'genome_designer.main.template_xhrs.variant_set_controls'),
 
-    url(r'^s3/signature', 'genome_designer.main.xhr_uploader.handle_s3', name="s3_signature"),
-    url(r'^s3/delete', 'genome_designer.main.xhr_uploader.handle_s3', name='s3_delete'),
-    url(r'^s3/success', 'genome_designer.main.xhr_uploader.success', name="s3_success")
 )
+
+if settings.S3_ENABLED:
+    urlpatterns += patterns('',
+        url(r'^_/genes$',
+                'genome_designer.main.xhr_handlers.get_gene_list'),
+        url(r'^_/projects/([\w-]+)/refgenomes/import_s3$',
+                'genome_designer.main.xhr_handlers.import_reference_genome_s3',
+                name="import_reference_genome_s3"),
+        url(r'^_/projects/([\w-]+)/samples/parse_targets_file_s3$',
+                'genome_designer.main.xhr_handlers.parse_targets_file_s3',
+                name="parse_targets_file_s3"),
+        url(r'^_/projects/([\w-]+)/samples/process_sample_files_s3$',
+                'genome_designer.main.xhr_handlers.process_sample_files_s3',
+                name="process_sample_files_s3"),
+        url(r'^s3/signature', 'genome_designer.main.xhr_uploader.handle_s3', name="s3_signature"),
+        url(r'^s3/delete', 'genome_designer.main.xhr_uploader.handle_s3', name='s3_delete'),
+        url(r'^s3/success', 'genome_designer.main.xhr_uploader.success', name="s3_success")
+    )
 
 if settings.DEBUG:
     from django.conf.urls.static import static

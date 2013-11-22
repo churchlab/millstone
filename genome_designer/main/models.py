@@ -38,6 +38,7 @@ from uuid import uuid4
 from contextlib import contextmanager
 import tempfile
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db import models
@@ -45,9 +46,6 @@ from django.db.models import Model
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
 from jsonfield import JSONField
-
-import settings
-
 
 
 ###############################################################################
@@ -369,7 +367,7 @@ class Project(Model):
     # The human-readable title of the project.
     title = models.CharField(max_length=256)
 
-    s3_backed = models.BooleanField(default=True)
+    s3_backed = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.title + '-' + str(self.owner)
@@ -516,7 +514,7 @@ class ReferenceGenome(Model):
     def get_client_jbrowse_data_path(self):
         if self.project.is_s3_backed():
             return os.path.join(
-                    'http://%s.s3.amazonaws.com/' % settings.AWS_EXPECTED_BUCKET,
+                    'http://%s.s3.amazonaws.com/' % settings.S3_BUCKET,
                     'projects',
                     str(self.project.uid),
                     'ref_genomes',
