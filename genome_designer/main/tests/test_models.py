@@ -69,7 +69,7 @@ class TestModels(TestCase):
                 label='test_dataset', 
                 type=Dataset.TYPE.FASTQ1)
 
-        GZIPPED_FASTQ_FILEPATH = os.path.join(settings.GD_ROOT_PATH, 'test_data',
+        GZIPPED_FASTQ_FILEPATH = os.path.join(settings.PWD, 'test_data',
                 'compressed_fastq', 'sample0.simLibrary.1.fq.gz')
 
         dataset.filesystem_location = clean_filesystem_location(
