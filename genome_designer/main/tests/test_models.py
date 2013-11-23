@@ -4,6 +4,7 @@ Tests for models.py.
 
 import os
 
+from django.conf import settings
 from django.test import TestCase
 
 from main.models import auto_generate_short_name
@@ -13,10 +14,6 @@ from main.models import User
 from main.models import Dataset
 from scripts.import_util import import_reference_genome_from_local_file
 import subprocess
-
-from settings import PWD as GD_ROOT_PATH
-from settings import BASH_PATH
-import settings
 
 
 TEST_PROJECT_NAME = 'testModels_project'
@@ -48,19 +45,6 @@ class TestModels(TestCase):
             TEST_REF_GENOME_PATH,
             'genbank')
 
-    def test_clean_filesystem_location(self):
-        FAKE_ABS_ROOT = '/root/of/all/evil'
-        EXPECTED_CLEAN_URL = 'projects/blah'
-        dirty_full_url = os.path.join(FAKE_ABS_ROOT, settings.MEDIA_ROOT,
-                EXPECTED_CLEAN_URL)
-        self.assertEqual(EXPECTED_CLEAN_URL,
-                clean_filesystem_location(dirty_full_url))
-
-    def test_auto_generate_short_name(self):
-        LONG_NAME = 'E Coli K12 Substrain MG1655'
-        EXPECTED_SHORT_NAME = 'e_coli_k12_s'
-        self.assertEqual(EXPECTED_SHORT_NAME,
-                auto_generate_short_name(LONG_NAME))
 
     def testSnpeffOnCreateRefGenome(self):
         """Ensure that Snpeff database is created successfully when creating
@@ -77,6 +61,7 @@ class TestModels(TestCase):
                 self.test_ref_genome.get_snpeff_directory_path(),
                 'snpEffectPredictor.bin'))
 
+
     def testDataSetCompression(self):
         """Make sure data set compression behaves correctly.
         """
@@ -84,7 +69,7 @@ class TestModels(TestCase):
                 label='test_dataset', 
                 type=Dataset.TYPE.FASTQ1)
 
-        GZIPPED_FASTQ_FILEPATH = os.path.join(GD_ROOT_PATH, 'test_data',
+        GZIPPED_FASTQ_FILEPATH = os.path.join(settings.GD_ROOT_PATH, 'test_data',
                 'compressed_fastq', 'sample0.simLibrary.1.fq.gz')
 
         dataset.filesystem_location = clean_filesystem_location(
@@ -94,7 +79,7 @@ class TestModels(TestCase):
 
         process = subprocess.Popen(
                 ('head '+dataset.wrap_if_compressed()+' | wc -l'), 
-                shell=True, executable= BASH_PATH, stdout=subprocess.PIPE,
+                shell=True, executable=settings.BASH_PATH, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
 
         wc_output, errmsg = process.communicate()
@@ -109,5 +94,20 @@ class TestModels(TestCase):
 
 
 
-            
+class TestModelsStatic(TestCase):
+    """Tests for static methods.
+    """
 
+    def test_clean_filesystem_location(self):
+        FAKE_ABS_ROOT = '/root/of/all/evil'
+        EXPECTED_CLEAN_URL = 'projects/blah'
+        dirty_full_url = os.path.join(FAKE_ABS_ROOT, settings.MEDIA_ROOT,
+                EXPECTED_CLEAN_URL)
+        clean_location = clean_filesystem_location(dirty_full_url)
+        self.assertEqual(EXPECTED_CLEAN_URL, clean_location)
+
+    def test_auto_generate_short_name(self):
+        LONG_NAME = 'E Coli K12 Substrain MG1655'
+        EXPECTED_SHORT_NAME = 'e_coli_k12_s'
+        self.assertEqual(EXPECTED_SHORT_NAME,
+                auto_generate_short_name(LONG_NAME))
