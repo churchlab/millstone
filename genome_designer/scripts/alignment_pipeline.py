@@ -122,6 +122,13 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
     if sample_alignment:
         # TODO: Delete existing data?
         experiment_sample = sample_alignment.experiment_sample
+
+        # Delete existing Datasets since they will be recreated below.
+        dataset_types_to_delete = [Dataset.TYPE.BWA_ALIGN,
+                Dataset.TYPE.BWA_ALIGN_ERROR]
+        datasets_to_delete = sample_alignment.dataset_set.filter(
+                type__in=dataset_types_to_delete)
+        datasets_to_delete.delete()
     else:
         # Create the initial record.
         sample_alignment = ExperimentSampleToAlignment.objects.create(
