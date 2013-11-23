@@ -279,7 +279,7 @@ class Dataset(Model):
     # to a pipe
     COMPRESSION_TYPES = {
         '.gz': ('gzip', '-dc'),
-        '.bz2': ('bzcat'),
+        '.bz2': ('bzcat',),
         '.zip': ('unzip','-p')
     }
 
