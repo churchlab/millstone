@@ -216,7 +216,7 @@ def sanitize_record_id(record_id_string):
     return re.match( r'^\w{1,20}', record_id_string).group()
 
 
-def parse_targets_file(targets_file):
+def parse_targets_file(project, targets_file):
     # The targets file shouldn't be over 1 Mb ( that would be ~3,000 genomes)
     if hasattr(targets_file, "size"):
         assert targets_file.size < 1000000, (
@@ -227,10 +227,11 @@ def parse_targets_file(targets_file):
 
     targets_file_header = reader.fieldnames
 
-    assert len(targets_file_header) >= 6, "Bad header. Were columns removed?"
-
     REQUIRED_HEADER_PART = ['Sample_Name', 'Plate_or_Group', 'Well',
-            'Read_1_Path', 'Read_2_Path','Parent_Samples']
+            'Read_1_Path', 'Read_2_Path']
+    assert len(targets_file_header) >= len(REQUIRED_HEADER_PART), (
+        "Bad header. Were columns removed?")
+
     for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
             REQUIRED_HEADER_PART):
         assert col == check, (
@@ -260,9 +261,21 @@ def parse_targets_file(targets_file):
                         'except for the paths.\n(Row %d, "%s")' % (
                                 row_num, field_name))
             else:
-                # NOTE: different from import_util.import_samples_from_targets_file
-                # If it is a path, take the filename from path and return them as a list.
-                clean_field_value = os.path.basename(field_value)
+                if project.is_s3_backed():
+                    # If it is a path, take the filename from path and return
+                    # them as a list.
+                    clean_field_value = os.path.basename(field_value)
+                else:
+                    # If it is a path, then try to open the file and read one byte.
+                    # Replace the string '$GD_ROOT with the project path, so we
+                    # can use the test data
+                    clean_field_value = field_value.replace('$GD_ROOT', PWD)
+                    with open(clean_field_value, 'rb') as test_file:
+                        try:
+                            test_file.read(8)
+                        except:
+                            raise Exception("Cannot read file at %s" %
+                                    clean_field_value)
                 clean_row[field_name] = clean_field_value
 
         # Save this row.
@@ -285,7 +298,7 @@ def import_samples_from_targets_file(project, targets_file):
         targets_file: The UploadedFile django object that holds the targets
             in .tsv format.
     """
-    valid_rows = parse_targets_file(targets_file)
+    valid_rows = parse_targets_file(project, targets_file)
 
     # Now create ExperimentSample objects along with their respective Datasets.
     # The data is copied to the entity location.
