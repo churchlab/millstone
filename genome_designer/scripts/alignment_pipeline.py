@@ -31,6 +31,15 @@ from settings import BASH_PATH
 
 SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
 
+FILES_TO_DELETE_AFTER_ALIGNMENT = set([
+    'bwa_align.sam',
+    'bwa_align.bam',
+    'bwa_align.sorted.bam',
+    'bwa_align.sorted.bam.bai',
+    'bwa_align.sorted.grouped.bam',
+    'bwa_align.sorted.grouped.bam.bai',
+])
+
 
 def create_alignment_groups_and_start_alignments(
         alignment_group_label, ref_genome_list, sample_list,
@@ -419,6 +428,8 @@ def align_with_bwa(alignment_group, experiment_sample=None,
         bwa_dataset.status = Dataset.STATUS.READY
         bwa_dataset.save()
 
+        delete_redundant_files(sample_alignment.get_model_data_dir())
+
     except subprocess.CalledProcessError as e:
         error_output.write(str(e))
         bwa_dataset.status = Dataset.STATUS.FAILED
@@ -720,3 +731,14 @@ def wait_and_check_pipe(pipe, popenargs=None):
             cmd = ''
         raise CalledProcessError(retcode, cmd)
     return 0
+
+
+def delete_redundant_files(source_dir):
+    """Delete redundant files upon alignment completion.
+
+    This is sort of a hack for now to deal with the issue where we are
+    generating a bunch of extra data during alignment.
+    """
+    for f in os.listdir(source_dir):
+        if f in FILES_TO_DELETE_AFTER_ALIGNMENT:
+            os.remove(os.path.join(source_dir, f))
