@@ -430,7 +430,7 @@ post_save.connect(post_project_create, sender=Project,
 def post_project_delete(sender, instance, **kwargs):
     instance.delete_model_data_dir()
 post_delete.connect(post_project_delete, sender=Project,
-        dispatch_uid='project_create')
+        dispatch_uid='project_delete')
 
 
 class ReferenceGenome(Model):
@@ -676,9 +676,10 @@ class AlignmentGroup(Model):
         for alignment in self.experimentsampletoalignment_set.all():
             alignment_dataset = get_dataset_with_type(alignment,
                     Dataset.TYPE.BWA_ALIGN)
-            if (not alignment_dataset or
-                    alignment_dataset.status in [
-                        Dataset.STATUS.FAILED, Dataset.STATUS.UNKNOWN]):
+            if not alignment_dataset:
+                return Dataset.STATUS.UNKNOWN
+            if (alignment_dataset.status in [
+                    Dataset.STATUS.FAILED, Dataset.STATUS.UNKNOWN]):
                 return alignment_dataset.status
             if alignment_dataset.status == Dataset.STATUS.COMPUTING:
                 any_computing = True
@@ -785,6 +786,7 @@ class ExperimentSampleToAlignment(Model):
         """
         return os.path.join(self.get_model_data_root(), str(self.uid))
 
+
     def ensure_model_data_dir_exists(self):
         """Ensure that a data directory exists for this model.
         """
@@ -793,6 +795,24 @@ class ExperimentSampleToAlignment(Model):
 
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
+
+
+    def delete_model_data_dir(self):
+        """Removes all data associated with this model.
+
+        WARNING: Be careful with this method!
+        """
+        data_dir = self.get_model_data_dir()
+        if os.path.exists(data_dir):
+            shutil.rmtree(data_dir)
+
+
+# Delete all alignment data when the model is deleted.
+def post_sample_alignment_delete(sender, instance, **kwargs):
+    instance.delete_model_data_dir()
+post_delete.connect(post_sample_alignment_delete,
+        sender=ExperimentSampleToAlignment,
+        dispatch_uid='sample_alignment_delete')
 
 
 ###############################################################################

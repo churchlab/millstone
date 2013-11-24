@@ -41,60 +41,6 @@ FILES_TO_DELETE_AFTER_ALIGNMENT = set([
 ])
 
 
-def create_alignment_groups_and_start_alignments(
-        alignment_group_label, ref_genome_list, sample_list,
-        test_models_only=False, concurrent=DEBUG_CONCURRENT):
-
-    """Creates an AlignmentGroup and kicks off alignment for each one.
-
-    We create an AlignmentGroup for each ReferenceGenome and align all
-    ExpermentSamples to each ReferenceGenome separately.
-
-    Args:
-        ref_genome_list: List of ReferenceGenome instances.
-        sample_list: List of sample instances. Must belong to same project as
-            ReferenceGenomes.
-        test_models_only: If True, don't actually run alignments. Just create
-            models.
-        concurrent: If True, run alignments in parallel.
-    """
-    assert len(alignment_group_label) > 0, "Name must be non-trivial string."
-    assert len(ref_genome_list) > 0, (
-            "Must provide at least one ReferenceGenome.")
-    assert len(sample_list) > 0, (
-            "Must provide at least one ExperimentSample.")
-
-    # If running concurrently, check whether Celery is running.
-    if concurrent:
-        celery_status = get_celery_worker_status()
-        assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
-
-    # Save the alignment group objects for returning if required.
-    alignment_groups = {}
-
-    for ref_genome in ref_genome_list:
-        alignment_group = AlignmentGroup.objects.create(
-                label=alignment_group_label + '_' + ref_genome.label,
-                reference_genome=ref_genome,
-                aligner=AlignmentGroup.ALIGNER.BWA)
-
-        alignment_groups[ref_genome.uid] = alignment_group
-
-        # Kick of the alignments concurrently.
-        alignment_tasks = []
-        for sample in sample_list:
-            args = [alignment_group, sample, None, test_models_only]
-            alignment_tasks.append(fn_runner(align_with_bwa,
-                alignment_group.reference_genome.project, args, concurrent))
-
-            # TODO(DBG): Uncomment once bwa_mem works correctly.
-            # See: https://github.com/churchlab/genome-designer-v2/issues/93
-            # alignment_tasks.append(fn_runner(align_with_bwa_mem, args, concurrent))
-
-    # Return a dictionary of all alignment groups indexed by ref_genome uid.
-    return alignment_groups
-    
-
 def align_with_bwa_mem(alignment_group, experiment_sample=None,
         sample_alignment=None, test_models_only=False):
     """
@@ -109,6 +55,7 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
             alignment data and re-run alignment.
         test_models_only: If True, don't actually perform alignment, just
             create the basic models.
+
     """
 
     ### Validation
@@ -232,6 +179,8 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
 
         bwa_dataset.status = Dataset.STATUS.READY
         bwa_dataset.save()
+
+        delete_redundant_files(sample_alignment.get_model_data_dir())
 
     except subprocess.CalledProcessError as e:
         error_output.write(str(e))
@@ -729,6 +678,100 @@ def get_insert_size(bam_file_location):
     return insert_size
 
 
+ALIGNMENT_FN = align_with_bwa_mem
+
+def create_alignment_groups_and_start_alignments(
+        alignment_group_label, ref_genome_list, sample_list,
+        test_models_only=False, concurrent=DEBUG_CONCURRENT):
+
+    """Creates an AlignmentGroup and kicks off alignment for each one.
+
+    We create an AlignmentGroup for each ReferenceGenome and align all
+    ExpermentSamples to each ReferenceGenome separately.
+
+    Args:
+        ref_genome_list: List of ReferenceGenome instances.
+        sample_list: List of sample instances. Must belong to same project as
+            ReferenceGenomes.
+        test_models_only: If True, don't actually run alignments. Just create
+            models.
+        concurrent: If True, run alignments in parallel.
+    """
+    assert len(alignment_group_label) > 0, "Name must be non-trivial string."
+    assert len(ref_genome_list) > 0, (
+            "Must provide at least one ReferenceGenome.")
+    assert len(sample_list) > 0, (
+            "Must provide at least one ExperimentSample.")
+
+    # If running concurrently, check whether Celery is running.
+    if concurrent:
+        celery_status = get_celery_worker_status()
+        assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
+
+    # Save the alignment group objects for returning if required.
+    alignment_groups = {}
+
+    for ref_genome in ref_genome_list:
+        alignment_group = AlignmentGroup.objects.create(
+                label=alignment_group_label + '_' + ref_genome.label,
+                reference_genome=ref_genome,
+                aligner=AlignmentGroup.ALIGNER.BWA)
+
+        alignment_groups[ref_genome.uid] = alignment_group
+
+        # Kick of the alignments concurrently.
+        # TODO(gleb): Use this list to block on when integrating with
+        # variant calling.
+        alignment_tasks = []
+        for sample in sample_list:
+            # TODO(DBG): Get rid of align_with_bwa once we are sure bwa mem
+            # works.
+            # See: https://github.com/churchlab/genome-designer-v2/issues/93
+            args = [alignment_group, sample, None, test_models_only]
+            alignment_tasks.append(fn_runner(ALIGNMENT_FN,
+                    alignment_group.reference_genome.project, args, concurrent))
+
+    # Return a dictionary of all alignment groups indexed by ref_genome uid.
+    return alignment_groups
+
+
+def resume_alignment_group_alignment(alignment_group, sample_list,
+        concurrent=DEBUG_CONCURRENT):
+    """Resumes alignments that are not complete for an alignment group.
+
+    Any samples that are not in the ready state are deleted and re-started.
+    """
+    # If running concurrently, check whether Celery is running.
+    if concurrent:
+        celery_status = get_celery_worker_status()
+        assert not CELERY_ERROR_KEY in celery_status, (
+                celery_status[CELERY_ERROR_KEY])
+
+    for sample in sample_list:
+        # Skip samples that have already been aligned.
+        maybe_sample_alignment_list = (
+                alignment_group.experimentsampletoalignment_set.filter(
+                    experiment_sample=sample))
+        if len(maybe_sample_alignment_list):
+            sample_alignment = maybe_sample_alignment_list[0]
+            maybe_dataset_set = sample_alignment.dataset_set.filter(
+                type=Dataset.TYPE.BWA_ALIGN)
+            if len(maybe_dataset_set):
+                bwa_dataset = maybe_dataset_set[0]
+                if bwa_dataset.status == Dataset.STATUS.READY:
+                    # Skip repeating alignment.
+                    continue
+                else:
+                    # Delete the sample_alignment and its data and just start
+                    # over.
+                    sample_alignment.delete()
+
+        # Carry out alignment.
+        args = [alignment_group, sample, None, False]
+        fn_runner(ALIGNMENT_FN, alignment_group.reference_genome.project,
+                args, concurrent=concurrent)
+
+
 def wait_and_check_pipe(pipe, popenargs=None):
     """Similar to subprocess.check_call() except takes a running pipe
     as input.
@@ -756,3 +799,15 @@ def delete_redundant_files(source_dir):
     for f in os.listdir(source_dir):
         if f in FILES_TO_DELETE_AFTER_ALIGNMENT:
             os.remove(os.path.join(source_dir, f))
+
+
+def clean_alignment_group_data(alignment_group):
+    """Utility method for cleaning redundant data manually.
+    """
+    for sample_alignment in alignment_group.experimentsampletoalignment_set.all():
+        maybe_dataset_set = sample_alignment.dataset_set.filter(
+                type=Dataset.TYPE.BWA_ALIGN)
+        if len(maybe_dataset_set):
+            bwa_dataset = maybe_dataset_set[0]
+            if bwa_dataset.status == Dataset.STATUS.READY:
+                delete_redundant_files(sample_alignment.get_model_data_dir())
