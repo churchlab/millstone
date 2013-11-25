@@ -86,17 +86,34 @@ def run_freebayes(alignment_group, alignment_type):
     vcf_output_filename = os.path.join(
             freebayes_vcf_dir, alignment_type + '.vcf')
 
-    # Get handles for each of the bam files.
     sample_alignment_list = (
             alignment_group.experimentsampletoalignment_set.all())
-    bam_files = map(
-            lambda sample_alignment: get_dataset_with_type(
-                    sample_alignment, alignment_type).get_absolute_location(),
-            sample_alignment_list
-    )
+
+    # Filter out mis-aligned files.
+    # TODO: Should we show in the UI that some alignments failed and are
+    # being skipped?
+    def _is_successful_alignment(sample_alignment):
+        bam_dataset = get_dataset_with_type(sample_alignment, alignment_type)
+        return bam_dataset.status == Dataset.STATUS.READY
+    sample_alignment_list = [sample_alignment for sample_alignment in
+            sample_alignment_list if _is_successful_alignment(sample_alignment)]
+
+    # Get handles for each of the bam files.
+    def _get_bam_location(sample_alignment):
+        bam_dataset = get_dataset_with_type(sample_alignment, alignment_type)
+        return bam_dataset.get_absolute_location()
+    bam_files = [_get_bam_location(sample_alignment) for sample_alignment in
+            sample_alignment_list if sample_alignment]
 
     # Keep only valid bam_files
-    bam_files = filter(lambda bam_file: bam_file is not None, bam_files)
+    valid_bam_files = []
+    for bam_file in bam_files:
+        if bam_file is None:
+            continue
+        if not os.stat(bam_file).st_size > 0:
+            continue
+        valid_bam_files.append(bam_file)
+    bam_files = valid_bam_files
     assert len(bam_files) == len(sample_alignment_list), (
             "Expected %d bam files, but found %d" % (
                     len(sample_alignment_list), len(bam_files)))
@@ -121,7 +138,7 @@ def run_freebayes(alignment_group, alignment_type):
     ])
 
     with open(vcf_output_filename, 'w') as fh:
-        subprocess.call(full_command, stdout=fh)
+        subprocess.check_call(full_command, stdout=fh)
 
     # If a Dataset already exists, delete it, might have been a bad run.
     existing_set = Dataset.objects.filter(
