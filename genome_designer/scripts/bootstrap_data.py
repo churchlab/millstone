@@ -381,6 +381,15 @@ def reset_database():
     os.mkdir(settings.MEDIA_ROOT)
 
 
+def confirm_bootstrap():
+    confirm_text = raw_input(
+            "This will wipe the current database. Are you sure? y/n\n")
+    return confirm_text in ['y', 'Y', 'yes']
+
+
 if __name__ == '__main__':
-    reset_database()
-    bootstrap_fake_data()
+    if confirm_bootstrap():
+        reset_database()
+        bootstrap_fake_data()
+    else:
+        print 'Aborting'
