@@ -1,0 +1,80 @@
+<html>
+<head>
+  <title>Genome Designer Celery Worker Manager</title>
+  {% load staticfiles %}
+  {% load coffeescript %}
+
+  <script type="text/javascript" src="{% static "jquery-2.0.3.min.js" %}"></script>
+  <script type="text/javascript" src="{% static "bootstrap/js/bootstrap.min.js" %}"></script>
+  <script type="text/javascript" src="{% static "underscore-min.js" %}"></script>
+  <script type="text/javascript" src="{% static "backbone-min.js" %}"></script>
+  <script type="text/javascript" src="{% static "jquery.validate.min.js" %}"></script>
+  <script type="text/javascript" src="{% static "jquery.cookie.js" %}"></script>
+  <script type="text/javascript" src="{% static "jquery.validate.additional-methods.min.js" %}"></script>
+  <script type="text/javascript" src="{{ STATIC_URL}}{% coffeescript "app.coffee" %}"></script>
+  <link rel="stylesheet" href="{% static "bootstrap/css/bootstrap.min.css" %}" type="text/css" />
+
+</head>
+<body>
+  <div class="container">
+    <div id="startup-view">
+    </div>
+
+    <div class="row">
+      <div class="center-block span6" style="float:none;">
+        <p>Copyright 2013</p>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script id="home-view-template" type="text/template">
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <div class="lead">
+      <p>
+      Changing the configurations below to allow worker processes (Celery) to connect to master process.
+      </p>
+    </div>
+    <div id="message-box" class="alert hidden">
+      <h4 id="message-header"></h4>
+      <p id="message"></p>
+    </div>
+    <form class="form-horizontal" role="form">
+      <input type="hidden" name="csrfmiddlewaretoken" value="<%- $.cookie('csrftoken') %>">
+      <div class="form-group">
+        <label for="inputHost" class="col-sm-2 control-label">Host</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="inputHost" name="host" placeholder="ec2-xx-xx-xx-xx.compute-1.amazonaws.com" value="{{ host }}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="inputDatabse" class="col-sm-2 control-label">Database</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="inputDatabse" name="dbname" placeholder="genome-designer" value="{{ dbname }}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="inputUser" class="col-sm-2 control-label">User</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="inputUser" name="user" placeholder="genome-designer" value="{{ user }}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="inputPassword" class="col-sm-2 control-label">Password</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="inputPassword" name="password" placeholder="Find the password from Genome Designer" value="{{ password }}">
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-offset-2 col-sm-10">
+          <button type="button" class="btn btn-default" id="test-button">Test Connection</button>
+          <button tpye="button" class="btn btn-primary" id="save-button" disabled>Save</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+</script>
+
+</html>

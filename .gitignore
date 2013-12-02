@@ -47,6 +47,7 @@ tools/
 
 # Local settings overrides
 conf/local_settings.py
+genome_designer/conf/local_settings.py
 
 # SnpEff Temp Data
 # TODO(dbg): Tests should clean these up.
@@ -61,3 +62,6 @@ genome_designer/snpEff_summary.html
 venv
 
 .DS_Store
+
+# Ignore compiled javascripts.
+celery_manager/celery_manager/static/COMPILED/
