@@ -89,7 +89,9 @@ def save(request):
             'PORT': 5432,
         }
     }
-    config = """DATABASES = %s """ % repr(db)
+    rabbitmq = "amqp://genome_designer:%s@%s:5672" % (password, host)
+    config = "DATABASES = %s \n" % repr(db)
+    config += "BROKER_URL = %s \n" % repr(rabbitmq)
     path = get_local_settings_path()
 
     with open(path, "w") as f:

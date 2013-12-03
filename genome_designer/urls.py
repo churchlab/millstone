@@ -133,6 +133,11 @@ if settings.S3_ENABLED:
         url(r'^s3/success', 'genome_designer.main.xhr_uploader.success', name="s3_success")
     )
 
+if settings.RUNNING_ON_EC2:
+    urlpatterns += patterns('',
+        url(r'^ec2/info$', 'genome_designer.main.views.ec2_info_view', name="ec2_info")
+    )
+
 if settings.DEBUG:
     from django.conf.urls.static import static
     urlpatterns += static('jbrowse', document_root=settings.JBROWSE_ROOT, show_indexes=True)

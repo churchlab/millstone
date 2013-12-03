@@ -578,3 +578,26 @@ def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
     }
 
     return render(request, 'single_variant_view.html', context)
+
+
+if settings.RUNNING_ON_EC2:
+    from boto.utils import get_instance_metadata
+    @login_required
+    def ec2_info_view(request):
+        m = get_instance_metadata()
+
+        password_path = os.path.join(settings.PWD, "../password.txt")
+        if os.path.isfile(password_path):
+            with open(password_path) as f:
+                password = f.read().strip()
+        else:
+            password = "Not found from '%s'" % password_path
+
+        context = {
+            'hostname': m['pulic-hostname'],
+            'instance_type': m['instance-type'],
+            'instance_id': m['instance-id'],
+            'password': password
+        }
+
+        return render(request, 'ec2_info_view.html', context)
