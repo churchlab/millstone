@@ -54,7 +54,7 @@ def test(request):
             content_type='application/json')
 
     try:
-        connstring = 'amqp://%s:%s@%s:5672/' % (user, password, host)
+        connstring = 'amqp://%s:%s@%s:5672//' % (user, password, host)
         conn = kombu.Connection()
         conn.connect()
     except Exception as e:
@@ -89,7 +89,7 @@ def save(request):
             'PORT': 5432,
         }
     }
-    rabbitmq = "amqp://genome_designer:%s@%s:5672" % (password, host)
+    rabbitmq = "amqp://%s:%s@%s:5672//" % (user, password, host)
     config = "DATABASES = %s \n" % repr(db)
     config += "BROKER_URL = %s \n" % repr(rabbitmq)
     path = get_local_settings_path()
