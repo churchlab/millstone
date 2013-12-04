@@ -18,6 +18,7 @@ setup_django_env()
 import os
 import random
 import shutil
+import sys
 
 from django.db import transaction
 from django.contrib.auth.models import User
@@ -386,6 +387,8 @@ def reset_database():
 
 
 def confirm_bootstrap():
+    if len(sys.argv) > 1 and sys.argv[1] in ["-q",]:
+        return True
     confirm_text = raw_input(
             "This will wipe the current database. Are you sure? y/n\n")
     return confirm_text in ['y', 'Y', 'yes']
