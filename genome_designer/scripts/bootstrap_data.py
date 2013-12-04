@@ -349,25 +349,29 @@ def reset_database():
     For now, only works with the temp.db database to prevent
     accidentally deleting data down the line.
     """
-    ### Delete the old database if it exists.
-    print 'Deleting old database ...'
 
-    # Identify the proper absolute path.
-    temp_db_name_or_abs_path = settings.DATABASES['default']['NAME']
-    if os.path.isabs(temp_db_name_or_abs_path):
-        tempdb_abs_path = temp_db_name_or_abs_path
+    if settings.DATABASES['default']['ENGINE'] != 'django.db.backends.sqlite3':
+        print "reset_database() does nothing if we don't use sqlite3"
     else:
-        tempdb_abs_path = os.path.join(GD_ROOT, temp_db_name_or_abs_path)
+        ### Delete the old database if it exists.
+        print 'Deleting old database ...'
 
-    # Make sure the expect name is temp.
-    # TODO: Make it a bit harder for clients to accidentally delete their
-    # database.
-    EXPECTED_TEMP_DB_NAME = 'temp.db'
-    temp_db_name = os.path.split(tempdb_abs_path)[1]
-    assert temp_db_name == EXPECTED_TEMP_DB_NAME
+        # Identify the proper absolute path.
+        temp_db_name_or_abs_path = settings.DATABASES['default']['NAME']
+        if os.path.isabs(temp_db_name_or_abs_path):
+            tempdb_abs_path = temp_db_name_or_abs_path
+        else:
+            tempdb_abs_path = os.path.join(GD_ROOT, temp_db_name_or_abs_path)
 
-    if os.path.exists(tempdb_abs_path):
-        os.remove(tempdb_abs_path)
+        # Make sure the expect name is temp.
+        # TODO: Make it a bit harder for clients to accidentally delete their
+        # database.
+        EXPECTED_TEMP_DB_NAME = 'temp.db'
+        temp_db_name = os.path.split(tempdb_abs_path)[1]
+        assert temp_db_name == EXPECTED_TEMP_DB_NAME
+
+        if os.path.exists(tempdb_abs_path):
+            os.remove(tempdb_abs_path)
 
     ### Run syncdb
     # NOTE: Remove interactive=False if you want to have the option of creating
