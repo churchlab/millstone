@@ -19,10 +19,13 @@ from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     """Parses the VCF associated with the AlignmentGroup and saves data there.
     """
-    reference_genome = alignment_group.reference_genome
-
     vcf_dataset = get_dataset_with_type(alignment_group, vcf_dataset_type)
+    parse_vcf(vcf_dataset, alignment_group.reference_genome)
 
+
+def parse_vcf(vcf_dataset, reference_genome):
+    """Parses the VCF and creates Variant models relative to ReferenceGenome.
+    """
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
 
@@ -36,7 +39,6 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
             # data fields as well.
             variant, alts = get_or_create_variant(reference_genome, 
                     record, vcf_dataset)
-
 
 
 def extract_raw_data_dict(vcf_record):
