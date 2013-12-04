@@ -55,7 +55,7 @@ def test(request):
 
     try:
         connstring = 'amqp://%s:%s@%s:5672//' % (user, password, host)
-        conn = kombu.Connection()
+        conn = kombu.Connection(connstring)
         conn.connect()
     except Exception as e:
         print e
