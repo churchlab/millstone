@@ -25,8 +25,8 @@ def home(request):
     exec code in config
 
     c = {
-        'dbname': config.get('DATABASES', {}).get('default', {}).get('NAME', 'genome-designer'),
-        'user': config.get('DATABASES', {}).get('default', {}).get('USER', 'genome-designer'),
+        'dbname': config.get('DATABASES', {}).get('default', {}).get('NAME', 'genome_designer'),
+        'user': config.get('DATABASES', {}).get('default', {}).get('USER', 'genome_designer'),
         'password': config.get('DATABASES', {}).get('default', {}).get('PASSWORD', ''),
         'host': config.get('DATABASES', {}).get('default', {}).get('HOST', ''),
     }
