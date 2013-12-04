@@ -176,11 +176,19 @@ LOGGING = {
             'level':'INFO',
             'propagate': True,
         },
+
         's3': {
             'handlers':['console'],
             'level':'INFO',
             'propagate': True,
         },
+
+        # Uncomment to see SQL logs on the console.
+        # 'django.db.backends': {
+        #     'handlers':['console'],
+        #     'level':'DEBUG',
+        #     'propagate': False,
+        # },
     }
 }
 
