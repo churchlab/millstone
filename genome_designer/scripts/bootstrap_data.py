@@ -351,29 +351,7 @@ def reset_database():
     """
     ### Delete the old database if it exists.
     print 'Deleting old database ...'
-
-    # Identify the proper absolute path.
-    temp_db_name_or_abs_path = settings.DATABASES['default']['NAME']
-    if os.path.isabs(temp_db_name_or_abs_path):
-        tempdb_abs_path = temp_db_name_or_abs_path
-    else:
-        tempdb_abs_path = os.path.join(GD_ROOT, temp_db_name_or_abs_path)
-
-    # Make sure the expect name is temp.
-    # TODO: Make it a bit harder for clients to accidentally delete their
-    # database.
-    EXPECTED_TEMP_DB_NAME = 'temp.db'
-    temp_db_name = os.path.split(tempdb_abs_path)[1]
-    assert temp_db_name == EXPECTED_TEMP_DB_NAME
-
-    if os.path.exists(tempdb_abs_path):
-        os.remove(tempdb_abs_path)
-
-    ### Run syncdb
-    # NOTE: Remove interactive=False if you want to have the option of creating
-    # a super user on sync.
-    print 'Creating new database via syncdb ...'
-    call_command('syncdb', interactive=False)
+    call_command('flush', interactive=False)
 
     ### Recreate the media root.
     if os.path.exists(settings.MEDIA_ROOT):
@@ -383,7 +361,7 @@ def reset_database():
 
 def confirm_bootstrap():
     confirm_text = raw_input(
-            "This will wipe the current database. Are you sure? y/n\n")
+            "This will wipe any current database. Are you sure? y/n\n")
     return confirm_text in ['y', 'Y', 'yes']
 
 
