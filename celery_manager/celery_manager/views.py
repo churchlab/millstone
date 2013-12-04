@@ -97,6 +97,8 @@ def save(request):
     with open(path, "w") as f:
         f.write(config)
 
+    os.system("supervisorctl restart celery")
+
     response = {
         'status': 'success'
     }
