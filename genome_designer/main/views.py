@@ -597,7 +597,7 @@ if settings.RUNNING_ON_EC2:
             password = "Not found from '%s'" % password_path
 
         context = {
-            'hostname': m['pulic-hostname'],
+            'hostname': m['public-hostname'],
             'instance_type': m['instance-type'],
             'instance_id': m['instance-id'],
             'password': password
