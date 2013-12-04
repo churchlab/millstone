@@ -584,6 +584,9 @@ if settings.RUNNING_ON_EC2:
     from boto.utils import get_instance_metadata
     @login_required
     def ec2_info_view(request):
+        """
+        boto.utils.get_instance_metadata() will block if not running on EC2.
+        """
         m = get_instance_metadata()
 
         password_path = os.path.join(settings.PWD, "../password.txt")
