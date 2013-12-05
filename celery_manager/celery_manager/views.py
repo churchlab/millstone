@@ -8,6 +8,8 @@ from django.views.decorators.http import require_POST
 from django.conf import settings
 from django.views.decorators.csrf import ensure_csrf_cookie
 import psycopg2
+
+import subprocess
 import json
 import os
 import kombu
@@ -106,3 +108,24 @@ def save(request):
     }
     return HttpResponse(json.dumps(response),
         content_type='application/json')
+
+def status(request):
+    manage_py_path = os.path.abspath(os.path.join(settings.BASE_DIR, "../../genome_designer/manage.py"))
+    commands = ['celery inspect ping',
+                'celery status',
+                'celery report']
+
+    outputs = {}
+    for c in commands:
+        try:
+            outputs[c] = subprocess.check_output("python " + manage_py_path + " " + c, shell=True)
+        except subprocess.CalledProcessError as e:
+            outputs[c] = str(e)
+
+    response = {
+        'status': 'success',
+        'outputs': outputs
+    }
+    return HttpResponse(json.dumps(response),
+        content_type='application/json')
+

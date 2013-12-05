@@ -12,4 +12,5 @@ urlpatterns = patterns('',
     url(r'^$', 'celery_manager.views.home', name='home'),
     url(r'^test$', 'celery_manager.views.test', name='test'),
     url(r'^save$', 'celery_manager.views.save', name='save'),
+    url(r'^status$', 'celery_manager.views.status', name='status'),
 ) + static(settings.STATIC_URL, document_root=os.path.join(settings.BASE_DIR, "static"))
