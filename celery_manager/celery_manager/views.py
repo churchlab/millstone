@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 from django.conf import settings
+from django.views.decorators.csrf import ensure_csrf_cookie
 import psycopg2
 import json
 import os
@@ -17,6 +18,7 @@ def get_local_settings_path():
     assert os.path.isfile(path)
     return path
 
+@ensure_csrf_cookie
 def home(request):
     path = get_local_settings_path()
     with open(path) as f:
