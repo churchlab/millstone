@@ -157,6 +157,14 @@ the application.
 4. Visit the url <http://localhost:8000/> to see the demo.
 
 
+## Configuring PostgreSQL database.
+
+See instructions for setting up PostgresSQL database:
+<https://overlappingminds.com/thoughts/069accf7-ccb4-4b7a-bd40-022c49a053cd>
+
+*NOTE:* Be sure to make local db config changes in `conf/local_settings.py`.
+
+
 ## Tests
 
 We currently use [django-nose](https://pypi.python.org/pypi/django-nose) for

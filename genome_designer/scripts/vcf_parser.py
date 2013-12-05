@@ -5,6 +5,8 @@ We leverage pyvcf as much as possible.
 """
 
 import pickle
+
+from django.db import transaction
 import vcf
 
 from main.models import get_dataset_with_type
@@ -16,12 +18,28 @@ from main.models import VariantEvidence
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 
 
+class QueryCache(object):
+    """Manual caching for queries to avoid excessive db calls.
+
+    NOTE: Only trying this with one model so far. Haven't determined how
+    useful this really is.
+    """
+    def __init__(self):
+        self.uid_to_experiment_sample_map = {}
+
+
 def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     """Parses the VCF associated with the AlignmentGroup and saves data there.
     """
-    reference_genome = alignment_group.reference_genome
-
     vcf_dataset = get_dataset_with_type(alignment_group, vcf_dataset_type)
+    parse_vcf(vcf_dataset, alignment_group.reference_genome)
+
+
+@transaction.commit_on_success
+def parse_vcf(vcf_dataset, reference_genome):
+    """Parses the VCF and creates Variant models relative to ReferenceGenome.
+    """
+    query_cache = QueryCache()
 
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
@@ -30,13 +48,22 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
         # keys from this VCF.
         update_filter_key_map(reference_genome, vcf_reader)
 
-        for record in vcf_reader:
+        for record_idx, record in enumerate(vcf_reader):
+            # Make sure the QueryCache object has experiment samples populated.
+            # Assumes every row has same samples. (Pretty sure this is true
+            # for well-formatted vcf file.)
+            if (len(query_cache.uid_to_experiment_sample_map) == 0 and
+                    len(record.samples) > 0):
+                for sample in record.samples:
+                    sample_uid = sample.sample
+                    query_cache.uid_to_experiment_sample_map[sample_uid] = (
+                            ExperimentSample.objects.get(uid=sample_uid))
+
             # Get or create the Variant for this record. This step
             # also generates the alternate objects and assigns their
             # data fields as well.
             variant, alts = get_or_create_variant(reference_genome, 
-                    record, vcf_dataset)
-
+                    record, vcf_dataset, query_cache)
 
 
 def extract_raw_data_dict(vcf_record):
@@ -83,7 +110,8 @@ def populate_common_data_info(data_dict, vcf_record):
         effective_key = 'INFO_' + key
         data_dict[effective_key] = pickle.dumps(value)
 
-def get_or_create_variant(reference_genome, vcf_record, vcf_dataset):
+def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
+        query_cache):
     """Create a variant if it doesn't already exist, along with
     its child VariantCallerCommonData object and VariantEvidencye
     and VariantAlternate children.
@@ -152,11 +180,12 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset):
     [raw_data_dict.pop(k, None) for k in raw_alt_keys]
 
     # Create a common data object for this variant.
-    common_data_obj = VariantCallerCommonData.objects.create(
+    common_data_obj, created = VariantCallerCommonData.objects.get_or_create(
             variant=variant,
             source_dataset=vcf_dataset,
-            data=raw_data_dict 
     )
+    common_data_obj.data = raw_data_dict
+    common_data_obj.save()
 
     # TODO: What about num -2 objects? I'm really not excited about
     # creating a VariantGenotype object, nor do I think it will 
@@ -170,11 +199,12 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset):
     for sample in vcf_record.samples:
         sample_uid = sample.sample
         sample_data_dict = extract_sample_data_dict(sample)
-        sample_obj = ExperimentSample.objects.get(uid=sample_uid)
-        VariantEvidence.objects.create(
+        sample_obj = query_cache.uid_to_experiment_sample_map[sample_uid]
+        ve, created = VariantEvidence.objects.get_or_create(
                 experiment_sample=sample_obj,
-                variant_caller_common_data=common_data_obj,
-                data=sample_data_dict)
+                variant_caller_common_data=common_data_obj)
+        ve.data = sample_data_dict
+        ve.save()
 
     return (variant, alts)
 
