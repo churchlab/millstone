@@ -115,12 +115,12 @@ def status(request):
                 'celery status',
                 'celery report']
 
+    settings_module = "genome_designer.settings"
+
     outputs = {}
     for c in commands:
-        try:
-            outputs[c] = subprocess.check_output("env DJANGO_SETTINGS_MODULE= python " + manage_py_path + " " + c, shell=True)
-        except subprocess.CalledProcessError as e:
-            outputs[c] = str(e)
+        outputs[c] = os.popen("env DJANGO_SETTINGS_MODULE=%s python %s %s 2>&1" % (
+                settings_module, manage_py_path, c)).read()
 
     response = {
         'status': 'success',
