@@ -243,7 +243,7 @@ def get_sample_id_set_for_variant(variant):
     """Returns the set of all ExperimentSamples ids for which there exists a
     relationship to the Variant
     """
-    return set([ve.experiment_sample.id for ve in
+    return set([ve.experiment_sample_id for ve in
             VariantEvidence.objects.filter(
                     variant_caller_common_data__variant=variant)])
 
