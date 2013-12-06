@@ -152,6 +152,7 @@ INSTALLED_APPS = (
     'django_nose'
 )
 
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -166,6 +167,12 @@ LOGGING = {
         'console':{
             'level':'DEBUG',
             'class':'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'default.log', # override in local_settings.py
             'formatter': 'simple'
         },
     },
@@ -185,7 +192,7 @@ LOGGING = {
 
         # Uncomment to see SQL logs on the console.
         # 'django.db.backends': {
-        #     'handlers':['console'],
+        #     'handlers':['file'],
         #     'level':'DEBUG',
         #     'propagate': False,
         # },
