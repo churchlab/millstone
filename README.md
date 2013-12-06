@@ -164,6 +164,11 @@ See instructions for setting up PostgresSQL database:
 
 *NOTE:* Be sure to make local db config changes in `conf/local_settings.py`.
 
+In order to run tests with Postgres, your user will need CREATE permissions.
+You can grant these by logging into the Posgres shell and running:
+
+    ALTER USER django CREATEDB;
+
 
 ## Tests
 
