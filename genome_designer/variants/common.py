@@ -717,3 +717,26 @@ def get_subdict(big_dict, fields):
         TypeError if field missing from big_dict.
     """
     return {k: big_dict[k] for k in fields}
+
+
+def create_initial_filter_eval_result_object(variant_list):
+    """Creates a FilterEvalResult object containing the variants
+    and all samples associated with those variants.
+    """
+    variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
+
+    # First get all data we'll need to fulfill this.
+    # We get the VariantCallerCommonData so we can have access to the
+    # Variant id and do the bucketing into the metadata dict.
+    all_ve_list = VariantEvidence.objects.filter(
+            variant_caller_common_data__variant__in=variant_list).select_related(
+                    'variant_caller_common_data')
+
+    # Iterate through these results and populate metadata.
+    # This code should not make any DB calls as we should have everything
+    # from above.
+    for ve in all_ve_list:
+        variant_id_to_metadata_dict[ve.variant_caller_common_data.variant_id][
+                'passing_sample_ids'].add(ve.experiment_sample_id)
+
+    return FilterEvalResult(set(variant_list), variant_id_to_metadata_dict)

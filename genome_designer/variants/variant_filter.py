@@ -50,6 +50,7 @@ from variants.common import VARIANT_ALTERNATE_SQL_KEY_MAP
 from variants.common import VARIANT_TABLE_KEY__ID
 from variants.common import VARIANT_TABLE_KEY__SAMPLE
 from variants.common import assert_delim_for_key
+from variants.common import create_initial_filter_eval_result_object
 from variants.common import eval_variant_set_filter_expr
 from variants.common import evaluate_condition_in_triple
 from variants.common import get_all_key_map
@@ -266,15 +267,9 @@ class VariantFilterEvaluator(object):
         else:
             variant_list = self.ref_genome.variant_set.all()
 
-        # Create a FilterEvalResult object capturing the results so far.
-        variant_id_to_metadata_dict = defaultdict(
-                metadata_default_dict_factory_fn)
-        for variant in variant_list:
-            variant_id_to_metadata_dict[variant.id] = {
-                'passing_sample_ids': get_sample_id_set_for_variant(variant),
-            }
-        q_part_result = FilterEvalResult(set(variant_list),
-                variant_id_to_metadata_dict)
+        # Create a FilterEvalResult object containing all variants so far
+        # and all sample associations.
+        q_part_result = create_initial_filter_eval_result_object(variant_list)
 
         # Now we need to properly handle identify how each ExperimentSample is
         # related to each Variant, if applicable.
