@@ -726,7 +726,7 @@ def create_initial_filter_eval_result_object(variant_query_set):
     variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
 
     query_result = _get_variant_id_sample_id_tuple_list(variant_query_set,
-        raw_sql=True)
+        raw_sql=False)
 
     for variant_id, sample_id in query_result:
         variant_id_to_metadata_dict[variant_id]['passing_sample_ids'].add(
