@@ -719,24 +719,69 @@ def get_subdict(big_dict, fields):
     return {k: big_dict[k] for k in fields}
 
 
-def create_initial_filter_eval_result_object(variant_list):
+def create_initial_filter_eval_result_object(variant_query_set):
     """Creates a FilterEvalResult object containing the variants
     and all samples associated with those variants.
     """
     variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
 
-    # First get all data we'll need to fulfill this.
-    # We get the VariantCallerCommonData so we can have access to the
-    # Variant id and do the bucketing into the metadata dict.
-    all_ve_list = VariantEvidence.objects.filter(
-            variant_caller_common_data__variant__in=variant_list).select_related(
-                    'variant_caller_common_data')
+    query_result = _get_variant_id_sample_id_tuple_list(variant_query_set,
+        raw_sql=True)
 
-    # Iterate through these results and populate metadata.
-    # This code should not make any DB calls as we should have everything
-    # from above.
-    for ve in all_ve_list:
-        variant_id_to_metadata_dict[ve.variant_caller_common_data.variant_id][
-                'passing_sample_ids'].add(ve.experiment_sample_id)
+    for variant_id, sample_id in query_result:
+        variant_id_to_metadata_dict[variant_id]['passing_sample_ids'].add(
+                sample_id)
 
-    return FilterEvalResult(set(variant_list), variant_id_to_metadata_dict)
+    variant_set = set(variant_query_set)
+    return FilterEvalResult(variant_set, variant_id_to_metadata_dict)
+
+
+def _get_variant_id_sample_id_tuple_list(variant_query_set, raw_sql=True):
+    """Returns list of two-tuples (variant_id, sample_id).
+
+    Allows debugging by toggling raw_sql argument.
+    """
+    if raw_sql:
+        raise NotImplementedError
+        # # We perform a raw SQL hit requesting only the relevant data since this
+        # # is a big request.
+
+        # cursor = connection.cursor()
+
+        # # Extract the variant filter part that says which rows to fetch.
+        # variant_query_set_from_part = _extract_sql_from_part(
+        #         variant_query_set.query.__str__())
+
+        # raw_sql = (
+        #     'SELECT '
+        #         '"main_variantcallercommondata"."variant_id", '
+        #         '"main_variantevidence"."experiment_sample_id" '
+        #     'FROM "main_variantevidence" INNER JOIN '
+        #         '"main_variantcallercommondata" ON ('
+        #             '"main_variantevidence"."variant_caller_common_data_id" = '
+        #                 '"main_variantcallercommondata"."id") '
+        #     'WHERE "main_variantcallercommondata"."variant_id" IN ('
+        #         'SELECT "main_variant"."id" FROM %s);' %
+        #             variant_query_set_from_part
+        # )
+
+        # # Perform the query and handle the results.
+        # cursor.execute(raw_sql)
+        # query_result = cursor.fetchall()
+    else:
+        all_ve_list = VariantEvidence.objects.filter(
+            variant_caller_common_data__variant__in=variant_query_set).\
+                    select_related('variant_caller_common_data')
+        query_result = []
+        for ve in all_ve_list:
+            query_result.append((ve.variant_caller_common_data.variant_id,
+                    ve.experiment_sample.id))
+    return query_result
+
+
+SQL_FROM_REGEX = re.compile('.*FROM(.*)')
+
+def _extract_sql_from_part(raw_query_str):
+    """Helper method to exract the FROM clause of a SQL query.
+    """
+    return SQL_FROM_REGEX.search(raw_query_str).group(1)
