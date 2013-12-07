@@ -9,9 +9,8 @@ import time
 import settings
 import tempfile
 
-try:
-    PROFILE_LOG_BASE = settings.PROFILE_LOG_BASE
-except:
+PROFILE_LOG_BASE = settings.PROFILE_LOG_BASE
+if PROFILE_LOG_BASE is None:
     PROFILE_LOG_BASE = tempfile.gettempdir()
 
 

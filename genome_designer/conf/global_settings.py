@@ -191,11 +191,11 @@ LOGGING = {
         },
 
         # Uncomment to see SQL logs on the console.
-        # 'django.db.backends': {
-        #     'handlers':['file'],
-        #     'level':'DEBUG',
-        #     'propagate': False,
-        # },
+        'django.db.backends': {
+            'handlers':['file'],
+            'level':'DEBUG',
+            'propagate': False,
+        },
     }
 }
 
@@ -332,3 +332,10 @@ TEST_RUNNER = 'test_suite_runner.CustomTestSuiteRunner'
 TEST_FILESYSTEM_DIR = os.path.join(PWD, 'temp_test_data')
 
 TEST_S3 = S3_ENABLED
+
+###############################################################################
+# Profiling
+###############################################################################
+
+# Directory where profiler logs will be stored. See README.md.
+PROFILE_LOG_BASE = None

@@ -210,3 +210,22 @@ From the `genome_designer` directory, run:
 
 NOTE: This will delete the entire dev database and re-create it with the
 hard-coded test models only.
+
+
+## Profiling code
+
+The `debug.profiler` module contains a `profile` decorator that can be added to a function. For example, to debug a view:
+
+1. Update local_settings.py with your profiler logs destination by setting the PROFILE_LOG_BASE attribute, e.g.:
+
+        PROFILE_LOG_BASE = '/path/to/logs'
+
+2. Add @profile('log_file_name') in front of the method you want to profile, e.g.:
+
+        @profile('mylog')
+        def my_view(request):
+            ...
+
+3. Use the `debug/inspect_profiler_data.py` convenience script to parse the data, e.g.:
+
+        python inspect_profiler_data.py /path/to/log/mylog
