@@ -191,7 +191,13 @@ LOGGING = {
         },
 
         # Uncomment to see SQL logs on the console.
-        'django.db.backends': {
+        # 'django.db.backends': {
+        #     'handlers':['file'],
+        #     'level':'DEBUG',
+        #     'propagate': False,
+        # },
+
+        'debug_logger': {
             'handlers':['file'],
             'level':'DEBUG',
             'propagate': False,
