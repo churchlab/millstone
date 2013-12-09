@@ -123,6 +123,8 @@ def get_variant_list(request):
         manual_filter_string = ''
     # TODO: Combine with saved filter string.
     combined_filter_string = manual_filter_string
+
+    # Determine whether melted or cast view.
     is_melted = request.GET.get('melt', 0) == '1'
 
     # Any exception from here should be caused by a malformed query from the
@@ -140,22 +142,25 @@ def get_variant_list(request):
                 pagination_len)
         variant_list = lookup_variant_result.result_list
         num_total_variants = lookup_variant_result.num_total_variants
+
+        # Adapt the Variants to display for the frontend.
         variant_list_json = adapt_model_or_modelview_list_to_frontend(variant_list,
                 variant_key_map=reference_genome.variant_key_map,
                 visible_key_names=visible_key_names)
 
-        # Grab the VariantSet data.
+        # Get all VariantSets that exist for this ReferenceGenome.
         variant_set_list = VariantSet.objects.filter(
                 reference_genome=reference_genome)
 
         # Query the keys valid for ReferenceGenome, and mark the ones that
-        # will be displayed so that the checkmarks are pre-filled in case
-        # the user wishes to change these.
+        # will be displayed so that the checkmarks in the visible field select
+        # are pre-filled in case the user wishes to change these.
         variant_key_map_with_active_fields_marked = copy.deepcopy(
                 reference_genome.variant_key_map)
         _mark_active_keys_in_variant_key_map(
                 variant_key_map_with_active_fields_marked)
 
+        # Package up the response.
         response_data = {
             VARIANT_LIST_RESPONSE_KEY__LIST: variant_list_json,
             VARIANT_LIST_RESPONSE_KEY__TOTAL: num_total_variants,

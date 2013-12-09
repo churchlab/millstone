@@ -388,9 +388,6 @@ class VariantFilterEvaluator(object):
             return get_django_q_object_for_gene_restrict(condition_string,
                     self.ref_genome)
 
-        ### If we're here, then the condition should be a basic,
-        ### delimiter-separated expression.
-
         # Finally, if here, then this should be a basic, delimiter-separated
         # expression.
         (delim, key, value) = get_delim_key_value_triple(condition_string,

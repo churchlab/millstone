@@ -39,17 +39,18 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
             result_list.extend(
                     MeltedVariantView.variant_as_melted_list(variant,
                             variant_id_to_metadata_dict))
-        num_total_variants = len(result_list)
 
+        # Count the results and return just the page we are looking at now.
+        num_total_variants = len(result_list)
         page_results = result_list[
             pagination_start:pagination_start + pagination_len]
+
     else:
         num_total_variants = len(variant_list)
 
-        # Apply pagination limits here for the first time. The actual number of
-        # results depending on the type of view object below will either be 1:1
-        # with variants/page, or out-numbered, but either way, we save ourselves
-        # throwaway object-adapting by truncating here.
+        # Apply pagination limits here before casting since the number is 1:1.
+        # TODO: Figure out how to similarly avoid casting all results in the
+        # is_melted case above.
         variant_list = variant_list[
                 pagination_start:pagination_start + pagination_len]
 
@@ -58,5 +59,4 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
         page_results = [CastVariantView.variant_as_cast_view(variant,
                 variant_id_to_metadata_dict) for variant in variant_list]
 
-    # Count the results and return just the page we are looking at now.
     return LookupVariantsResult(page_results, num_total_variants)

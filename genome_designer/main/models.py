@@ -1112,7 +1112,7 @@ class VariantEvidence(Model, VisibleFieldMixin):
     def default_view_fields(clazz):
         return [
             {'field':'gt_type'},
-            {'field':'sample_uid'},
+            {'field':'sample_uid', 'verbose':'Samples'},
         ]
 
 

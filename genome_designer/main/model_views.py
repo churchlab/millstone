@@ -86,7 +86,7 @@ class CastVariantView(BaseVariantView):
             result_list = []
 
             # Convert to list for next step.
-            if isinstance(delegate, QuerySet):
+            if isinstance(delegate, QuerySet) or isinstance(delegate, list):
                 delegate_list = delegate
             else:
                 delegate_list = [delegate]
@@ -100,12 +100,23 @@ class CastVariantView(BaseVariantView):
                     try: result_list.append(delegate.as_dict()[attr])
                     except: pass
 
+            # If no results, continue to next delegate.
+            if not len(result_list):
+                continue
+
+            # If exactly one object, just return that object.
             if len(result_list) == 1:
-                # If one object, return it.
                 return result_list[0]
-            elif len(result_list) > 1:
-                # Else if more than one, return a '|'-separated string.
+
+            # If 4 or less, return a '|'-separated string.
+            # Number 4 is about how many short strings can reasonably fit in a
+            # cell in the ui.
+            # NOTE: This case is most useful for showing Variant ALTs.
+            if len(result_list) <= 4:
                 return ' | '.join([str(res) for res in result_list])
+
+            # Otherwise return the count.
+            return len(result_list)
 
         # Default.
         return UNDEFINED_STRING

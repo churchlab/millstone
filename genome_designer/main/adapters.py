@@ -26,9 +26,12 @@ HIDDEN_PAIR_FIELDS = [
 
 
 def adapt_model_or_modelview_list_to_frontend(instance_list, **kwargs):
-    """Adapts a list of model instances to the frontend represenation.
+    """Adapts a list of model instances to the frontend representation.
 
     All instances in the list must be of the same type.
+
+    Returns:
+        JSON string.
     """
     if len(instance_list) == 0:
         return json.dumps({
@@ -97,7 +100,6 @@ def adapt_model_to_frontend(model, filters={}, obj_list=None, **kwargs):
         'mData': name,
         'sTitle': verbose_name
     } for (name, verbose_name) in zip(field_list, field_verbose_names)]
-
 
     # Package the result.
     return json.dumps({
@@ -171,6 +173,7 @@ def get_model_field_fe_representation(model_obj, field, field_info={},
     else:
         model_field = getattr(model_obj, field)
 
+    # Maybe special handling if ModelField is of special type.
     if isinstance(model_field, Model):
         return adapt_model_instance_to_frontend(model_field, field_info)
     elif model_field.__class__.__name__ ==  'ManyRelatedManager':
@@ -179,4 +182,6 @@ def get_model_field_fe_representation(model_obj, field, field_info={},
     elif isinstance(model_field, QuerySet):
         return [adapt_model_instance_to_frontend(m, field_info)
                 for m in model_field]
+
+    # Default. No further special handling needed.
     return str(model_field)
