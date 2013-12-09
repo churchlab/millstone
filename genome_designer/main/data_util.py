@@ -29,7 +29,7 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
     # Apply the filters.
     filter_result = get_variants_that_pass_filter(
             combined_filter_string, reference_genome)
-    variant_list = filter_result.variant_set
+    variant_list = list(filter_result.variant_set)
     variant_id_to_metadata_dict = filter_result.variant_id_to_metadata_dict
 
     # Convert to appropriate view objects.
@@ -39,13 +39,24 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
             result_list.extend(
                     MeltedVariantView.variant_as_melted_list(variant,
                             variant_id_to_metadata_dict))
-    else:
-        result_list = [CastVariantView.variant_as_cast_view(variant,
-                variant_id_to_metadata_dict) for variant in variant_list]
+        num_total_variants = len(result_list)
 
-    num_total_variants = len(result_list)
-    page_results = result_list[
+        page_results = result_list[
             pagination_start:pagination_start + pagination_len]
+    else:
+        num_total_variants = len(variant_list)
+
+        # Apply pagination limits here for the first time. The actual number of
+        # results depending on the type of view object below will either be 1:1
+        # with variants/page, or out-numbered, but either way, we save ourselves
+        # throwaway object-adapting by truncating here.
+        variant_list = variant_list[
+                pagination_start:pagination_start + pagination_len]
+
+        # TODO: Avoid casting all results when only subset is returned.
+        # Question is how to get the total count without doing the cast.
+        page_results = [CastVariantView.variant_as_cast_view(variant,
+                variant_id_to_metadata_dict) for variant in variant_list]
 
     # Count the results and return just the page we are looking at now.
     return LookupVariantsResult(page_results, num_total_variants)
