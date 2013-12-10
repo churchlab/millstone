@@ -57,14 +57,20 @@ class CastVariantView(BaseVariantView):
     """View of Variant that does not expose the individual
     VariantToExperimentSample relationships.
     """
-    def __init__(self, variant):
+    def __init__(self, variant, data_cache):
+        """Constructor.
+
+        Args:
+            variant: A Variant instance.
+            data_cache: RequestScopedVariantDataCache instance.
+        """
         self.variant = variant
         self.variantalternate_list = (
-                variant.variantalternate_set.all())
+                data_cache.get_variant_alternate_list(variant))
         self.variant_caller_common_data_list = (
-                variant.variantcallercommondata_set.all())
-        self.variant_evidence_list = VariantEvidence.objects.filter(
-                variant_caller_common_data__variant=variant)
+                data_cache.get_variant_caller_common_data_list(variant))
+        self.variant_evidence_list = (
+                data_cache.get_variant_evidence_list(variant))
 
     def custom_getattr(self, attr):
         """For an attribute of a Variant, returns what you would expect.
@@ -93,11 +99,10 @@ class CastVariantView(BaseVariantView):
 
             # Iterate through the delegates.
             for delegate in delegate_list:
-
                 if hasattr(delegate, attr):
                     result_list.append(getattr(delegate, attr))
                 else:
-                    try: result_list.append(delegate.as_dict()[attr])
+                    try: result_list.append(delegate[attr])
                     except: pass
 
             # If no results, continue to next delegate.
@@ -122,20 +127,21 @@ class CastVariantView(BaseVariantView):
         return UNDEFINED_STRING
 
     @classmethod
-    def variant_as_cast_view(clazz, variant_obj,
-            variant_id_to_metadata_dict=None):
+    def variant_as_cast_view(clazz, variant_obj, variant_id_to_metadata_dict,
+            data_cache):
         """Factory method returns a cast view for the given variant.
 
         Args:
             variant_obj: The Variant object to melt.
             variant_id_to_metadata_dict: See TODO.
+            data_cache: Object that handles bulk SQL lookup.
 
         Returns:
             A CastVariantView instance.
         """
         # TODO: Do we need to modify the view based on passing samples in the
         # metadata.
-        return CastVariantView(variant_obj)
+        return CastVariantView(variant_obj, data_cache)
 
 
 class MeltedVariantView(BaseVariantView):
