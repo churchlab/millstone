@@ -1078,8 +1078,13 @@ class VariantEvidence(Model, VisibleFieldMixin):
     # TODO: Extract interesting keys (e.g. gt_type) into their own SQL fields.
     data = JSONField()
 
-    # HACK: Manually cache data to avoid expensive lookups.
-    manually_cached_data = {}
+    def __init__(self, *args, **kwargs):
+        # HACK: Manually cache data to avoid expensive lookups.
+        self.manually_cached_data = {}
+
+        # call super's __init__ without the alt_value field if present
+        super(VariantEvidence, self).__init__(*args, **kwargs)
+
 
     def __getattr__(self, name):
         """Automatically called if an attribute is not found in the typical
