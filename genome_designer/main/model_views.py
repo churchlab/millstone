@@ -121,7 +121,7 @@ class CastVariantView(BaseVariantView):
                 return ' | '.join([str(res) for res in result_list])
 
             # Otherwise return the count.
-            return len(result_list)
+            return '{' + str(len(result_list)) + '}'
 
         # Default.
         return UNDEFINED_STRING
