@@ -4,6 +4,8 @@ Common methods for getting data from the backend.
 These methods are intended to be used by both views.py, which should define
 only pages, and xhr_handlers.py, which are intended to respond to AJAX
 requests.
+
+This module interacts closely with the ModelViews in model_views.py.
 """
 
 from collections import defaultdict
@@ -108,17 +110,38 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
 
     # Convert to appropriate view objects.
     if is_melted:
+        # Since it's hard to nail pagination with MeltedVariantView without
+        # iteratively melting Variants, we use a slightly awkward strategy
+        # of first calculating what's the most results we need to get up
+        # to the current page, and then do the somewhat brute-force aggregation
+        # of the results until that point.
+
+        # First calculate the max results needed based on page size.
+        max_results_needed = pagination_start + pagination_len
+
         result_list = []
         for variant in variant_list:
             result_list.extend(
                     MeltedVariantView.variant_as_melted_list(variant,
                             variant_id_to_metadata_dict))
+            if len(result_list) > max_results_needed:
+                break
 
-        # Count the results and return just the page we are looking at now.
-        num_total_variants = len(result_list)
+        # Estimate the total number of results as the number of variants
+        # cross the number of samples.
+        # NOTE: This should be an over-calculation, I believe.
+        num_samples = ExperimentSample.objects.filter(
+                project=reference_genome.project).count()
+        approx_num_max_results = len(variant_list) * num_samples
+
+        # Maybe adjust if we are at the end of results.
+        if len(result_list) > approx_num_max_results:
+            approx_num_max_results = len(result_list)
+        num_total_variants = approx_num_max_results
+
+        # Return the current page of results.
         page_results = result_list[
-            pagination_start:pagination_start + pagination_len]
-
+                pagination_start:pagination_start + pagination_len]
     else:
         num_total_variants = len(variant_list)
 
