@@ -203,7 +203,7 @@ class MeltedVariantView(BaseVariantView):
             result_list = []
 
             # Convert to list for next step.
-            if isinstance(delegate, QuerySet):
+            if isinstance(delegate, QuerySet) or isinstance(delegate, list):
                 delegate_list = delegate
             else:
                 delegate_list = [delegate]
@@ -215,7 +215,7 @@ class MeltedVariantView(BaseVariantView):
                     result_list.append(getattr(delegate, attr))
                 else:
                     try:
-                        result_list.append(delegate.as_dict()[attr])
+                        result_list.append(delegate[attr])
                     except:
                         pass
 
@@ -262,8 +262,9 @@ class MeltedVariantView(BaseVariantView):
                 continue
 
             if variant_id_to_metadata_dict is not None:
-                passing_sample_ids = variant_id_to_metadata_dict[variant_obj.id].get(
-                        'passing_sample_ids', set())
+                passing_sample_ids = (
+                        variant_id_to_metadata_dict[variant_obj.id].get(
+                                'passing_sample_ids', set()))
             else:
                 passing_sample_ids = None
 
@@ -271,7 +272,7 @@ class MeltedVariantView(BaseVariantView):
                 if passing_sample_ids is not None:
                     # Don't add a row for VariantEvidence object if sample is
                     # not present.
-                    sample_id = variant_evidence_obj.experiment_sample.id
+                    sample_id = variant_evidence_obj.experiment_sample_id
                     if not sample_id in passing_sample_ids:
                         continue
                 melted_list.append(MeltedVariantView(variant_obj, common_data_obj,
