@@ -61,3 +61,6 @@ genome_designer/snpEff_summary.html
 venv
 
 .DS_Store
+
+# Ignore logs.
+*.log
