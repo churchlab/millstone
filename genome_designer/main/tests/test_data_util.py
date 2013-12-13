@@ -30,13 +30,14 @@ class TestRequestScopedVariantDataCache(TestCase):
         """
         from django.conf import settings
 
+        variant_list = []
         for pos in range(10):
-            var = Variant.objects.create(
+            variant_list.append(Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=pos,
-                ref_value='A')
+                ref_value='A'))
 
         # Just testing constructor and populate for now.
         # TODO: Add more thorough tests if we stick with this design.
