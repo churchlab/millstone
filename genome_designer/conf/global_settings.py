@@ -307,7 +307,7 @@ def is_ec2():
 RUNNING_ON_EC2 = is_ec2()
 
 # Allows user to create an S3 backed project. 
-S3_ENABLED = RUNNING_ON_EC2 or True
+S3_ENABLED = RUNNING_ON_EC2 or False
 
 # Don't perform any API call that changes anything on S3. 
 S3_DRY_RUN = False
