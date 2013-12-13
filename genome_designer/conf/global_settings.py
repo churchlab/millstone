@@ -335,4 +335,4 @@ TEST_RUNNER = 'test_suite_runner.CustomTestSuiteRunner'
 
 TEST_FILESYSTEM_DIR = os.path.join(PWD, 'temp_test_data')
 
-TEST_S3 = S3_ENABLED
+TEST_S3 = False
