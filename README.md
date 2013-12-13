@@ -3,6 +3,11 @@ genome-designer-v2
 
 Second generation of Genome Designer
 
+## Dependencies
+
+* R (for Picard)
+
+TODO: Add other deps.
 
 ## Installation
 
