@@ -199,7 +199,10 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     for sample in vcf_record.samples:
         sample_uid = sample.sample
         sample_data_dict = extract_sample_data_dict(sample)
-        sample_obj = query_cache.uid_to_experiment_sample_map[sample_uid]
+        if query_cache is not None:
+            sample_obj = query_cache.uid_to_experiment_sample_map[sample_uid]
+        else:
+            sample_obj = ExperimentSample.objects.get(uid=sample_uid)
         ve, created = VariantEvidence.objects.get_or_create(
                 experiment_sample=sample_obj,
                 variant_caller_common_data=common_data_obj)
