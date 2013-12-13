@@ -65,3 +65,6 @@ venv
 
 # Ignore compiled javascripts.
 celery_manager/celery_manager/static/COMPILED/
+
+# Ignore logs.
+*.log

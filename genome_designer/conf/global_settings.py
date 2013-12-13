@@ -152,6 +152,7 @@ INSTALLED_APPS = (
     'django_nose'
 )
 
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -166,6 +167,12 @@ LOGGING = {
         'console':{
             'level':'DEBUG',
             'class':'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'default.log', # override in local_settings.py
             'formatter': 'simple'
         },
     },
@@ -185,10 +192,16 @@ LOGGING = {
 
         # Uncomment to see SQL logs on the console.
         # 'django.db.backends': {
-        #     'handlers':['console'],
+        #     'handlers':['file'],
         #     'level':'DEBUG',
         #     'propagate': False,
         # },
+
+        'debug_logger': {
+            'handlers':['file'],
+            'level':'DEBUG',
+            'propagate': False,
+        },
     }
 }
 
@@ -336,3 +349,10 @@ TEST_RUNNER = 'test_suite_runner.CustomTestSuiteRunner'
 TEST_FILESYSTEM_DIR = os.path.join(PWD, 'temp_test_data')
 
 TEST_S3 = False
+
+###############################################################################
+# Profiling
+###############################################################################
+
+# Directory where profiler logs will be stored. See README.md.
+PROFILE_LOG_BASE = None

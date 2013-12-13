@@ -1078,6 +1078,14 @@ class VariantEvidence(Model, VisibleFieldMixin):
     # TODO: Extract interesting keys (e.g. gt_type) into their own SQL fields.
     data = JSONField()
 
+    def __init__(self, *args, **kwargs):
+        # HACK: Manually cache data to avoid expensive lookups.
+        self.manually_cached_data = {}
+
+        # call super's __init__ without the alt_value field if present
+        super(VariantEvidence, self).__init__(*args, **kwargs)
+
+
     def __getattr__(self, name):
         """Automatically called if an attribute is not found in the typical
         place.
@@ -1100,6 +1108,10 @@ class VariantEvidence(Model, VisibleFieldMixin):
 
     @property
     def sample_uid(self):
+        if 'sample_uid' in self.manually_cached_data:
+            return self.manually_cached_data['sample_uid']
+
+        # Otherwise, probably do DB lookup. Guarantee correctness.
         return self.experiment_sample.uid
 
     def as_dict(self):
@@ -1112,7 +1124,7 @@ class VariantEvidence(Model, VisibleFieldMixin):
     def default_view_fields(clazz):
         return [
             {'field':'gt_type'},
-            {'field':'sample_uid'},
+            {'field':'sample_uid', 'verbose':'Samples'},
         ]
 
 

@@ -10,11 +10,24 @@ from django.db import connection
 from django.db.models import Q
 
 from main.models import Variant
+from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from variants.filter_eval_result import metadata_default_dict_factory_fn
 from variants.filter_eval_result import FilterEvalResult
+
+
+###############################################################################
+# DEBUG (uncomment)
+#
+# NOTE: Do not commit logging statements unless you know that you want them
+#       to be around for a good reason.
+###############################################################################
+
+# import logging
+# LOGGER = logging.getLogger('debug_logger')
+# LOGGER.debug('This adds a logging statement.')
 
 
 ###############################################################################
@@ -243,7 +256,7 @@ def get_sample_id_set_for_variant(variant):
     """Returns the set of all ExperimentSamples ids for which there exists a
     relationship to the Variant
     """
-    return set([ve.experiment_sample.id for ve in
+    return set([ve.experiment_sample_id for ve in
             VariantEvidence.objects.filter(
                     variant_caller_common_data__variant=variant)])
 
@@ -425,11 +438,11 @@ def eval_variant_set_filter_expr(set_restrict_string, ref_genome):
     Returns:
         A FilterEvalResult object.
     """
-    return _eval_variant_set_filter_expr__brute_force_on_negative(
+    return _eval_variant_set_filter_expr__brute_force(
             set_restrict_string, ref_genome)
 
 
-def _eval_variant_set_filter_expr__brute_force_on_negative(
+def _eval_variant_set_filter_expr__brute_force(
         set_restrict_string, ref_genome):
     """Implementation that uses brute force on negative case.
 
@@ -461,10 +474,53 @@ def _eval_variant_set_filter_expr__brute_force_on_negative(
     is_negative_query = bool(match.group('maybe_not'))
 
     # If forward-case, use optimized implementation.
-    if not is_negative_query:
-        return _eval_variant_set_filter_expr__optimized__positive(
+    if is_negative_query:
+        return _eval_variant_set_filter_expr__brute_force__negative(
+                variant_set.id, ref_genome)
+    else:
+        return _eval_variant_set_filter_expr__brute_force__positive(
                 variant_set.id, ref_genome)
 
+
+def _eval_variant_set_filter_expr__brute_force__positive(variant_set_id,
+        ref_genome):
+    """Positive look up by brute force.
+
+    NOTE: We eventually want to hard-code the SQL for this as started in
+    _eval_variant_set_filter_expr__optimized__positive() but this broke
+    when we switched to Postgres since it has a slightly different syntax
+    from Sqlite.
+    """
+    # Store the results in these data structures.
+    passing_variant_set = set()
+    variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
+
+    for variant in Variant.objects.filter(reference_genome=ref_genome):
+        matching_vtvs = VariantToVariantSet.objects.filter(
+                variant=variant,
+                variant_set_id=variant_set_id)
+        if len(matching_vtvs) > 0:
+            assert len(matching_vtvs) == 1, (
+                    "Multiple VariantToVariantSet objects found for "
+                    "Variant.uid=%s, VariantSet.uid=%s" % (
+                            variant.uid, variant_set.uid))
+            vtvs = matching_vtvs[0]
+            passing_variant_set.add(variant)
+            passing_sample_ids = set([sample.id for sample in
+                    vtvs.sample_variant_set_association.all()])
+            variant_id_to_metadata_dict[variant.id][
+                    'passing_sample_ids'] = passing_sample_ids
+
+    return FilterEvalResult(passing_variant_set, variant_id_to_metadata_dict)
+
+
+def _eval_variant_set_filter_expr__brute_force__negative(variant_set_id,
+        ref_genome):
+    """Negative look up by brute force.
+
+    NOTE: We eventually want to hard-code the SQL for this as started in
+    _eval_variant_set_filter_expr__optimized_full_not_working().
+    """
     # Store the results in these data structures.
     passing_variant_set = set()
     variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
@@ -481,7 +537,7 @@ def _eval_variant_set_filter_expr__brute_force_on_negative(
                 experiment_sample = variant_evidence.experiment_sample
                 matching_vtvs = VariantToVariantSet.objects.filter(
                         variant=variant,
-                        variant_set=variant_set,
+                        variant_set_id=variant_set_id,
                         sample_variant_set_association__id=experiment_sample.id)
                 if not len(matching_vtvs):
                     passing_sample_ids.add(experiment_sample.id)
@@ -494,7 +550,7 @@ def _eval_variant_set_filter_expr__brute_force_on_negative(
             # objects exist for the Variant in which case we do a simpler
             # query.
             matching_vtvs = VariantToVariantSet.objects.filter(
-                    variant=variant, variant_set=variant_set)
+                    variant=variant, variant_set_id=variant_set_id)
             if not len(matching_vtvs):
                 passing_variant_set.add(variant)
 
@@ -504,6 +560,8 @@ def _eval_variant_set_filter_expr__brute_force_on_negative(
 def _eval_variant_set_filter_expr__optimized__positive(variant_set_id,
         ref_genome):
     """Supports positive queries in a more optimal fashion.
+
+    NOTE: Temporarily unused as this broke when we switched to Postgresql.
     """
     # We need to perform a custom SQL statement to get all the INNER JOINs
     # right. As far as we can tell, there is not a clear way to do this using
@@ -672,3 +730,52 @@ def get_subdict(big_dict, fields):
         TypeError if field missing from big_dict.
     """
     return {k: big_dict[k] for k in fields}
+
+
+def create_initial_filter_eval_result_object(variant_query_set):
+    """Creates a FilterEvalResult object containing the variants
+    and all samples associated with those variants.
+    """
+    variant_id_to_metadata_dict = defaultdict(metadata_default_dict_factory_fn)
+
+    query_result = _get_variant_id_sample_id_tuple_list(variant_query_set)
+
+    for variant_id, sample_id in query_result:
+        variant_id_to_metadata_dict[variant_id]['passing_sample_ids'].add(
+                sample_id)
+
+    return FilterEvalResult(set(variant_query_set), variant_id_to_metadata_dict)
+
+
+def _get_variant_id_sample_id_tuple_list(variant_query_set):
+    """Returns list of two-tuples (variant_id, sample_id).
+
+    Allows debugging by toggling raw_sql argument.
+    """
+    # Grab all VariantEvidence objects. These have relations to
+    # samples. Use values_list() to only get necessary data, avoiding overhead
+    # of getting all data, plus avoiding casting to Model object.
+    # NOTE: The reason we don't do select_related() with VariantCallerCommonData
+    # here is because the Django values_list() syntax won't allow doing
+    # 'variantcallercommondata__id' so we do a separte called below and then
+    # some simple looping to process it all.
+    all_ve_list = VariantEvidence.objects.filter(
+        variant_caller_common_data__variant__in=variant_query_set).\
+                values_list('experiment_sample_id',
+                        'variant_caller_common_data_id')
+
+    # Build map from VariantCallerCommonData id to Variant id.
+    all_vccd_list = VariantCallerCommonData.objects.filter(
+        variant__in=variant_query_set).values_list('id', 'variant_id')
+    vccd_id_to_variant_id_map = {}
+    for vccd in all_vccd_list:
+        vccd_id_to_variant_id_map[vccd[0]] = vccd[1]
+
+    # Assemble the result.
+    query_result = []
+    for ve in all_ve_list:
+        sample_id = ve[0]
+        vccd_id = ve[1]
+        variant_id = vccd_id_to_variant_id_map[vccd_id]
+        query_result.append((variant_id, sample_id))
+    return query_result

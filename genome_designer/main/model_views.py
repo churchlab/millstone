@@ -57,14 +57,20 @@ class CastVariantView(BaseVariantView):
     """View of Variant that does not expose the individual
     VariantToExperimentSample relationships.
     """
-    def __init__(self, variant):
+    def __init__(self, variant, data_cache):
+        """Constructor.
+
+        Args:
+            variant: A Variant instance.
+            data_cache: RequestScopedVariantDataCache instance.
+        """
         self.variant = variant
         self.variantalternate_list = (
-                variant.variantalternate_set.all())
+                data_cache.get_variant_alternate_list(variant))
         self.variant_caller_common_data_list = (
-                variant.variantcallercommondata_set.all())
-        self.variant_evidence_list = VariantEvidence.objects.filter(
-                variant_caller_common_data__variant=variant)
+                data_cache.get_variant_caller_common_data_list(variant))
+        self.variant_evidence_list = (
+                data_cache.get_variant_evidence_list(variant))
 
     def custom_getattr(self, attr):
         """For an attribute of a Variant, returns what you would expect.
@@ -86,45 +92,56 @@ class CastVariantView(BaseVariantView):
             result_list = []
 
             # Convert to list for next step.
-            if isinstance(delegate, QuerySet):
+            if isinstance(delegate, QuerySet) or isinstance(delegate, list):
                 delegate_list = delegate
             else:
                 delegate_list = [delegate]
 
             # Iterate through the delegates.
             for delegate in delegate_list:
-
                 if hasattr(delegate, attr):
                     result_list.append(getattr(delegate, attr))
                 else:
-                    try: result_list.append(delegate.as_dict()[attr])
+                    try: result_list.append(delegate[attr])
                     except: pass
 
+            # If no results, continue to next delegate.
+            if not len(result_list):
+                continue
+
+            # If exactly one object, just return that object.
             if len(result_list) == 1:
-                # If one object, return it.
                 return result_list[0]
-            elif len(result_list) > 1:
-                # Else if more than one, return a '|'-separated string.
+
+            # If 4 or less, return a '|'-separated string.
+            # Number 4 is about how many short strings can reasonably fit in a
+            # cell in the ui.
+            # NOTE: This case is most useful for showing Variant ALTs.
+            if len(result_list) <= 4:
                 return ' | '.join([str(res) for res in result_list])
+
+            # Otherwise return the count.
+            return '{' + str(len(result_list)) + '}'
 
         # Default.
         return UNDEFINED_STRING
 
     @classmethod
-    def variant_as_cast_view(clazz, variant_obj,
-            variant_id_to_metadata_dict=None):
+    def variant_as_cast_view(clazz, variant_obj, variant_id_to_metadata_dict,
+            data_cache):
         """Factory method returns a cast view for the given variant.
 
         Args:
             variant_obj: The Variant object to melt.
             variant_id_to_metadata_dict: See TODO.
+            data_cache: Object that handles bulk SQL lookup.
 
         Returns:
             A CastVariantView instance.
         """
         # TODO: Do we need to modify the view based on passing samples in the
         # metadata.
-        return CastVariantView(variant_obj)
+        return CastVariantView(variant_obj, data_cache)
 
 
 class MeltedVariantView(BaseVariantView):
@@ -186,7 +203,7 @@ class MeltedVariantView(BaseVariantView):
             result_list = []
 
             # Convert to list for next step.
-            if isinstance(delegate, QuerySet):
+            if isinstance(delegate, QuerySet) or isinstance(delegate, list):
                 delegate_list = delegate
             else:
                 delegate_list = [delegate]
@@ -198,7 +215,7 @@ class MeltedVariantView(BaseVariantView):
                     result_list.append(getattr(delegate, attr))
                 else:
                     try:
-                        result_list.append(delegate.as_dict()[attr])
+                        result_list.append(delegate[attr])
                     except:
                         pass
 
@@ -245,8 +262,9 @@ class MeltedVariantView(BaseVariantView):
                 continue
 
             if variant_id_to_metadata_dict is not None:
-                passing_sample_ids = variant_id_to_metadata_dict[variant_obj.id].get(
-                        'passing_sample_ids', set())
+                passing_sample_ids = (
+                        variant_id_to_metadata_dict[variant_obj.id].get(
+                                'passing_sample_ids', set()))
             else:
                 passing_sample_ids = None
 
@@ -254,7 +272,7 @@ class MeltedVariantView(BaseVariantView):
                 if passing_sample_ids is not None:
                     # Don't add a row for VariantEvidence object if sample is
                     # not present.
-                    sample_id = variant_evidence_obj.experiment_sample.id
+                    sample_id = variant_evidence_obj.experiment_sample_id
                     if not sample_id in passing_sample_ids:
                         continue
                 melted_list.append(MeltedVariantView(variant_obj, common_data_obj,

@@ -3,6 +3,11 @@ genome-designer-v2
 
 Second generation of Genome Designer
 
+## Dependencies
+
+* R (for Picard)
+
+TODO: Add other deps.
 
 ## Installation
 
@@ -164,6 +169,11 @@ See instructions for setting up PostgresSQL database:
 
 *NOTE:* Be sure to make local db config changes in `conf/local_settings.py`.
 
+In order to run tests with Postgres, your user will need CREATE permissions.
+You can grant these by logging into the Posgres shell and running:
+
+    ALTER USER django CREATEDB;
+
 
 ## Tests
 
@@ -205,3 +215,22 @@ From the `genome_designer` directory, run:
 
 NOTE: This will delete the entire dev database and re-create it with the
 hard-coded test models only.
+
+
+## Profiling code
+
+The `debug.profiler` module contains a `profile` decorator that can be added to a function. For example, to debug a view:
+
+1. Update local_settings.py with your profiler logs destination by setting the PROFILE_LOG_BASE attribute, e.g.:
+
+        PROFILE_LOG_BASE = '/path/to/logs'
+
+2. Add @profile('log_file_name') in front of the method you want to profile, e.g.:
+
+        @profile('mylog')
+        def my_view(request):
+            ...
+
+3. Use the `debug/inspect_profiler_data.py` convenience script to parse the data, e.g.:
+
+        python inspect_profiler_data.py /path/to/log/mylog
