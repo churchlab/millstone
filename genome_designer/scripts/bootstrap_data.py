@@ -23,6 +23,7 @@ import sys
 from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from django.conf import settings
 
 from main.models import AlignmentGroup
 from main.models import Dataset
@@ -43,7 +44,6 @@ from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
 from scripts.import_util import import_reference_genome_from_local_file
 
-import settings
 from settings import PWD as GD_ROOT
 
 # Test data.
