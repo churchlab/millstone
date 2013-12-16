@@ -750,32 +750,10 @@ def create_initial_filter_eval_result_object(variant_query_set):
 def _get_variant_id_sample_id_tuple_list(variant_query_set):
     """Returns list of two-tuples (variant_id, sample_id).
 
-    Allows debugging by toggling raw_sql argument.
+    NOTE: Transient implementation that ignores variant_query_set.
     """
-    # Grab all VariantEvidence objects. These have relations to
-    # samples. Use values_list() to only get necessary data, avoiding overhead
-    # of getting all data, plus avoiding casting to Model object.
-    # NOTE: The reason we don't do select_related() with VariantCallerCommonData
-    # here is because the Django values_list() syntax won't allow doing
-    # 'variantcallercommondata__id' so we do a separte called below and then
-    # some simple looping to process it all.
-    all_ve_list = VariantEvidence.objects.filter(
-        variant_caller_common_data__variant__in=variant_query_set).\
-                values_list('experiment_sample_id',
-                        'variant_caller_common_data_id')
-
-    # Build map from VariantCallerCommonData id to Variant id.
-    all_vccd_list = VariantCallerCommonData.objects.filter(
-        variant__in=variant_query_set).values_list('id', 'variant_id')
-    vccd_id_to_variant_id_map = {}
-    for vccd in all_vccd_list:
-        vccd_id_to_variant_id_map[vccd[0]] = vccd[1]
-
-    # Assemble the result.
-    query_result = []
-    for ve in all_ve_list:
-        sample_id = ve[0]
-        vccd_id = ve[1]
-        variant_id = vccd_id_to_variant_id_map[vccd_id]
-        query_result.append((variant_id, sample_id))
-    return query_result
+    cursor = connection.cursor()
+    sql_statement = (
+            'SELECT id, experiment_sample_id FROM materialized_melted_variant')
+    cursor.execute(sql_statement)
+    return cursor.fetchall()
