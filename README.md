@@ -5,9 +5,9 @@ Second generation of Genome Designer
 
 ## Dependencies
 
+* Postgresql 9.3 (only this version has been tested)
 * R (for Picard)
-
-TODO: Add other deps.
+* Python deps: See requirements.txt / instructions below
 
 ## Installation
 
