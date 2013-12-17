@@ -10,11 +10,14 @@ This module interacts closely with the ModelViews in model_views.py.
 
 from collections import defaultdict
 
+from django.db import connection
+
 from main.model_views import CastVariantView
 from main.model_views import MeltedVariantView
 from main.models import ExperimentSample
 from main.models import Variant
 from main.models import VariantEvidence
+from variants.common import dictfetchall
 from variants.variant_filter import get_variants_that_pass_filter
 
 
@@ -102,63 +105,15 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
     Returns:
         List of CastVariantView or MeltedVariantView objects.
     """
-    # Apply the filters.
-    filter_result = get_variants_that_pass_filter(
-            combined_filter_string, reference_genome)
-    variant_list = list(filter_result.variant_set)
-    variant_id_to_metadata_dict = filter_result.variant_id_to_metadata_dict
-
-    # Convert to appropriate view objects.
-    if is_melted:
-        # Since it's hard to nail pagination with MeltedVariantView without
-        # iteratively melting Variants, we use a slightly awkward strategy
-        # of first calculating what's the most results we need to get up
-        # to the current page, and then do the somewhat brute-force aggregation
-        # of the results until that point.
-
-        # First calculate the max results needed based on page size.
-        max_results_needed = pagination_start + pagination_len
-
-        result_list = []
-        for variant in variant_list:
-            result_list.extend(
-                    MeltedVariantView.variant_as_melted_list(variant,
-                            variant_id_to_metadata_dict))
-            if len(result_list) > max_results_needed:
-                break
-
-        # Estimate the total number of results as the number of variants
-        # cross the number of samples.
-        # NOTE: This should be an over-calculation, I believe.
-        num_samples = ExperimentSample.objects.filter(
-                project=reference_genome.project).count()
-        approx_num_max_results = len(variant_list) * num_samples
-
-        # Maybe adjust if we are at the end of results.
-        if len(result_list) > approx_num_max_results:
-            approx_num_max_results = len(result_list)
-        num_total_variants = approx_num_max_results
-
-        # Return the current page of results.
-        page_results = result_list[
-                pagination_start:pagination_start + pagination_len]
-    else:
-        num_total_variants = len(variant_list)
-
-        # Apply pagination limits here before casting since the number is 1:1.
-        # TODO: Figure out how to similarly avoid casting all results in the
-        # is_melted case above.
-        variant_list = variant_list[
-                pagination_start:pagination_start + pagination_len]
-
-        # Make a single query to get all the required data.
-        data_cache = RequestScopedVariantDataCache()
-        data_cache.populate(variant_list, reference_genome.project)
-
-        # TODO: Avoid casting all results when only subset is returned.
-        # Question is how to get the total count without doing the cast.
-        page_results = [CastVariantView.variant_as_cast_view(variant,
-                        variant_id_to_metadata_dict, data_cache)
-                for variant in variant_list]
-
+    cursor = connection.cursor()
+    sql_statement = (
+            'SELECT position, experiment_sample_uid '
+            'FROM materialized_melted_variant '
+            'LIMIT %d '
+            'OFFSET %d '
+            % (pagination_len, pagination_start))
+    cursor.execute(sql_statement)
+    result_list = dictfetchall(cursor)
+    page_results = result_list[:pagination_len]
+    num_total_variants = 1000000
     return LookupVariantsResult(page_results, num_total_variants)
