@@ -52,6 +52,13 @@ class AbstractMaterializedViewManager(object):
         transaction.commit_unless_managed()
 
 
+SELECT_FIELDS = [
+    'main_variant.id',
+    'main_variant.position',
+    'main_experimentsample.id AS experiment_sample_id',
+    'main_experimentsample.uid AS experiment_sample_uid'
+]
+
 class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
     """Interface for objects providing a wrapper for a Postgresql materialized
     view.
@@ -61,16 +68,16 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
         self.view_table_name = 'materialized_melted_variant'
         self.cursor = connection.cursor()
 
-
     def create_internal(self):
         """Override.
         """
         create_sql_statement = (
             'CREATE MATERIALIZED VIEW %s AS '
-                'SELECT main_variant.id, main_experimentsample.id AS experiment_sample_id FROM main_variant '
+                'SELECT %s FROM main_variant '
                     'INNER JOIN main_variantcallercommondata ON (main_variant.id = main_variantcallercommondata.variant_id) '
                     'INNER JOIN main_variantevidence ON (main_variantcallercommondata.id = main_variantevidence.variant_caller_common_data_id) '
-                    'INNER JOIN main_experimentsample ON (main_variantevidence.experiment_sample_id = main_experimentsample.id)'
-            % (self.view_table_name,))
+                    'INNER JOIN main_experimentsample ON (main_variantevidence.experiment_sample_id = main_experimentsample.id) '
+                'ORDER BY main_variant.position'
+            % (self.view_table_name, ', '.join(SELECT_FIELDS)))
         self.cursor.execute(create_sql_statement)
         transaction.commit_unless_managed()

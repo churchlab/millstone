@@ -2,6 +2,9 @@
 Classes that describe how a particular model should be viewed.
 """
 
+import json
+import string
+
 from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
@@ -321,3 +324,42 @@ class GeneView(object):
             {'field':'end'},
             {'field':'variants'},
         ]
+
+
+def adapt_new_melted_variant_view_to_frontend(melted_variant_view_list):
+    """Returns JSON string.
+    """
+    field_dict_list = [
+        {'field': 'position'},
+        {'field': 'experiment_sample_uid'},
+    ]
+
+    # Parse the list of field names.
+    field_list = [fdict['field'] for fdict in field_dict_list]
+
+    # Get the verbose names for the fields.
+    def _get_verbose(fdict):
+        if 'verbose' in fdict:
+            return fdict['verbose']
+        else:
+            return string.capwords(fdict['field'],'_').replace('_',' ')
+    field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
+
+    # Create frontend representations of the objects.
+    fe_obj_list = []
+    for melted_variant_obj in melted_variant_view_list:
+        # Get (key, value) pairs for visible fields.
+        visible_field_pairs = [
+                (field, melted_variant_obj[field]) for field in field_list]
+        fe_obj_list.append(dict(visible_field_pairs))
+
+    # Create the config dict required by DataTables.js.
+    obj_field_config = [{
+        'mData': name,
+        'sTitle': verbose_name
+    } for (name, verbose_name) in zip(field_list, field_verbose_names)]
+
+    return json.dumps({
+        'obj_list': fe_obj_list,
+        'field_config': obj_field_config
+    })

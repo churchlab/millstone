@@ -23,6 +23,7 @@ from django.views.decorators.http import require_GET, require_POST
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.data_util import lookup_variants
+from main.model_views import adapt_new_melted_variant_view_to_frontend
 from main.model_views import GeneView
 from main.models import Project
 from main.models import ReferenceGenome
@@ -144,9 +145,7 @@ def get_variant_list(request):
         num_total_variants = lookup_variant_result.num_total_variants
 
         # Adapt the Variants to display for the frontend.
-        variant_list_json = adapt_model_or_modelview_list_to_frontend(variant_list,
-                variant_key_map=reference_genome.variant_key_map,
-                visible_key_names=visible_key_names)
+        variant_list_json = adapt_new_melted_variant_view_to_frontend(variant_list)
 
         # Get all VariantSets that exist for this ReferenceGenome.
         variant_set_list = VariantSet.objects.filter(
