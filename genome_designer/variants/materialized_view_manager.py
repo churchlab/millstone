@@ -78,16 +78,28 @@ SCHEMA_BUILDER = SchemaBuilder()
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.id', 'id', False)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.position', 'position', True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', 'chromosome', True)
+SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', 'ref', True)
+SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', True)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', False)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', 'experiment_sample_uid', True)
 MELTED_VARIANT_SCHEMA = SCHEMA_BUILDER.get_schema()
 
-# Generate the SELECT clause.
+# Generate the SELECT clause for building the table.
 MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS = [
         schema_obj['source_col_name'] + ' AS ' + schema_obj['joined_table_col_name']
         for schema_obj in MELTED_VARIANT_SCHEMA
 ]
-MATERIALIZED_TABLE_SELECT_CLAUSE = ', '.join(MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS)
+MATERIALIZED_TABLE_SELECT_CLAUSE = ', '.join(
+        MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS)
+
+# Generate the SELECT clause for querying the table.
+MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS = [
+        schema_obj['joined_table_col_name']
+        for schema_obj in MELTED_VARIANT_SCHEMA
+]
+MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE = ', '.join(
+        MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS)
+
 
 class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
     """Interface for objects providing a wrapper for a Postgresql materialized
@@ -105,9 +117,14 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
         create_sql_statement = (
             'CREATE MATERIALIZED VIEW %s AS '
                 'SELECT %s FROM main_variant '
+                    'INNER JOIN main_variantalternate ON (main_variant.id = main_variantalternate.variant_id) '
                     'INNER JOIN main_variantcallercommondata ON (main_variant.id = main_variantcallercommondata.variant_id) '
                     'INNER JOIN main_variantevidence ON (main_variantcallercommondata.id = main_variantevidence.variant_caller_common_data_id) '
                     'INNER JOIN main_experimentsample ON (main_variantevidence.experiment_sample_id = main_experimentsample.id) '
+                    # 'LEFT JOIN main_variantevidence_variantalternate_set ON '
+                    #         '(main_variantevidence.id = main_variantevidence_variantalternate_set.variantevidence_id) '
+                    # 'LEFT JOIN main_variantalternate ON '
+                    #         '(main_variantalternate.id = main_variantevidence_variantalternate_set.variantalternate_id) '
                 'WHERE (main_variant.reference_genome_id = %d) '
                 'ORDER BY main_variant.position'
             % (self.view_table_name, MATERIALIZED_TABLE_SELECT_CLAUSE, self.reference_genome.id)

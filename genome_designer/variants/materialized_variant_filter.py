@@ -26,6 +26,7 @@ from variants.common import get_django_q_object_for_triple
 from variants.common import hashablefetchall
 from variants.common import SqlReadySymbol
 from variants.common import SymbolGenerator
+from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE
 from variants.filter_eval_result import FilterEvalResult
 from variants.filter_scope import FilterScope
 
@@ -202,8 +203,9 @@ class VariantFilterEvaluator(object):
         # the results.
         cursor = connection.cursor()
         sql_statement = (
-                'SELECT id, position, experiment_sample_id, experiment_sample_uid '
+                'SELECT %s '
                 'FROM materialized_melted_variant '
+                % (MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE,)
         )
 
         # Maybe add WHERE clause.
