@@ -228,6 +228,14 @@ def get_delim_key_value_triple(raw_string, all_key_map):
     raise ParseError(raw_string, 'No valid filter delimeter.')
 
 
+def convert_delim_key_value_triple_to_expr(triple):
+    (delim, key, value) = triple
+    # Make '==' SQL-friendly.
+    if delim == '==':
+        delim = '='
+    return (key + delim + '%s', value)
+
+
 def _clean_delim(raw_delim):
     """Cleans a run delimiter.
     """
@@ -424,6 +432,33 @@ def dictfetchall(cursor):
     desc = cursor.description
     return [
         dict(zip([col[0] for col in desc], row))
+        for row in cursor.fetchall()
+    ]
+
+
+class HashableVariantDict(object):
+    """Hashable version of Variant Dict.
+
+    The Variant id and Sample id uniquely identify the row.
+    """
+
+    def __init__(self, obj_dict):
+        self.obj_dict = obj_dict
+
+    def __hash__(self):
+        return hash((self.obj_dict['id'],
+            self.obj_dict['experiment_sample_id']))
+
+    def __getitem__(self, key):
+        return self.obj_dict[key]
+
+
+def hashablefetchall(cursor):
+    """Returns all rows from a cursor as hashable object.
+    """
+    desc = cursor.description
+    return [
+        HashableVariantDict(dict(zip([col[0] for col in desc], row)))
         for row in cursor.fetchall()
     ]
 

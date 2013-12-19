@@ -55,6 +55,7 @@ class AbstractMaterializedViewManager(object):
 SELECT_FIELDS = [
     'main_variant.id',
     'main_variant.position',
+    'main_variant.chromosome',
     'main_experimentsample.id AS experiment_sample_id',
     'main_experimentsample.uid AS experiment_sample_uid'
 ]
