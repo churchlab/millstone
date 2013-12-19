@@ -368,6 +368,8 @@ def adapt_new_melted_variant_view_to_frontend(obj_list):
     """
     field_dict_list = [
         {'field': 'position'},
+        {'field': 'ref'},
+        {'field': 'alt'},
         {'field': 'experiment_sample_uid'},
     ]
     return adapt_non_recursive(obj_list, field_dict_list)
@@ -378,6 +380,8 @@ def adapt_new_cast_variant_view_to_frontend(obj_list):
     """
     field_dict_list = [
         {'field': 'position'},
+        {'field': 'ref'},
+        {'field': 'alt'},
         {'field': 'total_samples'},
     ]
     return adapt_non_recursive(obj_list, field_dict_list)
