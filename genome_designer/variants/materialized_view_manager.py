@@ -64,7 +64,8 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
     view.
     """
 
-    def __init__(self):
+    def __init__(self, reference_genome):
+        self.reference_genome = reference_genome
         self.view_table_name = 'materialized_melted_variant'
         self.cursor = connection.cursor()
 
@@ -77,7 +78,9 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                     'INNER JOIN main_variantcallercommondata ON (main_variant.id = main_variantcallercommondata.variant_id) '
                     'INNER JOIN main_variantevidence ON (main_variantcallercommondata.id = main_variantevidence.variant_caller_common_data_id) '
                     'INNER JOIN main_experimentsample ON (main_variantevidence.experiment_sample_id = main_experimentsample.id) '
+                'WHERE (main_variant.reference_genome_id = %d) '
                 'ORDER BY main_variant.position'
-            % (self.view_table_name, ', '.join(SELECT_FIELDS)))
+            % (self.view_table_name, ', '.join(SELECT_FIELDS), self.reference_genome.id)
+        )
         self.cursor.execute(create_sql_statement)
         transaction.commit_unless_managed()
