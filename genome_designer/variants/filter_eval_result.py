@@ -16,7 +16,7 @@ class FilterEvalResult(object):
     Provides utility methods for combining results.
     """
 
-    def __init__(self, variant_set, variant_id_to_metadata_dict):
+    def __init__(self, variant_set, variant_id_to_metadata_dict={}):
         if not isinstance(variant_set, set):
             variant_set = set(variant_set)
         self.variant_set = variant_set

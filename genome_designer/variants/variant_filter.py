@@ -480,7 +480,6 @@ class VariantFilterEvaluator(object):
 
 
     def get_samples_passing_for_evidence_or_alternate(self, variant, triple):
-
         (delim, key, value) = triple
         samples_passing_for_variant = set()
 
