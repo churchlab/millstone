@@ -326,15 +326,13 @@ class GeneView(object):
         ]
 
 
-def adapt_new_melted_variant_view_to_frontend(melted_variant_view_list):
-    """Returns JSON string.
-    """
-    field_dict_list = [
-        {'field': 'position'},
-        {'field': 'experiment_sample_uid'},
-    ]
+def adapt_non_recursive(obj_list, field_dict_list):
+    """Adapts of list of objects that doesn't require recursive calling.
 
-    # Parse the list of field names.
+    Returns:
+        JSON string representation of frontend objects.
+    """
+     # Parse the list of field names.
     field_list = [fdict['field'] for fdict in field_dict_list]
 
     # Get the verbose names for the fields.
@@ -347,7 +345,7 @@ def adapt_new_melted_variant_view_to_frontend(melted_variant_view_list):
 
     # Create frontend representations of the objects.
     fe_obj_list = []
-    for melted_variant_obj in melted_variant_view_list:
+    for melted_variant_obj in obj_list:
         # Get (key, value) pairs for visible fields.
         visible_field_pairs = [
                 (field, melted_variant_obj[field]) for field in field_list]
@@ -363,3 +361,23 @@ def adapt_new_melted_variant_view_to_frontend(melted_variant_view_list):
         'obj_list': fe_obj_list,
         'field_config': obj_field_config
     })
+
+
+def adapt_new_melted_variant_view_to_frontend(obj_list):
+    """Returns JSON string.
+    """
+    field_dict_list = [
+        {'field': 'position'},
+        {'field': 'experiment_sample_uid'},
+    ]
+    return adapt_non_recursive(obj_list, field_dict_list)
+
+
+def adapt_new_cast_variant_view_to_frontend(obj_list):
+    """Returns JSON string.
+    """
+    field_dict_list = [
+        {'field': 'position'},
+        {'field': 'total_samples'},
+    ]
+    return adapt_non_recursive(obj_list, field_dict_list)

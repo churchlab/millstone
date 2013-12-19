@@ -92,6 +92,11 @@ class RequestScopedVariantDataCache(object):
 
 class LookupVariantsResult(object):
     """Result of a call to lookup_variants.
+
+    Attributes:
+        result_list: List of cast or melted Variant objects.
+        num_total_variants: Total number of variants that match query.
+            For pagination.
     """
     def __init__(self, result_list, num_total_variants):
         self.result_list = result_list
@@ -103,17 +108,68 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
     """Lookup the Variants that match the filter specified in the params.
 
     Returns:
-        List of CastVariantView or MeltedVariantView objects.
+        LookupVariantsResult object.
     """
+    # First get the Variants that pass the filter.
+
     cursor = connection.cursor()
+    # We can do a rough limit on how many results.
+    # Estimate the total number of results as the number of variants
+    # cross the number of samples.
+    # NOTE: This should be an over-calculation, I believe.
+    # TODO: Figure this out precisely.
+    num_samples = ExperimentSample.objects.filter(
+        project=reference_genome.project).count()
+    num_pages = pagination_start / pagination_len
+    approx_num_max_results = (num_pages + 1) * pagination_len * num_samples
+
     sql_statement = (
-            'SELECT position, experiment_sample_uid '
+            'SELECT id, position, experiment_sample_uid '
             'FROM materialized_melted_variant '
-            'LIMIT %d '
-            'OFFSET %d '
-            % (pagination_len, pagination_start))
+            'LIMIT %d'
+            % (approx_num_max_results,)
+    )
     cursor.execute(sql_statement)
     result_list = dictfetchall(cursor)
-    page_results = result_list[:pagination_len]
+
+    # If this is a melted view, return results as they are.
+    if is_melted:
+        # TODO: Handle pagination.
+        page_results = result_list[pagination_start :
+                pagination_start + pagination_len]
+        num_total_variants = 1000000
+        return LookupVariantsResult(page_results, num_total_variants)
+
+    # Otherwise, we need to Cast the results.
+    page_results = cast_joined_variant_objects(result_list)
+    page_results = page_results[pagination_start :
+            pagination_start + pagination_len]
     num_total_variants = 1000000
     return LookupVariantsResult(page_results, num_total_variants)
+
+
+def cast_joined_variant_objects(melted_variant_list):
+    """Converts the list of melted variants into a cast representation.
+
+    This means returning one row per variant, compressing other columns
+    into an aggregate representation. For example, the 'experiment_sample_uid'
+    column becomes the 'total_samples'.
+    """
+    cast_obj_list = []
+
+    # First, we build a structure from variant id to list of result rows.
+    variant_id_to_result_row = defaultdict(list)
+    for result in melted_variant_list:
+        variant_id_to_result_row[result['id']].append(result)
+
+    for variant_id, result_row_list in variant_id_to_result_row.iteritems():
+        assert len(result_row_list), "Not expected. Debug."
+        position = result_row_list[0]['position']
+        total_samples = len(result_row_list)
+        cast_obj_list.append({
+            'id': variant_id,
+            'position': position,
+            'total_samples': total_samples
+        })
+
+    return cast_obj_list
