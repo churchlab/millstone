@@ -86,9 +86,11 @@ def cast_joined_variant_objects(melted_variant_list):
         assert len(result_row_list), "Not expected. Debug."
         position = result_row_list[0]['position']
         ref = result_row_list[0]['ref']
+        uid = result_row_list[0]['uid']
         total_samples = len(result_row_list)
         cast_obj_list.append({
             'id': variant_id,
+            'uid': uid,
             'position': position,
             'ref': ref,
             'alt': 'TODO',

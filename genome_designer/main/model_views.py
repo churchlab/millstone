@@ -347,8 +347,12 @@ def adapt_non_recursive(obj_list, field_dict_list):
     fe_obj_list = []
     for melted_variant_obj in obj_list:
         # Get (key, value) pairs for visible fields.
-        visible_field_pairs = [
-                (field, melted_variant_obj[field]) for field in field_list]
+        visible_field_pairs = []
+        for field in field_list:
+            value = melted_variant_obj[field]
+            if not value:
+                value = ''
+            visible_field_pairs.append((field, value))
         fe_obj_list.append(dict(visible_field_pairs))
 
     # Create the config dict required by DataTables.js.
@@ -367,9 +371,11 @@ def adapt_new_melted_variant_view_to_frontend(obj_list):
     """Returns JSON string.
     """
     field_dict_list = [
+        {'field': 'uid'},
         {'field': 'position'},
         {'field': 'ref'},
         {'field': 'alt'},
+        {'field': 'variant_set_name'},
         {'field': 'experiment_sample_uid'},
     ]
     return adapt_non_recursive(obj_list, field_dict_list)
@@ -379,6 +385,7 @@ def adapt_new_cast_variant_view_to_frontend(obj_list):
     """Returns JSON string.
     """
     field_dict_list = [
+        {'field': 'uid'},
         {'field': 'position'},
         {'field': 'ref'},
         {'field': 'alt'},
