@@ -76,10 +76,12 @@ class SchemaBuilder(object):
 
 SCHEMA_BUILDER = SchemaBuilder()
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.id', 'id', False)
+SCHEMA_BUILDER.add_melted_variant_field('main_variant.uid', 'uid', True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.position', 'position', True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', 'chromosome', True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', 'ref', True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', True)
+SCHEMA_BUILDER.add_melted_variant_field('main_variantset.label', 'variant_set_name', True)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', False)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', 'experiment_sample_uid', True)
 MELTED_VARIANT_SCHEMA = SCHEMA_BUILDER.get_schema()
@@ -121,6 +123,8 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                     'INNER JOIN main_variantcallercommondata ON (main_variant.id = main_variantcallercommondata.variant_id) '
                     'INNER JOIN main_variantevidence ON (main_variantcallercommondata.id = main_variantevidence.variant_caller_common_data_id) '
                     'INNER JOIN main_experimentsample ON (main_variantevidence.experiment_sample_id = main_experimentsample.id) '
+                    'LEFT JOIN main_varianttovariantset ON (main_variant.id = main_varianttovariantset.variant_id) '
+                    'LEFT JOIN main_variantset ON (main_variantset.id = main_varianttovariantset.variant_set_id) '
                     # 'LEFT JOIN main_variantevidence_variantalternate_set ON '
                     #         '(main_variantevidence.id = main_variantevidence_variantalternate_set.variantevidence_id) '
                     # 'LEFT JOIN main_variantalternate ON '
