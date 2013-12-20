@@ -16,8 +16,6 @@ class AbstractMaterializedViewManager(object):
 
     def create(self):
         """Creates the materialized view in the Postgresql DB.
-
-        Child classes should implement.
         """
         # Drop the existing table.
         self.drop()
@@ -110,8 +108,31 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
 
     def __init__(self, reference_genome):
         self.reference_genome = reference_genome
-        self.view_table_name = 'materialized_melted_variant'
+        self.view_table_name = self.get_table_name()
         self.cursor = connection.cursor()
+
+
+    def get_table_name(self):
+        """Get the name of the underlying SQL table.
+        """
+        return 'materialized_melted_variant_' + self.reference_genome.uid
+
+
+    def check_table_exists(self):
+        """Check if the table exists.
+
+        NOTE: Figured out the raw sql query by running psql with -E flag
+        and then calling \d. The -E flag causes the raw sql of the commands
+        to be shown.
+        """
+        raw_sql = (
+            'SELECT c.relname '
+            'FROM pg_catalog.pg_class c '
+            'WHERE c.relkind=%s AND c.relname=%s '
+        )
+        self.cursor.execute(raw_sql, params=('m', self.view_table_name))
+        return bool(self.cursor.fetchone())
+
 
     def create_internal(self):
         """Override.
@@ -135,3 +156,7 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
         )
         self.cursor.execute(create_sql_statement)
         transaction.commit_unless_managed()
+
+    def create_if_not_exists(self):
+        if not self.check_table_exists():
+            self.create()

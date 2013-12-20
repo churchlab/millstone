@@ -27,6 +27,7 @@ from variants.common import hashablefetchall
 from variants.common import SqlReadySymbol
 from variants.common import SymbolGenerator
 from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE
+from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.filter_eval_result import FilterEvalResult
 from variants.filter_scope import FilterScope
 
@@ -45,6 +46,12 @@ class VariantFilterEvaluator(object):
             scope: Optional FilterScope object which restricts the results
                 to the samples according to the semantic setting of the scope.
         """
+        # Manager for making queries to the materialized view table
+        # for this ReferenceGenome.
+        self.materialized_view_manager = MeltedVariantMaterializedViewManager(
+                ref_genome)
+        self.materialized_view_manager.create_if_not_exists()
+
         # Validation.
         if scope is not None:
             assert isinstance(scope, FilterScope)
@@ -69,6 +76,7 @@ class VariantFilterEvaluator(object):
             self.sympy_representation = ''
         else:
             self._create_symbolic_representation()
+
 
     def _create_symbolic_representation(self):
         """Creates a symbolic representation of the query to enable, among
@@ -204,8 +212,9 @@ class VariantFilterEvaluator(object):
         cursor = connection.cursor()
         sql_statement = (
                 'SELECT %s '
-                'FROM materialized_melted_variant '
-                % (MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE,)
+                'FROM %s'
+                % (MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE,
+                        self.materialized_view_manager.get_table_name())
         )
 
         # Maybe add WHERE clause.
