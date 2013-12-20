@@ -212,7 +212,7 @@ class VariantFilterEvaluator(object):
         cursor = connection.cursor()
         sql_statement = (
                 'SELECT %s '
-                'FROM %s'
+                'FROM %s '
                 % (MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE,
                         self.materialized_view_manager.get_table_name())
         )
