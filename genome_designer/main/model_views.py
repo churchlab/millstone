@@ -375,7 +375,7 @@ def adapt_new_melted_variant_view_to_frontend(obj_list):
         {'field': 'position'},
         {'field': 'ref'},
         {'field': 'alt'},
-        {'field': 'variant_set_name'},
+        {'field': 'variant_set_label'},
         {'field': 'experiment_sample_uid'},
     ]
     return adapt_non_recursive(obj_list, field_dict_list)
