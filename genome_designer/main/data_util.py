@@ -71,9 +71,9 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
 def cast_joined_variant_objects(melted_variant_list):
     """Converts the list of melted variants into a cast representation.
 
-    This means returning one row per variant, compressing other columns
-    into an aggregate representation. For example, the 'experiment_sample_uid'
-    column becomes the 'total_samples'.
+    This means returning one row per variant, compressing columns
+    into an aggregate representation. For example, in this initial
+    implementation, the 'experiment_sample_uid' column becomes 'total_samples'.
     """
     cast_obj_list = []
 
@@ -87,7 +87,13 @@ def cast_joined_variant_objects(melted_variant_list):
         position = result_row_list[0]['position']
         ref = result_row_list[0]['ref']
         uid = result_row_list[0]['uid']
-        total_samples = len(result_row_list)
+
+        # Count total samples.
+        total_samples = 0
+        for row in result_row_list:
+            if row['experiment_sample_uid']:
+                total_samples += 1
+
         cast_obj_list.append({
             'id': variant_id,
             'uid': uid,
