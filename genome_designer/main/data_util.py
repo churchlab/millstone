@@ -94,13 +94,21 @@ def cast_joined_variant_objects(melted_variant_list):
             if row['experiment_sample_uid']:
                 total_samples += 1
 
+        # Aggregate sets.
+        variant_sets = set()
+        for row in result_row_list:
+            if row['variant_set_label']:
+                variant_sets.add(row['variant_set_label'])
+        variant_set_string = ', '.join(list(variant_sets))
+
         cast_obj_list.append({
             'id': variant_id,
             'uid': uid,
             'position': position,
             'ref': ref,
             'alt': 'TODO',
-            'total_samples': total_samples
+            'total_samples': total_samples,
+            'variant_sets': variant_set_string,
         })
 
     return cast_obj_list
