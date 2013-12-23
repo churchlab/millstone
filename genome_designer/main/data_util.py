@@ -90,9 +90,11 @@ def cast_joined_variant_objects(melted_variant_list):
 
         # Count total samples.
         total_samples = 0
+        all_sample_uids = set()
         for row in result_row_list:
             if row['experiment_sample_uid']:
-                total_samples += 1
+                all_sample_uids.add(row['experiment_sample_uid'])
+        total_samples = len(all_sample_uids)
 
         # Aggregate sets.
         variant_sets = set()
