@@ -1,25 +1,33 @@
-from django.db.models.signals import post_save
-from django.db.models.signals import m2m_changed
-from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
-from scripts.snpeff_util import build_snpeff
-from scripts.import_util import generate_fasta_from_genbank, get_dataset_with_type
-from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
-from scripts.alignment_pipeline import ensure_bwa_index
+"""
+Signal registration.
+
+See: https://docs.djangoproject.com/en/dev/topics/signals/.
+"""
+
 import pickle
 
+from django.db.models.signals import m2m_changed
+from django.db.models.signals import post_save
 
-from models import ReferenceGenome
+from models import AlignmentGroup
 from models import Dataset
-from models import VariantSet
+from models import ExperimentSample
+from models import ExperimentSampleToAlignment
+from models import ReferenceGenome
 from models import VariantAlternate
 from models import VariantEvidence
-from models import ExperimentSample
-from models import AlignmentGroup
-from models import ExperimentSampleToAlignment
+from models import VariantSet
+from scripts.alignment_pipeline import ensure_bwa_index
+from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
+from scripts.import_util import generate_fasta_from_genbank
+from scripts.import_util import get_dataset_with_type
+from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
+from scripts.snpeff_util import build_snpeff
+
 
 # When a new ReferenceGenome is created, create its data dir.
 def post_ref_genome_create(sender, instance, created, **kwargs):
-    """ Upon creation, create necessary data for jbrowse and snpeff."""
+    """Upon creation, create necessary data for jbrowse and snpeff."""
     if created:
         instance.ensure_model_data_dir_exists()
         instance.ensure_snpeff_dir()
@@ -70,44 +78,15 @@ m2m_changed.connect(post_add_seq_to_ref_genome,
     sender=ReferenceGenome.dataset_set.through,
     dispatch_uid='add_seq_to_ref_genome')
 
+
 def post_variant_evidence_create(sender, instance, created, **kwargs):
     """Add existing VariantAlternates to this VariantEvidence Object."""
-
     if not created or not 'gt_bases' in instance.data:
         return
-
-    gt_bases = pickle.loads(instance.data['gt_bases'])
-
-    #if this variant evidence is a non-call, no need to add alternate alleles
-    if gt_bases is None: return
-
-    assert ('|' not in gt_bases), (
-            'GT bases string is phased;' + 
-            'this is not handled and should never happen...')
-
-    gt_bases = gt_bases.split('/')
-
-    for gt_base in gt_bases:
-        
-        try:
-            variant = instance.variant_caller_common_data.variant
-
-            #Skip if this is not an alternate allele            
-            if variant.ref_value == gt_base: continue
-
-            instance.variantalternate_set.add(VariantAlternate.objects.get(
-                    variant=variant,
-                    alt_value=gt_base
-                ))
-
-
-        except VariantAlternate.DoesNotExist:
-            print ('Attempt to add a SampleEvidence with an alternate ' +
-                    'allele that is not present for this variant!')
-            raise
-# Run post-save commands after making a new variant evidence object
+    instance.create_variant_alternate_association()
 post_save.connect(post_variant_evidence_create, sender=VariantEvidence,
         dispatch_uid='variant_evidence_create')
+
 
 def post_variant_set_create(sender, instance, created, **kwargs):
     if created:
@@ -116,11 +95,13 @@ def post_variant_set_create(sender, instance, created, **kwargs):
 post_save.connect(post_variant_set_create, sender=VariantSet,
         dispatch_uid='variant_set_create')
 
+
 def post_sample_create(sender, instance, created, **kwargs):
     if created:
         instance.ensure_model_data_dir_exists()
 post_save.connect(post_sample_create, sender=ExperimentSample,
         dispatch_uid='post_sample_create')
+
 
 def post_sample_align_create(sender, instance, created, **kwargs):
     if created:
@@ -128,12 +109,10 @@ def post_sample_align_create(sender, instance, created, **kwargs):
 post_save.connect(post_sample_create, sender=ExperimentSampleToAlignment,
         dispatch_uid='post_sample_create')
 
+
 # We'll store freebayes and such under this location.
 def post_alignment_group_create(sender, instance, created, **kwargs):
     if created:
         instance.ensure_model_data_dir_exists()
 post_save.connect(post_alignment_group_create, sender=AlignmentGroup,
         dispatch_uid='alignment_group_create')
-
-
-

@@ -183,9 +183,8 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     common_data_obj, created = VariantCallerCommonData.objects.get_or_create(
             variant=variant,
             source_dataset=vcf_dataset,
+            data=raw_data_dict
     )
-    common_data_obj.data = raw_data_dict
-    common_data_obj.save()
 
     # TODO: What about num -2 objects? I'm really not excited about
     # creating a VariantGenotype object, nor do I think it will 
@@ -205,9 +204,8 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
             sample_obj = ExperimentSample.objects.get(uid=sample_uid)
         ve, created = VariantEvidence.objects.get_or_create(
                 experiment_sample=sample_obj,
-                variant_caller_common_data=common_data_obj)
-        ve.data = sample_data_dict
-        ve.save()
+                variant_caller_common_data=common_data_obj,
+                data=sample_data_dict)
 
     return (variant, alts)
 

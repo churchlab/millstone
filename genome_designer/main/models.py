@@ -975,6 +975,40 @@ class VariantEvidence(Model, VisibleFieldMixin):
         except:
             raise AttributeError
 
+
+    def create_variant_alternate_association(self):
+        gt_bases = pickle.loads(self.data['gt_bases'])
+
+        # If this variant evidence is a non-call, no need to add alt alleles.
+        if gt_bases is None:
+            return
+
+        assert ('|' not in gt_bases), (
+                'GT bases string is phased;' +
+                'this is not handled and should never happen...')
+
+        # The gt_bases string looks like, e.g. 'A/AT'. Loop over alts.
+        for gt_base in gt_bases.split('/'):
+            try:
+                variant = self.variant_caller_common_data.variant
+
+                # Skip if this is not an alternate allele
+                if variant.ref_value == gt_base:
+                    continue
+
+                self.variantalternate_set.add(
+                        VariantAlternate.objects.get(
+                            variant=variant,
+                            alt_value=gt_base
+                ))
+
+            except VariantAlternate.DoesNotExist:
+                # Should not happen.
+                print ('Attempt to add a SampleEvidence with an alternate ' +
+                        'allele that is not present for this variant!')
+                raise
+
+
     @property
     def sample_uid(self):
         if 'sample_uid' in self.manually_cached_data:
