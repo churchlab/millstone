@@ -103,12 +103,19 @@ def cast_joined_variant_objects(melted_variant_list):
                 variant_sets.add(row['variant_set_label'])
         variant_set_string = ', '.join(list(variant_sets))
 
+        # Aggregate Variant alternates.
+        variant_alts = set()
+        for row in result_row_list:
+            if row['alt']:
+                variant_alts.add(row['alt'])
+        variant_alt_string = ' | '.join(variant_alts)
+
         cast_obj_list.append({
             'id': variant_id,
             'uid': uid,
             'position': position,
             'ref': ref,
-            'alt': 'TODO',
+            'alt': variant_alt_string,
             'total_samples': total_samples,
             'variant_sets': variant_set_string,
         })
