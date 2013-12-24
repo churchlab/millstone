@@ -101,7 +101,7 @@ def cast_joined_variant_objects(melted_variant_list):
         for row in result_row_list:
             if row['variant_set_label']:
                 variant_sets.add(row['variant_set_label'])
-        variant_set_string = ', '.join(list(variant_sets))
+        variant_set_string = ', '.join(variant_sets)
 
         # Aggregate Variant alternates.
         variant_alts = set()
