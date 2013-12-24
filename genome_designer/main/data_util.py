@@ -85,7 +85,6 @@ def cast_joined_variant_objects(melted_variant_list):
     for variant_id, result_row_list in variant_id_to_result_row.iteritems():
         assert len(result_row_list), "Not expected. Debug."
         position = result_row_list[0]['position']
-        ref = result_row_list[0]['ref']
         uid = result_row_list[0]['uid']
 
         # Count total samples.
@@ -97,24 +96,49 @@ def cast_joined_variant_objects(melted_variant_list):
         total_samples = len(all_sample_uids)
 
         # Aggregate sets.
-        variant_sets = set()
+        variant_set_samples = defaultdict(set)
         for row in result_row_list:
             if row['variant_set_label']:
-                variant_sets.add(row['variant_set_label'])
-        variant_set_string = ', '.join(variant_sets)
+                variant_set_samples[row['variant_set_label']].add(
+                        row['experiment_sample_uid'])
+        variant_set_string_parts = []
+        for label, sample_set in variant_set_samples.iteritems():
+            none_null_samples = set()
+            for sample in sample_set:
+                if sample:
+                    none_null_samples.add(sample)
+            variant_set_string_parts.append(
+                    label + ' (%d)' % len(none_null_samples))
+        variant_set_string = ' | '.join(variant_set_string_parts)
 
         # Aggregate Variant alternates.
-        variant_alts = set()
+        total_alt_count = 0
+        variant_alt_to_sample_dict = defaultdict(set)
         for row in result_row_list:
             if row['alt']:
-                variant_alts.add(row['alt'])
-        variant_alt_string = ' | '.join(variant_alts)
+                variant_alt_to_sample_dict[row['alt']].add(
+                        row['experiment_sample_uid'])
+        variant_alt_string_parts = []
+        for alt, sample_set in variant_alt_to_sample_dict.iteritems():
+            none_null_samples = set()
+            for sample in sample_set:
+                if sample:
+                    none_null_samples.add(sample)
+            variant_alt_string_parts.append(
+                    alt + ' (%d)' % len(none_null_samples))
+            total_alt_count += len(none_null_samples)
+        variant_alt_string = ' | '.join(variant_alt_string_parts)
 
+        # Now we can write the ref string.
+        ref_string = result_row_list[0]['ref'] + ' (%d)' % (
+                total_samples - total_alt_count)
+
+        # Combine the aggregates into a single Cast object.
         cast_obj_list.append({
             'id': variant_id,
             'uid': uid,
             'position': position,
-            'ref': ref,
+            'ref': ref_string,
             'alt': variant_alt_string,
             'total_samples': total_samples,
             'variant_sets': variant_set_string,
