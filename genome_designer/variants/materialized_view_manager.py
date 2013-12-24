@@ -149,7 +149,7 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
             'FROM pg_catalog.pg_class c '
             'WHERE c.relkind=%s AND c.relname=%s '
         )
-        self.cursor.execute(raw_sql, params=('m', self.view_table_name))
+        self.cursor.execute(raw_sql, ('m', self.view_table_name))
         return bool(self.cursor.fetchone())
 
 

@@ -231,7 +231,7 @@ class VariantFilterEvaluator(object):
         # Execute the query and store the results in hashable representation
         # so that they can be combined through boolean operators with other
         # evaluations.
-        cursor.execute(sql_statement, params=where_clause_args)
+        cursor.execute(sql_statement, where_clause_args)
         result_list = hashablefetchall(cursor)
         return FilterEvalResult(result_list)
 
