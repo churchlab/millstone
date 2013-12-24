@@ -82,7 +82,7 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variant.uid', 'uid', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.position', 'position', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', 'chromosome', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', 'ref', False, True)
-SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', True, True)
+SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', True, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', 'experiment_sample_uid', True, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variantset.label', 'variant_set_label', False, True)
@@ -178,6 +178,7 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                 'WHERE (main_variant.reference_genome_id = %d)) '
                 'UNION '
                 '(SELECT %s FROM main_variant '
+                    'INNER JOIN main_variantalternate ON main_variantalternate.variant_id = main_variant.id '
                     'INNER JOIN main_varianttovariantset ON main_variant.id = main_varianttovariantset.variant_id '
                     'INNER JOIN main_variantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
                 'WHERE (main_variant.reference_genome_id = %d)) '
