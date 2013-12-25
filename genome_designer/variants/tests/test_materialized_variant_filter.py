@@ -248,6 +248,48 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
             get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
 
 
+    def test_filter__by_position_complex(self):
+        """Test filtering by position.
+        """
+        # Create several Variants with positions:
+        # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+        for pos in range(10):
+            var = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=pos,
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
+
+            VariantToVariantSet.objects.create(variant=var,
+                    variant_set=self.catchall_variant_set)
+
+        # Test AND case.
+        QUERY_STRING = 'position < 1 & position > 7'
+        result = get_variants_that_pass_filter(QUERY_STRING,
+                self.ref_genome)
+        self.assertEqual(0, len(result.variant_set))
+
+        # Test OR case.
+        QUERY_STRING = 'position < 1 | position > 7'
+        result = get_variants_that_pass_filter(QUERY_STRING,
+                self.ref_genome)
+        variant_list = result.variant_set
+        self.assertEqual(3, len(variant_list))
+        for pos in [0, 8, 9]:
+            found = False
+            for var in variant_list:
+                if var.position == pos:
+                    found = True
+                    break
+            self.assertTrue(found, "Expected variant at pos %d not found" % pos)
+
+
 class TestMinimal(BaseTestVariantFilterTestCase):
     """Minimal tests for materialized views.
 

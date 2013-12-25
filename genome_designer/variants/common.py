@@ -452,6 +452,19 @@ class HashableVariantDict(object):
     def __getitem__(self, key):
         return self.obj_dict[key]
 
+    def __getattr__(self, attr):
+        """Override.
+
+        Since we changed the code from using python objects and instead
+        dictionaries, there are plenty of places using 'dot' attribute access
+        so rather than looking for all of those places I'm going to try making
+        this small hack and see how it works out.
+        """
+        try:
+            return self.obj_dict[attr]
+        except KeyError:
+            raise AttributeError
+
 
 def hashablefetchall(cursor):
     """Returns all rows from a cursor as hashable object.
