@@ -319,7 +319,7 @@ SNPEFF_SUMMARY_FILES = ['snpEff_genes.txt', 'snpEff_summary.html']
 ###############################################################################
 
 # Allows user to create an S3 backed project. 
-S3_ENABLED = True
+S3_ENABLED = False
 
 # Don't perform any API call that changes anything on S3. 
 S3_DRY_RUN = False
