@@ -202,6 +202,10 @@ To run a single test case, e.g.:
 
     (venv)$ python manage.py test scripts/tests/test_alignment_pipeline.py:TestAlignmentPipeline.test_create_alignment_groups_and_start_alignments
 
+To reuse the Postgresql database, wiping it rather than destroying and creating each time, use:
+
+    (venv)$ REUSE_DB=1 ./manage.py test
+
 
 ### Adding Tests
 
