@@ -29,7 +29,6 @@ from variants.variant_filter import SAMPLE_SCOPE_REGEX_NAMED
 from variants.variant_filter import SET_REGEX
 from variants.variant_filter import SET_REGEX_NAMED
 from variants.variant_filter import get_variants_that_pass_filter
-from variants.variant_filter import SymbolGenerator
 from variants.variant_filter import ParseError
 from variants.variant_filter import VariantFilterEvaluator
 
@@ -77,38 +76,6 @@ class BaseTestVariantFilterTestCase(TestCase):
 
 
 class TestVariantFilter(BaseTestVariantFilterTestCase):
-    def test_filter__by_position(self):
-        """Test filtering by position.
-        """
-        # Create several Variants with positions:
-        # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-        for pos in range(10):
-            var = Variant.objects.create(
-                type=Variant.TYPE.TRANSITION,
-                reference_genome=self.ref_genome,
-                chromosome='chrom',
-                position=pos,
-                ref_value='A')
-
-            var.variantalternate_set.add(
-                    VariantAlternate.objects.create(
-                            variant=var,
-                            alt_value='G'))
-
-        # Test querying Variants with position > 5.
-        result = get_variants_that_pass_filter('position > 5', self.ref_genome)
-        variants_above_5 = result.variant_set
-        self.assertEqual(4, len(variants_above_5))
-        for var in variants_above_5:
-            self.assertTrue(var.position > 5)
-
-        # Test querying Variants with position >= 5.
-        result = get_variants_that_pass_filter('position >= 5', self.ref_genome)
-        variants_above_5 = result.variant_set
-        self.assertEqual(5, len(variants_above_5))
-        for var in variants_above_5:
-            self.assertTrue(var.position >= 5)
-
 
     def test_filter__by_chromosome(self):
         """Test filtering by position.
@@ -1052,17 +1019,6 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
         self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation,
                 "Expected: %s. Actual: %s" % (EXPECTED_SYMBOLIC_REP,
                         evaluator.sympy_representation))
-
-
-class TestSymbolGenerator(TestCase):
-    """Tests the symbol generator used for symbolic manipulation.
-    """
-
-    def test_generator(self):
-        symbol_maker = SymbolGenerator()
-        self.assertEqual('A', symbol_maker.next())
-        self.assertEqual('B', symbol_maker.next())
-        self.assertEqual('C', symbol_maker.next())
 
 
 class TestExpressionRegex(TestCase):
