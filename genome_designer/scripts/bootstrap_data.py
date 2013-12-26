@@ -351,7 +351,15 @@ def reset_database():
     """
     ### Delete the old database if it exists.
     print 'Deleting old database ...'
+
+    """
+    flush: removes all rows in the database.
+    syncdb --all: performs syncdb on non-South apps and migrate on South apps
+    migrate --fake: note that migrate has been performed in syncdb
+    """
     call_command('flush', interactive=False)
+    call_command('syncdb', migrate_all=True, interactive=False)
+    call_command('migrate', fake=True, interactive=False)
 
     ### Recreate the media root.
     if os.path.exists(settings.MEDIA_ROOT):
