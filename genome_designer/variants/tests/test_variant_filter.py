@@ -78,45 +78,6 @@ class BaseTestVariantFilterTestCase(TestCase):
 class TestVariantFilter(BaseTestVariantFilterTestCase):
 
 
-    def test_filter__by_position_complex(self):
-        """Test filtering by position.
-        """
-        # Create several Variants with positions:
-        # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-        for pos in range(10):
-            var = Variant.objects.create(
-                type=Variant.TYPE.TRANSITION,
-                reference_genome=self.ref_genome,
-                chromosome='chrom',
-                position=pos,
-                ref_value='A')
-
-            var.variantalternate_set.add(
-                    VariantAlternate.objects.create(
-                            variant=var,
-                            alt_value='G'))
-
-        # Test AND case.
-        QUERY_STRING = 'position < 1 & position > 7'
-        result = get_variants_that_pass_filter(QUERY_STRING,
-                self.ref_genome)
-        self.assertEqual(0, len(result.variant_set))
-
-        # Test OR case.
-        QUERY_STRING = 'position < 1 | position > 7'
-        result = get_variants_that_pass_filter(QUERY_STRING,
-                self.ref_genome)
-        variant_list = result.variant_set
-        self.assertEqual(3, len(variant_list))
-        for pos in [0, 8, 9]:
-            found = False
-            for var in variant_list:
-                if var.position == pos:
-                    found = True
-                    break
-            self.assertTrue(found, "Expected variant at pos %d not found" % pos)
-
-
     def test_filter__with_non_SQL_key(self):
         """Tests handling of non-SQL key.
 
@@ -290,42 +251,6 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         passing_sample_ids = result.variant_id_to_metadata_dict[variant.id][
                 'passing_sample_ids']
         self.assertEqual(2, len(passing_sample_ids))
-
-
-    def test_filter__equality(self):
-        """Test filtering with equality operators.
-        """
-        # Create several Variants with positions:
-        # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-        for pos in range(10):
-            var = Variant.objects.create(
-                type=Variant.TYPE.TRANSITION,
-                reference_genome=self.ref_genome,
-                chromosome='chrom',
-                position=pos,
-                ref_value='A')
-
-            var.variantalternate_set.add(
-                    VariantAlternate.objects.create(
-                            variant=var,
-                            alt_value='G'))
-
-
-        variants = get_variants_that_pass_filter('position == 5',
-                self.ref_genome).variant_set
-        self.assertEqual(1, len(variants))
-        self.assertEqual(5, variants.pop().position)
-
-        variants = get_variants_that_pass_filter('position = 5',
-                self.ref_genome).variant_set
-        self.assertEqual(1, len(variants))
-        self.assertEqual(5, variants.pop().position)
-
-        variants = get_variants_that_pass_filter('position != 5',
-                self.ref_genome).variant_set
-        self.assertEqual(9, len(variants))
-        for var in variants:
-            self.assertTrue(var.position != 5)
 
 
     def test_filter__scoped(self):
@@ -706,45 +631,6 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 metadata[passing_variant.id]['passing_sample_ids'])
 
 
-    def test_filter__key_missing_from_map(self):
-        """Tests that filtering using an unrecognized key fails when using an
-        improperly initialized key map.
-
-        This test would catch something like this:
-            https://github.com/churchlab/genome-designer-v2/issues/36
-        """
-        ref_genome_2 = ReferenceGenome.objects.create(project=self.project,
-                label='refgenome2', num_chromosomes=1, num_bases=1000)
-
-        # Initialize but don't update with source vcf, thus only global
-        # keys are available.
-        initialize_filter_key_map(ref_genome_2)
-
-        var = Variant.objects.create(
-                type=Variant.TYPE.TRANSITION,
-                reference_genome=ref_genome_2,
-                chromosome='chrom',
-                position=100,
-                ref_value='A')
-
-        var.variantalternate_set.add(
-            VariantAlternate.objects.create(
-                    variant=var,
-                    alt_value='G'))
-
-        # This query runs without errors.
-        QUERY_STRING = 'position < 1'
-        variants = get_variants_that_pass_filter(QUERY_STRING,
-                ref_genome_2).variant_set
-        self.assertEqual(0, len(variants))
-
-        # This throws an error since INFO_XRM is not a recognized key.
-        with self.assertRaises(ParseError):
-            QUERY_STRING = 'position < 1 & INFO_XRM > 0'
-            variants = get_variants_that_pass_filter(QUERY_STRING,
-                    ref_genome_2).variant_set
-
-
     def test_filter__scoped__per_alt(self):
         variant = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
@@ -839,26 +725,6 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
     """Tests for the object that encapsulates evaluation of the filter string.
     """
-
-    def test_variant_filter_constructor(self):
-        """Tests the constructor.
-        """
-        raw_filter_string = 'position > 5'
-        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
-        EXPECTED_SYMBOLIC_REP = sympify('A')
-        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
-        self.assertEqual('position > 5',
-                evaluator.symbol_to_expression_map['A'])
-
-        raw_filter_string = 'position>5 & chromosome= chrom1'
-        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
-        EXPECTED_SYMBOLIC_REP = sympify('A & B')
-        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
-        self.assertEqual('position>5',
-                evaluator.symbol_to_expression_map['A'])
-        self.assertEqual('chromosome= chrom1',
-                evaluator.symbol_to_expression_map['B'])
-
 
     def test_variant_filter_constructor__scoped(self):
         """Tests the constructor.
