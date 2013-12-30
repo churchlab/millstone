@@ -2,6 +2,7 @@
 Tests for materialized_variant_filter.py.
 """
 
+import pickle
 import os
 
 from django.db import connection
@@ -288,6 +289,104 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                     found = True
                     break
             self.assertTrue(found, "Expected variant at pos %d not found" % pos)
+
+
+    def test_filter__equality(self):
+        """Test filtering with equality operators.
+        """
+        # Create several Variants with positions:
+        # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+        for pos in range(10):
+            var = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=pos,
+                ref_value='A')
+
+            var.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=var,
+                            alt_value='G'))
+
+            VariantToVariantSet.objects.create(variant=var,
+                    variant_set=self.catchall_variant_set)
+
+        variants = get_variants_that_pass_filter('position == 5',
+                self.ref_genome).variant_set
+        self.assertEqual(1, len(variants))
+        self.assertEqual(5, variants.pop().position)
+
+        variants = get_variants_that_pass_filter('position = 5',
+                self.ref_genome).variant_set
+        self.assertEqual(1, len(variants))
+        for var in variants:
+            self.assertEqual(5, var.position)
+
+        variants = get_variants_that_pass_filter('position != 5',
+                self.ref_genome).variant_set
+        self.assertEqual(9, len(variants))
+        for var in variants:
+            self.assertNotEqual(5, var.position)
+
+
+    def test_filter__no_sets(self):
+        """Tests that we can filter on Variants that are not associated with
+        sets. However, these Variants must be associated with ExperimentSamples.
+        """
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=2,
+                ref_value='A')
+
+        alt_G = VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='G')
+        variant.variantalternate_set.add(alt_G)
+
+        alt_T = VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='T')
+        variant.variantalternate_set.add(alt_T)
+
+        common_data_obj = VariantCallerCommonData.objects.create(
+                variant=variant,
+                source_dataset=self.vcf_dataset,
+        )
+
+        raw_sample_data_dict = {
+                'called': True,
+                'gt_type': pickle.dumps(2),
+                'gt_bases': pickle.dumps('G/G')
+        }
+        sample_1_evidence = VariantEvidence.objects.create(
+                experiment_sample=self.sample_obj_1,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+        raw_sample_data_dict = {
+                'called': True,
+                'gt_type': pickle.dumps(2),
+                'gt_bases': pickle.dumps('T/T')
+        }
+        sample_2_evidence = VariantEvidence.objects.create(
+                experiment_sample=self.sample_obj_2,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+        result = get_variants_that_pass_filter('', self.ref_genome)
+
+        # We expect 2 rows of results.
+        variants = result.variant_set
+        self.assertEqual(2, len(variants))
+
+        # Account for all results.
+        sample_uid__alt_value_pairs = [
+            (self.sample_obj_1.uid, 'G'),
+            (self.sample_obj_2.uid, 'T'),
+        ]
 
 
 class TestMinimal(BaseTestVariantFilterTestCase):

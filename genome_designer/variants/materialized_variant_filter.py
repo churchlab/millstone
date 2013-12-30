@@ -200,6 +200,8 @@ class VariantFilterEvaluator(object):
                 symbol_list = [conjunction_clause]
             else:
                 symbol_list = conjunction_clause.args
+
+            # Bin.
             for symbol in symbol_list:
                 updated_structs = self._single_symbol_mux(
                         symbol, filter_eval_results, sql_ready_symbol_list,
