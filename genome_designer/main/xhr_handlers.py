@@ -23,6 +23,8 @@ from django.views.decorators.http import require_GET, require_POST
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.data_util import lookup_variants
+from main.model_views import adapt_new_melted_variant_view_to_frontend
+from main.model_views import adapt_new_cast_variant_view_to_frontend
 from main.model_views import GeneView
 from main.models import Project
 from main.models import ReferenceGenome
@@ -36,7 +38,8 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import extract_filter_keys
-from variants.variant_filter import get_variants_that_pass_filter
+from variants.materialized_variant_filter import get_variants_that_pass_filter
+from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.variant_sets import update_variant_in_set_memberships
 
 if settings.S3_ENABLED:
@@ -144,9 +147,12 @@ def get_variant_list(request):
         num_total_variants = lookup_variant_result.num_total_variants
 
         # Adapt the Variants to display for the frontend.
-        variant_list_json = adapt_model_or_modelview_list_to_frontend(variant_list,
-                variant_key_map=reference_genome.variant_key_map,
-                visible_key_names=visible_key_names)
+        if is_melted:
+            variant_list_json = adapt_new_melted_variant_view_to_frontend(
+                    variant_list)
+        else:
+            variant_list_json = adapt_new_cast_variant_view_to_frontend(
+                    variant_list)
 
         # Get all VariantSets that exist for this ReferenceGenome.
         variant_set_list = VariantSet.objects.filter(
@@ -170,7 +176,7 @@ def get_variant_list(request):
                     variant_key_map_with_active_fields_marked)
         }
 
-    except Exception as e:
+    except ValueError as e:
         # TODO: More readable error reporting.
         exception_as_string = str(type(e)) + ' ' +  str(e)
         response_data = {
@@ -306,6 +312,28 @@ def get_gene_list(request):
 
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
+
+
+@login_required
+@require_GET
+def refresh_materialized_variant_table(request):
+    """Updates the materialized variant table corresponding to the
+    ReferenceGenome whose uid is provided in the GET params.
+    """
+    ref_genome_uid = request.GET.get('refGenomeUid')
+    print 'BOOM'
+    print ref_genome_uid
+    reference_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)
+
+    # NOTE: Call create() for now. It may be possible to make this quicker
+    # by calling refresh().
+    mvmvm = MeltedVariantMaterializedViewManager(reference_genome)
+    mvmvm.create()
+
+    return HttpResponse('ok')
+
 
 if settings.S3_ENABLED:
     @login_required

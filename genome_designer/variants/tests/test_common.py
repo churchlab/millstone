@@ -14,6 +14,7 @@ from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
 from variants.common import extract_filter_keys
+from variants.common import SymbolGenerator
 
 TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
 
@@ -52,3 +53,14 @@ class TestCommon(TestCase):
         EXPECTED_FILTER_KEY_SET = set(['position', 'gt_type'])
         self.assertEqual(EXPECTED_FILTER_KEY_SET,
                 set(extract_filter_keys(FILTER_EXPR, self.ref_genome)))
+
+
+class TestSymbolGenerator(TestCase):
+    """Tests the symbol generator used for symbolic manipulation.
+    """
+
+    def test_generator(self):
+        symbol_maker = SymbolGenerator()
+        self.assertEqual('A', symbol_maker.next())
+        self.assertEqual('B', symbol_maker.next())
+        self.assertEqual('C', symbol_maker.next())

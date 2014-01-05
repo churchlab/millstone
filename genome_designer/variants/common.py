@@ -55,41 +55,23 @@ VARIANT_MODEL_FIELDS = ('id', 'uid', 'type', 'reference_genome_id',
 ###############################################################################
 
 # Keys corresponding to columns in the Variant model.
-VARIANT_SQL_KEY_MAP = {
+MELTED_VARIANT_SQL_KEY_MAP = {
     'chromosome': {
         'type': 'String',
         'num': 1,
-        'variant_table_col': 'chromosome'
     },
     'position': {
         'type': 'Integer',
         'num': 1,
-        'variant_table_col': 'position'
     },
-}
-
-# Keys corresponding to columns in the Variant model.
-VARIANT_ALTERNATE_SQL_KEY_MAP = {
-    'alt_value': {
+    'variant_set_uid': {
         'type': 'String',
         'num': 1,
-        'variant_table_col': 'variantalternate__alt_value'
     },
-}
-
-# Keys corresponding to columns in the VariantCallerCommonData model.
-VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP = {
-}
-
-# Keys corresponding to columns in the VariantEvidence model.
-VARIANT_EVIDENCE_SQL_KEY_MAP = {
 }
 
 ALL_SQL_KEY_MAP_LIST = [
-    VARIANT_SQL_KEY_MAP,
-    VARIANT_ALTERNATE_SQL_KEY_MAP,
-    VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP,
-    VARIANT_EVIDENCE_SQL_KEY_MAP,
+    MELTED_VARIANT_SQL_KEY_MAP
 ]
 
 TYPE_TO_SUPPORTED_OPERATIONS = {
@@ -226,6 +208,14 @@ def get_delim_key_value_triple(raw_string, all_key_map):
 
     # If we got here, we didn't find a match.
     raise ParseError(raw_string, 'No valid filter delimeter.')
+
+
+def convert_delim_key_value_triple_to_expr(triple):
+    (delim, key, value) = triple
+    # Make '==' SQL-friendly.
+    if delim == '==':
+        delim = '='
+    return (key + delim + '%s', value)
 
 
 def _clean_delim(raw_delim):
@@ -424,6 +414,46 @@ def dictfetchall(cursor):
     desc = cursor.description
     return [
         dict(zip([col[0] for col in desc], row))
+        for row in cursor.fetchall()
+    ]
+
+
+class HashableVariantDict(object):
+    """Hashable version of Variant Dict.
+
+    The Variant id and Sample id uniquely identify the row.
+    """
+
+    def __init__(self, obj_dict):
+        self.obj_dict = obj_dict
+
+    def __hash__(self):
+        return hash((self.obj_dict['id'],
+            self.obj_dict['experiment_sample_id']))
+
+    def __getitem__(self, key):
+        return self.obj_dict[key]
+
+    def __getattr__(self, attr):
+        """Override.
+
+        Since we changed the code from using python objects and instead
+        dictionaries, there are plenty of places using 'dot' attribute access
+        so rather than looking for all of those places I'm going to try making
+        this small hack and see how it works out.
+        """
+        try:
+            return self.obj_dict[attr]
+        except KeyError:
+            raise AttributeError
+
+
+def hashablefetchall(cursor):
+    """Returns all rows from a cursor as hashable object.
+    """
+    desc = cursor.description
+    return [
+        HashableVariantDict(dict(zip([col[0] for col in desc], row)))
         for row in cursor.fetchall()
     ]
 
@@ -750,32 +780,10 @@ def create_initial_filter_eval_result_object(variant_query_set):
 def _get_variant_id_sample_id_tuple_list(variant_query_set):
     """Returns list of two-tuples (variant_id, sample_id).
 
-    Allows debugging by toggling raw_sql argument.
+    NOTE: Transient implementation that ignores variant_query_set.
     """
-    # Grab all VariantEvidence objects. These have relations to
-    # samples. Use values_list() to only get necessary data, avoiding overhead
-    # of getting all data, plus avoiding casting to Model object.
-    # NOTE: The reason we don't do select_related() with VariantCallerCommonData
-    # here is because the Django values_list() syntax won't allow doing
-    # 'variantcallercommondata__id' so we do a separte called below and then
-    # some simple looping to process it all.
-    all_ve_list = VariantEvidence.objects.filter(
-        variant_caller_common_data__variant__in=variant_query_set).\
-                values_list('experiment_sample_id',
-                        'variant_caller_common_data_id')
-
-    # Build map from VariantCallerCommonData id to Variant id.
-    all_vccd_list = VariantCallerCommonData.objects.filter(
-        variant__in=variant_query_set).values_list('id', 'variant_id')
-    vccd_id_to_variant_id_map = {}
-    for vccd in all_vccd_list:
-        vccd_id_to_variant_id_map[vccd[0]] = vccd[1]
-
-    # Assemble the result.
-    query_result = []
-    for ve in all_ve_list:
-        sample_id = ve[0]
-        vccd_id = ve[1]
-        variant_id = vccd_id_to_variant_id_map[vccd_id]
-        query_result.append((variant_id, sample_id))
-    return query_result
+    cursor = connection.cursor()
+    sql_statement = (
+            'SELECT id, experiment_sample_id FROM materialized_melted_variant')
+    cursor.execute(sql_statement)
+    return cursor.fetchall()
