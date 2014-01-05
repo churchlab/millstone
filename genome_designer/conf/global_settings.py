@@ -159,7 +159,10 @@ INSTALLED_APPS = (
     'main',
 
     # Testing
-    'django_nose'
+    'django_nose',
+
+    # database migrations,
+    'south',
 )
 
 
