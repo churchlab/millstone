@@ -38,7 +38,7 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import extract_filter_keys
-from variants.variant_filter import get_variants_that_pass_filter
+from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.variant_sets import update_variant_in_set_memberships
 
 if settings.S3_ENABLED:

@@ -55,41 +55,23 @@ VARIANT_MODEL_FIELDS = ('id', 'uid', 'type', 'reference_genome_id',
 ###############################################################################
 
 # Keys corresponding to columns in the Variant model.
-VARIANT_SQL_KEY_MAP = {
+MELTED_VARIANT_SQL_KEY_MAP = {
     'chromosome': {
         'type': 'String',
         'num': 1,
-        'variant_table_col': 'chromosome'
     },
     'position': {
         'type': 'Integer',
         'num': 1,
-        'variant_table_col': 'position'
     },
-}
-
-# Keys corresponding to columns in the Variant model.
-VARIANT_ALTERNATE_SQL_KEY_MAP = {
-    'alt_value': {
+    'variant_set_uid': {
         'type': 'String',
         'num': 1,
-        'variant_table_col': 'variantalternate__alt_value'
     },
-}
-
-# Keys corresponding to columns in the VariantCallerCommonData model.
-VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP = {
-}
-
-# Keys corresponding to columns in the VariantEvidence model.
-VARIANT_EVIDENCE_SQL_KEY_MAP = {
 }
 
 ALL_SQL_KEY_MAP_LIST = [
-    VARIANT_SQL_KEY_MAP,
-    VARIANT_ALTERNATE_SQL_KEY_MAP,
-    VARIANT_CALLER_COMMON_DATA_SQL_KEY_MAP,
-    VARIANT_EVIDENCE_SQL_KEY_MAP,
+    MELTED_VARIANT_SQL_KEY_MAP
 ]
 
 TYPE_TO_SUPPORTED_OPERATIONS = {

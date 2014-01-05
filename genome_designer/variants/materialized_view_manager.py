@@ -85,6 +85,7 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', 'ref', False, 
 SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', True, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', 'experiment_sample_uid', True, True)
+SCHEMA_BUILDER.add_melted_variant_field('main_variantset.uid', 'variant_set_uid', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variantset.label', 'variant_set_label', False, True)
 MELTED_VARIANT_SCHEMA = SCHEMA_BUILDER.get_schema()
 

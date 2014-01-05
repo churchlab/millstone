@@ -238,11 +238,6 @@ class VariantFilterEvaluator(object):
         return FilterEvalResult(result_list)
 
 
-    def _build_where_clause(self, sql_ready_symbol_list):
-        """Returns the WHERE clause of a SQL query composed of the symbols in
-        the provided list.
-        """
-
     def _single_symbol_mux(self, symbol, filter_eval_results, q_list,
             remaining_triples):
         """Helper method for evaluating a single symbol.
@@ -262,6 +257,7 @@ class VariantFilterEvaluator(object):
             * A triple of delim, key, value if the condition must be evaluated
                 in-memory.
         """
+        # Look up the expression that the symbol represents.
         condition_string = self.get_condition_string_for_symbol(symbol)
 
         # Finally, if here, then this should be a basic, delimiter-separated
