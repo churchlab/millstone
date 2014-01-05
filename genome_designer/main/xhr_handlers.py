@@ -39,6 +39,7 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import extract_filter_keys
 from variants.materialized_variant_filter import get_variants_that_pass_filter
+from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.variant_sets import update_variant_in_set_memberships
 
 if settings.S3_ENABLED:
@@ -311,6 +312,28 @@ def get_gene_list(request):
 
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
+
+
+@login_required
+@require_GET
+def refresh_materialized_variant_table(request):
+    """Updates the materialized variant table corresponding to the
+    ReferenceGenome whose uid is provided in the GET params.
+    """
+    ref_genome_uid = request.GET.get('refGenomeUid')
+    print 'BOOM'
+    print ref_genome_uid
+    reference_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)
+
+    # NOTE: Call create() for now. It may be possible to make this quicker
+    # by calling refresh().
+    mvmvm = MeltedVariantMaterializedViewManager(reference_genome)
+    mvmvm.create()
+
+    return HttpResponse('ok')
+
 
 if settings.S3_ENABLED:
     @login_required

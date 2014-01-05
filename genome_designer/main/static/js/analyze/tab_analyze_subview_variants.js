@@ -54,6 +54,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
           _.bind(this.handleApplyFilterClick, this));
       $('#gd-filter-field-select-btn').click(
           _.bind(this.handleShowFieldSelect, this));
+      $('#gd-filter-refresh-materialized').click(
+          _.bind(this.handleRefreshMaterializedView, this));
     }, this));
   },
 
@@ -174,6 +176,23 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         {'model': variantFieldSelectModel});
     this.listenTo(this.variantFieldSelect, 'updateSelectedFields',
         _.bind(this.handleUpdateSelectedFields, this));
+  },
+
+
+  /**
+   * Sends a request to the server to refresh the materialized data table and
+   * reloads the page on success.
+   */
+  handleRefreshMaterializedView: function() {
+    this.setUIStartLoadingState();
+
+    var requestData = {
+      'refGenomeUid': this.model.get('refGenomeUid'),
+    }
+    $.get('/_/variants/refresh_materialized_variant_table', requestData,
+        function(data) {
+          window.location.reload();
+        });
   },
 
 
