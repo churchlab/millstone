@@ -126,8 +126,8 @@ SNPEFF_ALT_RE = re.compile(r''.join([
         r'\|?(?P<{:s}>[^\|]*)\|?(?P<{:s}>[^\|]*)\)']
         ).format(*SNPEFF_FIELDS.keys()))
 
-def build_snpeff(ref_genome, **kwargs):
-    '''
+def build_snpeff(ref_genome):
+    """
     SnpEFF needs a config file for every reference genome, which lists a
     single reference genome, its chromosomes, and the codon table that
     each uses. For now we can assume that all our genomes will use bacterial
@@ -142,20 +142,17 @@ def build_snpeff(ref_genome, **kwargs):
     snpEFF tools directory. Given a ref_genome object, it generates a
     snpEFF config file and builds and snpEFF database file for the genome,
     and places it in the ref genome's data dir under ./snpeff.
-    '''
+    """
 
     # if no genbank file for this ref genome, then do nothing
-
     if not ref_genome.is_annotated():
         print "Snpeff indexing failed: No genbank for reference genome %s" % (
                 ref_genome.uid)
         return
 
-    #path to the snpeff dir for this project
-    ref_genome.ensure_snpeff_dir()
-
     # Path we give to snp_eff should be the ref_genomes/uid/snpeff dir
     # and ref_genomes/uid/snpeff/uid is where snpeff will look for genes.gbk
+    ref_genome.ensure_snpeff_dir()
     snpeff_uid_path = ref_genome.get_snpeff_directory_path()
     snpeff_path = os.path.join(get_snpeff_config_path(ref_genome))
 
