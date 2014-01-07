@@ -321,8 +321,6 @@ def refresh_materialized_variant_table(request):
     ReferenceGenome whose uid is provided in the GET params.
     """
     ref_genome_uid = request.GET.get('refGenomeUid')
-    print 'BOOM'
-    print ref_genome_uid
     reference_genome = get_object_or_404(ReferenceGenome,
             project__owner=request.user.get_profile(),
             uid=ref_genome_uid)
