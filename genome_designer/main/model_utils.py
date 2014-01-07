@@ -5,11 +5,23 @@ Utility objects and functions for interacting with models.
 from uuid import uuid4
 
 from django.conf import settings
+from django.db import IntegrityError
+from django.db import models
+from django.db import transaction
 
 import os
 import pickle
 import re
 import stat
+
+
+# Size of unique UIDs.
+UUID_SIZE = 8
+
+
+###############################################################################
+# Mixins
+###############################################################################
 
 class VisibleFieldMixin(object):
     """Mixin that provides methods for controlling which fields are displayed.
@@ -35,7 +47,34 @@ class VisibleFieldMixin(object):
         return clazz.default_view_fields() + additional_fields
 
 
-def short_uuid(cls):
+###############################################################################
+# Unique Uid
+###############################################################################
+
+class SafeCreateModelManager(models.Manager):
+    """Manager that retries creation due to IntegrityError.
+    """
+
+    # The maximum number of clash resolutions allowed.
+    # The probability of a clash for a # particular model (26 + 10) ^ 8 which
+    # should not be a problem for now. If it takes more than 10 attempts to
+    # resolve, either the db is too full, or there is a bug.
+    MAX_UID_CLASHES = 10
+
+    def create(self, uid_fail_count=0, **kwargs):
+        """Create, allowing for rare uid clash.
+        """
+        try:
+            return self.get_query_set().create(**kwargs)
+        except IntegrityError as e:
+            transaction.commit_unless_managed()
+            uid_fail_count += 1
+            if uid_fail_count > self.MAX_UID_CLASHES:
+                raise e
+            return self.create(uid_fail_count=uid_fail_count, **kwargs)
+
+
+def short_uuid():
     """Generates a short uuid, repeating if necessary to maintain
     uniqueness.
 
@@ -46,20 +85,29 @@ def short_uuid(cls):
     possible to access the instance class at the scope where model fields
     are declared.
     """
-    UUID_SIZE = 8
+    return str(uuid4())[:UUID_SIZE]
 
-    # Even with a short id, the probability of collision is very low,
-    # but timeout just in case rather than risk locking up.
-    timeout = 0
-    while timeout < 1000:
-        initial_long = str(uuid4())
-        candidate = initial_long[:UUID_SIZE]
-        if len(cls.objects.filter(uid=candidate)) == 0:
-            return candidate
-        else:
-            timeout += 1
-    raise RuntimeError, "Too many short_uuid attempts."
 
+class UniqueUidModelMixin(models.Model):
+    """Mixin that adds a field for a unique uid and catches an IntegrityError
+    and retries in case the same uid is used.
+
+    NOTE: This overrides the manager. Further changes that require changing
+    the manager will require considering the SafeCreateModelManager.
+    """
+    class Meta:
+        abstract = True
+
+    uid = models.CharField(max_length=UUID_SIZE, unique=True,
+            default=short_uuid)
+
+    # Override the default manager.
+    objects = SafeCreateModelManager()
+
+
+###############################################################################
+# Misc helpers
+###############################################################################
 
 def ensure_exists_0775_dir(destination):
     """Creates a directory with 0775 permissions, and gets the group of the
