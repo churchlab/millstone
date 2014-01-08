@@ -98,6 +98,7 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variantevidence.id', 've_id', True
 # ExperimentSample
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', True, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', 'experiment_sample_uid', True, True)
+SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.label', 'experiment_sample_label', True, True)
 
 # VariantSet
 SCHEMA_BUILDER.add_melted_variant_field('main_variantset.uid', 'variant_set_uid', False, True)
