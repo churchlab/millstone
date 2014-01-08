@@ -77,14 +77,26 @@ SCHEMA_BUILDER = SchemaBuilder()
 # SCHEMA_BUILDER.add_melted_variant_field(<source_col_name>,
 #         <joined_table_col_named>, <is_null_in_variant_to_set_label>,
 #         <user_queryable>)
+
+# Variant
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.id', 'id', False, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.uid', 'uid', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.position', 'position', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', 'chromosome', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', 'ref', False, True)
+
+# VariantAlternate
 SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', False, True)
+
+# Key-value data.
+# SCHEMA_BUILDER.add_melted_variant_field('main_variantcallercommondata.data', 'vccd_data', True, False)
+# SCHEMA_BUILDER.add_melted_variant_field('main_variantevidence.data', 've_data', True, False)
+
+# ExperimentSample
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', True, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', 'experiment_sample_uid', True, True)
+
+# VariantSet
 SCHEMA_BUILDER.add_melted_variant_field('main_variantset.uid', 'variant_set_uid', False, True)
 SCHEMA_BUILDER.add_melted_variant_field('main_variantset.label', 'variant_set_label', False, True)
 MELTED_VARIANT_SCHEMA = SCHEMA_BUILDER.get_schema()
@@ -117,7 +129,7 @@ MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS = [
         schema_obj['joined_table_col_name']
         for schema_obj in MELTED_VARIANT_SCHEMA
 ]
-MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE = ', '.join(
+MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE = ', '.join(
         MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS)
 
 
@@ -158,32 +170,40 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
         """Override.
         """
         create_sql_statement = (
-            'CREATE MATERIALIZED VIEW %s AS '
-                '(SELECT %s FROM main_variant '
-                    'INNER JOIN main_variantcallercommondata ON (main_variant.id = main_variantcallercommondata.variant_id) '
-                    'INNER JOIN main_variantevidence ON (main_variantcallercommondata.id = main_variantevidence.variant_caller_common_data_id) '
-                    'INNER JOIN main_experimentsample ON (main_variantevidence.experiment_sample_id = main_experimentsample.id) '
+            'CREATE MATERIALIZED VIEW %s AS ('
+                'WITH table_1 AS ('
+                    '('
+                        'SELECT %s FROM main_variant '
+                            'INNER JOIN main_variantcallercommondata ON (main_variant.id = main_variantcallercommondata.variant_id) '
+                            'INNER JOIN main_variantevidence ON (main_variantcallercommondata.id = main_variantevidence.variant_caller_common_data_id) '
+                            'INNER JOIN main_experimentsample ON (main_variantevidence.experiment_sample_id = main_experimentsample.id) '
 
-                    # VariantSet
-                    'LEFT JOIN main_varianttovariantset_sample_variant_set_association ON ('
-                            'main_experimentsample.id = main_varianttovariantset_sample_variant_set_association.experimentsample_id) '
-                    'LEFT JOIN main_varianttovariantset ON ('
-                            'main_varianttovariantset_sample_variant_set_association.varianttovariantset_id = main_varianttovariantset.id AND '
-                            'main_varianttovariantset.variant_id = main_variant.id) '
-                    'LEFT JOIN main_variantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
+                            # VariantSet
+                            'LEFT JOIN main_varianttovariantset_sample_variant_set_association ON ('
+                                    'main_experimentsample.id = main_varianttovariantset_sample_variant_set_association.experimentsample_id) '
+                            'LEFT JOIN main_varianttovariantset ON ('
+                                    'main_varianttovariantset_sample_variant_set_association.varianttovariantset_id = main_varianttovariantset.id AND '
+                                    'main_varianttovariantset.variant_id = main_variant.id) '
+                            'LEFT JOIN main_variantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
 
-                    # VariantAlternate
-                    'LEFT JOIN main_variantevidence_variantalternate_set ON ('
-                            'main_variantevidence.id = main_variantevidence_variantalternate_set.variantevidence_id) '
-                    'LEFT JOIN main_variantalternate ON main_variantevidence_variantalternate_set.variantalternate_id = main_variantalternate.id '
-                'WHERE (main_variant.reference_genome_id = %d)) '
-                'UNION '
-                '(SELECT %s FROM main_variant '
-                    'INNER JOIN main_variantalternate ON main_variantalternate.variant_id = main_variant.id '
-                    'INNER JOIN main_varianttovariantset ON main_variant.id = main_varianttovariantset.variant_id '
-                    'INNER JOIN main_variantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
-                'WHERE (main_variant.reference_genome_id = %d)) '
-                'ORDER BY position, experiment_sample_uid DESC '
+                            # VariantAlternate
+                            'LEFT JOIN main_variantevidence_variantalternate_set ON ('
+                                    'main_variantevidence.id = main_variantevidence_variantalternate_set.variantevidence_id) '
+                            'LEFT JOIN main_variantalternate ON main_variantevidence_variantalternate_set.variantalternate_id = main_variantalternate.id '
+                        'WHERE (main_variant.reference_genome_id = %d)'
+                    ') '
+                    'UNION '
+                    '('
+                        'SELECT %s FROM main_variant '
+                            'INNER JOIN main_variantalternate ON main_variantalternate.variant_id = main_variant.id '
+                            'INNER JOIN main_varianttovariantset ON main_variant.id = main_varianttovariantset.variant_id '
+                            'INNER JOIN main_variantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
+                        'WHERE (main_variant.reference_genome_id = %d)'
+                    ') '
+                    'ORDER BY position, experiment_sample_uid DESC '
+                ') ' # WITH
+                'SELECT * FROM table_1'
+            ')'
             % (self.view_table_name, MATERIALIZED_TABLE_SELECT_CLAUSE, self.reference_genome.id,
                     MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE, self.reference_genome.id)
         )

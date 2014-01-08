@@ -26,7 +26,7 @@ from variants.common import get_django_q_object_for_triple
 from variants.common import hashablefetchall
 from variants.common import SqlReadySymbol
 from variants.common import SymbolGenerator
-from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE
+from variants.materialized_view_manager import MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.filter_eval_result import FilterEvalResult
 from variants.filter_scope import FilterScope
@@ -215,7 +215,7 @@ class VariantFilterEvaluator(object):
         sql_statement = (
                 'SELECT %s '
                 'FROM %s '
-                % (MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE,
+                % (MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE,
                         self.materialized_view_manager.get_table_name())
         )
 
