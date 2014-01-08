@@ -11,6 +11,7 @@ import os.path
 import json
 import re
 from StringIO import StringIO
+import time
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -320,6 +321,8 @@ def refresh_materialized_variant_table(request):
     """Updates the materialized variant table corresponding to the
     ReferenceGenome whose uid is provided in the GET params.
     """
+    profiling_time_start = time.time()
+
     ref_genome_uid = request.GET.get('refGenomeUid')
     reference_genome = get_object_or_404(ReferenceGenome,
             project__owner=request.user.get_profile(),
@@ -329,6 +332,8 @@ def refresh_materialized_variant_table(request):
     # by calling refresh().
     mvmvm = MeltedVariantMaterializedViewManager(reference_genome)
     mvmvm.create()
+
+    print 'REFRESH TOOK', time.time() - profiling_time_start
 
     return HttpResponse('ok')
 
