@@ -52,6 +52,9 @@ class AbstractMaterializedViewManager(object):
 
 # Build the schema used to build the materialized view.
 # All of this happens on the first module import.
+# NOTE: This schema currenlty doesn't include the catch-all data field in each
+# of the VariantCallerCommonData and VariantEvidence models, which contains
+# key-value fields extracted from .vcf.
 class SchemaBuilder(object):
     def __init__(self):
         self.schema = []
@@ -89,8 +92,8 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', 'ref', False, 
 SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', False, True)
 
 # Key-value data.
-# SCHEMA_BUILDER.add_melted_variant_field('main_variantcallercommondata.data', 'vccd_data', True, False)
-# SCHEMA_BUILDER.add_melted_variant_field('main_variantevidence.data', 've_data', True, False)
+SCHEMA_BUILDER.add_melted_variant_field('main_variantcallercommondata.id', 'vccd_id', True, False)
+SCHEMA_BUILDER.add_melted_variant_field('main_variantevidence.id', 've_id', True, False)
 
 # ExperimentSample
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', True, False)
@@ -169,9 +172,11 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
     def create_internal(self):
         """Override.
         """
+        # Query all columsn except the catch-all key value fields first,
+        # then join with the key-value columns.
         create_sql_statement = (
             'CREATE MATERIALIZED VIEW %s AS ('
-                'WITH table_1 AS ('
+                'WITH melted_variant_data AS ('
                     '('
                         'SELECT %s FROM main_variant '
                             'INNER JOIN main_variantcallercommondata ON (main_variant.id = main_variantcallercommondata.variant_id) '
@@ -201,8 +206,17 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                         'WHERE (main_variant.reference_genome_id = %d)'
                     ') '
                     'ORDER BY position, experiment_sample_uid DESC '
-                ') ' # WITH
-                'SELECT * FROM table_1'
+                ') ' # melted_variant_data
+                ', vccd_data_table AS ('
+                    'SELECT id, data AS vccd_data from main_variantcallercommondata'
+                ') ' # vccd_data_table
+                ', ve_data_table AS ('
+                    'SELECT id, data AS ve_data from main_variantevidence'
+                ') ' # ve_data_table
+                'SELECT melted_variant_data.*, vccd_data, ve_data '
+                    'FROM melted_variant_data '
+                        'LEFT JOIN ve_data_table ON ve_data_table.id = melted_variant_data.ve_id '
+                        'LEFT JOIN vccd_data_table ON vccd_data_table.id = melted_variant_data.vccd_id'
             ')'
             % (self.view_table_name, MATERIALIZED_TABLE_SELECT_CLAUSE, self.reference_genome.id,
                     MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE, self.reference_genome.id)
