@@ -35,6 +35,7 @@ from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
+from scripts.data_export_util import export_melted_variant_view
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
@@ -336,6 +337,23 @@ def refresh_materialized_variant_table(request):
     print 'REFRESH TOOK', time.time() - profiling_time_start
 
     return HttpResponse('ok')
+
+
+def export_variants_as_csv(request):
+    """Handles a request to download variants in .csv format.
+    """
+    ref_genome_uid = request.GET.get('ref_genome_uid')
+    reference_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)
+
+    # NOTE: Currently a no-op.
+    variant_id_list = []
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="variants.csv"'
+    export_melted_variant_view(reference_genome, variant_id_list, response)
+    return response
 
 
 if settings.S3_ENABLED:

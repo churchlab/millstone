@@ -33,7 +33,19 @@
         Refresh Materialized View
       </button>
     </div>
+
+    <div style="margin-top: 10px;">
+      <button id="gd-filter-export-csv" class="btn gd-btn-with-margins">
+        Export as csv
+      </button>
+    </div>
   </div>
 </div>
+
+<form id="gd-filter-export-csv-form" action="/_/variants/export_as_csv"
+    method="GET">
+  <input type='hidden' name='csrfmiddlewaretoken' value='{{csrf}}' />
+  <input type="hidden" name="ref_genome_uid" value={{ref_genome.uid}}>
+</form>
 
 {% include "filter_field_select_modal.html" %}

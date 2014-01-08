@@ -42,21 +42,31 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
   renderControls: function() {
     // Request the filter control html from the server for now.
     // TODO: Client-side template support.
-    $.get('/_/templates/variant_filter_controls', _.bind(function(response) {
-      // Append the DOM.
-      $('#gd-analyze-subview-controls-hook').append(response);
 
-      // Fill in the filter if relevant.
-      $('#gd-new-filter-input').val(this.model.get('filterString'));
 
-      // Register listeners.
-      $('#gd-filter-box-apply-btn').click(
-          _.bind(this.handleApplyFilterClick, this));
-      $('#gd-filter-field-select-btn').click(
-          _.bind(this.handleShowFieldSelect, this));
-      $('#gd-filter-refresh-materialized').click(
-          _.bind(this.handleRefreshMaterializedView, this));
-    }, this));
+    var requestData = {
+      'csrf': gd.getCookie('csrftoken'),
+      'refGenomeUid': this.model.get('refGenomeUid')
+    };
+
+    $.get('/_/templates/variant_filter_controls', requestData,
+        _.bind(function(response) {
+          // Append the DOM.
+          $('#gd-analyze-subview-controls-hook').append(response);
+
+          // Fill in the filter if relevant.
+          $('#gd-new-filter-input').val(this.model.get('filterString'));
+
+          // Register listeners.
+          $('#gd-filter-box-apply-btn').click(
+              _.bind(this.handleApplyFilterClick, this));
+          $('#gd-filter-field-select-btn').click(
+              _.bind(this.handleShowFieldSelect, this));
+          $('#gd-filter-refresh-materialized').click(
+              _.bind(this.handleRefreshMaterializedView, this));
+          $('#gd-filter-export-csv').click(
+              _.bind(this.handleExportCsv, this));
+        }, this));
   },
 
 
@@ -188,11 +198,22 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     var requestData = {
       'refGenomeUid': this.model.get('refGenomeUid'),
-    }
+    };
     $.get('/_/variants/refresh_materialized_variant_table', requestData,
         function(data) {
           window.location.reload();
         });
+  },
+
+
+  /**
+   * Starts a download of Variants passing the current filter in .csv format.
+   *
+   * TODO(gleb): Currently this is a partial implementation and just downloads
+   * all variants. This needs to be completed.
+   */
+  handleExportCsv: function() {
+    $('#gd-filter-export-csv-form').submit();
   },
 
 
