@@ -71,6 +71,11 @@ need to do the following to get JBrowse up and running:
 2. Install nginx if it's not already installed (use brew on Mac OSX) and copy
    or symlink the config file to nginx sites-enabled dir.
 
+   NOTE: This might be different for different OSX versions, and you might need to 
+   additionally modify `/usr/local/etc/nginx/nginx.conf`, since in 1.4.2 on
+   OSX 10.6.8, it thinks `/usr/local/etc/nginx/sites-enabled` is a directory,
+   not a file. 
+
    Unix:
 
         $ ln -s config/jbrowse.local.nginx /etc/nginx/sites-enabled
@@ -79,6 +84,7 @@ need to do the following to get JBrowse up and running:
 
         $ sudo mkdir -p /usr/local/etc/nginx/sites-enabled
         $ sudo ln -s config/jbrowse.local.nginx /usr/local/etc/nginx/sites-enabled
+        
 
 3. Restart nginx.
 
