@@ -43,31 +43,7 @@ However, in reality, this doesn't seem to work perfectly. In particular, it may
 be necessary to install specific packages first.
 
 NOTE: Watch changes to requirements.txt and re-run the install command when
-collaborators add new dependencies
-
-#### Troubleshooting
-
-The environment setup process is not perfect, specifically with respet to
-particular packages. Here are some helpful hints:
-
-* For numpy, you may have to explicitly call
-
-        pip install numpy
-
-    as BioPython may complain that numpy is not installed when trying to run the
-    full install from requirements.txt. For some reason the deps aren't wired up
-    correctly.
-
-* If pyvcf fails to install due to:
-
-        error: can't copy 'vcf/cparse.c': doesn't exist or not a regular file"
-
-    try manually navigating to `/path/to/venv/build/pyvcf/vcf` and runnning
-
-            cython cparse.pyx
-
-    which should generate the missing file.
-
+collaborators add new dependencies.
 
 ### Git Submodules
 
@@ -98,16 +74,16 @@ need to do the following to get JBrowse up and running:
    NOTE: This might be different for different OSX versions, and you might need to 
    additionally modify `/usr/local/etc/nginx/nginx.conf`, since in 1.4.2 on
    OSX 10.6.8, it thinks `/usr/local/etc/nginx/sites-enabled` is a directory,
-   not a file. 
+   not a file.
 
    Unix:
 
         $ ln -s config/jbrowse.local.nginx /etc/nginx/sites-enabled
 
-   Mac:
+   Mac (run these commands from the project root):
 
         $ sudo mkdir -p /usr/local/etc/nginx/sites-enabled
-        $ sudo ln -s config/jbrowse.local.nginx /usr/local/etc/nginx/sites-enabled
+        $ sudo ln -s `pwd`/config/jbrowse.local.nginx /usr/local/etc/nginx/sites-enabled/genome-designer-v2
         
 
 3. Restart nginx.
