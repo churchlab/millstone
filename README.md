@@ -43,7 +43,31 @@ However, in reality, this doesn't seem to work perfectly. In particular, it may
 be necessary to install specific packages first.
 
 NOTE: Watch changes to requirements.txt and re-run the install command when
-collaborators add new dependencies.
+collaborators add new dependencies
+
+#### Troubleshooting
+
+The environment setup process is not perfect, specifically with respet to
+particular packages. Here are some helpful hints:
+
+* For numpy, you may have to explicitly call
+
+        pip install numpy
+
+    as BioPython may complain that numpy is not installed when trying to run the
+    full install from requirements.txt. For some reason the deps aren't wired up
+    correctly.
+
+* If pyvcf fails to install due to:
+
+        error: can't copy 'vcf/cparse.c': doesn't exist or not a regular file"
+
+    try manually navigating to `/path/to/venv/build/pyvcf/vcf` and runnning
+
+            cython cparse.pyx
+
+    which should generate the missing file.
+
 
 ### Git Submodules
 
