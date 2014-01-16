@@ -96,7 +96,10 @@ def import_reference_genome_from_local_file(project, label, file_location,
         import_format: Must be 'fasta' or 'genbank'.
         move: move instead of copy the original file_location - for instance,
         if we saved it to a temporary file. Moving is of course faster than
-        copying. 
+        copying.
+
+    Returns:
+        ReferenceGenome.
     """
     # Validate the input.
     assert import_format in ['fasta', 'genbank']
@@ -112,7 +115,6 @@ def import_reference_genome_from_local_file(project, label, file_location,
     for genome_record in SeqIO.parse(file_location, import_format):
         num_chromosomes += 1
         num_bases += len(genome_record)
-
 
     # Make sure sequence exists.
     if not num_bases > 0:

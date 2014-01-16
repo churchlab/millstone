@@ -41,6 +41,13 @@ def parse_vcf(vcf_dataset, reference_genome):
     """
     query_cache = QueryCache()
 
+    # First count the number of records to give output.
+    record_count = 0
+    with open(vcf_dataset.get_absolute_location()) as fh:
+        vcf_reader = vcf.Reader(fh)
+        for record in vcf_reader:
+            record_count += 1
+
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
 
@@ -49,6 +56,7 @@ def parse_vcf(vcf_dataset, reference_genome):
         update_filter_key_map(reference_genome, vcf_reader)
 
         for record_idx, record in enumerate(vcf_reader):
+            print 'Parsing', record_idx + 1, 'out of', record_count
             # Make sure the QueryCache object has experiment samples populated.
             # Assumes every row has same samples. (Pretty sure this is true
             # for well-formatted vcf file.)

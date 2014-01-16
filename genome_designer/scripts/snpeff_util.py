@@ -278,6 +278,25 @@ if __name__ == '__main__':
             '/path/to/project'),
         '/scratch/dbg/bw_strains/gbk/BW25113_updated.snpeff.config')
 
+
+def get_snpeff_vcf_output_path(alignment_group, alignment_type):
+    """Returns the path to SnpEff dir, reltaive to the AlignmentGroup data
+    location.
+
+    Ensures that the intermediate dirs are created so the file can be written.
+
+    Path is of the form:
+    /projects/<project_uid>/alignment_groups/vcf/snpeff/<alignment_type>.vcf
+    """
+    vcf_dir = os.path.join(alignment_group.get_model_data_dir(), 'vcf')
+    ensure_exists_0775_dir(vcf_dir)
+    snpeff_vcf_dir = os.path.join(vcf_dir, 'snpeff')
+    ensure_exists_0775_dir(snpeff_vcf_dir)
+    vcf_output_filename = os.path.join(
+            snpeff_vcf_dir, alignment_type + '.vcf')
+    return vcf_output_filename
+
+
 def run_snpeff(alignment_group, alignment_type):
     """Run snpeff on an alignment group after creating a vcf with a snpcaller.
 
@@ -295,16 +314,8 @@ def run_snpeff(alignment_group, alignment_type):
             type=VCF_DATASET_TYPE).get_absolute_location()
 
     # Prepare a directory to put the output file.
-    # We'll put them in /projects/<project_uid>/alignment_groups/vcf/snpeff/
-    #     <alignment_type>.vcf
-    # We'll save these for now, maybe it's not necessary later.
-
-    vcf_dir = os.path.join(alignment_group.get_model_data_dir(), 'vcf')
-    ensure_exists_0775_dir(vcf_dir)
-    snpeff_vcf_dir = os.path.join(vcf_dir, 'snpeff')
-    ensure_exists_0775_dir(snpeff_vcf_dir)
-    vcf_output_filename = os.path.join(
-            snpeff_vcf_dir, alignment_type + '.vcf')
+    vcf_output_filename = get_snpeff_vcf_output_path(alignment_group,
+            alignment_type)
 
     snpeff_args = [
         'java',
