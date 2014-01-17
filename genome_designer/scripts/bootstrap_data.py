@@ -168,15 +168,18 @@ def create_fake_variants_and_variant_sets(ref_genome):
     _add_fake_variants_to_fake_set()
 
 
+def get_or_create_user():
+    try:
+        return User.objects.get(username=TEST_USERNAME)
+    except User.DoesNotExist:
+        return User.objects.create_user(
+                TEST_USERNAME, password=TEST_PASSWORD, email=TEST_EMAIL)
+
+
 def bootstrap_fake_data():
     """Fill the database with fake data.
     """
-    ### Get or create the user.
-    try:
-        user = User.objects.get(username=TEST_USERNAME)
-    except User.DoesNotExist:
-        user = User.objects.create_user(
-                TEST_USERNAME, password=TEST_PASSWORD, email=TEST_EMAIL)
+    user = get_or_create_user()
 
     ### Create some projects
     (test_project, project_created) = Project.objects.get_or_create(
