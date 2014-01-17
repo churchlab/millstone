@@ -41,7 +41,6 @@ import settings
 
 # Tags used to indicate which tab we are on.
 TAB_ROOT__DATA = 'DATA'
-TAB_ROOT__ALIGN = 'ALIGN'
 TAB_ROOT__ANALYZE = 'ANALYZE'
 
 
@@ -137,18 +136,6 @@ def tab_root_data(request, project_uid):
         'tab_root': TAB_ROOT__DATA
     }
     return render(request, 'project.html', context)
-
-
-@login_required
-def tab_root_align(request, project_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-
-    context = {
-        'project': project,
-        'tab_root': TAB_ROOT__ALIGN
-    }
-    return render(request, 'tab_root_align.html', context)
 
 
 VALID_ANALYZE_SUB_VIEWS = set([
@@ -334,7 +321,7 @@ def alignment_view(request, project_uid, alignment_group_uid):
     })
     context = {
         'project': project,
-        'tab_root': TAB_ROOT__ALIGN,
+        'tab_root': TAB_ROOT__DATA,
         'alignment_group': alignment_group,
         'experiment_sample_to_alignment_list_json': adapt_model_to_frontend(
                 ExperimentSampleToAlignment,
@@ -399,7 +386,7 @@ def alignment_create_view(request, project_uid):
 
     context = {
         'project': project,
-        'tab_root': TAB_ROOT__ALIGN,
+        'tab_root': TAB_ROOT__DATA,
         'samples_list_json': adapt_model_to_frontend(ExperimentSample,
                 {'project':project}),
         'ref_genomes_list_json': adapt_model_to_frontend(ReferenceGenome,
@@ -426,7 +413,7 @@ def sample_alignment_error_view(request, project_uid, alignment_group_uid,
         raw_data = 'undefined'
     context = {
         'project': project,
-        'tab_root': TAB_ROOT__ALIGN,
+        'tab_root': TAB_ROOT__DATA,
         'raw_data': raw_data
     }
     return render(request, 'sample_alignment_error_view.html', context)

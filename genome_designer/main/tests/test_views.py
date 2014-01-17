@@ -68,8 +68,6 @@ class TestViews(TestCase):
                 # Tab base views.
                 reverse('genome_designer.main.views.project_view',
                         args=(test_project.uid,)),
-                reverse('genome_designer.main.views.tab_root_align',
-                        args=(test_project.uid,)),
                 reverse('genome_designer.main.views.tab_root_analyze',
                         args=(test_project.uid,)),
 
