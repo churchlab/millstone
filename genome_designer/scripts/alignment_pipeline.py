@@ -8,6 +8,7 @@ and carry out the gauntlet of steps to perform alignments and clean them up.
 
 import copy
 import os
+import re
 import subprocess
 from subprocess import CalledProcessError
 import sys

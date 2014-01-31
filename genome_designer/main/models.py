@@ -109,6 +109,7 @@ class Dataset(UniqueUidModelMixin):
         BWA_ALIGN = 'bwa_align'
         BWA_ALIGN_ERROR = 'bwa_align_error'
         VCF_FREEBAYES = 'vcff'
+        VCF_SV = 'vcfsv'
         VCF_USERINPUT = 'vcfu'
         VCF_FREEBAYES_SNPEFF = 'vcffe'
 
