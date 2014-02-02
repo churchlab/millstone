@@ -66,6 +66,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
               _.bind(this.handleRefreshMaterializedView, this));
           $('#gd-filter-export-csv').click(
               _.bind(this.handleExportCsv, this));
+          $('#gd-snp-filter-error-close-btn').click(
+              _.bind(this.handleErrorAlertClose, this));
         }, this));
   },
 
@@ -175,6 +177,18 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
 
   /**
+   * Hides the alert box.
+   *
+   * Previously, we were adding Bootstrap's data-dismiss="alert" to the dom
+   * but that was causing the entire element to be deleted so that subsequent
+   * alerts wouldn't show.
+   */
+  handleErrorAlertClose: function() {
+    $('#gd-snp-filter-error').hide();
+  },
+
+
+  /**
    * Creates the modal for selecting which fields are being displayed and
    * shows it.
    */
@@ -232,6 +246,9 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
   /** Kicks off the process for updating the list of displayed variants. */
   updateVariantList: function() {
+    // Hide any alert.
+    this.handleErrorAlertClose();
+
     // Update the UI to show that the new Variant list is loading.
     this.setUIStartLoadingState();
 

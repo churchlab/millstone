@@ -178,7 +178,7 @@ def get_variant_list(request):
                     variant_key_map_with_active_fields_marked)
         }
 
-    except ValueError as e:
+    except Exception as e:
         # TODO: More readable error reporting.
         exception_as_string = str(type(e)) + ' ' +  str(e)
         response_data = {
