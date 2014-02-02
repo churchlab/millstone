@@ -31,7 +31,8 @@ VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
 # Dataset type to use for snp annotation.
 VCF_ANNOTATED_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 # Dataset type for results of finding SVs.
-VCF_SV_DATASET_TYPE = Dataset.TYPE.VCF_SV
+VCF_PINDEL_TYPE = Dataset.TYPE.VCF_PINDEL
+VCF_DELLY_TYPE = Dataset.TYPE.VCF_DELLY
 
 def run_snp_calling_pipeline(alignment_group, concurrent=DEBUG_CONCURRENT):
     """Calls SNPs for all of the alignments in the alignment_group.
@@ -58,11 +59,11 @@ def run_snp_calling_pipeline_internal(alignment_group):
         vcf_dataset_type = VCF_ANNOTATED_DATASET_TYPE
     else:
         vcf_dataset_type = VCF_DATASET_TYPE
-    vcf_sv_dataset_type = VCF_SV_DATASET_TYPE
 
     # Parse the resulting vcfs.
     parse_alignment_group_vcf(alignment_group, vcf_dataset_type)
-    parse_alignment_group_vcf(alignment_group, vcf_sv_dataset_type)
+    parse_alignment_group_vcf(alignment_group, Dataset.TYPE.VCF_PINDEL)
+    parse_alignment_group_vcf(alignment_group, Dataset.TYPE.VCF_DELLY)
 
 
 def run_analysis_pipeline(alignment_group, alignment_type):
@@ -121,8 +122,9 @@ def run_analysis_pipeline(alignment_group, alignment_type):
             "Expected %d bam files, but found %d" % (
                     len(sample_alignment_list), len(bam_files)))
 
-    run_freebayes(alignment_group, fasta_ref, bam_files, VCF_DATASET_TYPE, vcf_output_filename)
-    run_sv(alignment_group, fasta_ref, bam_files, VCF_SV_DATASET_TYPE, sv_vcf_dir)
+    run_freebayes(alignment_group, fasta_ref, bam_files, vcf_output_filename)
+    run_pindel(alignment_group, fasta_ref, bam_files, sv_vcf_dir)
+    run_delly(alignment_group, fasta_ref, bam_files, sv_vcf_dir)
 
 def _add_dataset(alignment_group, vcf_dataset_type, vcf_output_filename):
     # If a Dataset already exists, delete it, might have been a bad run.
@@ -142,13 +144,15 @@ def _add_dataset(alignment_group, vcf_dataset_type, vcf_output_filename):
     alignment_group.dataset_set.add(dataset)
 
 
-def run_freebayes(alignment_group, fasta_ref, bam_files, vcf_dataset_type, vcf_output_filename):
+def run_freebayes(alignment_group, fasta_ref, bam_files, vcf_output_filename):
     """Run freebayes using the bam alignment files keyed by the alignment_type
     for all Genomes of the passed in ReferenceGenome.
 
     NOTE: If a Genome doesn't have a bam alignment file with this
     alignment_type, then it won't be used.
     """
+    vcf_dataset_type = VCF_DATASET_TYPE
+
     # Build up the bam part of the freebayes binary call.
     bam_part = []
     for bam_file in bam_files:
@@ -182,18 +186,18 @@ def _get_sample_uid(bam_file):
             stdout=subprocess.PIPE)
     # read only the first 10 lines, to avoid loading large bam files into memory
     samdata = subprocess.check_output(['head'], stdin=process.stdout)
-    print 'samdata:', samdata
     # find the sample uid, which is found in the form RG:Z:[uid]
     match = re.search('RG:Z:(\S+)', samdata)
-    print 'match:', match
     if not match:
         # should not happen if the bam file is structured properly
         assert 'Internal error: no sample uid found in bam file'
     return match.group(1)
 
 
-def run_sv(alignment_group, fasta_ref, bam_files, vcf_dataset_type, sv_vcf_dir):
-    """Run pindel and delly to find SVs."""
+def run_pindel(alignment_group, fasta_ref, bam_files, sv_vcf_dir):
+    """Run pindel to find SVs."""
+    vcf_dataset_type = VCF_PINDEL_TYPE
+
     # Create pindel config file
     pindel_config = os.path.join(sv_vcf_dir, 'pindel_config.txt')
     with open(pindel_config, 'w') as fh:
@@ -203,18 +207,17 @@ def run_sv(alignment_group, fasta_ref, bam_files, vcf_dataset_type, sv_vcf_dir):
             fh.write('%s %s %s\n' % (bam_file, insert_size, sample_uid))
 
     # Build the full pindel command.
-    print fasta_ref, pindel_config, sv_vcf_dir
+    pindel_root = os.path.join(sv_vcf_dir, 'pindel')
     subprocess.check_call(['%s/pindel/pindel' % TOOLS_DIR,
         '-f', fasta_ref,
         '-i', pindel_config,
         '-c', 'ALL',
-        '-o', os.path.join(sv_vcf_dir, 'pindel')
+        '-o', pindel_root
     ])
 
     # convert different types to vcf separately
-    pindel_root = os.path.join(sv_vcf_dir, 'pindel')
     subprocess.check_call(['%s/pindel/pindel2vcf' % TOOLS_DIR,
-        '-P', pindel_root,  # -P pindel output root
+        '-P', pindel_root,
         '-r', fasta_ref,
         '-R', 'name',
         '-d', 'date'
@@ -222,4 +225,41 @@ def run_sv(alignment_group, fasta_ref, bam_files, vcf_dataset_type, sv_vcf_dir):
 
     # add dataset for sv.
     _add_dataset(alignment_group, vcf_dataset_type, pindel_root + '.vcf')
+
+
+def run_delly(alignment_group, fasta_ref, bam_files, sv_vcf_dir):
+    """Run delly to find SVs."""
+    vcf_dataset_type = VCF_DELLY_TYPE
+
+    delly_root = os.path.join(sv_vcf_dir, 'delly')
+    transformations = ['DEL', 'DUP', 'INV']
+    vcf_outputs = map(lambda transformation:
+            '%s_%s.vcf' % (delly_root, transformation), transformations)
+
+    # run delly for each type of transformation
+    for transformation, vcf_output in zip(transformations, vcf_outputs):
+        # not checked_call, because delly errors if it doesn't find any SVs
+        subprocess.call(['%s/delly/delly' % TOOLS_DIR,
+            '-t', transformation,
+            '-o', vcf_output,
+            '-g', fasta_ref] + bam_files)
+
+    # combine the separate vcfs for each transformation
+    delly_vcf = delly_root + '.vcf'
+    vcf_outputs = filter(lambda file: os.path.exists(file), vcf_outputs)
+    if vcf_outputs:
+        with open(delly_vcf, 'w') as fh:
+            subprocess.check_call(['vcf-concat'] + vcf_outputs, stdout=fh)
+    else:
+        # hack: create empty vcf
+        subprocess.check_call(['touch', delly_root])
+        subprocess.check_call(['%s/pindel/pindel2vcf' % TOOLS_DIR,
+            '-p', delly_root,
+            '-r', fasta_ref,
+            '-R', 'name',
+            '-d', 'date'
+        ])
+
+    # add dataset for sv.
+    _add_dataset(alignment_group, vcf_dataset_type, delly_vcf)
 
