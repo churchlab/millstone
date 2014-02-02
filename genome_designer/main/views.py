@@ -31,12 +31,12 @@ from main.models import ExperimentSampleToAlignment
 from main.models import Variant
 from main.models import VariantSet
 from main.models import VariantToVariantSet
-from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
+from pipeline.pipeline import run_pipeline
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_reference_genome_from_ncbi
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
-from scripts.snp_callers import run_snp_calling_pipeline
+from pipeline.snv_calling import call_snvs
 import settings
 
 # Tags used to indicate which tab we are on.
@@ -312,7 +312,7 @@ def alignment_view(request, project_uid, alignment_group_uid):
             reference_genome__project=project, uid=alignment_group_uid)
 
     if request.POST:
-        run_snp_calling_pipeline(alignment_group)
+        call_snvs(alignment_group)
         return HttpResponse('ok')
 
     # Initial javascript data.
@@ -367,7 +367,7 @@ def alignment_create_view(request, project_uid):
 
         # Kick off alignments.
         try:
-            create_alignment_groups_and_start_alignments(alignment_group_name,
+            run_pipeline(alignment_group_name,
                     ref_genome_list, sample_list)
 
             # Success. Return a redirect response.

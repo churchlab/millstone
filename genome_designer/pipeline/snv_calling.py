@@ -2,6 +2,9 @@
 Functions for calling SNPs.
 """
 
+from celery import group
+from celery import chain
+from celery import task
 import os
 import subprocess
 
@@ -13,8 +16,8 @@ from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
-from scripts.snpeff_util import run_snpeff
-from scripts.util import fn_runner
+from main.s3 import project_files_needed
+from variant_effects import run_snpeff
 from scripts.vcf_parser import parse_alignment_group_vcf
 from settings import DEBUG_CONCURRENT
 from settings import PWD
@@ -29,22 +32,12 @@ VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
 # Dataset type to use for snp annotation.
 VCF_ANNOTATED_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 
-def run_snp_calling_pipeline(alignment_group, concurrent=DEBUG_CONCURRENT):
-    """Calls SNPs for all of the alignments in the alignment_group.
+@task
+@project_files_needed
+def call_snvs(alignment_group):
+    """Calls SNVs for all of the alignments in the alignment_group.
     """
-    # Check whether Celery is running.
-    if concurrent:
-        celery_status = get_celery_worker_status()
-        assert not CELERY_ERROR_KEY in celery_status, (
-                celery_status[CELERY_ERROR_KEY])
 
-    args = [alignment_group]
-    fn_runner(run_snp_calling_pipeline_internal, alignment_group.reference_genome.project, args, concurrent)
-
-
-def run_snp_calling_pipeline_internal(alignment_group):
-    """Internal method to provide async interface.
-    """
     run_freebayes(alignment_group, Dataset.TYPE.BWA_ALIGN)
 
     # For now, automatically run snpeff if a genbank annotation is available.
@@ -97,6 +90,9 @@ def run_freebayes(alignment_group, alignment_type):
         return bam_dataset.status == Dataset.STATUS.READY
     sample_alignment_list = [sample_alignment for sample_alignment in
             sample_alignment_list if _is_successful_alignment(sample_alignment)]
+
+    if len(sample_alignment_list) == 0:
+        raise Exception('No successful alignments, Freebayes cannot proceed.')
 
     # Get handles for each of the bam files.
     def _get_bam_location(sample_alignment):

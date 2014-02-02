@@ -47,7 +47,8 @@ if settings.S3_ENABLED:
 
     def import_reference_genome_from_s3(project, label, s3file, import_format):
         with s3_temp_get(s3file) as f:
-            return import_reference_genome_from_local_file(project, label, f, import_format)
+            return import_reference_genome_from_local_file(
+                    project, label, f, import_format)
 
     @project_files_needed
     def import_samples_from_s3(project, targets_file_rows, s3files):

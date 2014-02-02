@@ -23,13 +23,24 @@ def project_files_needed(func):
     """A decorator function to wrap function to make sure the availability and
     persistance of project files for the period of function execution.
 
-    NOTE: 1st argument of function must be models.Project instance.
+    NOTE: Either 1st argument or kwargs['project'] of function 
+          must be models.Project instance
     """
     @wraps(func)
-    def wrapper(project, *args, **kwargs):
+    def wrapper(*args, **kwargs):
+        try:
+            assert isinstance(args[0], Project)
+            project = args[0]
+        except AssertionError:
+            assert 'project' in kwargs, ("Function decorator "+
+                    "project_files_needed requires either "+
+                    "Models.project as first arg or 'project' as kwarg")
+            project = kwargs['project']
+            del kwargs['project']
+
         assert isinstance(project, Project)
         with project_s3_persisted(project):
-            return func(project, *args, **kwargs)
+            return func(*args, **kwargs)
     return wrapper
 
 @contextmanager
