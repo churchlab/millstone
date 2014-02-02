@@ -194,6 +194,20 @@ def _get_sample_uid(bam_file):
     return match.group(1)
 
 
+def filter_small_variants(vcf_file, cutoff):
+    """Go through each line of vcf, and remove small structural variants"""
+    vcf_file_tmp = vcf_file + '.tmp'
+    with open(vcf_file_tmp, 'w') as fh:
+        for line in open(vcf_file):
+            match = re.search('SVLEN=(-?[0-9]+);', line)
+            # Check if SVLEN > cutoff
+            if not match or abs(int(match.group(1))) > cutoff:
+                fh.write(line)
+
+    # move temporary file back to vcf_file path
+    subprocess.check_call(['mv', vcf_file_tmp, vcf_file])
+
+
 def run_pindel(alignment_group, fasta_ref, bam_files, sv_vcf_dir):
     """Run pindel to find SVs."""
     vcf_dataset_type = VCF_PINDEL_TYPE
@@ -222,9 +236,11 @@ def run_pindel(alignment_group, fasta_ref, bam_files, sv_vcf_dir):
         '-R', 'name',
         '-d', 'date'
     ])
+    pindel_vcf = pindel_root + '.vcf'
+    filter_small_variants(pindel_vcf, 10)
 
     # add dataset for sv.
-    _add_dataset(alignment_group, vcf_dataset_type, pindel_root + '.vcf')
+    _add_dataset(alignment_group, vcf_dataset_type, pindel_vcf)
 
 
 def run_delly(alignment_group, fasta_ref, bam_files, sv_vcf_dir):
