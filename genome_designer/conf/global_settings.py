@@ -255,6 +255,11 @@ djcelery.setup_loader()
 # RabbitMQ settings
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 
+CELERY_IMPORTS = (
+        'pipeline.read_alignment',
+        'pipeline.snv_calling',
+)
+
 
 ###############################################################################
 # External tools

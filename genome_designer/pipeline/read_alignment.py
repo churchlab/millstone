@@ -12,6 +12,7 @@ from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from main.s3 import project_files_needed
+from read_alignment_util import ensure_bwa_index
 from scripts.import_util import add_dataset_to_entity
 from scripts.jbrowse_util import add_bam_file_track
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
@@ -49,8 +50,6 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
             create the basic models.
 
     """
-    print "We've made it here!"
-
     ### Validation
     if not experiment_sample:
         assert sample_alignment
@@ -200,48 +199,6 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
         sample_alignment.save()
 
         return sample_alignment
-
-def ensure_bwa_index(ref_genome_fasta, error_output=None):
-    """Creates the bwa index if it doesn't exist already.
-
-    We rely on the convention that the index file location is the fasta
-    location with the extension '.bwt' appended to it.
-    """
-    if not os.path.exists(ref_genome_fasta + '.bwt'):
-        build_bwa_index(ref_genome_fasta, error_output)
-
-    # Also build the fasta index.
-    if not os.path.exists(ref_genome_fasta + '.fai'):
-        subprocess.check_call([
-            SAMTOOLS_BINARY,
-            'faidx',
-            ref_genome_fasta
-        ], stderr=error_output)
-
-    ref_genome_dict_path = os.path.splitext(ref_genome_fasta)[0] + '.dict'
-    if not os.path.exists(ref_genome_dict_path):
-        subprocess.check_call([
-            'java', '-Xmx1024M',
-            '-jar', '%s/picard/CreateSequenceDictionary.jar' % TOOLS_DIR,
-            'R=', ref_genome_fasta,
-            'O=', ref_genome_dict_path,
-        ], stderr=error_output)
-
-
-def build_bwa_index(ref_genome_fasta, error_output=None):
-    """Calls the command that builds the bwa index required for alignment.
-
-    This creates a file in the same directory as ref_genome_fasta, appending
-    the extension '.bwt' to the name of the fasta.
-    """
-    subprocess.check_call([
-        '%s/bwa/bwa' % TOOLS_DIR,
-        'index',
-        '-a',
-        'is',
-        ref_genome_fasta
-    ], stderr=error_output)
-
 
 DEFAULT_PROCESSING_MASK = {
     'make_bam': True,

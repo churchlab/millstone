@@ -17,7 +17,7 @@ from models import ReferenceGenome
 from models import VariantAlternate
 from models import VariantEvidence
 from models import VariantSet
-from pipeline.read_alignment import ensure_bwa_index
+from pipeline.read_alignment_util import ensure_bwa_index
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.import_util import generate_fasta_from_genbank
 from scripts.import_util import get_dataset_with_type
