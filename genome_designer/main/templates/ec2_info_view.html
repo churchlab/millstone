@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block tabs_or_splash %}
+<div class="page-header">
+  <h1>EC2 Information</h1>
+</div>
+
+<table class="table">
+  <tbody>
+    <tr>
+      <td>Hostname</td>
+      <td>{{ hostname }}</td>
+    </tr>
+    <tr>
+      <td>Instance Type</td>
+      <td>{{ instance_type }}</td>
+    </tr>
+    <tr>
+      <td>Instance ID</td>
+      <td>{{ instance_id }}</td>
+    </tr>
+    <tr>
+      <td>Password</td>
+      <td>{{ password }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<script type="text/javascript">
+  VIEW_TAG = 'EC2_INFO_VIEW';
+</script>
+{% endblock %}
+

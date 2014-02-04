@@ -116,11 +116,15 @@ class TestAlignmentPipeline(TestCase):
                     found_bam_track = True
 
                     # Also check that the urlTemplate is correct.
-                    EXPECTED_URL_TEMPLATE = os.path.join(
-                            settings.JBROWSE_DATA_URL_ROOT,
-                            bwa_align_dataset.filesystem_location)
-                    self.assertEqual(EXPECTED_URL_TEMPLATE,
-                            track['urlTemplate'])
+                    # NOTE (Changping): This would fail if the project is 
+                    # S3 backed and urlTemplate would point to S3 endpoint.
+
+                    if not self.reference_genome.project.is_s3_backed():
+                        EXPECTED_URL_TEMPLATE = os.path.join(
+                                settings.JBROWSE_DATA_URL_ROOT,
+                                bwa_align_dataset.filesystem_location)
+                        self.assertEqual(EXPECTED_URL_TEMPLATE,
+                                track['urlTemplate'])
 
                     break
             self.assertTrue(found_bam_track)
@@ -168,11 +172,13 @@ class TestAlignmentPipeline(TestCase):
                     found_bam_track = True
 
                     # Also check that the urlTemplate is correct.
-                    EXPECTED_URL_TEMPLATE = os.path.join(
-                            settings.JBROWSE_DATA_URL_ROOT,
-                            bwa_align_dataset.filesystem_location)
-                    self.assertEqual(EXPECTED_URL_TEMPLATE,
-                            track['urlTemplate'])
+                    if not self.reference_genome.project.is_s3_backed():                            
+                        EXPECTED_URL_TEMPLATE = os.path.join(
+                                settings.JBROWSE_DATA_URL_ROOT,
+                                bwa_align_dataset.filesystem_location)
+
+                        self.assertEqual(EXPECTED_URL_TEMPLATE,
+                                track['urlTemplate'])
 
                     break
             self.assertTrue(found_bam_track)

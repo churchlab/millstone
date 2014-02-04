@@ -226,7 +226,7 @@ class Project(UniqueUidModelMixin):
     # The human-readable title of the project.
     title = models.CharField(max_length=256)
 
-    s3_backed = models.BooleanField(default=False)
+    s3_backed = models.BooleanField(default=settings.S3_ENABLED)
 
     def __unicode__(self):
         return self.title + '-' + str(self.owner)
