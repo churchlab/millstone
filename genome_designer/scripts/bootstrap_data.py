@@ -375,7 +375,7 @@ def confirm_bootstrap():
         return True
     confirm_text = raw_input(
             "This will wipe any current database. Are you sure? y/n\n")
-    return confirm_text in ['y', 'Y', 'yes']
+    return confirm_text.lower() in ['y', 'yes']
 
 
 if __name__ == '__main__':
