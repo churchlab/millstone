@@ -37,14 +37,36 @@ VCF_ANNOTATED_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 VCF_PINDEL_TYPE = Dataset.TYPE.VCF_PINDEL
 VCF_DELLY_TYPE = Dataset.TYPE.VCF_DELLY
 
+# Delete this function eventually
+# It is just a special case of find_variants (only runs freebayes), kept here so that test_snv_calling still works.
+@task
+@project_files_needed
+def call_snvs(alignment_group):
+    alignment_type = Dataset.TYPE.BWA_ALIGN
+    common_params = {
+            'alignment_group': alignment_group,
+            'alignment_type': alignment_type,
+            'fasta_ref': _get_fasta_ref(alignment_group),
+            'output_dir': _create_output_dir(alignment_group),
+            'bam_files': _find_valid_bam_files(alignment_group, alignment_type),
+            }
+
+    variant_tools = (
+            ('freebayes', Dataset.TYPE.VCF_FREEBAYES, run_freebayes),
+            )
+
+    for variant_params in variant_tools:
+        find_variants_with_tool(common_params, variant_params)
+
 @task
 @project_files_needed
 def find_variants(alignment_group):
     """Calls SNVs for all of the alignments in the alignment_group.
     """
+    alignment_type = Dataset.TYPE.BWA_ALIGN
     common_params = {
             'alignment_group': alignment_group,
-            'alignment_type': Dataset.TYPE.BWA_ALIGN,
+            'alignment_type': alignment_type,
             'fasta_ref': _get_fasta_ref(alignment_group),
             'output_dir': _create_output_dir(alignment_group),
             'bam_files': _find_valid_bam_files(alignment_group, alignment_type),
@@ -61,7 +83,7 @@ def find_variants(alignment_group):
 
 def _get_fasta_ref(alignment_group):
     # Grab the reference genome fasta for the alignment.
-    fasta_ref = get_dataset_with_type(
+    return get_dataset_with_type(
             alignment_group.reference_genome,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
@@ -72,6 +94,7 @@ def _create_output_dir(alignment_group):
     # We'll save these for now, maybe it's not necessary later.
     vcf_dir = os.path.join(alignment_group.get_model_data_dir(), 'vcf')
     ensure_exists_0775_dir(vcf_dir)
+    return vcf_dir
 
 def _find_valid_bam_files(alignment_group, alignment_type):
     sample_alignment_list = (
