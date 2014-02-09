@@ -2,17 +2,12 @@
 Functions for calling SNPs.
 """
 
-from celery import group
-from celery import chain
-from celery import task
 import os
 import re
 import subprocess
 
-import vcf
+from celery import task
 
-from main.celery_util import CELERY_ERROR_KEY
-from main.celery_util import get_celery_worker_status
 from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
@@ -21,8 +16,6 @@ from read_alignment import get_insert_size
 from main.s3 import project_files_needed
 from variant_effects import run_snpeff
 from scripts.vcf_parser import parse_alignment_group_vcf
-from settings import DEBUG_CONCURRENT
-from settings import PWD
 from settings import TOOLS_DIR
 
 # TODO: These VCF types should be set somewhere else. snpeff_util and vcf_parser

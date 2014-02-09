@@ -255,6 +255,11 @@ djcelery.setup_loader()
 # RabbitMQ settings
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 
+CELERY_IMPORTS = (
+        'pipeline.read_alignment',
+        'pipeline.snv_calling',
+)
+
 
 ###############################################################################
 # External tools
@@ -322,8 +327,19 @@ SNPEFF_SUMMARY_FILES = ['snpEff_genes.txt', 'snpEff_summary.html']
 # S3
 ###############################################################################
 
+# Check if we are running on an EC2 instance.
+# Ref: http://stackoverflow.com/questions/10907418/how-to-check-application-runs-in-aws-ec2-instance
+def is_ec2():
+    import socket
+    try:
+        socket.gethostbyname('instance-data.ec2.internal.')
+        return True
+    except socket.gaierror:
+        return False
+RUNNING_ON_EC2 = is_ec2()
+
 # Allows user to create an S3 backed project. 
-S3_ENABLED = False
+S3_ENABLED = RUNNING_ON_EC2 or False
 
 # Don't perform any API call that changes anything on S3. 
 S3_DRY_RUN = False
@@ -351,7 +367,7 @@ TEST_RUNNER = 'test_suite_runner.CustomTestSuiteRunner'
 
 TEST_FILESYSTEM_DIR = os.path.join(PWD, 'temp_test_data')
 
-TEST_S3 = S3_ENABLED
+TEST_S3 = False
 
 ###############################################################################
 # Profiling

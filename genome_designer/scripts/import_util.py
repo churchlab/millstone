@@ -219,7 +219,7 @@ def sanitize_record_id(record_id_string):
     return re.match( r'^\w{1,20}', record_id_string).group()
 
 
-def parse_targets_file(project, targets_file):
+def parse_targets_file(project, targets_file, remove_directory_path=False):
     # The targets file shouldn't be over 1 Mb ( that would be ~3,000 genomes)
     if hasattr(targets_file, "size"):
         assert targets_file.size < 1000000, (
@@ -264,7 +264,7 @@ def parse_targets_file(project, targets_file):
                         'except for the paths.\n(Row %d, "%s")' % (
                                 row_num, field_name))
             else:
-                if project.is_s3_backed():
+                if remove_directory_path:
                     # If it is a path, take the filename from path and return
                     # them as a list.
                     clean_field_value = os.path.basename(field_value)

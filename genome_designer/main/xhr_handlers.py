@@ -385,7 +385,7 @@ if settings.S3_ENABLED:
         sample_filenames = []
 
         try:
-            valid_rows = parse_targets_file(csv_io)
+            valid_rows = parse_targets_file(csv_io, remove_directory_path=True)
             for field_name, field_value in valid_rows.iteritems():
                 if 'Path' in field_name:
                     sample_filenames.append(field_value)

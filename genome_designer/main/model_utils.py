@@ -118,11 +118,14 @@ def ensure_exists_0775_dir(destination):
 
     Does nothing if it already existed.  Errors if creation fails.
     """
-    if not os.path.exists(destination):
+    try:
         os.makedirs(destination)
         # User and group have all permissions | get group id from directory.
         os.chmod(destination, stat.S_ISGID | 0775)
-
+    except OSError as e:
+        if e.errno != 17: # File exists
+            raise
+        # Otherwise, nothing to do.
     return True
 
 

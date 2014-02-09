@@ -18,10 +18,12 @@ setup_django_env()
 import os
 import random
 import shutil
+import sys
 
 from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from django.conf import settings
 
 from main.models import AlignmentGroup
 from main.models import Dataset
@@ -42,7 +44,6 @@ from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
 from scripts.import_util import import_reference_genome_from_local_file
 
-import settings
 from settings import PWD as GD_ROOT
 
 # Test data.
@@ -370,9 +371,11 @@ def reset_database():
 
 
 def confirm_bootstrap():
+    if len(sys.argv) > 1 and sys.argv[1] in ["-q",]:
+        return True
     confirm_text = raw_input(
             "This will wipe any current database. Are you sure? y/n\n")
-    return confirm_text in ['y', 'Y', 'yes']
+    return confirm_text.lower() in ['y', 'yes']
 
 
 if __name__ == '__main__':
