@@ -38,7 +38,7 @@ from main.models import VariantAlternate
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from pipeline.pipeline import run_pipeline
-from pipeline.snv_calling import call_snvs
+#from pipeline.snv_calling import call_snvs
 from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir

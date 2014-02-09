@@ -36,7 +36,6 @@ from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_reference_genome_from_ncbi
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
-from pipeline.snv_calling import find_variants
 import settings
 
 # Tags used to indicate which tab we are on.
@@ -312,7 +311,7 @@ def alignment_view(request, project_uid, alignment_group_uid):
             reference_genome__project=project, uid=alignment_group_uid)
 
     if request.POST:
-        find_variants(alignment_group)
+        #find_variants(alignment_group)  # TODO: run with celery
         return HttpResponse('ok')
 
     # Initial javascript data.

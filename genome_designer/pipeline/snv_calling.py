@@ -30,13 +30,11 @@ VCF_ANNOTATED_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 VCF_PINDEL_TYPE = Dataset.TYPE.VCF_PINDEL
 VCF_DELLY_TYPE = Dataset.TYPE.VCF_DELLY
 
-# Delete this function eventually
-# It is just a special case of find_variants (only runs freebayes), kept here so that test_snv_calling still works.
-@task
-@project_files_needed
-def call_snvs(alignment_group):
+# Returns a dictionary of common parameters required for all variant callers
+# (freebayes, pindel, delly)
+def get_common_tool_params(alignment_group):
     alignment_type = Dataset.TYPE.BWA_ALIGN
-    common_params = {
+    return {
             'alignment_group': alignment_group,
             'alignment_type': alignment_type,
             'fasta_ref': _get_fasta_ref(alignment_group),
@@ -44,35 +42,13 @@ def call_snvs(alignment_group):
             'bam_files': _find_valid_bam_files(alignment_group, alignment_type),
             }
 
-    variant_tools = (
-            ('freebayes', Dataset.TYPE.VCF_FREEBAYES, run_freebayes),
-            )
-
-    for variant_params in variant_tools:
-        find_variants_with_tool(common_params, variant_params)
-
-@task
-@project_files_needed
-def find_variants(alignment_group):
-    """Calls SNVs for all of the alignments in the alignment_group.
-    """
-    alignment_type = Dataset.TYPE.BWA_ALIGN
-    common_params = {
-            'alignment_group': alignment_group,
-            'alignment_type': alignment_type,
-            'fasta_ref': _get_fasta_ref(alignment_group),
-            'output_dir': _create_output_dir(alignment_group),
-            'bam_files': _find_valid_bam_files(alignment_group, alignment_type),
-            }
-
-    variant_tools = (
+# Returns a tuple of variant tools params to pass into find_variants_with_tool
+def get_variant_tool_params():
+    return (
             ('freebayes', Dataset.TYPE.VCF_FREEBAYES, run_freebayes),
             ('pindel', Dataset.TYPE.VCF_PINDEL, run_pindel),
             ('delly', Dataset.TYPE.VCF_DELLY, run_delly),
             )
-
-    for variant_params in variant_tools:
-        find_variants_with_tool(common_params, variant_params)
 
 def _get_fasta_ref(alignment_group):
     # Grab the reference genome fasta for the alignment.
@@ -126,8 +102,10 @@ def _find_valid_bam_files(alignment_group, alignment_type):
                     len(sample_alignment_list), len(bam_files)))
     return bam_files
 
-def find_variants_with_tool(common_params, variant_params):
-    alignment_group = common_params['alignment_group']
+@task
+@project_files_needed
+def find_variants_with_tool(alignment_group, variant_params):
+    common_params = get_common_tool_params(alignment_group)
     tool_name, vcf_dataset_type, tool_function = variant_params
 
     # Create subdirectory for this tool
