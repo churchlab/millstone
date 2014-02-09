@@ -9,14 +9,14 @@ setup_django_env()
 
 from main.models import AlignmentGroup
 from main.models import ExperimentSampleToAlignment
-from scripts.snp_callers import run_snp_calling_pipeline_internal
-from scripts.alignment_pipeline import align_with_bwa
+from pipeline.snv_calling import call_snvs_internal
+from pipeline.pipeline import align_with_bwa
 
 def debug_snp_callers():
     alignment_group = AlignmentGroup.objects.get(
             uid='54305db0')
 
-    run_snp_calling_pipeline_internal(alignment_group)
+    call_snvs_internal(alignment_group)
 
 
 def debug_align_with_bwa():

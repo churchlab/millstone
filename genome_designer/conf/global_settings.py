@@ -158,11 +158,12 @@ INSTALLED_APPS = (
     # our apps
     'main',
 
+    # database migrations,
+    'south',
+
     # Testing
     'django_nose',
 
-    # database migrations,
-    'south',
 )
 
 

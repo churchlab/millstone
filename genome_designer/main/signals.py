@@ -17,12 +17,12 @@ from models import ReferenceGenome
 from models import VariantAlternate
 from models import VariantEvidence
 from models import VariantSet
-from scripts.alignment_pipeline import ensure_bwa_index
+from pipeline.read_alignment import ensure_bwa_index
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.import_util import generate_fasta_from_genbank
 from scripts.import_util import get_dataset_with_type
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
-from scripts.snpeff_util import build_snpeff
+from pipeline.variant_effects import build_snpeff
 
 
 # When a new ReferenceGenome is created, create its data dir.

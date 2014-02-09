@@ -22,8 +22,6 @@ urlpatterns = patterns('',
     # Tab base views.
     url(r'^projects/([\w-]+)/data$',
             'genome_designer.main.views.project_view'),
-    url(r'^projects/([\w-]+)/align$',
-            'genome_designer.main.views.tab_root_align'),
     url(r'^projects/([\w-]+)/analyze$',
             'genome_designer.main.views.tab_root_analyze'),
     url(r'^projects/([\w-]+)/analyze/([\w-]+)$',

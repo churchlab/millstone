@@ -35,8 +35,8 @@ from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantSet
 from main.models import VariantToVariantSet
-from scripts.alignment_pipeline import create_alignment_groups_and_start_alignments
-from scripts.snp_callers import run_snp_calling_pipeline
+from pipeline.pipeline import run_pipeline
+from pipeline.snv_calling import call_snvs
 from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
@@ -284,13 +284,12 @@ def bootstrap_fake_data():
 
     # Run the alignment. Return the alignment group created, indexed by the
     # reference genome's uid.
-    alignment_group_dict = create_alignment_groups_and_start_alignments(
-            'test_align', [full_vcf_reference_genome], full_vcf_samples,
-            concurrent=False)
+    alignment_group_dict = run_pipeline(
+            'test_align', [full_vcf_reference_genome], full_vcf_samples)
     full_vcf_alignment_group = alignment_group_dict[full_vcf_reference_genome.uid]
 
     # Run Freebayes. This should also kick off snpeff afterwards.
-    run_snp_calling_pipeline(full_vcf_alignment_group, concurrent=False)
+    #call_snvs(full_vcf_alignment_group)
 
     def _create_region_intervals(region, interval_tuple_list):
         """Helper method to create RegionIntervals for a Region.

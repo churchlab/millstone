@@ -31,7 +31,7 @@ TEST_DATA_DIR = os.path.join(GD_ROOT, 'test_data')
 LARGE_VCF = os.path.join(TEST_DATA_DIR,
         'fix_recoli_variants_snpeff.vcf')
 
-# Uncomment to do subset of ~variants.
+# Uncomment to do subset of ~50 variants.
 # LARGE_VCF = os.path.join(TEST_DATA_DIR,
 #         'fix_recoli_variants_snpeff_small_test.vcf')
 
@@ -45,7 +45,7 @@ EXPERIMENT_SAMPLE_MODEL_DATA_PICKLE = os.path.join(TEST_DATA_DIR,
 def main():
     # Create a User and Project.
     user = get_or_create_user()
-    test_project, project_created = Project.objects.get_or_create(
+    test_project = Project.objects.create(
             title=EXAMPLE_PROJECT_NAME, owner=user.get_profile())
     ref_genome = import_reference_genome_from_local_file(test_project,
             'mg1655', MG1655_REF_GENOME, 'genbank', move=False)
@@ -70,7 +70,7 @@ def main():
     with open(EXPERIMENT_SAMPLE_MODEL_DATA_PICKLE) as sample_data_fh:
         es_data = pickle.load(sample_data_fh)
         for es in es_data:
-            ExperimentSample.objects.get_or_create(
+            ExperimentSample.objects.create(
                 uid=es.uid,
                 project=test_project,
                 label=es.label,
