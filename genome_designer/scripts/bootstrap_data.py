@@ -310,19 +310,19 @@ def bootstrap_fake_data():
     region_1 = Region.objects.create(
         reference_genome=full_vcf_reference_genome,
         label='region_1',
-        type=Region.TYPE.CALLABLE)
+        type=Region.TYPE.POOR_MAPPING_QUALITY)
     _create_region_intervals(region_1, [(1,150), (300, 400), (500, 900)])
 
     region_2 = Region.objects.create(
         reference_genome=full_vcf_reference_genome,
         label='region_2',
-        type=Region.TYPE.CALLABLE)
+        type=Region.TYPE.POOR_MAPPING_QUALITY)
     _create_region_intervals(region_2, [(1000, 1500)])
 
     region_3 = Region.objects.create(
         reference_genome=full_vcf_reference_genome,
         label='region_3',
-        type=Region.TYPE.CALLABLE)
+        type=Region.TYPE.POOR_MAPPING_QUALITY)
     _create_region_intervals(region_3, [(1800, 1900), (2150, 2300)])
 
     # And some GENE regions.

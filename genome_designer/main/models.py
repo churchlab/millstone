@@ -1117,7 +1117,6 @@ class VariantFilter(Model):
     """
     pass
 
-
 class Region(UniqueUidModelMixin):
     """Semantic annotation for a disjoint set of intervals in a
     ReferenceGenome.
@@ -1129,18 +1128,18 @@ class Region(UniqueUidModelMixin):
     # Human-readable identifier.
     # Depending on the type and how disciplined we are with development,
     # this could further be semantically meaningful (e.g. gene name).
-    label = models.CharField('Sample Name', max_length=256)
+    label = models.CharField('Region Name', max_length=256)
 
     class TYPE:
-        """The type of this dataset.
+        """The type of this region.
 
         Limit to 40-chars as per Dataset.type field def.
         """
-        CALLABLE = 'c'
-        GENE = 'g'
+        POOR_MAPPING_QUALITY = 'POOR_MAPPING_QUALITY'
+        GENE = 'GENE'
+
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
-
 
 class RegionInterval(Model):
     """One of possibly several intervals that describe a single region.

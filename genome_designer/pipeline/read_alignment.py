@@ -207,6 +207,7 @@ DEFAULT_PROCESSING_MASK = {
     'indel_realigner': True,
     'compute_insert_metrics': True,
     'index': True,
+    'compute_callable_loci': True
 }
 
 def process_sam_bam_file(experiment_sample, reference_genome, 
@@ -306,7 +307,12 @@ def process_sam_bam_file(experiment_sample, reference_genome,
     if effective_mask['compute_insert_metrics']:
         compute_insert_metrics(realigned_bam_file_location, error_output)
 
-    # 5. Create index.
+    # 5. Compute callable loci
+    if effective_mask['compute_callable_loci']:
+        compute_callable_loci(reference_genome, 
+                realigned_bam_file_location, error_output)
+
+    # 6. Create index.
     if effective_mask['index']:
         subprocess.check_call([
             SAMTOOLS_BINARY,
@@ -356,7 +362,6 @@ def realign_given_indels(
             reference_genome,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
-
     # Prepare realignment intervals file.
     subprocess.check_call([
         'java', '-Xmx1024M',
@@ -391,10 +396,29 @@ def compute_insert_metrics(bam_file_location, stderr=None):
         'VALIDATION_STRINGENCY=LENIENT' # Prevent unmapped read problems
     ], stderr=stderr)
 
+def compute_callable_loci(reference_genome, bam_file_location, stderr=None):
+
+    ref_genome_fasta_location = get_dataset_with_type(
+            reference_genome,
+            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
+    output = _get_callable_loci_output_filename(bam_file_location)
+    summary_file = os.path.splitext(bam_file_location)[0] + '.loci_summary.txt'
+    subprocess.check_call([
+        'java', '-Xmx1024M',
+        '-jar', '%s/gatk/GenomeAnalysisTK.jar' % TOOLS_DIR,
+        '-T', 'CallableLoci',
+        '-R', ref_genome_fasta_location,
+        '-I', bam_file_location,
+        '-summary', summary_file,
+        '-o', output,
+    ], stderr=stderr)
 
 def _get_metrics_output_filename(bam_file_location):
     return os.path.splitext(bam_file_location)[0] + '.insertmet.txt'
 
+def _get_callable_loci_output_filename(bam_file_location):
+    return os.path.splitext(bam_file_location)[0] + '.callable_loci.bed'
 
 def get_insert_size(bam_file_location):
     """Returns the average insert size for a bam_file."""
