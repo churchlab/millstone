@@ -261,6 +261,8 @@ def sample_list_view(request, project_uid):
         'project': project,
         'tab_root': TAB_ROOT__DATA,
         'sample_list': sample_list,
+        'sample_list_json': adapt_model_to_frontend(
+                ExperimentSample, {'project': project}),
         'error_string': error_string
     }
     return render(request, 'sample_list.html', context)

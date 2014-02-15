@@ -1,5 +1,5 @@
 /**
- * @fileoverview The home view containing search results.
+ * @fileoverview View for samples, including upload.
  */
 
 
@@ -12,7 +12,13 @@ gd.SampleView = Backbone.View.extend({
   },
 
   render: function() {
-    $('#gd-sidenav-link-samples').addClass('active');    
+    $('#gd-sidenav-link-samples').addClass('active');
+
+    this.datatable = new gd.DataTableComponent({
+        el: $('#gd-sample-list-view-datatable-hook'),
+        objList: SAMPLE_LIST_DATA['obj_list'],
+        fieldConfig: SAMPLE_LIST_DATA['field_config']
+    });
 
     if (this.$("#uploadDiv")) {
       this.uploader = this.$("#uploadDiv").fineUploaderS3({
@@ -129,13 +135,13 @@ gd.SampleView = Backbone.View.extend({
       }, this));
     }
   },
-  
+
   events: {
     'click #submitFormFromFile': 'handleFormSubmit',
   },
-  
+
   handleFormSubmit: function() {
     $("#formFromFile").submit();
   },
-  
+
 });

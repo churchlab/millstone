@@ -481,9 +481,13 @@ class ExperimentSample(UniqueUidModelMixin):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
-        return [{'field':'label'},
-                {'field':'group'},
-                {'field':'well'}]
+        return [
+            {'field': 'uid'},
+            {'field': 'label'},
+            {'field': 'group'},
+            {'field': 'well'},
+            {'field': 'num_reads'}
+        ]
 
 
 class AlignmentGroup(UniqueUidModelMixin):
