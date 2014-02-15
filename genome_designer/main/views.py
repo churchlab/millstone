@@ -244,7 +244,7 @@ def sample_list_view(request, project_uid):
 
     error_string = None
 
-    # If a POST, then we are creating a new genome.
+    # If a POST, then we are uploading new samples.
     if request.method == 'POST':
         # TODO: Add more informative error handling
         try:
@@ -254,13 +254,9 @@ def sample_list_view(request, project_uid):
         except Exception as e:
             error_string = 'Import error: ' + str(e)
 
-    # Query the db for the samples for this project.
-    sample_list = ExperimentSample.objects.filter(project=project)
-
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
-        'sample_list': sample_list,
         'sample_list_json': adapt_model_to_frontend(
                 ExperimentSample, {'project': project}),
         'error_string': error_string
