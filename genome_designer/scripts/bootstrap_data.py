@@ -38,7 +38,8 @@ from main.models import VariantAlternate
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from pipeline.pipeline import run_pipeline
-from pipeline.snv_calling import call_snvs
+from pipeline.snv_calling import get_variant_tool_params
+from pipeline.snv_calling import find_variants_with_tool
 from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
@@ -69,6 +70,8 @@ TEST_BAM_INDEX = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'bwa_align.sorted.grouped.realigned.bam.bai')
 
 TEST_PROJECT_NAME = 'recoli'
+
+SV_PROJECT_NAME = 'sv_testing'
 
 REF_GENOME_1_LABEL = 'mg1655'
 
@@ -186,7 +189,7 @@ def bootstrap_fake_data():
     (test_project, project_created) = Project.objects.get_or_create(
             title=TEST_PROJECT_NAME, owner=user.get_profile())
     (test_project_2, project_created) = Project.objects.get_or_create(
-            title='project2', owner=user.get_profile())
+            title=SV_PROJECT_NAME, owner=user.get_profile())
     (test_project_3, project_created) = Project.objects.get_or_create(
             title='project3', owner=user.get_profile())
 
@@ -289,9 +292,6 @@ def bootstrap_fake_data():
             'test_align', [full_vcf_reference_genome], full_vcf_samples)
     full_vcf_alignment_group = alignment_group_dict[full_vcf_reference_genome.uid]
 
-    # Run Freebayes. This should also kick off snpeff afterwards.
-    #call_snvs(full_vcf_alignment_group)
-
     def _create_region_intervals(region, interval_tuple_list):
         """Helper method to create RegionIntervals for a Region.
 
@@ -344,6 +344,28 @@ def bootstrap_fake_data():
         label='geneC',
         type=Region.TYPE.GENE)
     _create_region_intervals(gene_C, [(1, 500)])
+
+    # Bootstrap test_project_2 with SV stuff
+    sv_testing_bootstrap(test_project_2)
+
+
+def sv_testing_bootstrap(project):
+    sv_testing_dir = os.path.join(GD_ROOT, 'test_data', 'sv_testing')
+    fasta = os.path.join(sv_testing_dir, 'ref.fa')
+    fq1 = os.path.join(sv_testing_dir, 'simLibrary.1.fq')
+    fq2 = os.path.join(sv_testing_dir, 'simLibrary.2.fq')
+
+    ref_genome = import_reference_genome_from_local_file(
+            project, 'ref', fasta, 'fasta')
+
+    sample = ExperimentSample.objects.create(
+            project=project,
+            label='simLibrary',
+    )
+    copy_and_add_dataset_source(sample, Dataset.TYPE.FASTQ1,
+            Dataset.TYPE.FASTQ1, fq1)
+    copy_and_add_dataset_source(sample, Dataset.TYPE.FASTQ2,
+            Dataset.TYPE.FASTQ2, fq2)
 
 
 def reset_database():
