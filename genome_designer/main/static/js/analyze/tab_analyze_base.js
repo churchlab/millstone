@@ -63,9 +63,9 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     this.model.set('refGenomeUid', refGenomeUid);
 
     // Determine the subview.
-    var subViewKey = 'variants';
+    var subViewKey = 'variants'; // Default
     if (this.model.has('subView')) {
-      var subViewKey = this.model.get('subView');
+      subViewKey = this.model.get('subView');
     }
 
     // Update the url.
@@ -95,6 +95,9 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     var subViewUrlToken = subViewOptionValue.toLowerCase();
     var refGenomeUid = this.model.get('refGenomeUid');
     this.router.navOnRefGenomeSelect(refGenomeUid, subViewUrlToken);
+
+    // Update the model subview key.
+    subViewKey = this.model.set('subView' ,subViewUrlToken);
 
     // Update the view.
     var newSubViewType = gd.TabAnalyzeBaseView.SUBVIEW_TYPE_TO_VIEW_CLASS[
