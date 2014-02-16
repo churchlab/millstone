@@ -36,11 +36,15 @@ from settings import BASH_PATH
 
 ALIGNMENT_FN = align_with_bwa_mem
 
-def run_pipeline(
-        alignment_group_label, ref_genome_list, sample_list,
-        test_models_only=False):
+def _assert_celery_running():
+    # If running concurrently, check whether Celery is running.
+    celery_status = get_celery_worker_status()
+    assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
 
-    """Creates an AlignmentGroup and kicks off alignment for each one.
+def run_pipeline_multiple_ref_genomes(alignment_group_label, ref_genome_list,
+        sample_list, test_models_only=False):
+    """
+    Runs the pipeline for each ref genome in the ref_genome_list.
 
     We create an AlignmentGroup for each ReferenceGenome and align all
     ExpermentSamples to each ReferenceGenome separately.
@@ -51,7 +55,6 @@ def run_pipeline(
             ReferenceGenomes.
         test_models_only: If True, don't actually run alignments. Just create
             models.
-        concurrent: If True, run alignments in parallel.
     """
 
     assert len(alignment_group_label) > 0, "Name must be non-trivial string."
@@ -59,60 +62,77 @@ def run_pipeline(
             "Must provide at least one ReferenceGenome.")
     assert len(sample_list) > 0, (
             "Must provide at least one ExperimentSample.")
-
-    # If running concurrently, check whether Celery is running.
-    celery_status = get_celery_worker_status()
-    assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
+    _assert_celery_running()
 
     # Save the alignment group objects for returning if required.
     alignment_groups = {}
 
     for ref_genome in ref_genome_list:
-        alignment_group = AlignmentGroup.objects.create(
-                label=alignment_group_label + '_' + ref_genome.label,
-                reference_genome=ref_genome,
-                aligner=AlignmentGroup.ALIGNER.BWA)
-
-        alignment_groups[ref_genome.uid] = alignment_group
-
-        # Kick of the alignments concurrently.
-        # TODO(gleb): Use this list to block on when integrating with
-        # variant calling.
-
-        # Since we don't want results to be passed as arguments in the 
-        # chain, use .si(...) and not .s(...)
-        # http://stackoverflow.com/
-        #       questions/15224234/celery-chaining-tasks-sequentially
-
-        alignment_tasks = []
-        for sample in sample_list:
-
-            # create a task signature for this subtask
-            align_task_signature = ALIGNMENT_FN.si(
-                    alignment_group, sample, None, test_models_only,
-                    project=ref_genome.project)
-
-            alignment_tasks.append(align_task_signature)
-
-        align_task_group = group(alignment_tasks)
-
-        # create signatures for all variant tools
-        variant_callers = []
-        for variant_params in get_variant_tool_params():
-            variant_caller_signature = find_variants_with_tool.si(
-                    alignment_group, variant_params, project=ref_genome.project)
-
-            variant_callers.append(variant_caller_signature)
-
-        variant_caller_group = group(variant_callers)
-
-        whole_pipeline = chain(align_task_group, variant_caller_group)
-
-        # now, run the whole pipeline
-        whole_pipeline.apply_async()
+        alignment_groups[ref_genome.uid] = run_pipeline(
+                alignment_group_label + '_' + ref_genome.label,
+                ref_genome, sample_list)
 
     # Return a dictionary of all alignment groups indexed by ref_genome uid.
     return alignment_groups
+
+def run_pipeline(alignment_group_label, ref_genome, sample_list, test_models_only=False):
+    """
+    Creates an AlignmentGroup if not created and kicks off alignment for each one.
+
+    Args:
+        ref_genome: ReferenceGenome instance
+        sample_list: List of sample instances. Must belong to same project as
+            ReferenceGenomes.
+        test_models_only: If True, don't actually run alignments. Just create
+            models.
+    """
+
+    assert len(alignment_group_label) > 0, "Name must be non-trivial string."
+    assert len(sample_list) > 0, (
+            "Must provide at least one ExperimentSample.")
+    _assert_celery_running()
+
+    (alignment_group, created) = AlignmentGroup.objects.get_or_create(
+            label=alignment_group_label,
+            reference_genome=ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
+    # Kick of the alignments concurrently.
+    # TODO(gleb): Use this list to block on when integrating with
+    # variant calling.
+
+    # Since we don't want results to be passed as arguments in the
+    # chain, use .si(...) and not .s(...)
+    # http://stackoverflow.com/
+    #       questions/15224234/celery-chaining-tasks-sequentially
+
+    alignment_tasks = []
+    for sample in sample_list:
+        # create a task signature for this subtask
+        align_task_signature = ALIGNMENT_FN.si(
+                alignment_group, sample, None, test_models_only,
+                project=ref_genome.project)
+
+        alignment_tasks.append(align_task_signature)
+
+    align_task_group = group(alignment_tasks)
+
+    # create signatures for all variant tools
+    variant_callers = []
+    for variant_params in get_variant_tool_params():
+        variant_caller_signature = find_variants_with_tool.si(
+                alignment_group, variant_params, project=ref_genome.project)
+
+        variant_callers.append(variant_caller_signature)
+
+    variant_caller_group = group(variant_callers)
+
+    whole_pipeline = chain(align_task_group, variant_caller_group)
+
+    # now, run the whole pipeline
+    whole_pipeline.apply_async()
+
+    return alignment_group
 
 def resume_alignment_group_alignment(alignment_group, sample_list,
         concurrent=DEBUG_CONCURRENT):

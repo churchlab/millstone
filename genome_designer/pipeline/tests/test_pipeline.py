@@ -14,7 +14,7 @@ from main.models import Dataset
 from main.models import get_dataset_with_type
 from main.models import ExperimentSample
 from main.models import Project
-from pipeline.pipeline import run_pipeline
+from pipeline.pipeline import run_pipeline_multiple_ref_genomes
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
@@ -66,7 +66,7 @@ class TestAlignmentPipeline(TestCase):
         ref_genome_list = [self.reference_genome]
         sample_list = [self.experiment_sample]
 
-        run_pipeline('name_placeholder',
+        run_pipeline_multiple_ref_genomes('name_placeholder',
                 ref_genome_list, sample_list, test_models_only=False)
 
         alignment_group_obj_list = AlignmentGroup.objects.filter(
