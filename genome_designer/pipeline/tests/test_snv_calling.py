@@ -16,7 +16,8 @@ from main.models import get_dataset_with_type
 from main.models import Project
 from main.models import User
 from main.models import Variant
-from pipeline.snv_calling import call_snvs
+from pipeline.snv_calling import get_variant_tool_params
+from pipeline.snv_calling import find_variants_with_tool
 from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
@@ -91,7 +92,8 @@ class TestSNPCallers(TestCase):
                 Dataset.TYPE.BWA_ALIGN, copy_dest)
 
         # Run the pipeline.
-        call_snvs(alignment_group, project=self.project)
+        variant_params = get_variant_tool_params()[0]  # first one is freebayes
+        find_variants_with_tool(alignment_group, variant_params, project=self.project)
 
         # Check that the alignment group has a freebayes vcf dataset associated
         # with it.
@@ -185,7 +187,8 @@ class TestSNPCallers(TestCase):
                 reference_genome=REFERENCE_GENOME)))
 
         # Run the pipeline.
-        call_snvs(alignment_group, project=self.project)
+        variant_params = get_variant_tool_params()[0]  # first one is freebayes
+        find_variants_with_tool(alignment_group, variant_params, project=self.project)
 
         # Grab the resulting variants.
         variants = Variant.objects.filter(reference_genome=REFERENCE_GENOME)

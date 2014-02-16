@@ -1,5 +1,6 @@
 import copy
 import os
+import re
 import subprocess
 from subprocess import CalledProcessError
 import sys

@@ -98,10 +98,18 @@ def extract_raw_data_dict(vcf_record):
     # as a substitution or an SV, so for now, just pass its __str__()
     data_dict['ALT'] = pickle.dumps(vcf_record.ALT)
 
+    def expand_type(svtype):
+        if svtype == 'DEL':
+            return 'DELETION'
+        else:
+            return 'unknown'
     # The TYPE is just a property of the record object.
     # TODO: Do we care about the var_subtype()? (ts/tv/complex/sv type/etc?)
-    if hasattr(vcf_record, 'var_type'):
-        data_dict['TYPE'] = pickle.dumps(str(vcf_record.var_type))
+    # sv callers store the type in vcf_record.INFO['SVTYPE']
+    if hasattr(vcf_record, 'INFO') and 'SVTYPE' in dict(vcf_record.INFO):
+        data_dict['TYPE'] = expand_type(dict(vcf_record.INFO)['SVTYPE'])
+    elif hasattr(vcf_record, 'var_type'):
+        data_dict['TYPE'] = str(vcf_record.var_type)
     else:
         data_dict['TYPE'] =  'unknown'
 
@@ -146,7 +154,7 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     raw_data_dict = extract_raw_data_dict(vcf_record)
 
     # Extract the relevant fields from the common data object.
-    type = 'UNKNOWN' # TODO: Get this from vcf data?
+    type = str(raw_data_dict.pop('TYPE'))
     chromosome = pickle.loads(str(raw_data_dict.pop('CHROM')))
     position = int(pickle.loads(str(raw_data_dict.pop('POS'))))
     ref_value = pickle.loads(str(raw_data_dict.pop('REF')))

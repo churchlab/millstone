@@ -26,7 +26,8 @@ from main.models import ExperimentSampleToAlignment
 from scripts.import_util import add_dataset_to_entity
 from scripts.jbrowse_util import add_bam_file_track
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
-from snv_calling import call_snvs
+from snv_calling import get_variant_tool_params
+from snv_calling import find_variants_with_tool
 from read_alignment import align_with_bwa_mem
 from settings import DEBUG_CONCURRENT
 from settings import PWD
@@ -95,11 +96,17 @@ def run_pipeline(
 
         align_task_group = group(alignment_tasks)
 
-        # create a task signature for the snv calling subtask
-        snp_call_task_signature = call_snvs.si(alignment_group,
-                project=ref_genome.project)
+        # create signatures for all variant tools
+        variant_callers = []
+        for variant_params in get_variant_tool_params():
+            variant_caller_signature = find_variants_with_tool.si(
+                    alignment_group, variant_params, project=ref_genome.project)
 
-        whole_pipeline = chain(align_task_group, snp_call_task_signature)
+            variant_callers.append(variant_caller_signature)
+
+        variant_caller_group = group(variant_callers)
+
+        whole_pipeline = chain(align_task_group, variant_caller_group)
 
         # now, run the whole pipeline
         whole_pipeline.apply_async()
