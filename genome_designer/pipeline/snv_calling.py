@@ -213,6 +213,9 @@ def run_pindel(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
     """Run pindel to find SVs."""
     vcf_dataset_type = VCF_PINDEL_TYPE
 
+    if not os.path.isdir('%s/pindel' % TOOLS_DIR):
+        raise Exception('Pindel is not installed. Aborting.')
+
     # Create pindel config file
     pindel_config = os.path.join(vcf_output_dir, 'pindel_config.txt')
     with open(pindel_config, 'w') as fh:
@@ -243,6 +246,9 @@ def run_pindel(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
 def run_delly(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
     """Run delly to find SVs."""
     vcf_dataset_type = VCF_DELLY_TYPE
+
+    if not os.path.isdir('%s/delly' % TOOLS_DIR):
+        raise Exception('Delly is not installed. Aborting.')
 
     delly_root = vcf_output_filename[:-4]  # get rid of .vcf extension
     transformations = ['DEL', 'DUP', 'INV']
