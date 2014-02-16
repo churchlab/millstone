@@ -249,16 +249,26 @@ def run_delly(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
     vcf_outputs = map(lambda transformation:
             '%s_%s.vcf' % (delly_root, transformation), transformations)
 
+    # Rename bam files, because Delly uses the name of the file as the sample uid.
+    # Use cp instead of mv, because other sv callers will be reading from the
+    #   original bam file.
+    new_bam_files = []
+    for bam_file in bam_files:
+        new_bam_file = os.path.join(os.path.dirname(bam_file),
+            _get_sample_uid(bam_file) + '.bam')
+        subprocess.check_call(['cp', bam_file, new_bam_file])
+        subprocess.check_call(['cp', bam_file + '.bai', new_bam_file + '.bai'])
+        new_bam_files.append(new_bam_file)
+
     # run delly for each type of transformation
     for transformation, vcf_output in zip(transformations, vcf_outputs):
         # not checked_call, because delly errors if it doesn't find any SVs
         subprocess.call(['%s/delly/delly' % TOOLS_DIR,
             '-t', transformation,
             '-o', vcf_output,
-            '-g', fasta_ref] + bam_files)
+            '-g', fasta_ref] + new_bam_files)
 
     # combine the separate vcfs for each transformation
-    # TODO update sample uids
     vcf_outputs = filter(lambda file: os.path.exists(file), vcf_outputs)
     if vcf_outputs:
         with open(vcf_output_filename, 'w') as fh:
@@ -272,4 +282,9 @@ def run_delly(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
             '-R', 'name',
             '-d', 'date'
         ])
+
+    # Delete temporary renamed bam files
+    for bam_file in new_bam_files:
+        subprocess.check_call(['rm', bam_file])
+        subprocess.check_call(['rm', bam_file + '.bai'])
 
