@@ -384,7 +384,7 @@ class ReferenceGenome(UniqueUidModelMixin):
                 maybe_force_nginx = 'http://localhost'
 
             return os.path.join(
-                    maybe_force_nginx + '/jbrowse/index.html?data=gd_data/',
+                    maybe_force_nginx + '/jbrowse/gd_data/',
                     'projects',
                     str(self.project.uid),
                     'ref_genomes',
