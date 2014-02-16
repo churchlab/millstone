@@ -208,7 +208,8 @@ DEFAULT_PROCESSING_MASK = {
     'indel_realigner': True,
     'compute_insert_metrics': True,
     'index': True,
-    'compute_callable_loci': True
+    'compute_callable_loci': True,
+    'withmd': True,
 }
 
 def process_sam_bam_file(experiment_sample, reference_genome, 
@@ -241,14 +242,13 @@ def process_sam_bam_file(experiment_sample, reference_genome,
         bam_file_location = os.path.splitext(sam_file_location)[0] + '.bam'
 
         if effective_mask['make_bam']:
-            fh = open(bam_file_location, 'w')
-            subprocess.check_call([
-                SAMTOOLS_BINARY,
-                'view',
-                '-bS',
-                sam_file_location
-            ], stdout=fh, stderr=error_output)
-            fh.close()
+            with open(bam_file_location, 'w') as fh:
+                subprocess.check_call([
+                    SAMTOOLS_BINARY,
+                    'view',
+                    '-bS',
+                    sam_file_location
+                ], stdout=fh, stderr=error_output)
     else:
         bam_file_location = sam_bam_file_location
 
@@ -304,24 +304,52 @@ def process_sam_bam_file(experiment_sample, reference_genome,
                 error_output
         )
 
-    # 4. Compute insert size metrics
-    if effective_mask['compute_insert_metrics']:
-        compute_insert_metrics(realigned_bam_file_location, error_output)
+    # 4. Add back MD tags for visualization of mismatches by Jbrowse
+    if effective_mask['withmd']:
+        final_bam_location = (
+                os.path.splitext(realigned_bam_file_location)[0] +
+                '.withmd.bam'
+        )
 
-    # 5. Compute callable loci
+        ref_genome_fasta_location = get_dataset_with_type(
+                reference_genome,
+                Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
+        with open(final_bam_location, 'w') as fh:
+            # Add MD tags for Jbrowse visualization
+            subprocess.check_call([
+                SAMTOOLS_BINARY,
+                'fillmd', '-b',
+                realigned_bam_file_location,
+                ref_genome_fasta_location
+            ], stderr=error_output, stdout=fh)
+
+        # Re-index this new bam file. 
+        subprocess.check_call([
+            SAMTOOLS_BINARY, 'index', final_bam_location], 
+            stderr=error_output)
+
+    else:
+        final_bam_location = realigned_bam_file_location
+
+    # 5. Compute insert size metrics
+    if effective_mask['compute_insert_metrics']:
+        compute_insert_metrics(final_bam_location, error_output)
+
+    # 6. Compute callable loci
     if effective_mask['compute_callable_loci']:
         compute_callable_loci(reference_genome, 
-                realigned_bam_file_location, error_output)
+                final_bam_location, error_output)
 
-    # 6. Create index.
+    # 7. Create index.
     if effective_mask['index']:
         subprocess.check_call([
             SAMTOOLS_BINARY,
             'index',
-            realigned_bam_file_location,
+            final_bam_location,
         ], stderr=error_output)
 
-    return realigned_bam_file_location
+    return final_bam_location
 
 
 def add_groups(experiment_sample, input_bam_file, bam_output_file, error_output):

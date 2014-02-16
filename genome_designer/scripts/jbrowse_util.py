@@ -55,12 +55,43 @@ def prepare_jbrowse_ref_sequence(reference_genome, **kwargs):
         '--out', jbrowse_path,
     ])
 
+def add_genbank_file_track(reference_genome, **kwargs):
+    """
+    Jbrowse has the ability to make tracks out of genbank files. This
+    takes the genbank file from a reference_genome object and attempts to 
+    make such a track and then add it to the track list.
+    """
+    FLATFILE_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'flatfile-to-json.pl')
+
+    reference_gbk = reference_genome.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).get_absolute_location()
+
+    jbrowse_path = reference_genome.get_jbrowse_directory_path()
+
+    genbank_json_command = [
+        FLATFILE_TRACK_BIN,
+        '--gbk', reference_gbk,
+        '--out', jbrowse_path,
+        #'--type', 'CDS',
+        '--autocomplete','all',
+        '--trackLabel','gbk',
+        '--key',"GenBank CDS",
+        '--trackType',"JBrowse/View/Track/HTMLFeatures",
+        #'--getSubfeatures',
+        #'--className','transcript',
+        '--subfeatureClasses', "{\"CDS\":\"transcript-CDS\"}"
+    ]
+
+    print ' '.join(genbank_json_command)
+
+    subprocess.call(genbank_json_command)
+
 
 def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     """Update the JBrowse track config file, trackList.json, for this
     ReferenceGenome with a track for the given sample_alignment and alignment_type.
     """
-    ADD_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'add-track-json.pl')
+    ADD_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'flatfile-to-json.pl-json.pl')
 
     reference_genome = sample_alignment.alignment_group.reference_genome
 

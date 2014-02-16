@@ -22,6 +22,7 @@ from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.import_util import generate_fasta_from_genbank
 from scripts.import_util import get_dataset_with_type
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
+from scripts.jbrowse_util import add_genbank_file_track
 from pipeline.variant_effects import build_snpeff
 
 
@@ -50,7 +51,6 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
         dataset = model.objects.get(pk=pk)
         if dataset.type == Dataset.TYPE.REFERENCE_GENOME_FASTA:
             # Run jbrowse ref genome processing
-
             prepare_jbrowse_ref_sequence(instance)
 
         elif dataset.type == Dataset.TYPE.REFERENCE_GENOME_GENBANK:
@@ -62,6 +62,9 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
             if not instance.dataset_set.filter(
                     type=Dataset.TYPE.REFERENCE_GENOME_FASTA).exists():
                 generate_fasta_from_genbank(instance)
+
+            # Run jbrowse genbank genome processing for genes
+            add_genbank_file_track(instance)
 
     #Initialize variant key map field
     initialize_filter_key_map(instance)
