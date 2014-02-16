@@ -327,7 +327,7 @@ class ReferenceGenome(UniqueUidModelMixin):
         """Link to url view for this model.
         """
         return reverse(
-                'genome_designer.main.views.reference_genome_view',
+                'main.views.reference_genome_view',
                 args=(self.project.uid, self.uid))
 
     def get_model_data_root(self):
@@ -574,7 +574,7 @@ class AlignmentGroup(UniqueUidModelMixin):
         """Link to url view for this model.
         """
         return reverse(
-                'genome_designer.main.views.alignment_view',
+                'main.views.alignment_view',
                 args=(self.reference_genome.project.uid, self.uid))
 
     @classmethod
@@ -626,7 +626,7 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
     def error_link(self):
         return ('<a href="' +
                 reverse(
-                        'genome_designer.main.views.sample_alignment_error_view',
+                        'main.views.sample_alignment_error_view',
                         args=(self.alignment_group.reference_genome.project.uid,
                                 self.alignment_group.uid,
                                 self.uid)) +
@@ -781,7 +781,7 @@ class Variant(UniqueUidModelMixin):
         """Link to url view for this model.
         """
         return reverse(
-                'genome_designer.main.views.single_variant_view',
+                'main.views.single_variant_view',
                 args=(self.reference_genome.project.uid,
                         self.reference_genome.uid, self.uid))
 
@@ -1097,7 +1097,7 @@ class VariantSet(UniqueUidModelMixin):
         """Link to url view for this model.
         """
         return reverse(
-                'genome_designer.main.views.variant_set_view',
+                'main.views.variant_set_view',
                 args=(self.reference_genome.project.uid, self.uid))
 
     def get_model_data_root(self):

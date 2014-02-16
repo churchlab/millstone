@@ -53,52 +53,52 @@ class TestViews(TestCase):
 
         # Urls that do not require the user to be logged in.
         self.no_login_required_urls = [
-                reverse('genome_designer.main.views.home_view'),
+                reverse('main.views.home_view'),
         ]
 
         # Urls that require the user to be logged in, but do not try any
         # particular entity.
         self.non_specific_login_required_urls = [
-                reverse('genome_designer.main.views.project_list_view'),
-                reverse('genome_designer.main.views.project_create_view'),
+                reverse('main.views.project_list_view'),
+                reverse('main.views.project_create_view'),
         ]
 
         # Urls for a specific entity.
         self.specific_entity_urls = [
                 # Tab base views.
-                reverse('genome_designer.main.views.project_view',
+                reverse('main.views.project_view',
                         args=(test_project.uid,)),
-                reverse('genome_designer.main.views.tab_root_analyze',
+                reverse('main.views.tab_root_analyze',
                         args=(test_project.uid,)),
 
                 # Project-specific views
-                reverse('genome_designer.main.views.project_view',
+                reverse('main.views.project_view',
                         args=(test_project.uid,)),
 
                 # Reference genomes
-                reverse('genome_designer.main.views.reference_genome_list_view',
+                reverse('main.views.reference_genome_list_view',
                         args=(test_project.uid,)),
-                reverse('genome_designer.main.views.reference_genome_view',
+                reverse('main.views.reference_genome_view',
                         args=(test_project.uid, ref_genome.uid)),
 
                 # Alignments
-                reverse('genome_designer.main.views.alignment_list_view',
+                reverse('main.views.alignment_list_view',
                         args=(test_project.uid,)),
-                reverse('genome_designer.main.views.alignment_create_view',
+                reverse('main.views.alignment_create_view',
                         args=(test_project.uid,)),
-                reverse('genome_designer.main.views.alignment_view',
+                reverse('main.views.alignment_view',
                         args=(test_project.uid, alignment_group.uid)),
 
                 # Variant sets
-                reverse('genome_designer.main.views.variant_set_list_view',
+                reverse('main.views.variant_set_list_view',
                         args=(test_project.uid,)),
 
                 # Samples
-                reverse('genome_designer.main.views.sample_list_view',
+                reverse('main.views.sample_list_view',
                         args=(test_project.uid,)),
 
                 # Variants
-                reverse('genome_designer.main.views.single_variant_view',
+                reverse('main.views.single_variant_view',
                         args=(test_project.uid, ref_genome.uid, variant.uid)),
         ]
 
