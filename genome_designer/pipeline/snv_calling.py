@@ -66,6 +66,7 @@ def _create_output_dir(alignment_group):
     return vcf_dir
 
 def _find_valid_bam_files(alignment_group, alignment_type):
+    """ Returns a list of tuples (bam file path, corresponding sample) """
     sample_alignment_list = (
             alignment_group.experimentsampletoalignment_set.all())
 
@@ -85,22 +86,21 @@ def _find_valid_bam_files(alignment_group, alignment_type):
     def _get_bam_location(sample_alignment):
         bam_dataset = get_dataset_with_type(sample_alignment, alignment_type)
         return bam_dataset.get_absolute_location()
-    bam_files = [_get_bam_location(sample_alignment) for sample_alignment in
-            sample_alignment_list if sample_alignment]
+    bam_files = [(_get_bam_location(sample_alignment), sample_alignment.experiment_sample)
+            for sample_alignment in sample_alignment_list if sample_alignment]
 
     # Keep only valid bam_files
     valid_bam_files = []
-    for bam_file in bam_files:
+    for bam_file, sample in bam_files:
         if bam_file is None:
             continue
         if not os.stat(bam_file).st_size > 0:
             continue
-        valid_bam_files.append(bam_file)
-    bam_files = valid_bam_files
-    assert len(bam_files) == len(sample_alignment_list), (
+        valid_bam_files.append((bam_file, sample))
+    assert len(valid_bam_files) == len(sample_alignment_list), (
             "Expected %d bam files, but found %d" % (
                     len(sample_alignment_list), len(bam_files)))
-    return bam_files
+    return valid_bam_files
 
 @task
 @project_files_needed
@@ -159,7 +159,7 @@ def run_freebayes(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
 
     # Build up the bam part of the freebayes binary call.
     bam_part = []
-    for bam_file in bam_files:
+    for bam_file, sample in bam_files:
         bam_part.append('--bam')
         bam_part.append(bam_file)
 
@@ -178,21 +178,6 @@ def run_freebayes(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
 
     with open(vcf_output_filename, 'w') as fh:
         subprocess.check_call(full_command, stdout=fh)
-
-
-def _get_sample_uid(bam_file):
-    """extract sample uid information from bam file"""
-    # convert to readable sam file
-    process = subprocess.Popen(['%s/samtools/samtools' % TOOLS_DIR, 'view', bam_file],
-            stdout=subprocess.PIPE)
-    # read only the first 10 lines, to avoid loading large bam files into memory
-    samdata = subprocess.check_output(['head'], stdin=process.stdout)
-    # find the sample uid, which is found in the form RG:Z:[uid]
-    match = re.search('RG:Z:(\S+)', samdata)
-    if not match:
-        # should not happen if the bam file is structured properly
-        assert 'Internal error: no sample uid found in bam file'
-    return match.group(1)
 
 
 def _filter_small_variants(vcf_file, cutoff):
@@ -219,10 +204,9 @@ def run_pindel(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
     # Create pindel config file
     pindel_config = os.path.join(vcf_output_dir, 'pindel_config.txt')
     with open(pindel_config, 'w') as fh:
-        for bam_file in bam_files:
+        for bam_file, sample in bam_files:
             insert_size = get_insert_size(bam_file)
-            sample_uid = _get_sample_uid(bam_file)
-            fh.write('%s %s %s\n' % (bam_file, insert_size, sample_uid))
+            fh.write('%s %s %s\n' % (bam_file, insert_size, sample.uid))
 
     # Build the full pindel command.
     pindel_root = vcf_output_filename[:-4]  # get rid of .vcf extension
@@ -259,9 +243,8 @@ def run_delly(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
     # Use cp instead of mv, because other sv callers will be reading from the
     #   original bam file.
     new_bam_files = []
-    for bam_file in bam_files:
-        new_bam_file = os.path.join(os.path.dirname(bam_file),
-            _get_sample_uid(bam_file) + '.bam')
+    for bam_file, sample in bam_files:
+        new_bam_file = os.path.join(os.path.dirname(bam_file), sample.uid + '.bam')
         subprocess.check_call(['cp', bam_file, new_bam_file])
         subprocess.check_call(['cp', bam_file + '.bai', new_bam_file + '.bai'])
         new_bam_files.append(new_bam_file)
