@@ -97,7 +97,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     this.router.navOnRefGenomeSelect(refGenomeUid, subViewUrlToken);
 
     // Update the model subview key.
-    subViewKey = this.model.set('subView' ,subViewUrlToken);
+    this.model.set('subView' ,subViewUrlToken);
 
     // Update the view.
     var newSubViewType = gd.TabAnalyzeBaseView.SUBVIEW_TYPE_TO_VIEW_CLASS[
