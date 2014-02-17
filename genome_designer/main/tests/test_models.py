@@ -9,16 +9,23 @@ from django.test import TestCase
 
 from main.models import auto_generate_short_name
 from main.models import clean_filesystem_location
+from main.models import AlignmentGroup
+from main.models import ExperimentSample
+from main.models import ExperimentSampleToAlignment
 from main.models import Project
+from main.models import ReferenceGenome
 from main.models import User
 from main.models import Dataset
 from scripts.import_util import import_reference_genome_from_local_file
 import subprocess
 
 
+TEST_USERNAME = 'testuser'
+TEST_PASSWORD = 'password'
+TEST_EMAIL = 'test@example.com'
 TEST_PROJECT_NAME = 'testModels_project'
 TEST_REF_GENOME_NAME = 'mg1655_partial'
-TEST_REF_GENOME_PATH =  os.path.join(settings.PWD,
+TEST_REF_GENOME_PATH = os.path.join(settings.PWD,
     'test_data/full_vcf_test_set/mg1655_tolC_through_zupT.gb')
 
 
@@ -27,11 +34,6 @@ class TestModels(TestCase):
     def setUp(self):
         """Override.
         """
-
-        TEST_USERNAME = 'testuser'
-        TEST_PASSWORD = 'password'
-        TEST_EMAIL = 'test@example.com'
-
         user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
                 email=TEST_EMAIL)
 
@@ -92,6 +94,41 @@ class TestModels(TestCase):
         assert int(wc_output) == 10, (
                 "Compression failed: %s" % (errmsg))
 
+
+class TestAlignmentGroup(TestCase):
+
+    def test_get_samples(self):
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+        self.test_project = Project.objects.create(
+                title=TEST_PROJECT_NAME,
+                owner=user.get_profile())
+        self.test_ref_genome = ReferenceGenome.objects.create(
+                project=self.test_project,
+                label='blah',
+                num_chromosomes=1,
+                num_bases=1000)
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=self.test_ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
+        # Create a bunch of samples and relate them.
+        for sample_idx in range(10):
+            sample = ExperimentSample.objects.create(
+                    uid=str(sample_idx),
+                    project=self.test_project,
+                    label='some label'
+            )
+            ExperimentSampleToAlignment.objects.create(
+                    alignment_group=alignment_group,
+                    experiment_sample=sample)
+
+        # Test the method.
+        samples = alignment_group.get_samples()
+        sample_uid_set = set([sample.uid for sample in samples])
+        self.assertEqual(sample_uid_set,
+                set([str(x) for x in range(10)]))
 
 
 class TestModelsStatic(TestCase):

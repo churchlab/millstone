@@ -590,15 +590,11 @@ class AlignmentGroup(UniqueUidModelMixin):
                 {'field':'end_time'}]
 
     def get_samples(self):
+        """Many different tasks require getting the sample (or their UIDs)
+        that are in this alignment group.
         """
-        Many different tasks require getting the sample (or their UIDs)
-        that are in this alignment group. 
-        """
-        experiment_samples = ExperimentSampleToAlignment.objects.filter(
-                alignment_group=self)
-        samples = ExperimentSample.objects.filter(
-                experimentsampletoalignment__in=experiment_samples)
-        return samples
+        return ExperimentSample.objects.filter(
+                experimentsampletoalignment__alignment_group=self)
 
 
 class ExperimentSampleToAlignment(UniqueUidModelMixin):
