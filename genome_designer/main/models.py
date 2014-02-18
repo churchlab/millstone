@@ -117,6 +117,10 @@ class Dataset(UniqueUidModelMixin):
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
 
+    TYPE_TO_RELATED_MODEL = {
+        TYPE.VCF_FREEBAYES: 'alignmentgroup_set',
+    }
+
     # Human-readable identifier. Also used for JBrowse.
     label = models.CharField(max_length=256)
 
@@ -207,6 +211,10 @@ class Dataset(UniqueUidModelMixin):
         # finally:
         #     shutil.rmtree(dirname)
         #     if p: p.close()
+
+    def get_related_model_set(self):
+        return getattr(self, Dataset.TYPE_TO_RELATED_MODEL[self.type])
+
 
 # Make sure the Dataset types are unique. This runs once at startup.
 assert_unique_types(Dataset.TYPE)

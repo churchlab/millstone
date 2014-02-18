@@ -10,6 +10,7 @@ from django.test import TestCase
 from main.models import auto_generate_short_name
 from main.models import clean_filesystem_location
 from main.models import AlignmentGroup
+from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
@@ -129,6 +130,31 @@ class TestAlignmentGroup(TestCase):
         sample_uid_set = set([sample.uid for sample in samples])
         self.assertEqual(sample_uid_set,
                 set([str(x) for x in range(10)]))
+
+
+class TestDataset(TestCase):
+
+    def test_get_related_model_set(self):
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+        self.test_project = Project.objects.create(
+                title=TEST_PROJECT_NAME,
+                owner=user.get_profile())
+        self.test_ref_genome = ReferenceGenome.objects.create(
+                project=self.test_project,
+                label='blah',
+                num_chromosomes=1,
+                num_bases=1000)
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=self.test_ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+        dataset = Dataset.objects.create(
+            label='the label', type=Dataset.TYPE.VCF_FREEBAYES)
+        alignment_group.dataset_set.add(dataset)
+
+        alignment_group_set = dataset.get_related_model_set()
+        self.assertTrue(alignment_group in alignment_group_set.all())
 
 
 class TestModelsStatic(TestCase):
