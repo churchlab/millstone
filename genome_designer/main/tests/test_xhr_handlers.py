@@ -44,7 +44,7 @@ STATUS_CODE__SUCCESS = 200
 
 class TestGetVariantList(TestCase):
 
-    url = reverse('genome_designer.main.xhr_handlers.get_variant_list')
+    url = reverse('main.xhr_handlers.get_variant_list')
 
     def setUp(self):
         # Useful models.

@@ -288,9 +288,8 @@ def bootstrap_fake_data():
 
     # Run the alignment. Return the alignment group created, indexed by the
     # reference genome's uid.
-    alignment_group_dict = run_pipeline(
-            'test_align', [full_vcf_reference_genome], full_vcf_samples)
-    full_vcf_alignment_group = alignment_group_dict[full_vcf_reference_genome.uid]
+    full_vcf_alignment_group = run_pipeline(
+            'test_align', full_vcf_reference_genome, full_vcf_samples)
 
     def _create_region_intervals(region, interval_tuple_list):
         """Helper method to create RegionIntervals for a Region.

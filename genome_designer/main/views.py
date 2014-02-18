@@ -31,6 +31,7 @@ from main.models import ExperimentSampleToAlignment
 from main.models import Variant
 from main.models import VariantSet
 from main.models import VariantToVariantSet
+from pipeline.pipeline import run_pipeline_multiple_ref_genomes
 from pipeline.pipeline import run_pipeline
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_reference_genome_from_ncbi
@@ -309,7 +310,8 @@ def alignment_view(request, project_uid, alignment_group_uid):
             reference_genome__project=project, uid=alignment_group_uid)
 
     if request.POST:
-        #find_variants(alignment_group)  # TODO: run with celery
+        run_pipeline(alignment_group.label, alignment_group.reference_genome,
+                alignment_group.get_samples())
         return HttpResponse('ok')
 
     # Initial javascript data.
@@ -364,7 +366,7 @@ def alignment_create_view(request, project_uid):
 
         # Kick off alignments.
         try:
-            run_pipeline(alignment_group_name,
+            run_pipeline_multiple_ref_genomes(alignment_group_name,
                     ref_genome_list, sample_list)
 
             # Success. Return a redirect response.

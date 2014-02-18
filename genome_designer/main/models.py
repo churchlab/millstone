@@ -117,6 +117,10 @@ class Dataset(UniqueUidModelMixin):
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
 
+    TYPE_TO_RELATED_MODEL = {
+        TYPE.VCF_FREEBAYES: 'alignmentgroup_set',
+    }
+
     # Human-readable identifier. Also used for JBrowse.
     label = models.CharField(max_length=256)
 
@@ -217,6 +221,10 @@ class Dataset(UniqueUidModelMixin):
         # finally:
         #     shutil.rmtree(dirname)
         #     if p: p.close()
+
+    def get_related_model_set(self):
+        return getattr(self, Dataset.TYPE_TO_RELATED_MODEL[self.type])
+
 
 # Make sure the Dataset types are unique. This runs once at startup.
 assert_unique_types(Dataset.TYPE)
@@ -337,7 +345,7 @@ class ReferenceGenome(UniqueUidModelMixin):
         """Link to url view for this model.
         """
         return reverse(
-                'genome_designer.main.views.reference_genome_view',
+                'main.views.reference_genome_view',
                 args=(self.project.uid, self.uid))
 
     def get_model_data_root(self):
@@ -584,7 +592,7 @@ class AlignmentGroup(UniqueUidModelMixin):
         """Link to url view for this model.
         """
         return reverse(
-                'genome_designer.main.views.alignment_view',
+                'main.views.alignment_view',
                 args=(self.reference_genome.project.uid, self.uid))
 
     @classmethod
@@ -600,15 +608,11 @@ class AlignmentGroup(UniqueUidModelMixin):
                 {'field':'end_time'}]
 
     def get_samples(self):
+        """Many different tasks require getting the sample (or their UIDs)
+        that are in this alignment group.
         """
-        Many different tasks require getting the sample (or their UIDs)
-        that are in this alignment group. 
-        """
-        experiment_samples = ExperimentSampleToAlignment.objects.filter(
-                alignment_group=self)
-        samples = ExperimentSample.objects.filter(
-                experimentsampletoalignment__in=experiment_samples)
-        return samples
+        return ExperimentSample.objects.filter(
+                experimentsampletoalignment__alignment_group=self)
 
 
 class ExperimentSampleToAlignment(UniqueUidModelMixin):
@@ -636,7 +640,7 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
     def error_link(self):
         return ('<a href="' +
                 reverse(
-                        'genome_designer.main.views.sample_alignment_error_view',
+                        'main.views.sample_alignment_error_view',
                         args=(self.alignment_group.reference_genome.project.uid,
                                 self.alignment_group.uid,
                                 self.uid)) +
@@ -791,7 +795,7 @@ class Variant(UniqueUidModelMixin):
         """Link to url view for this model.
         """
         return reverse(
-                'genome_designer.main.views.single_variant_view',
+                'main.views.single_variant_view',
                 args=(self.reference_genome.project.uid,
                         self.reference_genome.uid, self.uid))
 
@@ -1107,7 +1111,7 @@ class VariantSet(UniqueUidModelMixin):
         """Link to url view for this model.
         """
         return reverse(
-                'genome_designer.main.views.variant_set_view',
+                'main.views.variant_set_view',
                 args=(self.reference_genome.project.uid, self.uid))
 
     def get_model_data_root(self):
