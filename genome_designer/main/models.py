@@ -123,11 +123,15 @@ class Dataset(UniqueUidModelMixin):
     # Location on the filesystem relative to settings.MEDIA_ROOT.
     filesystem_location = models.CharField(max_length=512, blank=True)
 
+    # Associated with a separate index? (e.g. for vcf/tabix and bam files)
+    filesystem_idx_location = models.CharField(max_length=512, blank=True)
+
     # When the dataset is a result of a computation, we'll set a status on it.
     # NOTE: The reliability of the present implementation of this model feature
     # is questionable.
     class STATUS:
-        """The status of running this Dataset.
+        """
+        The status of running this Dataset.
 
         Limit to 40-chars as per Dataset.status field def.
         """
@@ -139,12 +143,12 @@ class Dataset(UniqueUidModelMixin):
     status = models.CharField(max_length=40, choices=STATUS_CHOICES,
             default=STATUS.READY)
 
-    # Dictionary of compression suffixes and programs to use to decompress
-    # to a pipe
+    # Dictionary of compression suffixes and programs to use to perform
+    # various actions on a pipe
     COMPRESSION_TYPES = {
-        '.gz': ('gzip', '-dc'),
-        '.bz2': ('bzcat',),
-        '.zip': ('unzip','-p')
+        '.gz': {'cat': ('gzip', '-dc'), 'zip': ('gzip','-r')},
+        '.bz2': {'cat': ('bzcat',), 'zip': ('bgzip','-c')},
+        '.zip': {'cat': ('unzip','-p'), 'zip': ('zip','-')},
     }
 
     def __unicode__(self):
@@ -163,6 +167,12 @@ class Dataset(UniqueUidModelMixin):
         return self.filesystem_location.endswith(
                 tuple(self.COMPRESSION_TYPES.keys()))
 
+    def is_indexed(self):
+        """
+        Checks if dataset has idx location.
+        """
+        return not (self.filesystem_idx_location == '')
+
     def wrap_if_compressed(self):
         """ This helper function returns a process substitution string
         to be used by /bin/bash if the fastq read file is compressed, otherwise
@@ -171,7 +181,7 @@ class Dataset(UniqueUidModelMixin):
         absolute_location = self.get_absolute_location()
         if self.is_compressed():
             extension = os.path.splitext(self.filesystem_location)[1]
-            program = ' '.join(self.COMPRESSION_TYPES[extension])
+            program = ' '.join(self.COMPRESSION_TYPES[extension]['cat'])
             return '<({:s} {:s})'.format(
                     program, absolute_location)
         else:

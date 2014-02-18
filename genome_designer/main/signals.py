@@ -73,8 +73,8 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
 
     # Create the bwa index before perfoming the alignments in parallel. 
     ref_genome_fasta = get_dataset_with_type(
-        instance,
-        Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+            instance,
+            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
     ensure_bwa_index(ref_genome_fasta)
 
 m2m_changed.connect(post_add_seq_to_ref_genome,

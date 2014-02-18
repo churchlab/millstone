@@ -161,10 +161,14 @@ def clean_filesystem_location(filesystem_location):
     return clean_filesystem_location
 
 
-def get_dataset_with_type(entity, type):
+def get_dataset_with_type(entity, type, compressed=False):
     """Returns the Dataset with the requested type, or None if doesn't exist.
+
+    If there are both compressed and uncompressed versions, return the 
+    uncompressed unless the compressed is asked for.
     """
-    results = entity.dataset_set.filter(type=type)
+    results = [r for r in entity.dataset_set.filter(type=type) 
+            if r.is_compressed() == compressed]
     assert len(results) < 2, ("More than 2 Datasets of type %s for entity %s."
             % (str(entity), type))
     if len(results) > 0:
