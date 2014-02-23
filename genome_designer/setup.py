@@ -60,15 +60,41 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/38y3p2e7za4conk/tabix-0.2.4-linux.zip'  
         ]
     },
+    'pindel' : {
+        'Darwin' : [
+            'https://www.dropbox.com/s/8wuh47i2hao3vlr/pindel-darwin.zip'
+        ],
+        'Linux' : [
+            'https://www.dropbox.com/s/wyfve2dfgqbt94d/pindel-linux.zip'
+        ]
+    },
+    'delly' : {
+        'Darwin' : [
+            'https://www.dropbox.com/s/l3qs0mbm2vapqf8/delly-darwin.zip'
+        ],
+        'Linux' : [
+            'https://www.dropbox.com/s/k1gaxm1wb0odubc/delly-linux.zip'
+        ]
+    },
+    'vcf-concat' : {
+        'Darwin' : [
+            'https://www.dropbox.com/s/ehowcdaic4tln0n/vcf-concat-darwin.zip'
+        ],
+        'Linux' : [
+            'https://www.dropbox.com/s/buf80h0qfwjqaqp/vcf-concat-linux.zip'
+        ]
+    },
     'picard' : [
         'https://www.dropbox.com/s/189loxsmsch1xbb/picard-tools-1.96.zip'
     ]
+
 }
 
 # For any tools that have multiple executables that need permission changes, 
 # for tools whose executables arent named after their tool
 TOOLS_TO_EXECUTABLES = {
-    'tabix' : ['tabix','bgzip']
+    'tabix' : ['tabix','bgzip'],
+    'pindel' : ['pindel','pindel2vcf']
 }
 
 def setup(arglist):
