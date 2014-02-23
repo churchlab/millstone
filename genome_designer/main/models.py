@@ -810,6 +810,8 @@ class Variant(UniqueUidModelMixin):
         INSERTION = 'INSERTION'
         TRANSITION = 'TRANSITION'
         TRANSVERSION = 'TRANSVERSION'
+        DUPLICATION = 'DUPLICATION'
+        INVERSION = 'INVERSION'
         COMPLEX = 'COMPLEX' # Multi-base in different genomes
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField('Type', max_length=40, choices=TYPE_CHOICES)

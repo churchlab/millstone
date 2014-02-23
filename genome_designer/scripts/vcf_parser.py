@@ -102,10 +102,9 @@ def extract_raw_data_dict(vcf_record):
     data_dict['ALT'] = pickle.dumps(vcf_record.ALT)
 
     def expand_type(svtype):
-        if svtype == 'DEL':
-            return 'DELETION'
-        else:
-            return 'unknown'
+        svtypes = {'DEL': 'DELETION', 'DUP': 'DUPLICATION', 'INV': 'INVERSION'}
+        return svtypes[svtype] if svtype in svtypes else 'unknown'
+
     # The TYPE is just a property of the record object.
     # TODO: Do we care about the var_subtype()? (ts/tv/complex/sv type/etc?)
     # sv callers store the type in vcf_record.INFO['SVTYPE']
