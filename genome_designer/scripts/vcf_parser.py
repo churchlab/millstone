@@ -16,7 +16,10 @@ from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
+from settings import TOOLS_DIR
 
+TABIX_BINARY = '%s/tabix/tabix' % TOOLS_DIR
+BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
 
 class QueryCache(object):
     """Manual caching for queries to avoid excessive db calls.
@@ -33,7 +36,7 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     """
     vcf_dataset = get_dataset_with_type(alignment_group, vcf_dataset_type)
     parse_vcf(vcf_dataset, alignment_group.reference_genome)
-
+    
 
 @transaction.commit_on_success
 def parse_vcf(vcf_dataset, reference_genome):
@@ -126,6 +129,53 @@ def populate_common_data_info(data_dict, vcf_record):
     for key, value in vcf_record.INFO.iteritems():
         effective_key = 'INFO_' + key
         data_dict[effective_key] = pickle.dumps(value)
+
+def vcf_to_vcftabix(vcf_dataset):
+    """
+    Generate a compressed version of a vcf file and index it with 
+    samtools tabix. Add a new dataset model instance for this compressed
+    version, with the same related objects. Flag is as compressed,
+    indexed, etc. 
+    """
+
+    # 1. Check if dataset is compressed. If not, then grab the compressed
+    # version or make a compressed version.
+    if not vcf_dataset.is_compressed():
+        # Check for existing compressed version using related model.
+        # Assume that the first model will do. 
+        related_model = vcf_dataset.get_related_model_set().all()[:1]
+        compressed_dataset = get_dataset_with_type(
+                entity= related_model, 
+                type= vcf_dataset.type, 
+                compressed=True)
+        # If there is no compressed dataset, then make it
+        if compressed_dataset is None:
+            compressed_dataset = vcf_dataset.make_compressed('.bgz')
+    else:
+        compressed_dataset = vcf_dataset
+
+    if compressed_dataset.filesystem_idx_location == '':
+
+        # Set the tabix index location
+        compressed_dataset.filesystem_idx_location = (
+                compressed_dataset.filesystem_location + '.tbi')
+
+        # Make tabix index
+        subprocess.check_call([
+            TABIX_BINARY, 
+            '-p', 'vcf',
+            compressed_dataset.get_absolute_location()
+        ])
+    else:
+        # If it's already here, then make sure the index is right
+        assert compressed_dataset.filesystem_idx_location == (
+                compressed_dataset.filesystem_location + '.tbi'), (
+                'Tabix index file location is not correct.')
+        assert os.path.exists(
+                compressed_dataset.get_absolute_idx_location()), (
+                'Tabix index file does not exist on filesystem.')
+
+    return compressed_dataset
 
 def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
         query_cache):

@@ -52,16 +52,36 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/vjtegtyncmq8a8o/samtools-0.1.19-darwin.zip'
         ]
     },
+    'tabix' : {
+        'Darwin' : [
+            'https://www.dropbox.com/s/3mr5x3di2p513ma/tabix-0.2.4-darwin.zip'
+        ],
+        'Linux': [
+            'https://www.dropbox.com/s/38y3p2e7za4conk/tabix-0.2.4-linux.zip'  
+        ]
+    },
     'picard' : [
         'https://www.dropbox.com/s/189loxsmsch1xbb/picard-tools-1.96.zip'
     ]
 }
 
-def setup():
-    download_tools()
-    setup_jbrowse()
+# For any tools that have multiple executables that need permission changes, 
+# for tools whose executables arent named after their tool
+TOOLS_TO_EXECUTABLES = {
+    'tabix' : ['tabix','bgzip']
+}
 
-def download_tools():
+def setup(arglist):
+    if len(arglist) == 0:
+        download_tools()
+        setup_jbrowse()
+    else:
+        if 'jbrowse' in arglist:
+            setup_jbrowse()
+            arglist.remove('jbrowse')
+        download_tools(tools=arglist)
+
+def download_tools(tools= TOOLS_URLS.keys()):
     # Create tools dir if it doesn't exist.
     if not os.path.isdir(TOOLS_DIR):
         os.mkdir(TOOLS_DIR)
@@ -69,7 +89,7 @@ def download_tools():
     sys_type = platform.system()
 
     # Download the required tools from our Dropbox.
-    for tool in TOOLS_URLS:
+    for tool in tools:
 
         print 'Grabbing %s from Dropbox...' % tool
 
@@ -114,11 +134,19 @@ def download_tools():
                 print '    %s' % dest_path
 
         # This is really hackish, but because ZipFile does not save file
-        # permissions, we need to make the bins executable. Luckily,
-        # in all cases (so far), the bin has the same name as the tool...
-        tool_bin_file = os.path.join(dest_dir,tool)
-        if os.path.exists(tool_bin_file):
-            os.chmod(os.path.join(dest_dir,tool), stat.S_IXUSR)
+        # permissions, we need to make the bins executable. In cases where
+        # the executable name is different than the tool key in TOOL_URLS,
+        # use TOOLS_TO_EXECUTABLES.
+        if not tool in TOOLS_TO_EXECUTABLES:
+            tool_bin_files = [os.path.join(dest_dir,tool)]
+        else:
+            tool_bin_files = [os.path.join(dest_dir, exe) 
+                    for exe in TOOLS_TO_EXECUTABLES[tool]]
+                    
+        for tool_bin_file in tool_bin_files:
+            if os.path.exists(tool_bin_file):
+                os.chmod(tool_bin_file, 
+                        stat.S_IXUSR | stat.S_IWUSR | stat.S_IRUSR)
 
 def _get_file_url_from_dropbox(dropbox_url, filename):
     """
@@ -151,9 +179,4 @@ def setup_jbrowse():
             JBROWSE_DATA_SYMLINK_PATH)
 
 if __name__ == '__main__':
-
-    # Placeholder for a more comprehensive command line arg parsing:
-    if len(sys.argv) > 1 and sys.argv[1] == 'jbrowse':
-        setup_jbrowse()
-    else:
-        setup()
+    setup(sys.argv[1:])

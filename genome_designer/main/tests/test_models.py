@@ -17,6 +17,7 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import User
 from main.models import Dataset
+from main.model_utils import get_dataset_with_type
 from scripts.import_util import import_reference_genome_from_local_file
 import subprocess
 
@@ -49,7 +50,7 @@ class TestModels(TestCase):
             'genbank')
 
 
-    def testSnpeffOnCreateRefGenome(self):
+    def test_snpeff_on_create_ref_genome(self):
         """Ensure that Snpeff database is created successfully when creating
            a new reference genome object.
         """
@@ -63,37 +64,6 @@ class TestModels(TestCase):
         assert os.path.exists(os.path.join(
                 self.test_ref_genome.get_snpeff_directory_path(),
                 'snpEffectPredictor.bin'))
-
-
-    def testDataSetCompression(self):
-        """Make sure data set compression behaves correctly.
-        """
-        dataset = Dataset.objects.create(
-                label='test_dataset', 
-                type=Dataset.TYPE.FASTQ1)
-
-        GZIPPED_FASTQ_FILEPATH = os.path.join(settings.PWD, 'test_data',
-                'compressed_fastq', 'sample0.simLibrary.1.fq.gz')
-
-        dataset.filesystem_location = clean_filesystem_location(
-                    GZIPPED_FASTQ_FILEPATH)
-
-        assert dataset.is_compressed()
-
-        process = subprocess.Popen(
-                ('head '+dataset.wrap_if_compressed()+' | wc -l'), 
-                shell=True, executable=settings.BASH_PATH, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-
-        wc_output, errmsg = process.communicate()
-        rc = process.returncode
-
-        assert rc == 0, (
-                "Compression process returned non-zero exit status: %s" % (
-                        errmsg))
-
-        assert int(wc_output) == 10, (
-                "Compression failed: %s" % (errmsg))
 
 
 class TestAlignmentGroup(TestCase):
@@ -155,6 +125,70 @@ class TestDataset(TestCase):
 
         alignment_group_set = dataset.get_related_model_set()
         self.assertTrue(alignment_group in alignment_group_set.all())
+
+    def test_dataset_compression_piping(self):
+        """
+        Make sure data set compression behaves correctly.
+        """
+        dataset = Dataset.objects.create(
+                label='test_dataset', 
+                type=Dataset.TYPE.FASTQ1)
+
+        GZIPPED_FASTQ_FILEPATH = os.path.join(settings.PWD, 'test_data',
+                'compressed_fastq', 'sample0.simLibrary.1.fq.gz')
+
+        dataset.filesystem_location = clean_filesystem_location(
+                    GZIPPED_FASTQ_FILEPATH)
+
+        assert dataset.is_compressed()
+
+        process = subprocess.Popen(
+                ('head '+dataset.wrap_if_compressed()+' | wc -l'), 
+                shell=True, executable=settings.BASH_PATH, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+
+        wc_output, errmsg = process.communicate()
+        rc = process.returncode
+
+        assert rc == 0, (
+        "Compression process returned non-zero exit status: %s" % (
+                errmsg))
+
+        assert int(wc_output) == 10, (
+                "Compression failed: %s" % (errmsg))
+
+    def test_compress_dataset(self):
+        """
+        Make sure that compressing a dataset and putting a new dataset
+        entry into the db works correctly. 
+        """
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+
+        self.test_project = Project.objects.create(
+            title=TEST_PROJECT_NAME,
+            owner=user.get_profile())
+
+        self.test_ref_genome = import_reference_genome_from_local_file(
+            self.test_project,
+            TEST_REF_GENOME_NAME,
+            TEST_REF_GENOME_PATH,
+            'genbank')
+
+        dataset = get_dataset_with_type(self.test_ref_genome,
+                type= Dataset.TYPE.REFERENCE_GENOME_GENBANK)
+
+        # All the magic happens here
+        compressed_dataset = dataset.make_compressed('.gz')
+
+        # Grab the new compressed dataset through the ref genome to 
+        # make sure that it got added
+        compressed_dataset_through_ref_genome = get_dataset_with_type(
+                entity= self.test_ref_genome, 
+                type= Dataset.TYPE.REFERENCE_GENOME_GENBANK,
+                compressed= True)
+        assert compressed_dataset == compressed_dataset_through_ref_genome
+
 
 
 class TestModelsStatic(TestCase):

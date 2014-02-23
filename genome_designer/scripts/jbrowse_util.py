@@ -12,10 +12,14 @@ from import_util import generate_fasta_from_genbank
 from main.models import Dataset
 from main.models import get_dataset_with_type
 from main.models import ReferenceGenome
+from scripts.vcf_parser import vcf_to_vcftabix
 from settings import JBROWSE_BIN_PATH
 from settings import JBROWSE_DATA_SYMLINK_PATH
 from settings import JBROWSE_DATA_URL_ROOT
 from settings import S3_BUCKET
+from settings import TOOLS_DIR
+
+TABIX_BINARY = '%s/tabix/tabix' % TOOLS_DIR
 
 # TODO: Figure out better place to put this.
 # JBrowse requires the symlink path to exist. See settings.py
@@ -41,7 +45,8 @@ def prepare_jbrowse_ref_sequence(reference_genome, **kwargs):
 
     # First ensure that the reference genome exists. If it fails, try to
     # convert from genbank, then give up.
-    reference_fasta = reference_genome.dataset_set.get(
+    reference_fasta = get_dataset_with_type(
+            reference_genome,
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
     # Next, ensure that the jbrowse directory exists.
@@ -63,7 +68,8 @@ def add_genbank_file_track(reference_genome, **kwargs):
     """
     FLATFILE_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'flatfile-to-json.pl')
 
-    reference_gbk = reference_genome.dataset_set.get(
+    reference_gbk = get_dataset_with_type(
+            reference_genome,
             type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).get_absolute_location()
 
     jbrowse_path = reference_genome.get_jbrowse_directory_path()
@@ -86,15 +92,99 @@ def add_genbank_file_track(reference_genome, **kwargs):
 
     subprocess.call(genbank_json_command)
 
+def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
+    """
+    From
+
+    JBrowse Docs:
+        http://gmod.org/wiki/JBrowse_Configuration_Guide
+                #Example_VCF-based_Variant_Track_Configuration
+    """
+    # Get the vcf file location from the the Dataset of the genome
+    # keyed by the alignment_type.
+    vcf_dataset = get_dataset_with_type(alignment_group, 
+            vcf_dataset_type)
+
+    vcf_dataset = _vcf_to_vcftabix(vcf_dataset)
+
+    if reference_genome.project.is_s3_backed():
+        urlTemplate = os.path.join('http://%s.s3.amazonaws.com/' % S3_BUCKET,
+            vcf_dataset.filesystem_location.strip("/jbrowse"))
+        urlTemplate_idx = os.path.join('http://%s.s3.amazonaws.com/' % S3_BUCKET,
+            vcf_dataset.filesystem_idx_location.strip("/jbrowse"))
+    else:
+        urlTemplate = os.path.join(JBROWSE_DATA_URL_ROOT,
+            vcf_dataset.filesystem_location)
+        urlTemplate_idx = os.path.join(JBROWSE_DATA_URL_ROOT,
+            vcf_dataset.filesystem_idx_location)
+
+    # TODO: This jbrowse vcf label really need to be more human readable.
+    label = str(alignment_group.label) + '_' + vcf_dataset.type
+
+    # Build the JSON object.
+    raw_dict_obj = {
+        "label"         : label,
+        "key"           : "%s SNVs" % vcf_dataset.label,
+        "storeClass"    : "JBrowse/Store/SeqFeature/VCFTabix",
+        "urlTemplate"   : urlTemplate,
+        "tbiUrlTemplate": urlTemplate_idx,
+        "type"          : "JBrowse/View/Track/HTMLVariants"
+    }
+
+    json_obj_string = json.dumps(raw_dict_obj)
+    _update_ref_genome_track_list(reference_genome, json_obj_string)
+
+def _vcf_to_vcftabix(vcf_dataset):
+    """
+    Generate a compressed version of a vcf file and index it with 
+    samtools tabix. Add a new dataset model instance for this compressed
+    version, with the same related objects. Flag is as compressed,
+    indexed, etc. 
+    """
+
+    # 1. Check if dataset is compressed. If not, then grab the compressed
+    # version or make a compressed version.
+    if not vcf_dataset.is_compressed():
+        # Check for existing compressed version using related model.
+        # Assume that the first model will do. 
+        related_model = vcf_dataset.get_related_model_set().all()[0]
+        compressed_dataset = get_dataset_with_type(
+                entity= related_model, 
+                type= vcf_dataset.type, 
+                compressed=True)
+        # If there is no compressed dataset, then make it
+        if compressed_dataset is None:
+            compressed_dataset = vcf_dataset.make_compressed('.bgz')
+    else:
+        compressed_dataset = vcf_dataset
+
+    if compressed_dataset.filesystem_idx_location == '':
+
+        # Set the tabix index location
+        compressed_dataset.filesystem_idx_location = (
+                compressed_dataset.filesystem_location + '.tbi')
+
+        # Make tabix index
+        subprocess.check_call([
+            TABIX_BINARY, 
+            '-p', 'vcf',
+            compressed_dataset.get_absolute_location()
+        ])
+    else:
+        # If it's already here, then make sure the index is right
+        assert compressed_dataset.filesystem_idx_location == (
+                compressed_dataset.filesystem_location + '.tbi'), (
+                'Tabix index file location is not correct.')
+        assert os.path.exists(
+                compressed_dataset.get_absolute_idx_location()), (
+                'Tabix index file does not exist on filesystem.')
+
+    return compressed_dataset
 
 def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     """Update the JBrowse track config file, trackList.json, for this
     ReferenceGenome with a track for the given sample_alignment and alignment_type.
     """
-    ADD_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'flatfile-to-json.pl-json.pl')
-
-    reference_genome = sample_alignment.alignment_group.reference_genome
-
     # Get the bam file location from the the Dataset of the genome
     # keyed by the alignment_type.
     bam_dataset = get_dataset_with_type(sample_alignment, alignment_type)

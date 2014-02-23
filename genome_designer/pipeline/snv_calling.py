@@ -16,6 +16,7 @@ from read_alignment import get_insert_size
 from main.s3 import project_files_needed
 from variant_effects import run_snpeff
 from scripts.vcf_parser import parse_alignment_group_vcf
+from scripts.jbrowse_util import add_vcf_track
 from settings import TOOLS_DIR
 
 # TODO: These VCF types should be set somewhere else. snpeff_util and vcf_parser
@@ -143,6 +144,10 @@ def find_variants_with_tool(alignment_group, variant_params):
             vcf_dataset_type = VCF_ANNOTATED_DATASET_TYPE
         else:
             vcf_dataset_type = VCF_DATASET_TYPE
+
+    # Tabix index and add the VCF track to Jbrowse
+    add_vcf_track(alignment_group.reference_genome, alignment_group,
+        vcf_dataset_type)
 
     # Parse the resulting vcf
     parse_alignment_group_vcf(alignment_group, vcf_dataset_type)

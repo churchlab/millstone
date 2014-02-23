@@ -307,7 +307,7 @@ class GeneView(object):
     @property
     def href(self):
         analyze_tab_part = reverse(
-                'genome_designer.main.views.tab_root_analyze',
+                'main.views.tab_root_analyze',
                 args=(self.region.reference_genome.project.uid,
                         self.region.reference_genome.uid,
                         'variants'))

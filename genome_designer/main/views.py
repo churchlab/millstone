@@ -84,7 +84,7 @@ def project_create_view(request):
             form.title = form.cleaned_data['title']
             form.save()
             return HttpResponseRedirect(
-                    reverse('genome_designer.main.views.project_view',
+                    reverse('main.views.project_view',
                             args=(project.uid,)))
     else:
         form = ProjectForm()
@@ -372,7 +372,7 @@ def alignment_create_view(request, project_uid):
             # Success. Return a redirect response.
             response_data = {
                 'redirect': reverse(
-                        'genome_designer.main.views.alignment_list_view',
+                        'main.views.alignment_list_view',
                         args=(project.uid,)),
             }
         except Exception as e:

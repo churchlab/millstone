@@ -150,7 +150,8 @@ def generate_fasta_from_genbank(ref_genome):
             type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists()
 
     # Get genbank path and filename components (for creating FASTA file name).
-    genbank_path = ref_genome.dataset_set.get(
+    genbank_path = get_dataset_with_type(
+            ref_genome,
             type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).get_absolute_location()
 
     genbank_dir, genbank_filename = os.path.split(genbank_path)
@@ -181,7 +182,8 @@ def import_reference_genome_from_ncbi(project, label, record_id, import_format):
     Pull a reference genome by accession from NCBI using efetch.
     """
     # Validate the input.
-    assert import_format in ['fasta', 'genbank']
+    assert import_format in ['fasta', 'genbank'], (
+            'Import Format must be \'fasta\' or \'genbank\'')
 
     # Format keys for Efetch.
     # More info at:  http://www.ncbi.nlm.nih.gov/

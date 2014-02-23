@@ -165,7 +165,7 @@ def build_snpeff(ref_genome):
     # Put a soft link to the reference genome genbank file in the snpeff dir
     # under the ./snpeff/uid dir called genes.gb. Remove any old links
     # if present.
-    ref_genome_path = ref_genome.dataset_set.get(
+    ref_genome_path = get_dataset_with_type(ref_genome,
             type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).get_absolute_location()
     assert ref_genome_path is not None, "No reference source genbank."
 
@@ -309,8 +309,9 @@ def run_snpeff(alignment_group, alignment_type):
     snpeff_config_path = get_snpeff_config_path(ref_genome)
 
     # Get the freebayes vcf file as input
-    assert alignment_group.dataset_set.get(type=VCF_DATASET_TYPE)
-    vcf_input_filename = alignment_group.dataset_set.get(
+    assert get_dataset_with_type(alignment_group,
+            type=VCF_DATASET_TYPE)
+    vcf_input_filename = get_dataset_with_type(alignment_group,
             type=VCF_DATASET_TYPE).get_absolute_location()
 
     # Prepare a directory to put the output file.

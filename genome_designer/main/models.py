@@ -43,6 +43,7 @@ from django.db.models import Model
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
 from jsonfield import JSONField
+import subprocess
 
 from model_utils import assert_unique_types
 from model_utils import auto_generate_short_name
@@ -54,7 +55,9 @@ from model_utils import make_choices_tuple
 from model_utils import short_uuid
 from model_utils import UniqueUidModelMixin
 from model_utils import VisibleFieldMixin
+from settings import TOOLS_DIR
 
+BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
 
 ###############################################################################
 # User-related models
@@ -117,8 +120,22 @@ class Dataset(UniqueUidModelMixin):
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
 
+    # This relationship lets us know where the dataset points. This
+    # is important in case we want to duplicate this dataset in order
+    # to make a compressed/uncompressed version - we need to hook it
+    # up to the correct related models after copying. 
     TYPE_TO_RELATED_MODEL = {
-        TYPE.VCF_FREEBAYES: 'alignmentgroup_set',
+        TYPE.REFERENCE_GENOME_FASTA : 'referencegenome_set',
+        TYPE.REFERENCE_GENOME_GENBANK : 'referencegenome_set',
+        TYPE.FASTQ1 : 'experimentsample_set',
+        TYPE.FASTQ2 : 'experimentsample_set',
+        TYPE.BWA_ALIGN : 'experimentsampletoalignment_set',
+        TYPE.BWA_ALIGN_ERROR : 'alignmentgroup_set',
+        TYPE.VCF_FREEBAYES : 'alignmentgroup_set',
+        TYPE.VCF_PINDEL : 'alignmentgroup_set',
+        TYPE.VCF_DELLY : 'alignmentgroup_set',
+        TYPE.VCF_USERINPUT : 'variantset_set',
+        TYPE.VCF_FREEBAYES_SNPEFF : 'alignmentgroup_set'
     }
 
     # Human-readable identifier. Also used for JBrowse.
@@ -150,9 +167,10 @@ class Dataset(UniqueUidModelMixin):
     # Dictionary of compression suffixes and programs to use to perform
     # various actions on a pipe
     COMPRESSION_TYPES = {
-        '.gz': {'cat': ('gzip', '-dc'), 'zip': ('gzip','-r')},
-        '.bz2': {'cat': ('bzcat',), 'zip': ('bgzip','-c')},
+        '.gz': {'cat': ('gzip','-dc'), 'zip': ('gzip','-c')},
+        '.bz2': {'cat': ('bzcat',), 'zip': ('bzip2','-c')},
         '.zip': {'cat': ('unzip','-p'), 'zip': ('zip','-')},
+        '.bgz': {'cat': (BGZIP_BINARY,'-dc'), 'zip': (BGZIP_BINARY,'-c')},
     }
 
     def __unicode__(self):
@@ -163,6 +181,10 @@ class Dataset(UniqueUidModelMixin):
         """
         return os.path.join(settings.PWD, settings.MEDIA_ROOT,
                 self.filesystem_location)
+
+    def get_absolute_idx_location(self):
+        return os.path.join(settings.PWD, settings.MEDIA_ROOT,
+                self.filesystem_idx_location)
 
     def is_compressed(self):
         """
@@ -224,6 +246,74 @@ class Dataset(UniqueUidModelMixin):
 
     def get_related_model_set(self):
         return getattr(self, Dataset.TYPE_TO_RELATED_MODEL[self.type])
+
+    def make_compressed(self, compression_type):
+        """
+        Generate a new compressed version of this dataset.
+
+        For some cases (like generating a compressed TABIX-indexed VCF),
+        we want to take a dataset and generate a compressed version of
+        the file (as a separate model instance) with the same associations 
+        to other related model instances. 
+
+        TODO: We could just replace the uncompressed version with the
+        compressed version with the compressed version, but right now that's
+        too much work, since we'd need to check every time to see if the file
+        was compressed, and depending on the tool, decide if we'd need to
+        decompress it via pipe, or write the decompressed version as a new
+        file, etc etc. So, currently the replace option is unimplemented.
+        """
+        # Check that compression_type is valid
+        assert compression_type in Dataset.COMPRESSION_TYPES, (
+                'compression_type is invalid, {:s} is not one of: {:s}'.format(
+                        compression_type, Dataset.COMPRESSION_TYPES.keys()))
+
+        # Check that this dataset isn't itself already compressed
+        assert self.is_compressed() is False, (
+                'This dataset is already compressed.')
+
+        # Check that a compressed dataset isn't already associated with a 
+        # related model (probably just one related model).    
+        related_models = self.get_related_model_set().all()
+        for obj in related_models:
+            old_compressed_dataset = get_dataset_with_type(obj, self.type, 
+                    compressed=True)
+            # TODO: In this case, do we want to just return this?
+            # Maybe with a warning?
+            assert old_compressed_dataset is None, (
+                'A related model already compressed' +
+                'this dataset: {:s}'.format(
+                        compressed_dataset.filesystem_location))
+            
+
+        # Generate the new compressed dataset file 
+        # by adding the compression_type suffix
+        orig_file = self.get_absolute_location()
+        new_compressed_file = orig_file + compression_type
+
+        compression_command = Dataset.COMPRESSION_TYPES[
+                compression_type]['zip']
+
+        with open(orig_file, 'rb') as fh_in:
+            with open(new_compressed_file, 'wb') as fh_out:
+                subprocess.check_call(compression_command, 
+                        stdin=fh_in, stdout=fh_out)
+
+        # Generate the new dataset model object
+        # need relative path, not absolute
+        new_compressed_file_rel = self.filesystem_location + compression_type
+
+        new_compressed_dataset = Dataset.objects.create(
+            label= self.label + ' (compressed)', 
+            type= self.type, 
+            filesystem_location= new_compressed_file_rel)
+
+        # Finally, add this new compressed dataset to the dataset_set
+        # field in all the related model objects that point to the
+        # uncompressed version
+        [obj.dataset_set.add(new_compressed_dataset) for obj in related_models]
+
+        return new_compressed_dataset
 
 
 # Make sure the Dataset types are unique. This runs once at startup.
