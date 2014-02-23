@@ -366,6 +366,9 @@ def sv_testing_bootstrap(project):
     copy_and_add_dataset_source(sample, Dataset.TYPE.FASTQ2,
             Dataset.TYPE.FASTQ2, fq2)
 
+    if '--sv' in sys.argv:  # using --sv argument runs pipeline for SV project
+        run_pipeline('sample_alignment_ref', ref_genome, [sample])
+
 
 def reset_database():
     """Deletes the old database and sets up a new one.
