@@ -9,7 +9,7 @@
 <div class="row">
   <!-- Side Nav
 ================================================== -->  
-  <div class="col-md-3">
+  <div class="col-xs-3">
     <div class="btn-group btn-group-justified gd-data-analyze-group">
       <a href="/projects/{{project.uid}}/data" type="button" class="btn btn-default {% if tab_root == 'DATA' %}active{% endif %}">Data</a>
       <a href="/projects/{{project.uid}}/analyze" type="button" class="btn btn-default {% if tab_root == 'ANALYZE' %}active{% endif %}">Analyze</a>
@@ -23,17 +23,16 @@
     {% if project %}
       {% include "side_nav_bar_analyze.html" %}
     {% endif %}
-  </div><!--/.col3 -->
+{% endif %}    
+  </div><!--/side nav -->
 
   <!-- Content Area
 ================================================== -->  
 
-  <div class="col-md-9">
-    {% block content%}
+  <div class="col-xs-9">
+    {% block content %}
+    No content.
     {% endblock %}
-    {% block tab_content%}
-    {% endblock %}
-  </div> <!--/.col9 -->
-{% endif %}
+  </div> <!-- /main content -->
 </div>
 {% endblock %}

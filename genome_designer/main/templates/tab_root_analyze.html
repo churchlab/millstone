@@ -3,7 +3,7 @@
 {% block tab_content %}
 
   <div class="row-fluid">
-    <select id="gd-analyze-select-ref-genome">
+    <select class="selectpicker" id="gd-analyze-select-ref-genome">
       <option value=-1>Select reference genome</option>
       {% for ref_genome in project.referencegenome_set.all %}
         <option value="{{ref_genome.uid}}"
@@ -13,7 +13,7 @@
       {% endfor %}
     </select>
 
-    <select id="gd-analyze-select-search-entity" class="gd-analyze-select-search-entity"
+    <select id="gd-analyze-select-search-entity" class="gd-analyze-select-search-entity selectpicker"
         style="display: none">
         <option value="VARIANTS" selected>Variants</option>
       <option value="SETS" {% if sub_view == 'sets' %}selected{% endif %}>Variant Sets</option>

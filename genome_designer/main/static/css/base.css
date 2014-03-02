@@ -15,7 +15,7 @@ http://getbootstrap.com/examples/sticky-footer/sticky-footer.css
 
 body {
   padding-top: 50px;
-  margin-bottom: 60px;
+  margin-bottom: 120px;
 }
 
 .gd-logo {
@@ -55,7 +55,15 @@ body {
 }
 
 .gd-caret-align {
-  display:inline-block;
+  margin-top: 6px;
+}
+
+.gd-data-header {
+  margin-top: 0px;
+}
+
+.gd-data-header > h1 {
+  margin-bottom: 0px;
 }
 
 .gd-error-text {

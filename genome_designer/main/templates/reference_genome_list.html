@@ -1,8 +1,8 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-<div class="page-header">
-  <h1>Reference Genomes</h1>
+<div class="page-header gd-data-header">
+  <h1 class="gd-data-header">Reference Genomes</h1>
 </div>
 
 <p>
@@ -14,7 +14,7 @@
     </div>
   {% endif %}
 
-  <div class="btn-group">
+  <div class="btn-group pull-right">
     <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
       Create New
       <span class="caret"></span>
@@ -28,6 +28,7 @@
       <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromNCBI" data-toggle="modal">From NCBI Accession...</a></li>
     </ul>
   </div>
+
 </p>
 
 <div id="gd-ref-genome-list-view-datatable-hook" class="container-fluid">
