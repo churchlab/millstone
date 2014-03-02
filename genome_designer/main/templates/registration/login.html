@@ -1,12 +1,29 @@
 {% extends "base.html" %}
 
 {% block tabs_or_splash %}
-  <h1>Login</h1>
-  <form action="/accounts/login/" method="post">{% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn">Login</button>
-    <input type="hidden" name="next" value="{{next}}" />
-  </form>
-  <br>
-  Or <a href="/accounts/register/">Register</a>
+<div class="page-header">
+<h1>Welcome to Millstone.</h1>
+</div>
+<div class="container">
+  <div class="row">
+    <div class="col-sm-4 col-sm-offset-4">
+      <div class="panel panel-default">
+        <div class="panel-body text-center">
+    
+          <form action="/accounts/login/" method="post">{% csrf_token %}
+            <p>
+              <input id="id_username" maxlength="254" name="username" type="text" class="form-control" placeholder="Username"/>
+            </p>
+            <p>
+              <input id="id_password" name="password" type="password" class="form-control" placeholder="Password"/></p>
+            <button class="btn btn-primary">Login</button>
+            <input type="hidden" name="next" value="{{next}}" />
+          </form>
+        <br>
+        Or <a href="/accounts/register/">Register</a>.
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -1,6 +1,6 @@
 <html>
 <head>
-  <title>Genome Designer</title>
+  <title>Millstone</title>
 
   {% load staticfiles %}
 
@@ -52,21 +52,37 @@
   <script type="text/javascript" src="{% static "js/gene_view.js" %}"></script>
   <script type="text/javascript" src="{% static "js/goterm_view.js" %}"></script>
   <script type="text/javascript" src="{% static "js/app.js" %}"></script>
+
+  <link rel="shortcut icon" 
+        type="image/png" 
+        href="{% static "img/logo2.png" %}">
+
 </head>
 <body>
+  <!-- NavBar
+================================================== -->
   {% include "top_nav_bar.html" %}
 
-  <div id="gd-page-container" class="gd-page-container container-fluid">
-    {% block tabs_or_splash%}{% endblock %}
-  </div><!--/#gd-page-container -->
+  <!-- Main
+================================================== -->
 
-  <footer class="gd-footer">
-    <div class="container-fluid">
-      <p>Designed and built by <a href="http://www.dbgoodman.com/" target="_blank">Dan Goodman</a>, <a href="http://www.glebkuznetsov.com/" target="_blank">Gleb Kuznetsov</a>, and <a href="http://www.linkedin.com/in/marclajoie" target="_blank">Marc Lajoie</a>.</p>
-      <p><a href="http://arep.med.harvard.edu/" target="_blank">Church Lab</a></p>
-      <p><a href="http://genetics.med.harvard.edu/" target="_blank">Harvard Medical School Department of Genetics</a></p>
-      <p>Copyright 2013</p>
+  <div id="gd-page-container" class="gd-page-container">
+    <div class="container">
+    {% block tabs_or_splash%}{% endblock %}
     </div>
-  </footer>
+  </div><!--/#gd-page-container --> 
+
+  <!-- Footer
+================================================== -->
+  <div id="gd-footer">
+    <div class="container">
+      <p>Designed and built by <a href="http://www.dbgoodman.com/" target="_blank">Dan Goodman</a>, <a href="http://www.glebkuznetsov.com/" target="_blank">Gleb Kuznetsov</a>, and <a href="http://www.linkedin.com/in/marclajoie" target="_blank">Marc Lajoie</a>.</p>
+      <p>
+        <a href="http://arep.med.harvard.edu/" target="_blank">Church Lab</a>, 
+        <a href="http://genetics.med.harvard.edu/" target="_blank">Harvard Medical School Department of Genetics</a>
+      </p>
+      <p>Copyright 2014</p>
+    </div>
+  </div>
 </body>
 </html>

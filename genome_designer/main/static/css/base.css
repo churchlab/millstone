@@ -1,25 +1,61 @@
-body {
-  padding-top: 50px;
-}
-
-.gd-page-container {
-  min-height: 100%;
-}
-
-.gd-tab-content {
-  min-height: 100%;
-}
-
-.gd-footer {
+/* Sticky footer styles
+http://getbootstrap.com/examples/sticky-footer/sticky-footer.css
+-------------------------------------------------- */
+#gd-footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  /* Set the fixed height of the footer here */
+  height: 120px;
   background-color: #f5f5f5;
   border-top: 1px solid #e5e5e5;
-  margin-top: 70px;
-  padding: 30px 0;
-  text-align: center;
+  padding-top: 20px;
+  padding-bottom: 20px; 
 }
 
-.gd-footer p {
-  margin: 0;
+body {
+  padding-top: 50px;
+  margin-bottom: 60px;
+}
+
+.gd-logo {
+  height: 38px;
+  width: 38px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  margin-right: 8px;
+}
+
+.gd-navbar {
+  margin-bottom: 10px; 
+}
+
+.gd-navbar .navbar .nav > li.dropdown.open.active > a:hover,
+
+.gd-navbar .navbar .nav.pull-right {margin-left: 10px; margin-right: 0;}
+
+.gd-navbar .navbar .nav.pull-left {margin-right: 5px; margin-right: 0;}
+
+.gd-navbar .navbar { min-height:40px;} 
+
+.gd-navbar .navbar .navbar-brand { 
+  float: none; 
+  font-size: 18px;
+  margin-top: 3px;
+}
+
+.gd-navbar .navbar .navbar-nav > li > a {  
+  padding-top: 12px; 
+  padding-bottom: 12px; 
+  line-height: 20px;
+}
+
+.gd-data-analyze-group {
+  padding-bottom: 10px;
+}
+
+.gd-caret-align {
+  display:inline-block;
 }
 
 .gd-error-text {
@@ -29,11 +65,6 @@ body {
 
 .gd-home-project-name {
   font-size: 20px;
-}
-
-.dropdown-menu > li > a.gd-topnavbar-create-project-text {
-  color: blue;
-  font-weight: bold;
 }
 
 input.gd-form-tall {
