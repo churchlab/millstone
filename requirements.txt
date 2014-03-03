@@ -1,5 +1,6 @@
 Django==1.5.1
 PyVCF==0.6.4
+South==0.8.4
 amqp==1.0.12
 anyjson==0.3.3
 argparse==1.2.1
@@ -21,5 +22,5 @@ python-dateutil==2.1
 pytz==2013b
 six==1.3.0
 sympy==0.7.3
+vulture==0.4.1
 wsgiref==0.1.2
-South==0.8.4

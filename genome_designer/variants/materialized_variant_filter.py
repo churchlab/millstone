@@ -9,22 +9,14 @@ from scratch.
 from django.db import connection
 from sympy.logic import boolalg
 
-from variants.common import ALL_SQL_KEY_MAP_LIST
-from variants.common import DELIM_TO_Q_POSTFIX
 from variants.common import EXPRESSION_REGEX
 from variants.common import SAMPLE_SCOPE_REGEX
-from variants.common import SAMPLE_SCOPE_REGEX_NAMED
 from variants.common import GENE_REGEX
-from variants.common import GENE_REGEX_NAMED
 from variants.common import SET_REGEX
-from variants.common import SET_REGEX_NAMED
-from variants.common import dictfetchall
 from variants.common import convert_delim_key_value_triple_to_expr
 from variants.common import get_all_key_map
 from variants.common import get_delim_key_value_triple
-from variants.common import get_django_q_object_for_triple
 from variants.common import hashablefetchall
-from variants.common import SqlReadySymbol
 from variants.common import SymbolGenerator
 from variants.materialized_view_manager import MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager

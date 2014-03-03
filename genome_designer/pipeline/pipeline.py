@@ -6,8 +6,6 @@ and carry out the gauntlet of steps to perform alignments, alignment
 cleaning, snv calling, and effect prediction.
 """
 
-from subprocess import CalledProcessError
-
 from celery import chain
 from celery import group
 from django.conf import settings
@@ -15,9 +13,9 @@ from django.conf import settings
 from main.celery_util import CELERY_ERROR_KEY
 from main.celery_util import get_celery_worker_status
 from main.models import AlignmentGroup
+from read_alignment import align_with_bwa_mem
 from snv_calling import get_variant_tool_params
 from snv_calling import find_variants_with_tool
-from read_alignment import align_with_bwa_mem
 
 
 # The default alignment function.
@@ -127,21 +125,3 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     whole_pipeline.apply_async()
 
     return alignment_group
-
-
-def wait_and_check_pipe(pipe, popenargs=None):
-    """Similar to subprocess.check_call() except takes a running pipe
-    as input.
-
-    Args:
-        pipe: The running pipe.
-        popenargs: Optional list of args passed to Popen for error reporting.
-    """
-    retcode = pipe.wait()
-    if retcode:
-        if popenargs:
-            cmd = popenargs[0]
-        else:
-            cmd = ''
-        raise CalledProcessError(retcode, cmd)
-    return 0
