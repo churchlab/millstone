@@ -1,45 +1,38 @@
-
 """
 The alignment pipeline.
 
 We start with the .fastq files and the reference for a particular genome
-and carry out the gauntlet of steps to perform alignments, alignment 
+and carry out the gauntlet of steps to perform alignments, alignment
 cleaning, snv calling, and effect prediction.
 """
 
-from celery import group
-from celery import chain
-from celery import task
-import copy
-import os
-import subprocess
 from subprocess import CalledProcessError
-import sys
+
+from celery import chain
+from celery import group
+from django.conf import settings
 
 from main.celery_util import CELERY_ERROR_KEY
 from main.celery_util import get_celery_worker_status
-from main.models import clean_filesystem_location
-from main.models import get_dataset_with_type
 from main.models import AlignmentGroup
 from main.models import Dataset
-from main.models import ExperimentSampleToAlignment
-from scripts.import_util import add_dataset_to_entity
-from scripts.jbrowse_util import add_bam_file_track
-from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
 from snv_calling import get_variant_tool_params
 from snv_calling import find_variants_with_tool
 from read_alignment import align_with_bwa_mem
-from settings import DEBUG_CONCURRENT
-from settings import PWD
-from settings import TOOLS_DIR
-from settings import BASH_PATH
 
+
+# The default alignment function.
 ALIGNMENT_FN = align_with_bwa_mem
 
+
 def _assert_celery_running():
-    # If running concurrently, check whether Celery is running.
+    """Make sure celery is running, unless settings.CELERY_ALWAYS_EAGER = True.
+    """
+    if settings.CELERY_ALWAYS_EAGER:
+        return
     celery_status = get_celery_worker_status()
     assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
+
 
 def run_pipeline_multiple_ref_genomes(alignment_group_label, ref_genome_list,
         sample_list, test_models_only=False):
@@ -75,7 +68,9 @@ def run_pipeline_multiple_ref_genomes(alignment_group_label, ref_genome_list,
     # Return a dictionary of all alignment groups indexed by ref_genome uid.
     return alignment_groups
 
-def run_pipeline(alignment_group_label, ref_genome, sample_list, test_models_only=False):
+
+def run_pipeline(alignment_group_label, ref_genome, sample_list,
+        test_models_only=False):
     """
     Creates an AlignmentGroup if not created and kicks off alignment for each one.
 
@@ -134,8 +129,8 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list, test_models_onl
 
     return alignment_group
 
-def resume_alignment_group_alignment(alignment_group, sample_list,
-        concurrent=DEBUG_CONCURRENT):
+
+def resume_alignment_group_alignment(alignment_group, sample_list):
     """Resumes alignments that are not complete for an alignment group.
 
     Any samples that are not in the ready state are deleted and re-started.
@@ -146,11 +141,7 @@ def resume_alignment_group_alignment(alignment_group, sample_list,
     # re-call SNPs as necessary. For now, let's just not do this. -dbg
     raise NotImplementedError
 
-    # If running concurrently, check whether Celery is running.
-    if concurrent:
-        celery_status = get_celery_worker_status()
-        assert not CELERY_ERROR_KEY in celery_status, (
-                celery_status[CELERY_ERROR_KEY])
+    _assert_celery_running()
 
     for sample in sample_list:
         # Skip samples that have already been aligned.

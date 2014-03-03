@@ -9,19 +9,18 @@ EMAIL = "millstone_user@gmail.com"
 
 # The absolute path of the settings.py file's directory.
 # Useful for settings that require absolute paths like templates.
-PWD = os.path.join(os.path.dirname(os.path.realpath(__file__ )), '../')
+PWD = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../')
 
 # Absolute path to the third-party tools dir where setup.py stores
 # downloaded tools that are used internally.
 TOOLS_DIR = os.path.join(PWD, 'tools')
 
+# Django DEBUG flag.
 DEBUG = True
 
+# A boolean that turns on/off template debug mode.
+# https://docs.djangoproject.com/en/dev/ref/settings/#template-debug
 TEMPLATE_DEBUG = DEBUG
-
-# Default True, requiring celery server to be running.
-# Override this as False in local_settings.py to force synchronous behavior.
-DEBUG_CONCURRENT = True
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -260,6 +259,10 @@ CELERY_IMPORTS = (
         'pipeline.snv_calling',
 )
 
+# When True, forces synchronous behavior so that it's not necessary
+# to have a celery server running.
+CELERY_ALWAYS_EAGER = False
+
 
 ###############################################################################
 # External tools
@@ -323,6 +326,7 @@ SNPEFF_BUILD_DEBUG = True
 # Names of SnpEff summary files, which we want to delete after running.
 SNPEFF_SUMMARY_FILES = ['snpEff_genes.txt', 'snpEff_summary.html']
 
+
 ###############################################################################
 # S3
 ###############################################################################
@@ -338,10 +342,12 @@ def is_ec2():
         return False
 RUNNING_ON_EC2 = is_ec2()
 
-# Allows user to create an S3 backed project. 
+# Allows user to create an S3 backed project.
+# Set this to False if you want to run on EC2, but not allow
+# data to be stored to S3.
 S3_ENABLED = RUNNING_ON_EC2 or False
 
-# Don't perform any API call that changes anything on S3. 
+# Don't perform any API call that changes anything on S3.
 S3_DRY_RUN = False
 
 # Get them from https://console.aws.amazon.com/iam/home?#security_credential
@@ -359,6 +365,7 @@ S3_TEST_BUCKET = S3_BUCKET
 # Maximum file size for user upload
 S3_FILE_MAX_SIZE = 1024 ** 3  # 1GB
 
+
 ###############################################################################
 # Testing
 ###############################################################################
@@ -369,8 +376,9 @@ TEST_FILESYSTEM_DIR = os.path.join(PWD, 'temp_test_data')
 
 TEST_S3 = False
 
+
 ###############################################################################
-# Profiling
+# Code Profiling
 ###############################################################################
 
 # Directory where profiler logs will be stored. See README.md.

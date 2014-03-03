@@ -17,7 +17,6 @@ from read_alignment_util import ensure_bwa_index
 from scripts.import_util import add_dataset_to_entity
 from scripts.jbrowse_util import add_bam_file_track
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
-from settings import DEBUG_CONCURRENT
 from settings import PWD
 from settings import TOOLS_DIR
 from settings import BASH_PATH
