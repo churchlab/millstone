@@ -15,7 +15,6 @@ from django.conf import settings
 from main.celery_util import CELERY_ERROR_KEY
 from main.celery_util import get_celery_worker_status
 from main.models import AlignmentGroup
-from main.models import Dataset
 from snv_calling import get_variant_tool_params
 from snv_calling import find_variants_with_tool
 from read_alignment import align_with_bwa_mem
@@ -128,44 +127,6 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     whole_pipeline.apply_async()
 
     return alignment_group
-
-
-def resume_alignment_group_alignment(alignment_group, sample_list):
-    """Resumes alignments that are not complete for an alignment group.
-
-    Any samples that are not in the ready state are deleted and re-started.
-    """
-
-    # This should be a part of run_alignment_pipeline, which will 
-    # intelligently decide to resume or restart all alignments and
-    # re-call SNPs as necessary. For now, let's just not do this. -dbg
-    raise NotImplementedError
-
-    _assert_celery_running()
-
-    for sample in sample_list:
-        # Skip samples that have already been aligned.
-        maybe_sample_alignment_list = (
-                alignment_group.experimentsampletoalignment_set.filter(
-                    experiment_sample=sample))
-        if len(maybe_sample_alignment_list):
-            sample_alignment = maybe_sample_alignment_list[0]
-            maybe_dataset_set = sample_alignment.dataset_set.filter(
-                type=Dataset.TYPE.BWA_ALIGN)
-            if len(maybe_dataset_set):
-                bwa_dataset = maybe_dataset_set[0]
-                if bwa_dataset.status == Dataset.STATUS.READY:
-                    # Skip repeating alignment.
-                    continue
-                else:
-                    # Delete the sample_alignment and its data and just start
-                    # over.
-                    sample_alignment.delete()
-
-        # Carry out alignment.
-        args = [alignment_group, sample, None, False]
-        # fn_runner(ALIGNMENT_FN, alignment_group.reference_genome.project,
-        #         args, concurrent=concurrent)
 
 
 def wait_and_check_pipe(pipe, popenargs=None):
