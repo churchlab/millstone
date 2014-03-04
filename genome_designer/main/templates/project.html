@@ -1,11 +1,30 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-  <h1>{{project.title}}</h1>
-
-  <button id="gd-projects-delete-btn" class="btn btn-danger">
-    Delete
-  </button>
+	<h1 class="gd-header">Project Overview</h1>	
+	<div class="panel panel-default">
+		<div class="panel-body">
+			<li class="list-group-item">Name: {{project.title}}</li>
+			<li class="list-group-item">Date Created:</li>
+			<li class="list-group-item">Reference Genomes:</li>
+			<li class="list-group-item">Samples:</li>
+			<li class="list-group-item">Alignments:</li>
+			<li class="list-group-item">Total Variants:</li>
+			<li class="list-group-item">Sets:</li>
+			<li class="list-group-item">Size on Disk:</li>
+		</div>
+		<div class="panel-footer">
+			<div class="btn-toolbar">
+				<a id="gd-projects-delete-btn" class="btn btn-primary">
+	    	Export Project
+	  		</a>
+				<a id="gd-projects-delete-btn" class="btn btn-danger">
+	    	Delete Project
+	  		</a>
+			</div>
+		</div>
+	</div>
+		
 
 <script type="text/javascript">
   VIEW_TAG = 'PROJECT';
