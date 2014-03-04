@@ -1,8 +1,8 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-<div class="page-header gd-data-header">
-  <h1 class="gd-data-header">Samples</h1>
+<div class="gd-header h1">
+  Samples
 </div>
 
 {% if error_string %}
@@ -12,30 +12,6 @@
     {{ error_string }}
   </div>
 {% endif %}
-
-<form class="form-search">
-  <div class="btn-group">
-    <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
-      Import
-      <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu">
-      <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From URL...</a></li>
-      <li role="presentation">
-        <a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">
-          From Server Location...
-        </a>
-      </li>
-      {% if project.is_s3_backed %}
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">
-            Upload To S3...
-          </a>
-        </li>
-      {% endif %}
-    </ul>
-  </div>
-</form>
 
 <div id="gd-sample-list-view-datatable-hook" class="container-fluid">
 </div>

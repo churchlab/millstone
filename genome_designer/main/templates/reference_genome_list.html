@@ -1,37 +1,19 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-<div class="page-header gd-data-header">
-  <h1 class="gd-data-header">Reference Genomes</h1>
+<div class="gd-header h1">
+  Reference Genomes
 </div>
 
-<p>
-  {% if error_string %}
-    <div class="alert alert-error alert-block">
-      <button type="button" class="close" data-dismiss="alert">&times;</button>
-      <h4>Error</h4>
-      {{ error_string }}
-    </div>
-  {% endif %}
+{% if error_string %}
+<div class="alert alert-error alert-block">
+  <button type="button" class="close" data-dismiss="alert">&times;</button>
+  <h4>Error</h4>
+  {{ error_string }}
+</div>
+{% endif %}
 
-  <div class="btn-group pull-right">
-    <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
-      Create New
-      <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu">
-      <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From Variant Set...</a></li>
-      <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>
-      {% if project.is_s3_backed %}
-      <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">Upload to S3...</a></li>
-      {% endif %}
-      <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromNCBI" data-toggle="modal">From NCBI Accession...</a></li>
-    </ul>
-  </div>
-
-</p>
-
-<div id="gd-ref-genome-list-view-datatable-hook" class="container-fluid">
+<div id="gd-ref-genome-list-view-datatable-hook">
 </div>
 
 <!-- ModalFromFile -->
@@ -92,9 +74,13 @@
 
 <script type="text/javascript">
   VIEW_TAG = 'REF_GENOME_LIST';
+  {% with is_s3_backend=project.is_s3_backend %}
+  IS_S3_BACKEND = '{{is_s3_backend}}';
+  {% endwith %}
 
   {% autoescape off %}
-    REF_GENOME_LIST_DATA = {{ref_genome_list_json}};
+  REF_GENOME_LIST_DATA = {{ref_genome_list_json}};
+    
   {% endautoescape %}
 
 </script>

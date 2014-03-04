@@ -8,6 +8,7 @@ gd.SampleView = Backbone.View.extend({
 
   initialize: function() {
     this.render();
+    this.decorate_new_button();
     this.uuid = qq.getUniqueId();
   },
 
@@ -143,5 +144,35 @@ gd.SampleView = Backbone.View.extend({
   handleFormSubmit: function() {
     $("#formFromFile").submit();
   },
+
+  decorate_new_button: function() {
+
+    $("div.gd-new-button").html(
+      '<form class="form-search">' +
+      '  <div class="btn-group">' +
+      '    <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">' +
+      '      New' +
+      '      <span class="caret"></span>' +
+      '    </a>' +
+      '    <ul class="dropdown-menu">' +
+      '      <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From URL...</a></li>' +
+      '      <li role="presentation">' +
+      '        <a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">' +
+      '          From Server Location...' +
+      '        </a>' +
+      '      </li>' +
+      '      {% if project.is_s3_backed %}' +
+      '        <li role="presentation">' +
+      '          <a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">' +
+      '            Upload To S3...' +
+      '          </a>' +
+      '        </li>' +
+      '      {% endif %}' +
+      '    </ul>' +
+      '  </div>' +
+      '</form>'
+    );
+  }
+
 
 });

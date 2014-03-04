@@ -1,15 +1,9 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-<div class="page-header">
-  <h1>Alignments</h1>
+<div class="gd-header h1">
+  Alignments
 </div>
-
-<p>
-  <a href="{% url 'main.views.alignment_create_view' project.uid %}">
-    <button type="submit" class="btn btn-primary">New Alignment...</button>
-  </a>
-</p>
 
 <div id="gd-alignment_list_view-datatable-hook" class="container-fluid">
 </div>
@@ -19,6 +13,7 @@
 
   {% autoescape off %}
     ALIGNMENT_LIST_DATA = {{alignment_list_json}};
+    NEW_ALIGNMENT_LINK = "{% url 'main.views.alignment_create_view' project.uid %}"
   {% endautoescape %}
 </script>
 {% endblock %}

@@ -6,33 +6,32 @@
 <script>alert("Missing tab root");</script>
 {% endif %}
 
-<div class="row">
-  <!-- Side Nav
+    <div class="gd-sidebar">
+    <!-- Side Nav
 ================================================== -->  
-  <div class="col-xs-3">
-    <div class="btn-group btn-group-justified gd-data-analyze-group">
-      <a href="/projects/{{project.uid}}/data" type="button" class="btn btn-default {% if tab_root == 'DATA' %}active{% endif %}">Data</a>
-      <a href="/projects/{{project.uid}}/analyze" type="button" class="btn btn-default {% if tab_root == 'ANALYZE' %}active{% endif %}">Analyze</a>
-    </div>
-
-{% if tab_root == 'DATA' %}
-    {% if project %}
-      {% include "side_nav_bar_data.html" %}
-    {% endif %}
-{% elif tab_root == 'ANALYZE' %}
-    {% if project %}
-      {% include "side_nav_bar_analyze.html" %}
-    {% endif %}
-{% endif %}    
-  </div><!--/side nav -->
+      <div class="btn-group btn-group-justified gd-data-analyze-group">
+        <a href="/projects/{{project.uid}}/data" type="button" class="btn btn-default {% if tab_root == 'DATA' %}active{% endif %}">Data</a>
+        <a href="/projects/{{project.uid}}/analyze" type="button" class="btn btn-default {% if tab_root == 'ANALYZE' %}active{% endif %}">Analyze</a>
+      </div>
+    {% if tab_root == 'DATA' %}
+        {% if project %}
+          {% include "side_nav_bar_data.html" %}
+        {% endif %}
+    {% elif tab_root == 'ANALYZE' %}
+        {% if project %}
+          {% include "side_nav_bar_analyze.html" %}
+        {% endif %}
+    {% endif %}    
+    </div><!--/side nav -->
 
   <!-- Content Area
 ================================================== -->  
-
-  <div class="col-xs-9">
+  
+  <div class="gd-main-content">
+    <div class="container-fluid">
     {% block content %}
     No content.
     {% endblock %}
-  </div> <!-- /main content -->
-</div>
+    </div>
+  </div><!-- /main content -->
 {% endblock %}

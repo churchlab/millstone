@@ -8,6 +8,7 @@ gd.AlignmentListView = Backbone.View.extend({
 
   initialize: function() {
     this.render();
+    this.decorate_new_button();
   },
 
   render: function() {
@@ -19,4 +20,14 @@ gd.AlignmentListView = Backbone.View.extend({
         fieldConfig: ALIGNMENT_LIST_DATA['field_config']
     });
   },
+
+  decorate_new_button: function() {
+
+    $("div.gd-new-button").html(
+      '<a href=' + NEW_ALIGNMENT_LINK + '>' +
+        '<button type="submit" class="btn btn-primary">New...</button>' +
+      '</a>'
+    );
+  }
+
 });

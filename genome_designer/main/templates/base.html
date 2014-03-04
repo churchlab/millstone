@@ -1,3 +1,4 @@
+<!DOCTYPE html> <!-- required for bootstrap to work right. -->
 <html>
 <head>
   <title>Millstone</title>
@@ -10,6 +11,8 @@
   <link rel="stylesheet" href="{% static "vendor/DataTables-1.9.4/extras/ColVis/media/css/ColVis.css" %}" type="text/css" />
   <link rel="stylesheet" href="{% static "vendor/fineuploader/fineuploader-4.0.1.min.css" %}" type="text/css" />
   <link rel="stylesheet" href="{% static "vendor/bootstrap-select/bootstrap-select.css" %}" type="text/css">
+  <link rel="stylesheet" href="{% static "vendor/dataTables.BootStrap/dataTables.BootStrap.css" %}" type="text/css">
+  
   <link rel="stylesheet" href="{% static "css/base.css" %}" type="text/css" />
 
 
@@ -25,7 +28,7 @@
   <script type="text/javascript" src="{% static "vendor/js/dt_bootstrap.js" %}"></script>
   <script type="text/javascript" src="{% static "vendor/fineuploader/all.fineuploader-4.0.1.min.js" %}"></script>
   <script type="text/javascript" src="{% static "vendor/bootstrap-select/bootstrap-select.js" %}"></script>
-  
+  <script type="text/javascript" src="{% static "vendor/dataTables.BootStrap/dataTables.BootStrap.js" %}"></script>
 
   <!-- JavaScript - Local -->
   <script type="text/javascript" src="{% static "js/namespace.js" %}"></script>
@@ -71,14 +74,14 @@
 ================================================== -->
 
   <div id="gd-page-container" class="gd-page-container">
-    <div class="container">
+    <div class="container-fluid">
     {% block tabs_or_splash%}{% endblock %}
     </div>
   </div><!--/#gd-page-container --> 
 
-  <!-- Footer
+  <!-- Footer (this is broken, so I'm commenting it out for now)
 ================================================== -->
-  <div id="gd-footer">
+<!--   <div id="gd-footer">
     <div class="container">
       <p>Designed and built by <a href="http://www.dbgoodman.com/" target="_blank">Dan Goodman</a>, <a href="http://www.glebkuznetsov.com/" target="_blank">Gleb Kuznetsov</a>, and <a href="http://www.linkedin.com/in/marclajoie" target="_blank">Marc Lajoie</a>.</p>
       <p>
@@ -87,6 +90,6 @@
       </p>
       <p>Copyright 2014</p>
     </div>
-  </div>
+  </div> -->
 </body>
 </html>
