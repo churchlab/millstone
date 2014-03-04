@@ -7,9 +7,7 @@ reasonable separation point is to separate page actions from Ajax actions.
 
 import copy
 import csv
-import os.path
 import json
-import re
 from StringIO import StringIO
 import time
 
@@ -113,8 +111,8 @@ def get_variant_list(request):
     # right permissions.
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
-    reference_genome = ReferenceGenome.objects.get(project=project,
-            uid=ref_genome_uid)
+    reference_genome = get_object_or_404(ReferenceGenome.objects.get(
+            project=project, uid=ref_genome_uid)
 
     # Pagination.
     pagination_start = int(request.GET.get('iDisplayStart', 0))

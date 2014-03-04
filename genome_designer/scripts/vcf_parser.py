@@ -18,8 +18,10 @@ from main.models import VariantEvidence
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import TOOLS_DIR
 
+
 TABIX_BINARY = '%s/tabix/tabix' % TOOLS_DIR
 BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
+
 
 class QueryCache(object):
     """Manual caching for queries to avoid excessive db calls.
@@ -36,7 +38,7 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     """
     vcf_dataset = get_dataset_with_type(alignment_group, vcf_dataset_type)
     parse_vcf(vcf_dataset, alignment_group.reference_genome)
-    
+
 
 @transaction.commit_on_success
 def parse_vcf(vcf_dataset, reference_genome):
@@ -74,7 +76,7 @@ def parse_vcf(vcf_dataset, reference_genome):
             # Get or create the Variant for this record. This step
             # also generates the alternate objects and assigns their
             # data fields as well.
-            variant, alts = get_or_create_variant(reference_genome, 
+            variant, alts = get_or_create_variant(reference_genome,
                     record, vcf_dataset, query_cache)
 
 
@@ -97,7 +99,7 @@ def extract_raw_data_dict(vcf_record):
             # way to deal with this quite yet.
             data_dict[str(key)] = pickle.dumps(value)
 
-    # The ALT key is a fancy _AltRecord object (or possibly subclassed 
+    # The ALT key is a fancy _AltRecord object (or possibly subclassed
     # as a substitution or an SV, so for now, just pass its __str__()
     data_dict['ALT'] = pickle.dumps(vcf_record.ALT)
 
@@ -113,7 +115,7 @@ def extract_raw_data_dict(vcf_record):
     elif hasattr(vcf_record, 'var_type'):
         data_dict['TYPE'] = str(vcf_record.var_type)
     else:
-        data_dict['TYPE'] =  'unknown'
+        data_dict['TYPE'] = 'unknown'
 
     # Populate 'INFO'
     if hasattr(vcf_record, 'INFO'):
@@ -130,22 +132,21 @@ def populate_common_data_info(data_dict, vcf_record):
         data_dict[effective_key] = pickle.dumps(value)
 
 def vcf_to_vcftabix(vcf_dataset):
-    """
-    Generate a compressed version of a vcf file and index it with 
+    """Generates a compressed version of a vcf file and index it with
     samtools tabix. Add a new dataset model instance for this compressed
     version, with the same related objects. Flag is as compressed,
-    indexed, etc. 
+    indexed, etc.
     """
 
     # 1. Check if dataset is compressed. If not, then grab the compressed
     # version or make a compressed version.
     if not vcf_dataset.is_compressed():
         # Check for existing compressed version using related model.
-        # Assume that the first model will do. 
+        # Assume that the first model will do.
         related_model = vcf_dataset.get_related_model_set().all()[:1]
         compressed_dataset = get_dataset_with_type(
-                entity= related_model, 
-                type= vcf_dataset.type, 
+                entity=related_model,
+                type=vcf_dataset.type,
                 compressed=True)
         # If there is no compressed dataset, then make it
         if compressed_dataset is None:
@@ -161,7 +162,7 @@ def vcf_to_vcftabix(vcf_dataset):
 
         # Make tabix index
         subprocess.check_call([
-            TABIX_BINARY, 
+            TABIX_BINARY,
             '-p', 'vcf',
             compressed_dataset.get_absolute_location()
         ])
@@ -274,6 +275,7 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
                 data=sample_data_dict)
 
     return (variant, alts)
+
 
 def extract_sample_data_dict(s):
     """Manually serializes a pyvcf _Call object because their internal use of

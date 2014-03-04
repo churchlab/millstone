@@ -1,16 +1,22 @@
+"""
+Miscellaneous utility functions.
+"""
+
 import os
-import pickle
 import shutil
 import sys
 import tempfile
+import urllib2
+
 
 # Number of characters that snpeff requires per line of the genbank file
 SNPEFF_MIN_LINE_LEN = 20
 
+
 def setup_django_env():
     """Setting up the django/python env is a PITA but must be done."""
     # First make sure settings are on the path.
-    PWD = os.path.dirname(os.path.realpath(__file__ ))
+    PWD = os.path.dirname(os.path.realpath(__file__))
     settings_path = os.path.split(PWD)[0]
     os.sys.path.append(settings_path)
 
@@ -56,19 +62,21 @@ def fn_runner(fn, project, args_list, concurrent=False):
     else:
         return generic_task.__call__(fn.__name__, project, args_list)
 
-import urllib2
 
 def internet_on():
+    """Check whether we're connected to the Internet.
+    """
     try:
-        response=urllib2.urlopen('http://74.125.228.100',timeout=1)
+        urllib2.urlopen('http://74.125.228.100', timeout=1)
         return True
-    except urllib2.URLError as err: pass
+    except urllib2.URLError:
+        pass
     return False
 
+
 def ensure_line_lengths(gb_file):
-    """
-    Since SNPEFF requires at least 20 characters per line, we will add trailing
-    spaces to every line of the genbank file and overwrite the file.
+    """Since SNPEFF requires at least 20 characters per line, we will add
+    trailing spaces to every line of the genbank file and overwrite the file.
     """
 
     fh_tmp = tempfile.NamedTemporaryFile(delete=False)
