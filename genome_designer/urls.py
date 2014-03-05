@@ -15,8 +15,6 @@ urlpatterns = patterns('',
             'main.views.project_create_view'),
     url(r'^projects/([\w-]+)$',
             'main.views.project_view'),
-    url(r'^projects/([\w-]+)/delete$',
-            'main.views.project_delete'),
 
     # Tab base views.
     url(r'^projects/([\w-]+)/data$',
@@ -103,6 +101,8 @@ urlpatterns = patterns('',
             'main.xhr_handlers.get_alignment_groups_for_ref_genome'),
     url(r'^_/genes$',
                 'main.xhr_handlers.get_gene_list'),
+    url(r'^projects/([\w-]+)/delete$',
+            'main.xhr_handlers.project_delete'),
 
 
     ###########################################################################

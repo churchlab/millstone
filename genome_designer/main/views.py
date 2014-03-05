@@ -116,16 +116,6 @@ def project_view(request, project_uid):
     return render(request, 'project.html', context)
 
 
-@login_required
-def project_delete(request, project_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-    project.delete()
-    response_data = {'redirect': '/'}
-    return HttpResponse(json.dumps(response_data),
-            content_type='application/json')
-
-
 VALID_ANALYZE_SUB_VIEWS = set([
     'variants',
     'sets',

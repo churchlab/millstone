@@ -49,6 +49,16 @@ if settings.S3_ENABLED:
 
 
 @login_required
+def project_delete(request, project_uid):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+    project.delete()
+    response_data = {'redirect': '/'}
+    return HttpResponse(json.dumps(response_data),
+            content_type='application/json')
+
+
+@login_required
 def export_variant_set_as_csv(request):
     """Returns a response to download a file for all of
     the samples contained in the variant set.
