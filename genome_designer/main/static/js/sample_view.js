@@ -147,7 +147,7 @@ gd.SampleView = Backbone.View.extend({
 
   decorate_new_button: function() {
 
-    $("div.gd-new-button").html(
+    button_html = (
       '<form class="form-search">' +
       '  <div class="btn-group">' +
       '    <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">' +
@@ -160,18 +160,22 @@ gd.SampleView = Backbone.View.extend({
       '        <a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">' +
       '          From Server Location...' +
       '        </a>' +
-      '      </li>' +
-      '      {% if project.is_s3_backed %}' +
+      '      </li>'
+    );
+    if (IS_S3_BACKEND == 'True') {
+      button_html = button_html + (
       '        <li role="presentation">' +
       '          <a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">' +
       '            Upload To S3...' +
       '          </a>' +
-      '        </li>' +
-      '      {% endif %}' +
+      '        </li>');
+    };
+    button_html = button_html + (
       '    </ul>' +
       '  </div>' +
       '</form>'
     );
+    $("div.gd-new-button").html(button_html);
   }
 
 
