@@ -1,26 +1,6 @@
 {% extends "tab_base.html" %}
 
-{% block tab_content %}
-
-  <div class="row-fluid">
-    <select class="selectpicker" id="gd-analyze-select-ref-genome">
-      <option value=-1>Select reference genome</option>
-      {% for ref_genome in project.referencegenome_set.all %}
-        <option value="{{ref_genome.uid}}"
-            {% if ref_genome.uid == selected_ref_genome_uid %}selected{% endif %}>
-          {{ref_genome.label}}
-        </option>
-      {% endfor %}
-    </select>
-
-    <select id="gd-analyze-select-search-entity" class="gd-analyze-select-search-entity selectpicker"
-        style="display: none">
-        <option value="VARIANTS" selected>Variants</option>
-      <option value="SETS" {% if sub_view == 'sets' %}selected{% endif %}>Variant Sets</option>
-      <option value="GENES" {% if sub_view == 'genes' %}selected{% endif %}>Genes</option>
-    </select>
-  </div>
-
+{% block content %}
   <div id="gd-analyze-subview-controls-hook" class="row-fluid gd-analyze-subview-controls-hook">
   </div>
 

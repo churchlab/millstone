@@ -2,13 +2,13 @@
 
 {% block tabs_or_splash %}
 
-{% if not tab_root %}
-<script>alert("Missing tab root");</script>
-{% endif %}
+  {% if not tab_root %}
+    <script>alert("DEBUG: Missing tab root");</script>
+  {% endif %}
 
-    <div class="gd-sidebar">
     <!-- Side Nav
 ================================================== -->  
+  <div class="gd-sidebar">
       <div class="btn-group btn-group-justified gd-data-analyze-group">
         <a href="/projects/{{project.uid}}/data" type="button" class="btn btn-default {% if tab_root == 'DATA' %}active{% endif %}">Data</a>
         <a href="/projects/{{project.uid}}/analyze" type="button" class="btn btn-default {% if tab_root == 'ANALYZE' %}active{% endif %}">Analyze</a>
@@ -22,7 +22,7 @@
           {% include "side_nav_bar_analyze.html" %}
         {% endif %}
     {% endif %}    
-    </div><!--/side nav -->
+  </div><!--/side nav -->
 
   <!-- Content Area
 ================================================== -->  
@@ -30,7 +30,7 @@
   <div class="gd-main-content">
     <div class="container-fluid">
     {% block content %}
-    No content.
+      No content.
     {% endblock %}
     </div>
   </div><!-- /main content -->

@@ -7,9 +7,7 @@ reasonable separation point is to separate page actions from Ajax actions.
 
 import copy
 import csv
-import os.path
 import json
-import re
 from StringIO import StringIO
 import time
 
@@ -27,6 +25,7 @@ from main.data_util import lookup_variants
 from main.model_views import adapt_new_melted_variant_view_to_frontend
 from main.model_views import adapt_new_cast_variant_view_to_frontend
 from main.model_views import GeneView
+from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Region
@@ -295,7 +294,6 @@ def get_variant_set_list(request):
 
 
 @login_required
-@require_GET
 def get_gene_list(request):
     ref_genome_uid = request.GET.get('refGenomeUid')
 
@@ -339,6 +337,7 @@ def refresh_materialized_variant_table(request):
     return HttpResponse('ok')
 
 
+@login_required
 def export_variants_as_csv(request):
     """Handles a request to download variants in .csv format.
     """
@@ -354,6 +353,30 @@ def export_variants_as_csv(request):
     response['Content-Disposition'] = 'attachment; filename="variants.csv"'
     export_melted_variant_view(reference_genome, variant_id_list, response)
     return response
+
+
+@login_required
+@require_GET
+def get_alignment_groups_for_ref_genome(request):
+    """Get list of AlignmentGroups for the provided ReferenceGenome uid.
+    """
+    # Parse the GET params.
+    ref_genome_uid = request.GET.get('refGenomeUid')
+
+    # Lookup the model and verify the owner is hte user
+    reference_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)
+
+    alignment_group_list = AlignmentGroup.objects.filter(
+            reference_genome=reference_genome)
+    response_data = [{
+        'label': ag.label,
+        'uid': ag.uid
+    } for ag in alignment_group_list]
+
+    return HttpResponse(json.dumps(response_data),
+            content_type='application/json')
 
 
 if settings.S3_ENABLED:
