@@ -108,6 +108,7 @@ VARIANT_LIST_RESPONSE_KEY__SET_LIST = 'variant_set_list_json'
 VARIANT_LIST_RESPONSE_KEY__KEY_MAP = 'variant_key_filter_map_json'
 VARIANT_LIST_RESPONSE_KEY__ERROR = 'error'
 
+
 @login_required
 @require_GET
 def get_variant_list(request):
@@ -118,12 +119,9 @@ def get_variant_list(request):
     ref_genome_uid = request.GET.get('refGenomeUid')
     project_uid = request.GET.get('projectUid')
 
-    # Get the project and verify that the requesting user has the
-    # right permissions.
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-    reference_genome = get_object_or_404(ReferenceGenome.objects.get(
-            project=project, uid=ref_genome_uid)
+    # Get model and verify permisssions.
+    reference_genome = get_object_or_404(ReferenceGenome,
+            project__uid=project_uid, uid=ref_genome_uid)
 
     # Pagination.
     pagination_start = int(request.GET.get('iDisplayStart', 0))
