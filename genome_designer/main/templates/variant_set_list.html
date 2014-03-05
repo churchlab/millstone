@@ -1,25 +1,20 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-<div class="page-header">
-  <h1>Variant Sets</h1>
+<h1 class="gd-header">Variant Sets</h1>
+
+{% if error_string %}
+<div class="alert alert-error alert-block">
+  <button type="button" class="close" data-dismiss="alert">&times;</button>
+  <h4>Error</h4>
+  {{ error_string }}
+</div>
+{% endif %}
+
+<div id="gd-variant_set_list_view-datatable-hook">
 </div>
 
-<p>
-  {% if error_string %}
-  <div class="alert alert-error alert-block">
-    <button type="button" class="close" data-dismiss="alert">&times;</button>
-    <h4>Error</h4>
-    {{ error_string }}
-  </div>
-  {% endif %}
-
-  {% include "variant_set_controls.html" %}
-</p>
-
-<div id="gd-variant_set_list_view-datatable-hook" class="container-fluid">
-</div>
-
+{% include "variant_set_controls.html" %}
 
 <script type="text/javascript">
   VIEW_TAG = 'VARIANT_SET_LIST';

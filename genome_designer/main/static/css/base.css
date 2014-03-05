@@ -1,25 +1,82 @@
-body {
-  padding-top: 50px;
-}
-
-.gd-page-container {
-  min-height: 100%;
-}
-
-.gd-tab-content {
-  min-height: 100%;
-}
-
-.gd-footer {
+/* Sticky footer styles
+http://getbootstrap.com/examples/sticky-footer/sticky-footer.css
+-------------------------------------------------- */
+#gd-footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  /* Set the fixed height of the footer here */
+  height: 120px;
   background-color: #f5f5f5;
   border-top: 1px solid #e5e5e5;
-  margin-top: 70px;
-  padding: 30px 0;
-  text-align: center;
+  padding-top: 20px;
+  padding-bottom: 20px; 
 }
 
-.gd-footer p {
-  margin: 0;
+body {
+  padding-top: 50px;
+  margin-bottom: 120px;
+}
+
+.gd-logo {
+  height: 38px;
+  width: 38px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  margin-right: 8px;
+}
+
+.gd-navbar {
+  margin-bottom: 10px; 
+}
+
+.gd-navbar .navbar .nav > li.dropdown.open.active > a:hover,
+
+.gd-navbar .navbar .nav.pull-right {margin-left: 10px; margin-right: 0;}
+
+.gd-navbar .navbar .nav.pull-left {margin-right: 5px; margin-right: 0;}
+
+.gd-navbar .navbar { min-height:40px;} 
+
+.gd-navbar .navbar .navbar-brand { 
+  float: none; 
+  font-size: 18px;
+  margin-top: 3px;
+}
+
+.gd-navbar .navbar .navbar-nav > li > a {  
+  padding-top: 12px; 
+  padding-bottom: 12px; 
+  line-height: 20px;
+}
+
+.gd-sidebar {
+  width: 180px;
+  height: 120px;
+  float: left;
+}
+
+.gd-main-content { 
+    margin-left: 180px;
+}
+
+.gd-data-analyze-group {
+  padding-bottom: 10px;
+}
+
+.gd-caret-align {
+  margin-top: 6px;
+}
+
+.gd-header {
+  margin-top: 0px;
+  /*border-bottom: 1px solid #dddddd;*/
+  margin-bottom: 8px;
+}
+
+.gd-header > h1 {
+  margin-top: 0px;
+  margin-bottom: 6px;
 }
 
 .gd-error-text {
@@ -31,11 +88,6 @@ body {
   font-size: 20px;
 }
 
-.dropdown-menu > li > a.gd-topnavbar-create-project-text {
-  color: blue;
-  font-weight: bold;
-}
-
 input.gd-form-tall {
   height: 40px;
   margin: 5px 0 5px 0;
@@ -43,10 +95,6 @@ input.gd-form-tall {
 
 .gd-variant-set-view-dropdown {
   margin-bottom: 20px;
-}
-
-.gd-analyze-select-search-entity {
-  margin-left: 10px;
 }
 
 .gd-analyze-subview-controls-hook {
@@ -59,24 +107,12 @@ input.gd-form-tall {
 /* GD Checkboxes for Datatables, checkbox td changes color */
 
 td.gd-dt-cb-div {
-    background-color: rgb(245, 245, 245);
-    border-bottom-color: rgb(204, 204, 204);
-    border-bottom-style: solid;
-    border-bottom-width: 0px;
-    border-left-color: rgb(204, 204, 204);
-    border-left-style: solid;
-    border-left-width: 1px;
-    border-right-color: rgb(204, 204, 204);
-    border-right-style: solid;
-    border-right-width: 0px;
-    border-top-color: rgb(204, 204, 204);
-    border-top-style: solid;
-    border-top-width: 1px;
     cursor: default;
     display: block;
     float: left;
     margin-bottom: 0px;
     margin-left: -1px;
+    margin-bottom: -1px;
     margin-right: 0px;
     margin-top: 0px;
     min-width: 16px;
@@ -88,201 +124,69 @@ td.gd-dt-cb-div {
     text-align: center;
 }
 
-td.gd-dt-cb-div.active  {
-    background-color: rgb(169, 219, 169);
+.table > tbody > tr > td.gd-dt-cb-div.active  {
+    background-color: rgba(67, 161, 16, 0.5);
     border-right-width: 1px;
     border-bottom-width: 1px;
-    border-bottom-color: rgb(70, 165, 70);
-    border-left-color: rgb(70, 165, 70);
-    border-right-color: rgb(70, 165, 70);
-    border-top-color: rgb(70, 165, 70);
+    /*border-bottom-color: rgb(70, 165, 70);*/
+    /*border-left-color: rgb(70, 165, 70);*/
+    /*border-right-color: rgb(70, 165, 70);*/
+    /*border-top-color: rgb(70, 165, 70);*/
 }
 
-tr:nth-child(odd) > td.gd-dt-cb-div.active {
-    background-color: rgb(169, 219, 169);
-    border-right-width: 1px;
-    border-bottom-width: 1px;
-    border-bottom-color: rgb(70, 165, 70);
-    border-left-color: rgb(70, 165, 70);
-    border-right-color: rgb(70, 165, 70);
-    border-top-color: rgb(70, 165, 70);
+/* Less table padding when within panel*/
+th.gd-dt-cb-div {
+  padding-left: 0px !important;
+  padding-right: 0px !important;
 }
 
-/* Datatables Bootstrap 2 CSS http://datatables.net/blog/Twitter_Bootstrap_2 */
-div.dataTables_length label {
-	float: left;
-	text-align: left;
+/* fix tr.odd row coloring */
+table.dataTable tr.odd {
+  background-color: #dddddd
 }
 
-div.dataTables_length select {
-	width: 75px;
+/* fix DataTables extra vertical space above */
+.dataTables_wrapper {
+  clear: none;
 }
 
-div.dataTables_filter label {
-	float: right;
+.dataTables_wrapper > div.panel > div.panel-body {
+  padding-bottom: 0px;
+} 
+
+.gd-new-button {
+  padding-left: 0px;
 }
 
-div.dataTables_info {
-	padding-top: 8px;
+.gd-table-controls > div {
+  vertical-align: middle;
+  display: inline-block;
+  float:none;  
+  padding-left: 5px;
+  padding-right: 5px;
 }
 
-div.dataTables_paginate {
-	float: right;
-	margin: 0;
+.gd-table-controls > div:nth-of-type(1) {
+  padding-left: 0px;
 }
 
-table.table {
-	clear: both;
-	margin-bottom: 6px !important;
-	max-width: none !important;
+.gd-table-controls > div:last-of-type {
+  padding-right: 0px;
 }
 
-table.table thead .sorting,
-table.table thead .sorting_asc,
-table.table thead .sorting_desc,
-table.table thead .sorting_asc_disabled,
-table.table thead .sorting_desc_disabled {
-	cursor: pointer;
-	*cursor: hand;
+.gd-table-controls > div > label {
+  margin-bottom: 0px;
 }
 
-table.table thead .sorting { background: url('/static/vendor/DataTables-1.9.4/media/images/sort_both.png') no-repeat center right; }
-table.table thead .sorting_asc { background: url('/static/vendor/DataTables-1.9.4/media/images/sort_asc.png') no-repeat center right; }
-table.table thead .sorting_desc { background: url('/static/vendor/DataTables-1.9.4/media/images/sort_desc.png') no-repeat center right; }
-
-table.table thead .sorting_asc_disabled { background: url('/static/vendor/DataTables-1.9.4/media/images/sort_asc_disabled.png') no-repeat center right; }
-table.table thead .sorting_desc_disabled { background: url('/static/vendor/DataTables-1.9.4/media/images/sort_desc_disabled.png') no-repeat center right; }
-
-table.dataTable th:active {
-	outline: none;
+.gd-table-controls:after {
+  clear: none;
 }
 
-/* Scrolling */
-div.dataTables_scrollHead table {
-	margin-bottom: 0 !important;
-	border-bottom-left-radius: 0;
-	border-bottom-right-radius: 0;
+.ColVis {
+  margin-bottom: 0px;
 }
 
-div.dataTables_scrollHead table thead tr:last-child th:first-child,
-div.dataTables_scrollHead table thead tr:last-child td:first-child {
-	border-bottom-left-radius: 0 !important;
-	border-bottom-right-radius: 0 !important;
+table.dataTable thead > tr > th {
+  padding-left: 8px;
 }
 
-div.dataTables_scrollBody table {
-	border-top: none;
-	margin-bottom: 0 !important;
-}
-
-div.dataTables_scrollBody tbody tr:first-child th,
-div.dataTables_scrollBody tbody tr:first-child td {
-	border-top: none;
-}
-
-div.dataTables_scrollFoot table {
-	border-top: none;
-}
-
-
-
-
-/*
- * TableTools styles
- */
-.table tbody tr.active td,
-.table tbody tr.active th {
-	background-color: #08C;
-	color: white;
-}
-
-.table tbody tr.active:hover td,
-.table tbody tr.active:hover th {
-	background-color: #0075b0 !important;
-}
-
-.table-striped tbody tr.active:nth-child(odd) td,
-.table-striped tbody tr.active:nth-child(odd) th {
-	background-color: #017ebc;
-}
-
-table.DTTT_selectable tbody tr {
-	cursor: pointer;
-	*cursor: hand;
-}
-
-div.DTTT .btn {
-	color: #333 !important;
-	font-size: 12px;
-}
-
-div.DTTT .btn:hover {
-	text-decoration: none !important;
-}
-
-
-ul.DTTT_dropdown.dropdown-menu a {
-	color: #333 !important; /* needed only when demo_page.css is included */
-}
-
-ul.DTTT_dropdown.dropdown-menu li:hover a {
-	background-color: #0088cc;
-	color: white !important;
-}
-
-/* TableTools information display */
-div.DTTT_print_info.modal {
-	height: 150px;
-	margin-top: -75px;
-	text-align: center;
-}
-
-div.DTTT_print_info h6 {
-	font-weight: normal;
-	font-size: 28px;
-	line-height: 28px;
-	margin: 1em;
-}
-
-div.DTTT_print_info p {
-	font-size: 14px;
-	line-height: 20px;
-}
-
-
-
-/*
- * FixedColumns styles
- */
-div.DTFC_LeftHeadWrapper table,
-div.DTFC_LeftFootWrapper table,
-table.DTFC_Cloned tr.even {
-	background-color: white;
-}
-
-div.DTFC_LeftHeadWrapper table {
-	margin-bottom: 0 !important;
-	border-top-right-radius: 0 !important;
-	border-bottom-left-radius: 0 !important;
-	border-bottom-right-radius: 0 !important;
-}
-
-div.DTFC_LeftHeadWrapper table thead tr:last-child th:first-child,
-div.DTFC_LeftHeadWrapper table thead tr:last-child td:first-child {
-	border-bottom-left-radius: 0 !important;
-	border-bottom-right-radius: 0 !important;
-}
-
-div.DTFC_LeftBodyWrapper table {
-	border-top: none;
-	margin-bottom: 0 !important;
-}
-
-div.DTFC_LeftBodyWrapper tbody tr:first-child th,
-div.DTFC_LeftBodyWrapper tbody tr:first-child td {
-	border-top: none;
-}
-
-div.DTFC_LeftFootWrapper table {
-	border-top: none;
-}

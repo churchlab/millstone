@@ -1,9 +1,25 @@
 {% extends "base.html" %}
-
 {% block tabs_or_splash %}
-  <h1>Register</h1>
-  <form action="/accounts/register/" method="post">{% csrf_token %}
-    {{ form.as_p }}
-    <input type="submit" value="Submit" class="btn"/>
-  </form>
+<div class="page-header">
+<h1>Register a new user.</h1>
+</div>
+<div class="container">
+  <div class="row">
+    <div class="col-sm-4 col-sm-offset-4">
+      <div class="panel panel-default">
+        <div class="panel-body text-center">
+    
+          <form action="/accounts/register/" method="post">{% csrf_token %}
+    		<p class="required"><input id="id_username" maxlength="30" name="username" type="text" class="form-control" placeholder="Username"/></p>
+			<p class="required"><input id="id_email" name="email" type="text" class="form-control" placeholder="Email Address"/></p>
+			<p class="required"><input id="id_password1" name="password1" type="password" class="form-control" placeholder="Password"/></p>
+			<p class="required"><input id="id_password2" name="password2" type="password" class="form-control" placeholder="Confirm Password"/></p>
+    		<input type="submit" value="Submit" class="btn"/>
+          </form>
+
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

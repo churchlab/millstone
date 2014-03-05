@@ -1,5 +1,24 @@
 {% extends "base.html" %}
 
 {% block tabs_or_splash %}
-  <h1>Genome Designer</h1>
+
+<div class="page-header">
+<h1>Select a project.</h1>
+</div>
+<div class="container">
+  <div class="row">
+    <div class="col-sm-4 col-sm-offset-4">
+      <ul class="list-group">
+        {% for project in project_list %}
+          <a href="{% url 'main.views.project_view' project.uid %}" class="list-group-item text-center">
+            {{project.title}}
+          </a>
+        {% endfor %}
+          <a href="/projects/create" class="list-group-item text-center text-primary">
+            <span class="text-primary">New project...</span>
+          </a>
+      </ul>
+    </div>
+  </div>
+</div>
 {% endblock %}

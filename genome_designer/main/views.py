@@ -116,52 +116,40 @@ def project_view(request, project_uid):
     return render(request, 'project.html', context)
 
 
-@login_required
-def project_delete(request, project_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-    project.delete()
-    response_data = {'redirect': '/'}
-    return HttpResponse(json.dumps(response_data),
-            content_type='application/json')
-
-
-@login_required
-def tab_root_data(request, project_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-
-    context = {
-        'project': project,
-        'tab_root': TAB_ROOT__DATA
-    }
-    return render(request, 'project.html', context)
-
-
 VALID_ANALYZE_SUB_VIEWS = set([
     'variants',
     'sets',
     'genes'
 ])
 
+
 @login_required
-def tab_root_analyze(request, project_uid, ref_genome_uid=None, sub_view=None):
+def tab_root_analyze(request, project_uid, alignment_group_uid=None, sub_view=None):
+    """The analyze view. Subviews are loaded in Javascript.
+    """
     context = {}
 
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
-    # Initial javascript data.
+    # Initial javascript data to establish initial state.
     init_js_data = {
         'project': adapt_model_instance_to_frontend(project)
     }
 
-    ref_genome = None
-    if ref_genome_uid is not None:
-        ref_genome = ReferenceGenome.objects.get(project=project,
-                uid=ref_genome_uid)
-        init_js_data['refGenome'] = adapt_model_instance_to_frontend(ref_genome)
-        context['selected_ref_genome_uid'] = ref_genome_uid
+    alignment_group = None
+    if alignment_group_uid is not None:
+        alignment_group = get_object_or_404(AlignmentGroup,
+                uid=alignment_group_uid,
+                reference_genome__project__owner=request.user.get_profile())
+        init_js_data['alignmentGroup'] = adapt_model_instance_to_frontend(
+                alignment_group)
+        context['active_alignment_group'] = alignment_group
+
+        ref_genome = alignment_group.reference_genome
+        init_js_data['refGenome'] = adapt_model_instance_to_frontend(
+                ref_genome)
+        context['active_ref_genome'] = ref_genome
 
     if sub_view is not None:
         if not sub_view in VALID_ANALYZE_SUB_VIEWS:
@@ -174,6 +162,7 @@ def tab_root_analyze(request, project_uid, ref_genome_uid=None, sub_view=None):
         'init_js_data': json.dumps(init_js_data),
         'tab_root': TAB_ROOT__ANALYZE,
     })
+    print context
 
     return render(request, 'tab_root_analyze.html', context)
 

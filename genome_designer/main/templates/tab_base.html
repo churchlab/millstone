@@ -1,35 +1,37 @@
 {% extends "base.html" %}
 
 {% block tabs_or_splash %}
-  <ul class="nav nav-tabs">
-    <li class="{% if tab_root == 'DATA' %}active{% endif %}">
-      <a href="/projects/{{project.uid}}/data">Data</a>
-    </li>
-    <li class="{% if tab_root == 'ANALYZE' %}active{% endif %}">
-      <a href="/projects/{{project.uid}}/analyze">Analyze</a>
-    </li>
-  </ul>
+
   {% if not tab_root %}
-    <script>alert("Missing tab root");</script>
+    <script>alert("DEBUG: Missing tab root");</script>
   {% endif %}
 
-  <div class="tab-content gd-tab-content">
-    <div class="tab-pane fade in active">
+    <!-- Side Nav
+================================================== -->  
+  <div class="gd-sidebar">
+      <div class="btn-group btn-group-justified gd-data-analyze-group">
+        <a href="/projects/{{project.uid}}/data" type="button" class="btn btn-default {% if tab_root == 'DATA' %}active{% endif %}">Data</a>
+        <a href="/projects/{{project.uid}}/analyze" type="button" class="btn btn-default {% if tab_root == 'ANALYZE' %}active{% endif %}">Analyze</a>
+      </div>
+    {% if tab_root == 'DATA' %}
+        {% if project %}
+          {% include "side_nav_bar_data.html" %}
+        {% endif %}
+    {% elif tab_root == 'ANALYZE' %}
+        {% if project %}
+          {% include "side_nav_bar_analyze.html" %}
+        {% endif %}
+    {% endif %}    
+  </div><!--/side nav -->
 
-      <!-- Currently actively working on the analyze tab.
-          All others should be the same. -->
-      {% if tab_root == 'DATA' %}
-        <div class="span3">
-          {% if project %}
-            {% include "side_nav_bar.html" %}
-          {% endif %}
-        </div><!--/.span3 -->
-        <div class="span9">
-          {% block content%}{% endblock %}
-        </div> <!--/.span9 -->
-      {% else %}
-        {% block tab_content%}{% endblock %}
-      {% endif %}
+  <!-- Content Area
+================================================== -->  
+  
+  <div class="gd-main-content">
+    <div class="container-fluid">
+    {% block content %}
+      No content.
+    {% endblock %}
     </div>
-  </div>
+  </div><!-- /main content -->
 {% endblock %}

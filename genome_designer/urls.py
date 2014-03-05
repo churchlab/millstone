@@ -15,8 +15,6 @@ urlpatterns = patterns('',
             'main.views.project_create_view'),
     url(r'^projects/([\w-]+)$',
             'main.views.project_view'),
-    url(r'^projects/([\w-]+)/delete$',
-            'main.views.project_delete'),
 
     # Tab base views.
     url(r'^projects/([\w-]+)/data$',
@@ -99,6 +97,12 @@ urlpatterns = patterns('',
             'main.xhr_handlers.refresh_materialized_variant_table'),
     url(r'^_/variants/export_as_csv$',
             'main.xhr_handlers.export_variants_as_csv'),
+    url(r'^_/alignmentgroups$',
+            'main.xhr_handlers.get_alignment_groups_for_ref_genome'),
+    url(r'^_/genes$',
+                'main.xhr_handlers.get_gene_list'),
+    url(r'^projects/([\w-]+)/delete$',
+            'main.xhr_handlers.project_delete'),
 
 
     ###########################################################################
@@ -115,8 +119,6 @@ urlpatterns = patterns('',
 
 if settings.S3_ENABLED:
     urlpatterns += patterns('',
-        url(r'^_/genes$',
-                'main.xhr_handlers.get_gene_list'),
         url(r'^_/projects/([\w-]+)/refgenomes/import_s3$',
                 'main.xhr_handlers.import_reference_genome_s3',
                 name="import_reference_genome_s3"),

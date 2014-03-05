@@ -6,6 +6,9 @@
 gd.Util = {};
 
 
+// Enable Select-Picker.
+$('.selectpicker').selectpicker();
+
 /**
  * Returns a new string instance that is this instance with the first letter
  * capitalized.

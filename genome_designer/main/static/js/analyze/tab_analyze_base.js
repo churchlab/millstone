@@ -27,7 +27,11 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
   render: function() {
     this.registerManualListeners();
 
-    if (this.model.has('refGenome')) {
+    if (this.model.has('alignmentGroup')) {
+      this.handleAlignmentGroupSelect(undefined,
+          this.model.get('alignmentGroup').uid,
+          this.model.get('refGenome').uid);
+    } else if (this.model.has('refGenome')) {
       this.handleRefGenomeSelect(undefined, this.model.get('refGenome').uid);
     }
   },
@@ -40,6 +44,8 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
   registerManualListeners: function() {
     $('#gd-analyze-select-ref-genome').change(
         _.bind(this.handleRefGenomeSelect, this));
+    $('#gd-analyze-select-ag').change(
+        _.bind(this.handleAlignmentGroupSelect, this));
     $('#gd-analyze-select-search-entity').change(
         _.bind(this.handleSearchEntitySelect, this));
   },
@@ -48,10 +54,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
   /**
    * Handles a Reference Genome being selected from the dropdown menu.
    *
-   * This method does an initial fetch of the data, and (re)-draws the
-   * DataTable component. Subsequent requests given the same filter are
-   * handled through a pagination dance between the DataTables component
-   * and server-side support.
+   * This method reveals the AlignmentGroup dropdown.
    *
    * @param {Event} e Event object if this is being called in response to an
    *     event. Ignored if opt_refGenomeUid is provided.
@@ -62,6 +65,69 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     var refGenomeUid = opt_refGenomeUid || $(e.target).val();
     this.model.set('refGenomeUid', refGenomeUid);
 
+    // Destroy the current subview.
+    this.destroySubview();
+
+    // Initialize the AlignmentGroup dropdown.
+    $('#gd-analyze-select-ag').empty();
+    $('#gd-analyze-select-ag').append(
+        '<option selected disabled>Alignment Group</option>');
+
+    // Hide the entity select if showing.
+    $('#gd-analyze-select-search-entity').hide();
+
+    // Populate the AlignmentGroup select with the relevant options and fade
+    // in.
+    var requestData = {
+      'refGenomeUid': this.model.get('refGenomeUid')
+    };
+    $.get('/_/alignmentgroups', requestData,
+        _.bind(function(response) {
+
+          // ReferenceGenome has no AlignmentGroups.
+          if (!response.length > 0) {
+            $('#gd-analyze-select-ag').append(
+                '<optgroup label="No Alignments"></optgroup>');
+            return;
+          }
+
+          // Otherwise, add option for each AlignmentGroup.
+          _.each(response, function(alignmentGroup) {
+            $('#gd-analyze-select-ag').append(
+                '<option value=' + alignmentGroup.uid + '>' +
+                  alignmentGroup.label +
+                '</option>');
+          })
+        }, this));
+    $('#gd-analyze-select-ag').fadeIn();
+  },
+
+
+  /**
+   * Handles an AlignmentGroup being selected from the dropdown menu.
+   *
+   * This method does an initial fetch of the data, and (re)-draws the
+   * DataTable component. Subsequent requests given the same filter are
+   * handled through a pagination dance between the DataTables component
+   * and server-side support.
+   *
+   * @param {Event} e Event object if this is being called in response to an
+   *     event. Ignored if opt_refGenomeUid is provided.
+   * @param {string=} opt_alignmentGroupUid Optional AlignmentGroup uid
+   *     explicitly provided.
+   * @param {string=} opt_refGenomeUid Optional ReferenceGenom uid
+   *     explicitly provided.
+   */
+  handleAlignmentGroupSelect: function(e, opt_alignmentGroupUid,
+      opt_refGenomeUid) {
+    var alignmentGroupUid = opt_alignmentGroupUid || $(e.target).val();
+    this.model.set('alignmentGroupUid', alignmentGroupUid);
+
+    // Manually setting this if not already set during previous select.
+    if (opt_refGenomeUid) {
+      this.model.set('refGenomeUid', opt_refGenomeUid);
+    }
+
     // Determine the subview.
     var subViewKey = 'variants'; // Default
     if (this.model.has('subView')) {
@@ -69,7 +135,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     }
 
     // Update the url.
-    this.router.navOnRefGenomeSelect(refGenomeUid, subViewKey);
+    this.router.navOnAlignmentGroupSelect(alignmentGroupUid, subViewKey);
 
     // Show the entity select (i.e. Variants, VariantSets, etc.)
     $('#gd-analyze-select-search-entity').fadeIn();
@@ -93,8 +159,8 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
 
     // Update the url.
     var subViewUrlToken = subViewOptionValue.toLowerCase();
-    var refGenomeUid = this.model.get('refGenomeUid');
-    this.router.navOnRefGenomeSelect(refGenomeUid, subViewUrlToken);
+    var alignmentGroupUid = this.model.get('alignmentGroupUid');
+    this.router.navOnAlignmentGroupSelect(alignmentGroupUid, subViewUrlToken);
 
     // Update the model subview key.
     this.model.set('subView' ,subViewUrlToken);
@@ -108,6 +174,16 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
 
   /** Draws or replaces the current subview with the new selected subview. */
   updateSubview: function(newSubviewType) {
+    this.destroySubview();
+
+    this.currentSubView = new newSubviewType({model: this.model});
+    this.listenTo(this.currentSubView, 'NAVIGATE',
+        _.bind(this.handleSubviewNav, this));
+  },
+
+
+  /** Tear out the current subview. */
+  destroySubview: function() {
     // Get rid of the current view.
     $('#gd-analyze-subview-controls-hook').empty();
     if (this.currentSubView) {
@@ -118,9 +194,6 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     // Remove anything left there.
     $('#gd-datatable-hook').empty();
 
-    this.currentSubView = new newSubviewType({model: this.model});
-    this.listenTo(this.currentSubView, 'NAVIGATE',
-        _.bind(this.handleSubviewNav, this));
   },
 
 

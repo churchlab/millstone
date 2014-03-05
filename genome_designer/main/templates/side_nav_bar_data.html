@@ -1,0 +1,14 @@
+<div class="list-group">
+  <a href="{% url 'main.views.reference_genome_list_view' project.uid %}" class="list-group-item {% if data_view == 'REFERENCE_GENOMES' %}active{% endif %}">
+    Reference Genomes
+  </a>
+  <a href="{% url 'main.views.sample_list_view' project.uid %}" class="list-group-item {% if data_view == 'SAMPLES' %}active{% endif %}">
+    Samples
+  </a>
+  <a href="{% url 'main.views.alignment_list_view' project.uid %}" class="list-group-item {% if data_view == 'ALIGNMENTS' %}active{% endif %}">
+    Alignments
+  </a>
+  <a href="{% url 'main.views.variant_set_list_view' project.uid %}" class="list-group-item {% if data_view == 'SETS' %}active{% endif %}">
+    Sets
+  </a>
+</div>

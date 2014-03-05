@@ -1,0 +1,57 @@
+<div class="list-group">
+  <select id="gd-analyze-select-ref-genome" class="list-group-item selectpicker">
+    <option selected disabled>Reference Genome</option>
+    {% for ref_genome in project.referencegenome_set.all %}
+      <option value="{{ref_genome.uid}}"
+          {% if ref_genome.uid == active_ref_genome.uid %}selected{% endif %}>
+        {{ref_genome.label}}
+      </option>
+    {% endfor %}
+  </select>
+
+  <select id="gd-analyze-select-ag" class="list-group-item selectpicker"
+      {% if not active_alignment_group %}style="display: none"{% endif %}>
+    <option selected disselect abled>Alignment Group</option>
+    {% if active_alignment_group %}
+      {% for alignment_group in active_ref_genome.alignmentgroup_set.all %}
+        <option value="{{alignment_group.uid}}"
+            {% if alignment_group.uid == active_alignment_group.uid %}selected{% endif %}>
+          {{alignment_group.label}}
+        </option>
+      {% endfor %}
+    {% endif %}
+  </select>
+
+  <select id="gd-analyze-select-search-entity" class="list-group-item selectpicker"
+      style="display: none">
+    <option value="VARIANTS" selected>Variants</option>
+    <option value="SETS" {% if sub_view == 'sets' %}selected{% endif %}>Variant Sets</option>
+    <option value="GENES" {% if sub_view == 'genes' %}selected{% endif %}>Genes</option>
+  </select>
+</div>
+
+<!--
+<div class="btn-group-vertical">
+  <div class="btn-group">
+    <button>Reference Genome</button>
+  </div>
+</div>
+
+<div class="list-group">
+  <li class="group list-group-item dropdown-toggle" data-toggle="dropdown">
+    Reference Genome
+    <span class="caret"></span>
+    <ul class="dropdown-menu" role="menu"> +
+      <li role="presentation"><a role="menuitem" href="#">Ref1</a></li>
+      <li role="presentation"><a role="menuitem" href="#">Ref2</a></li>
+    </ul>
+  </li>
+
+  <li class="list-group-item">
+    <i class="caret pull-right gd-caret-align"></i> Alignment Group
+  </li>
+  <li class="list-group-item" style="display: none">
+    <i class="caret pull-right gd-caret-align"></i> Variants
+  </li>
+</div>
+-->

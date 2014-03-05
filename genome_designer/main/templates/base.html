@@ -1,6 +1,7 @@
+<!DOCTYPE html> <!-- required for bootstrap to work right. -->
 <html>
 <head>
-  <title>Genome Designer</title>
+  <title>Millstone</title>
 
   {% load staticfiles %}
 
@@ -9,6 +10,10 @@
   <link rel="stylesheet" href="{% static "vendor/DataTables-1.9.4/media/css/jquery.dataTables.css" %}" type="text/css" />
   <link rel="stylesheet" href="{% static "vendor/DataTables-1.9.4/extras/ColVis/media/css/ColVis.css" %}" type="text/css" />
   <link rel="stylesheet" href="{% static "vendor/fineuploader/fineuploader-4.0.1.min.css" %}" type="text/css" />
+  <link rel="stylesheet" href="{% static "vendor/bootstrap-select/bootstrap-select.css" %}" type="text/css">
+  <link rel="stylesheet" href="{% static "vendor/datatables.bootstrap/datatables.bootstrap.css" %}" type="text/css">
+
+  <!-- css - Local -->
   <link rel="stylesheet" href="{% static "css/base.css" %}" type="text/css" />
 
   <!-- JavaScript - Third-party  -->
@@ -22,6 +27,8 @@
   <script type="text/javascript" src="{% static "vendor/DataTables-1.9.4/extras/ColVis/media/js/ColVis.js" %}"></script>
   <script type="text/javascript" src="{% static "vendor/js/dt_bootstrap.js" %}"></script>
   <script type="text/javascript" src="{% static "vendor/fineuploader/all.fineuploader-4.0.1.min.js" %}"></script>
+  <script type="text/javascript" src="{% static "vendor/bootstrap-select/bootstrap-select.js" %}"></script>
+  <script type="text/javascript" src="{% static "vendor/datatables.bootstrap/datatables.bootstrap.js" %}"></script>
 
   <!-- JavaScript - Local -->
   <script type="text/javascript" src="{% static "js/namespace.js" %}"></script>
@@ -52,21 +59,37 @@
   <script type="text/javascript" src="{% static "js/gene_view.js" %}"></script>
   <script type="text/javascript" src="{% static "js/goterm_view.js" %}"></script>
   <script type="text/javascript" src="{% static "js/app.js" %}"></script>
+
+  <link rel="shortcut icon"
+        type="image/png"
+        href="{% static "img/logo2.png" %}">
+
 </head>
 <body>
+  <!-- NavBar
+================================================== -->
   {% include "top_nav_bar.html" %}
 
-  <div id="gd-page-container" class="gd-page-container container-fluid">
-    {% block tabs_or_splash%}{% endblock %}
-  </div><!--/#gd-page-container -->
+  <!-- Main
+================================================== -->
 
-  <footer class="gd-footer">
+  <div id="gd-page-container" class="gd-page-container">
     <div class="container-fluid">
-      <p>Designed and built by <a href="http://www.dbgoodman.com/" target="_blank">Dan Goodman</a>, <a href="http://www.glebkuznetsov.com/" target="_blank">Gleb Kuznetsov</a>, and <a href="http://www.linkedin.com/in/marclajoie" target="_blank">Marc Lajoie</a>.</p>
-      <p><a href="http://arep.med.harvard.edu/" target="_blank">Church Lab</a></p>
-      <p><a href="http://genetics.med.harvard.edu/" target="_blank">Harvard Medical School Department of Genetics</a></p>
-      <p>Copyright 2013</p>
+    {% block tabs_or_splash%}{% endblock %}
     </div>
-  </footer>
+  </div><!--/#gd-page-container --> 
+
+  <!-- Footer (this is broken, so I'm commenting it out for now)
+================================================== -->
+<!--   <div id="gd-footer">
+    <div class="container">
+      <p>Designed and built by <a href="http://www.dbgoodman.com/" target="_blank">Dan Goodman</a>, <a href="http://www.glebkuznetsov.com/" target="_blank">Gleb Kuznetsov</a>, and <a href="http://www.linkedin.com/in/marclajoie" target="_blank">Marc Lajoie</a>.</p>
+      <p>
+        <a href="http://arep.med.harvard.edu/" target="_blank">Church Lab</a>, 
+        <a href="http://genetics.med.harvard.edu/" target="_blank">Harvard Medical School Department of Genetics</a>
+      </p>
+      <p>Copyright 2014</p>
+    </div>
+  </div> -->
 </body>
 </html>

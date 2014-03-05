@@ -29,6 +29,13 @@ gd.DataTableComponent = Backbone.View.extend({
   render: function() {
     // Draw the Datatable.
     this.updateDatatable(this.displayableObjList, this.displayableFieldConfig);
+
+    // Activate selectpicker on the dropdowns.
+    length_select = $("div.dataTables_length > label > select")
+    length_select.addClass('selectpicker')
+    length_select.selectpicker({
+      width: 'auto'
+    });
   },
 
 
@@ -122,9 +129,9 @@ gd.DataTableComponent = Backbone.View.extend({
     // Add a column for a select checkbox.
     displayableFieldConfig.push({
         'mData': 'checkbox',
-        'sTitle': 'Select',
+        'sTitle': ' ',
         'sClass': 'gd-dt-cb-div',
-        'sWidth': '10%',
+        'sWidth': '30px',
     });
 
     return displayableFieldConfig;
@@ -170,9 +177,9 @@ gd.DataTableComponent = Backbone.View.extend({
     this.$el.find(".gd-dt-cb.master").empty();
     this.$el.find(".gd-dt-cb.master").append(
       '<div class="gd-dt-cb-div master pull-right btn-group">' +
-        '<button class="btn"><input type="checkbox" class="gd-dt-cb master" id="' + masterCheckboxElId + '"></button>' +
-        '<button class="btn dropdown-toggle" style="min-height: 26px" data-toggle="dropdown">' +
-          '<span><i class="icon-chevron-down"></i></span>' +
+        '<button class="btn btn-default"><input type="checkbox" class="gd-dt-cb master" id="' + masterCheckboxElId + '"></button>' +
+        '<button class="btn btn-default dropdown-toggle" style="min-height: 26px" data-toggle="dropdown">' +
+          '<span><i class="caret"></i></span>' +
         '</button>' +
         '<ul class="dropdown-menu" id="' + this.datatableId + '-dropdown">' +
         '</ul>' +
@@ -238,7 +245,27 @@ gd.DataTableComponent = Backbone.View.extend({
     var datatableParams = {
         'aaData': objList,
         'aoColumns': fieldConfig,
-        'sDom': "<'row-fluid'<'span3'l><'span5'f><'span3'C><'gd-dt-cb master pull-right span1'>t<'row-fluid'<'span6'i><'span6'p>>",
+        'sDom': 
+          // This disgusting string tells where to put the table subelements.
+          // http://datatables.net/ref#sDom
+          // l is the row listing
+          // C is the ColVis plugin
+          // t is the table
+          // i is the row info 
+          // p is pagination
+          // gd-dt-cb is our master checkbox
+          "<'panel panel-default'" +      // start panel containing table
+          "<'panel-body'" +               // start panel containing table
+          "<'gd-table-controls'" +    // first make the top container
+          "<'gd-new-button'>" +  // green button
+          "l" +               // records per row
+          "<'gd-dt-cb master pull-right'>" + // master cb
+          ">>" +  // close panel body, container, row
+            "t" + // THE TABLE
+          "<'panel-footer'<'container-fluid'<'row'" +    // bottom container/row
+            "<'col-sm-4'i><'col-sm-8'p>" + // info, pagination
+          ">>>>", // close row, bottom container, panel footer, panel
+
         'bFilter': false,
         'bSortClasses': false,
         'bAutoWidth': false,
