@@ -66,18 +66,19 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
 
 def format_cast_objects(page_results):
     for page_result in page_results:
+        alts = page_result['alt']
+
         # Append ref with count of # variants without alt
-        page_result['ref'] += ' (%d)' % page_result['alt'].count(None)
+        page_result['ref'] += ' (%d)' % alts.count(None)
 
         # List frequency of each alt
-        alts = filter(lambda alt: alt, page_result['alt'])
-        alts.sort()
-        page_result['alt'] = ' | '.join([
-            '%s (%d)' % (val, len(list(group))) for val, group in groupby(alts)])
+        processed_alts = sorted(filter(lambda alt: alt, alts))
+        page_result['alt'] = ' | '.join(['%s (%d)' %
+            (val, len(list(group))) for val, group in groupby(processed_alts)])
 
         # Add additional information specific to cast view
         page_result['variant_sets'] = ''
-        page_result['total_samples'] = len(page_result['alt'])
+        page_result['total_samples'] = len(alts)
     return page_results
 
 
