@@ -317,6 +317,9 @@ class HashableVariantDict(object):
     def __getitem__(self, key):
         return self.obj_dict[key]
 
+    def __setitem__(self, key, value):
+        self.obj_dict[key] = value
+
     def __getattr__(self, attr):
         """Override.
 

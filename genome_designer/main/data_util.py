@@ -9,6 +9,7 @@ This module interacts closely with the ModelViews in model_views.py.
 """
 
 from collections import defaultdict
+from itertools import groupby
 
 from django.db import connection
 
@@ -40,32 +41,44 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
     given filter.
 
     This function delegates to the variant_filter module to get the list of
-    variants matching the filter. Then, this function takes those results
-    and handles casting them to appropriate view-type objects (e.g. Melted vs
-    Cast).
+    variants matching the filter, and in cast or melted form depending on the
+    is_melted flag.
 
     Returns:
         LookupVariantsResult object.
     """
-    # First get the Variants that pass the filter.
+    # Get the Variants that pass the filter.
     filter_eval_result = get_variants_that_pass_filter(combined_filter_string,
-            reference_genome)
+            reference_genome, is_melted)
     result_list = list(filter_eval_result.variant_set)
 
-    # If this is a melted view, return results as they are.
-    if is_melted:
-        # TODO: Handle pagination.
-        page_results = result_list[pagination_start :
-                pagination_start + pagination_len]
-        num_total_variants = 1000000
-        return LookupVariantsResult(page_results, num_total_variants)
-
-    # Otherwise, we need to Cast the results.
-    page_results = cast_joined_variant_objects(result_list)
-    page_results = page_results[pagination_start :
+    page_results = result_list[pagination_start :
             pagination_start + pagination_len]
-    num_total_variants = 1000000
+    print [result.obj_dict for result in page_results]
+
+    if not is_melted:
+        page_results = format_cast_objects(page_results)
+
+    num_total_variants = len(page_results)
+
     return LookupVariantsResult(page_results, num_total_variants)
+
+
+def format_cast_objects(page_results):
+    for page_result in page_results:
+        # Append ref with count of # variants without alt
+        page_result['ref'] += ' (%d)' % page_result['alt'].count(None)
+
+        # List frequency of each alt
+        alts = filter(lambda alt: alt, page_result['alt'])
+        alts.sort()
+        page_result['alt'] = ' | '.join([
+            '%s (%d)' % (val, len(list(group))) for val, group in groupby(alts)])
+
+        # Add additional information specific to cast view
+        page_result['variant_sets'] = ''
+        page_result['total_samples'] = len(page_result['alt'])
+    return page_results
 
 
 def cast_joined_variant_objects(melted_variant_list):

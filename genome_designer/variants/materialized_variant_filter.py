@@ -19,6 +19,7 @@ from variants.common import get_delim_key_value_triple
 from variants.common import hashablefetchall
 from variants.common import SymbolGenerator
 from variants.materialized_view_manager import MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
+from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.filter_eval_result import FilterEvalResult
 from variants.filter_scope import FilterScope
@@ -29,7 +30,7 @@ class VariantFilterEvaluator(object):
         '(position > 5) in ALL(sample1, sample2)'
     """
 
-    def __init__(self, raw_filter_string, ref_genome, scope=None):
+    def __init__(self, raw_filter_string, ref_genome, is_melted, scope=None):
         """Constructor.
 
         Args:
@@ -51,6 +52,7 @@ class VariantFilterEvaluator(object):
         self.raw_filter_string = raw_filter_string
         self.clean_filter_string = raw_filter_string
         self.ref_genome = ref_genome
+        self.is_melted = is_melted
         self.all_key_map = get_all_key_map(self.ref_genome)
         self.variant_caller_common_map = (
                 self.ref_genome.get_variant_caller_common_map())
@@ -201,15 +203,29 @@ class VariantFilterEvaluator(object):
                 (filter_eval_results, sql_ready_symbol_list,
                         remaining_triples) = updated_structs
 
+        # Create select clause. If melted, normal select clause with all columns.
+        # If cast, then array_agg alt and arbitrarily choose one of all
+        # other fields except for position (by arbitrarily we choose min)
+        if self.is_melted:
+            select_clause = MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
+        else:
+            columns = MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
+            def fix(column):
+                if column == 'position':
+                    return column
+                elif column == 'alt':
+                    return 'array_agg(alt) as alt'
+                else:
+                    return 'min(' + column + ') as ' + column
+            select_clause = ', '.join(map(fix, columns))
+
+        # Get table name
+        table_name = self.materialized_view_manager.get_table_name()
+
         # Handle global SQL keys. Perform the initial SQL query to constrain
         # the results.
         cursor = connection.cursor()
-        sql_statement = (
-                'SELECT %s '
-                'FROM %s '
-                % (MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE,
-                        self.materialized_view_manager.get_table_name())
-        )
+        sql_statement = 'SELECT %s FROM %s ' % (select_clause, table_name)
 
         # Maybe add WHERE clause.
         where_clause_conjunctive_expr_list = []
@@ -221,6 +237,10 @@ class VariantFilterEvaluator(object):
         where_clause_content = ' AND '.join(where_clause_conjunctive_expr_list)
         if where_clause_content:
             sql_statement += 'WHERE (' + where_clause_content + ') '
+
+        # If cast, need to group by position for array_agg to work.
+        if not self.is_melted:
+            sql_statement += 'GROUP BY position '
 
         # Execute the query and store the results in hashable representation
         # so that they can be combined through boolean operators with other
@@ -263,7 +283,7 @@ class VariantFilterEvaluator(object):
 # Main client method.
 ###############################################################################
 
-def get_variants_that_pass_filter(filter_string, ref_genome):
+def get_variants_that_pass_filter(filter_string, ref_genome, is_melted):
     """Takes a complete filter string and returns the variants that pass the
     filter.
 
@@ -283,5 +303,5 @@ def get_variants_that_pass_filter(filter_string, ref_genome):
         List of dictionary objects representing melted Variants.
         See materialized_view_manager.py.
     """
-    evaluator = VariantFilterEvaluator(filter_string, ref_genome)
+    evaluator = VariantFilterEvaluator(filter_string, ref_genome, is_melted)
     return evaluator.evaluate()
