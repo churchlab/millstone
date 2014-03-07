@@ -2,6 +2,7 @@
 Tests for models.py.
 """
 
+import json
 import os
 
 from django.conf import settings
@@ -16,7 +17,8 @@ from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import User
-from main.models import Dataset
+from main.models import Variant
+from main.models import VariantCallerCommonData
 from main.model_utils import get_dataset_with_type
 from scripts.import_util import import_reference_genome_from_local_file
 import subprocess
@@ -208,3 +210,73 @@ class TestModelsStatic(TestCase):
         EXPECTED_SHORT_NAME = 'e_coli_k12_s'
         self.assertEqual(EXPECTED_SHORT_NAME,
                 auto_generate_short_name(LONG_NAME))
+
+
+class TestVariantCallerCommonData(TestCase):
+
+    def test_json_data_field(self):
+        """Tests the data field which uses the Postgresql 9.3 json type.
+        """
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+
+        test_project = Project.objects.create(
+            title=TEST_PROJECT_NAME,
+            owner=user.get_profile())
+
+        reference_genome = ReferenceGenome.objects.create(
+            project=test_project,
+            label='ref1',
+            num_chromosomes=1,
+            num_bases=1000)
+
+        variant = Variant.objects.create(
+            reference_genome=reference_genome,
+            type='UNKNOWN',
+            chromosome='c1',
+            position=100,
+            ref_value='A'
+        )
+
+        raw_data_dict = {
+            'key1': 'val1',
+            'key2': 'val2',
+        }
+
+        # Test storing as dictionary.
+        vccd = VariantCallerCommonData.objects.create(
+            variant=variant,
+            source_dataset_id=1,
+            data=raw_data_dict
+        )
+        vccd_lookup = VariantCallerCommonData.objects.get(
+            id=vccd.id)
+        self.assertEquals(raw_data_dict, vccd_lookup.data)
+
+        # Test storing as string.
+        vccd = VariantCallerCommonData.objects.create(
+            variant=variant,
+            source_dataset_id=1,
+            data=json.dumps(raw_data_dict)
+        )
+        vccd_lookup = VariantCallerCommonData.objects.get(
+            id=vccd.id)
+        self.assertEquals(raw_data_dict, vccd_lookup.data)
+
+        # Test blank value.
+        vccd = VariantCallerCommonData.objects.create(
+            variant=variant,
+            source_dataset_id=1,
+        )
+        self.assertEquals(0, len(vccd.data))
+
+        # Test assigning after initial create.
+        vccd = VariantCallerCommonData.objects.create(
+            variant=variant,
+            source_dataset_id=1,
+        )
+        vccd.data=json.dumps(raw_data_dict)
+        vccd.save()
+        vccd_lookup = VariantCallerCommonData.objects.get(
+            id=vccd.id)
+        self.assertEquals(raw_data_dict, vccd_lookup.data)

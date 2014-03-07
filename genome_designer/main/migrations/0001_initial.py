@@ -11,18 +11,19 @@ class Migration(SchemaMigration):
         # Adding model 'UserProfile'
         db.create_table(u'main_userprofile', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='7bab1c02', unique=True, max_length=8)),
             ('user', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='3280f41b', unique=True, max_length=36)),
         ))
         db.send_create_signal(u'main', ['UserProfile'])
 
         # Adding model 'Dataset'
         db.create_table(u'main_dataset', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='4ccdf7e9', unique=True, max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='c4411672', unique=True, max_length=8)),
             ('type', self.gf('django.db.models.fields.CharField')(max_length=40)),
             ('label', self.gf('django.db.models.fields.CharField')(max_length=256)),
             ('filesystem_location', self.gf('django.db.models.fields.CharField')(max_length=512, blank=True)),
+            ('filesystem_idx_location', self.gf('django.db.models.fields.CharField')(max_length=512, blank=True)),
             ('status', self.gf('django.db.models.fields.CharField')(default='READY', max_length=40)),
         ))
         db.send_create_signal(u'main', ['Dataset'])
@@ -30,7 +31,7 @@ class Migration(SchemaMigration):
         # Adding model 'Project'
         db.create_table(u'main_project', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='b7d66ef2', unique=True, max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='955416e2', unique=True, max_length=8)),
             ('owner', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.UserProfile'])),
             ('title', self.gf('django.db.models.fields.CharField')(max_length=256)),
             ('s3_backed', self.gf('django.db.models.fields.BooleanField')(default=False)),
@@ -40,12 +41,12 @@ class Migration(SchemaMigration):
         # Adding model 'ReferenceGenome'
         db.create_table(u'main_referencegenome', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='9f1473d5', unique=True, max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='caf8a583', unique=True, max_length=8)),
             ('project', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Project'])),
             ('label', self.gf('django.db.models.fields.CharField')(max_length=256)),
             ('num_chromosomes', self.gf('django.db.models.fields.IntegerField')()),
             ('num_bases', self.gf('django.db.models.fields.BigIntegerField')()),
-            ('variant_key_map', self.gf('jsonfield.fields.JSONField')()),
+            ('variant_key_map', self.gf('main.custom_fields.PostgresJsonField')()),
         ))
         db.send_create_signal(u'main', ['ReferenceGenome'])
 
@@ -61,7 +62,7 @@ class Migration(SchemaMigration):
         # Adding model 'ExperimentSample'
         db.create_table(u'main_experimentsample', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='3def9b65', unique=True, max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='f919cc34', unique=True, max_length=8)),
             ('project', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Project'])),
             ('label', self.gf('django.db.models.fields.CharField')(max_length=256)),
             ('group', self.gf('django.db.models.fields.CharField')(max_length=256)),
@@ -82,7 +83,7 @@ class Migration(SchemaMigration):
         # Adding model 'AlignmentGroup'
         db.create_table(u'main_alignmentgroup', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='8f5a90c1', unique=True, max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='f96e6258', unique=True, max_length=8)),
             ('label', self.gf('django.db.models.fields.CharField')(max_length=256, blank=True)),
             ('reference_genome', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.ReferenceGenome'])),
             ('aligner', self.gf('django.db.models.fields.CharField')(max_length=10)),
@@ -103,7 +104,7 @@ class Migration(SchemaMigration):
         # Adding model 'ExperimentSampleToAlignment'
         db.create_table(u'main_experimentsampletoalignment', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='4d3c7226', unique=True, max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='7255b717', unique=True, max_length=8)),
             ('alignment_group', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.AlignmentGroup'])),
             ('experiment_sample', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.ExperimentSample'])),
         ))
@@ -121,7 +122,7 @@ class Migration(SchemaMigration):
         # Adding model 'Variant'
         db.create_table(u'main_variant', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='088ec42c', unique=True, max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='771bc560', unique=True, max_length=8)),
             ('type', self.gf('django.db.models.fields.CharField')(max_length=40)),
             ('reference_genome', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.ReferenceGenome'])),
             ('chromosome', self.gf('django.db.models.fields.CharField')(max_length=256, blank=True)),
@@ -135,28 +136,28 @@ class Migration(SchemaMigration):
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('variant', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Variant'])),
             ('source_dataset', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Dataset'])),
-            ('data', self.gf('jsonfield.fields.JSONField')()),
+            ('data', self.gf('main.custom_fields.PostgresJsonField')()),
         ))
         db.send_create_signal(u'main', ['VariantCallerCommonData'])
 
         # Adding model 'VariantAlternate'
         db.create_table(u'main_variantalternate', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='39c78a1f', max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='b913d517', unique=True, max_length=8)),
             ('variant', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Variant'], null=True)),
             ('alt_value', self.gf('django.db.models.fields.TextField')()),
             ('is_primary', self.gf('django.db.models.fields.BooleanField')(default=True)),
-            ('data', self.gf('jsonfield.fields.JSONField')()),
+            ('data', self.gf('main.custom_fields.PostgresJsonField')()),
         ))
         db.send_create_signal(u'main', ['VariantAlternate'])
 
         # Adding model 'VariantEvidence'
         db.create_table(u'main_variantevidence', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='d82922ce', max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='2321e923', unique=True, max_length=8)),
             ('experiment_sample', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.ExperimentSample'])),
             ('variant_caller_common_data', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.VariantCallerCommonData'])),
-            ('data', self.gf('jsonfield.fields.JSONField')()),
+            ('data', self.gf('main.custom_fields.PostgresJsonField')()),
         ))
         db.send_create_signal(u'main', ['VariantEvidence'])
 
@@ -189,7 +190,7 @@ class Migration(SchemaMigration):
         # Adding model 'VariantSet'
         db.create_table(u'main_variantset', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='da8ef027', unique=True, max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='d3e2621b', unique=True, max_length=8)),
             ('label', self.gf('django.db.models.fields.CharField')(max_length=256)),
             ('reference_genome', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.ReferenceGenome'])),
         ))
@@ -213,7 +214,7 @@ class Migration(SchemaMigration):
         # Adding model 'Region'
         db.create_table(u'main_region', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uid', self.gf('django.db.models.fields.CharField')(default='f063e81e', unique=True, max_length=36)),
+            ('uid', self.gf('django.db.models.fields.CharField')(default='b4865ffd', unique=True, max_length=8)),
             ('reference_genome', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.ReferenceGenome'])),
             ('label', self.gf('django.db.models.fields.CharField')(max_length=256)),
             ('type', self.gf('django.db.models.fields.CharField')(max_length=40)),
@@ -360,16 +361,17 @@ class Migration(SchemaMigration):
             'label': ('django.db.models.fields.CharField', [], {'max_length': '256', 'blank': 'True'}),
             'reference_genome': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.ReferenceGenome']"}),
             'start_time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'643365c5'", 'unique': 'True', 'max_length': '36'})
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'3e2bc8c3'", 'unique': 'True', 'max_length': '8'})
         },
         u'main.dataset': {
             'Meta': {'object_name': 'Dataset'},
+            'filesystem_idx_location': ('django.db.models.fields.CharField', [], {'max_length': '512', 'blank': 'True'}),
             'filesystem_location': ('django.db.models.fields.CharField', [], {'max_length': '512', 'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'label': ('django.db.models.fields.CharField', [], {'max_length': '256'}),
             'status': ('django.db.models.fields.CharField', [], {'default': "'READY'", 'max_length': '40'}),
             'type': ('django.db.models.fields.CharField', [], {'max_length': '40'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'a541ca0e'", 'unique': 'True', 'max_length': '36'})
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'40bd98d5'", 'unique': 'True', 'max_length': '8'})
         },
         u'main.experimentsample': {
             'Meta': {'object_name': 'ExperimentSample'},
@@ -379,7 +381,7 @@ class Migration(SchemaMigration):
             'label': ('django.db.models.fields.CharField', [], {'max_length': '256'}),
             'num_reads': ('django.db.models.fields.BigIntegerField', [], {'default': '-1'}),
             'project': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.Project']"}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'8a1075e0'", 'unique': 'True', 'max_length': '36'}),
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'6d5bbf61'", 'unique': 'True', 'max_length': '8'}),
             'well': ('django.db.models.fields.CharField', [], {'max_length': '256'})
         },
         u'main.experimentsampletoalignment': {
@@ -388,7 +390,7 @@ class Migration(SchemaMigration):
             'dataset_set': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'to': u"orm['main.Dataset']", 'null': 'True', 'blank': 'True'}),
             'experiment_sample': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.ExperimentSample']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'f6095264'", 'unique': 'True', 'max_length': '36'})
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'4e8a7009'", 'unique': 'True', 'max_length': '8'})
         },
         u'main.project': {
             'Meta': {'object_name': 'Project'},
@@ -396,7 +398,7 @@ class Migration(SchemaMigration):
             'owner': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.UserProfile']"}),
             's3_backed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'title': ('django.db.models.fields.CharField', [], {'max_length': '256'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'427ded09'", 'unique': 'True', 'max_length': '36'})
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'a7b7eafd'", 'unique': 'True', 'max_length': '8'})
         },
         u'main.referencegenome': {
             'Meta': {'object_name': 'ReferenceGenome'},
@@ -406,8 +408,8 @@ class Migration(SchemaMigration):
             'num_bases': ('django.db.models.fields.BigIntegerField', [], {}),
             'num_chromosomes': ('django.db.models.fields.IntegerField', [], {}),
             'project': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.Project']"}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'c2aa1768'", 'unique': 'True', 'max_length': '36'}),
-            'variant_key_map': ('jsonfield.fields.JSONField', [], {})
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'d7988bcf'", 'unique': 'True', 'max_length': '8'}),
+            'variant_key_map': ('main.custom_fields.PostgresJsonField', [], {})
         },
         u'main.region': {
             'Meta': {'object_name': 'Region'},
@@ -415,7 +417,7 @@ class Migration(SchemaMigration):
             'label': ('django.db.models.fields.CharField', [], {'max_length': '256'}),
             'reference_genome': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.ReferenceGenome']"}),
             'type': ('django.db.models.fields.CharField', [], {'max_length': '40'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'01598bab'", 'unique': 'True', 'max_length': '36'})
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'85ed1359'", 'unique': 'True', 'max_length': '8'})
         },
         u'main.regioninterval': {
             'Meta': {'object_name': 'RegionInterval'},
@@ -435,7 +437,7 @@ class Migration(SchemaMigration):
         u'main.userprofile': {
             'Meta': {'object_name': 'UserProfile'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'0122f58a'", 'unique': 'True', 'max_length': '36'}),
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'c1643715'", 'unique': 'True', 'max_length': '8'}),
             'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True'})
         },
         u'main.variant': {
@@ -446,30 +448,30 @@ class Migration(SchemaMigration):
             'ref_value': ('django.db.models.fields.TextField', [], {}),
             'reference_genome': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.ReferenceGenome']"}),
             'type': ('django.db.models.fields.CharField', [], {'max_length': '40'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'8a6a1cdc'", 'unique': 'True', 'max_length': '36'})
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'ffd84594'", 'unique': 'True', 'max_length': '8'})
         },
         u'main.variantalternate': {
             'Meta': {'object_name': 'VariantAlternate'},
             'alt_value': ('django.db.models.fields.TextField', [], {}),
-            'data': ('jsonfield.fields.JSONField', [], {}),
+            'data': ('main.custom_fields.PostgresJsonField', [], {}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'is_primary': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'0ec6f115'", 'max_length': '36'}),
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'8478b249'", 'unique': 'True', 'max_length': '8'}),
             'variant': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.Variant']", 'null': 'True'})
         },
         u'main.variantcallercommondata': {
             'Meta': {'object_name': 'VariantCallerCommonData'},
-            'data': ('jsonfield.fields.JSONField', [], {}),
+            'data': ('main.custom_fields.PostgresJsonField', [], {}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'source_dataset': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.Dataset']"}),
             'variant': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.Variant']"})
         },
         u'main.variantevidence': {
             'Meta': {'object_name': 'VariantEvidence'},
-            'data': ('jsonfield.fields.JSONField', [], {}),
+            'data': ('main.custom_fields.PostgresJsonField', [], {}),
             'experiment_sample': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.ExperimentSample']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'1afb584f'", 'max_length': '36'}),
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'b5045f61'", 'unique': 'True', 'max_length': '8'}),
             'variant_caller_common_data': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.VariantCallerCommonData']"}),
             'variantalternate_set': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['main.VariantAlternate']", 'symmetrical': 'False'})
         },
@@ -483,7 +485,7 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'label': ('django.db.models.fields.CharField', [], {'max_length': '256'}),
             'reference_genome': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.ReferenceGenome']"}),
-            'uid': ('django.db.models.fields.CharField', [], {'default': "'4b2d9f60'", 'unique': 'True', 'max_length': '36'}),
+            'uid': ('django.db.models.fields.CharField', [], {'default': "'eeb59746'", 'unique': 'True', 'max_length': '8'}),
             'variants': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'to': u"orm['main.Variant']", 'null': 'True', 'through': u"orm['main.VariantToVariantSet']", 'blank': 'True'})
         },
         u'main.varianttovariantset': {

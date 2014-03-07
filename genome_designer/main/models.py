@@ -42,7 +42,7 @@ from django.db import models
 from django.db.models import Model
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
-from jsonfield import JSONField
+from custom_fields import PostgresJsonField
 import subprocess
 
 from model_utils import assert_unique_types
@@ -423,9 +423,9 @@ class ReferenceGenome(UniqueUidModelMixin):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
         verbose_name="Datasets")
 
-    # a key/value list of all possible VCF fields, stored as a JSONField
+    # a key/value list of all possible VCF fields, stored as a PostgresJsonField
     # and dynamically updated by dynamic_snp_filter_key_map.py
-    variant_key_map = JSONField()
+    variant_key_map = PostgresJsonField()
 
     def __unicode__(self):
         return self.label
@@ -930,7 +930,7 @@ class VariantCallerCommonData(Model, VisibleFieldMixin):
     source_dataset = models.ForeignKey('Dataset')
 
     # Catch-all key-value data store.
-    data = JSONField()
+    data = PostgresJsonField()
 
     def __getattr__(self, name):
         """Automatically called if an attribute is not found in the typical
@@ -986,7 +986,7 @@ class VariantAlternate(UniqueUidModelMixin, VisibleFieldMixin):
     is_primary = models.BooleanField(default='False')
 
     # this json fields holds all PER ALT data (INFO data with num -1)
-    data = JSONField()
+    data = PostgresJsonField()
 
     def __unicode__(self):
         return 'var: ' + str(self.variant) + ', alt:' + self.alt_value
@@ -1041,7 +1041,7 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
 
     # Catch-all key-value set of data.
     # TODO: Extract interesting keys (e.g. gt_type) into their own SQL fields.
-    data = JSONField()
+    data = PostgresJsonField()
 
     def __init__(self, *args, **kwargs):
         # HACK: Manually cache data to avoid expensive lookups.

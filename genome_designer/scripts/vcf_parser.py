@@ -247,7 +247,7 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     [raw_data_dict.pop(k, None) for k in raw_alt_keys]
 
     # Create a common data object for this variant.
-    common_data_obj, created = VariantCallerCommonData.objects.get_or_create(
+    common_data_obj = VariantCallerCommonData.objects.create(
             variant=variant,
             source_dataset=vcf_dataset,
             data=raw_data_dict
