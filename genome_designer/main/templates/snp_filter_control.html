@@ -1,28 +1,37 @@
 <div id="gd-snp-filter-component">
   <div class="gd-manual-filter-input-container">
-    <input id="gd-new-filter-input" name="variant_filter_string" type="text"
-          class="input-large span6 gd-form-tall" placeholder="Enter new filter string"
-          {% if manual_filter_string %}
-            value="{{manual_filter_string}}"
-          {% endif %}
-          >
-
-    <input type="radio" name="melt" value=0 checked>Cast
-    <input type="radio" name="melt" value=1 {% if is_melted  %}checked{% endif %}>Melted
-
-    <div id="gd-snp-filter-error" class="alert alert-error alert-block" style="display:none">
-      <button type="button" id="gd-snp-filter-error-close-btn" class="close">&times;</button>
-      <h4>Error</h4>
-      <span id="gd-snp-filter-error-msg"></span>
+    <div class="form-inline" role="form">
+      <div class="form-group">
+        <input id="gd-new-filter-input" name="variant_filter_string" type="text"
+        class="form-control" placeholder="Filter string"
+        {% if manual_filter_string %}
+          value="{{manual_filter_string}}"
+        {% endif %}
+        >
+        <button class="btn btn-success" id="gd-filter-box-apply-btn" type="button">Apply</button>
+      </div><!-- dialog /input-group -->    
+      <div class="form-group">
+        <div class="btn-group" data-toggle="buttons">
+          <label class="btn btn-default">
+            <input type="radio" name="melt" value=0 checked>Cast
+          </label>
+          <label class="btn btn-default">
+            <input type="radio" name="melt" value=1 {% if is_melted  %}checked{% endif %}>Melted
+          </label>
+        </div><!-- radio /button-group -->  
+      </div>
     </div>
+  </div>
 
-    <div class="row gd-button-container">
-      <button id="gd-filter-box-apply-btn" class="btn btn-success span2 offset5">
-        Apply Filter
-      </button>
-    </div>
 
-    <div>
+
+  <div id="gd-snp-filter-error" class="alert alert-error alert-block" style="display:none">
+    <button type="button" id="gd-snp-filter-error-close-btn" class="close">&times;</button>
+    <h4>Error</h4>
+    <span id="gd-snp-filter-error-msg"></span>
+  </div>
+
+<!--     <div>
       <button id="gd-filter-field-select-btn" class="btn gd-btn-with-margins">
         Change displayed fields
       </button>
@@ -38,10 +47,10 @@
       <button id="gd-filter-export-csv" class="btn gd-btn-with-margins">
         Export as csv
       </button>
-    </div>
-  </div>
+    </div> -->
+  <!-- </div> -->
+<!-- </div> -->
 </div>
-
 <form id="gd-filter-export-csv-form" action="/_/variants/export_as_csv"
     method="GET">
   <input type='hidden' name='csrfmiddlewaretoken' value='{{csrf}}' />

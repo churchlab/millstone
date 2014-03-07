@@ -20,6 +20,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     this.currentSubView = null;
 
     this.render();
+    $('.gd-sidebar > div.list-group > select').selectpicker()
   },
 
 
@@ -44,10 +45,15 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
   registerManualListeners: function() {
     $('#gd-analyze-select-ref-genome').change(
         _.bind(this.handleRefGenomeSelect, this));
+    $('#gd-analyze-select-ref-genome').selectpicker();
+
     $('#gd-analyze-select-ag').change(
         _.bind(this.handleAlignmentGroupSelect, this));
+    $('#gd-analyze-select-ag').selectpicker('hide');
+
     $('#gd-analyze-select-search-entity').change(
         _.bind(this.handleSearchEntitySelect, this));
+    $('#gd-analyze-select-search-entity').selectpicker('hide');
   },
 
 
@@ -74,20 +80,23 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
         '<option selected disabled>Alignment Group</option>');
 
     // Hide the entity select if showing.
-    $('#gd-analyze-select-search-entity').hide();
+    //$('#gd-analyze-select-search-entity').hide();
 
     // Populate the AlignmentGroup select with the relevant options and fade
     // in.
     var requestData = {
       'refGenomeUid': this.model.get('refGenomeUid')
     };
+
     $.get('/_/alignmentgroups', requestData,
         _.bind(function(response) {
 
           // ReferenceGenome has no AlignmentGroups.
           if (!response.length > 0) {
             $('#gd-analyze-select-ag').append(
-                '<optgroup label="No Alignments"></optgroup>');
+                '<option selected disabled>No Alignments</option>');
+            $('#gd-analyze-select-ag').selectpicker('refresh');
+            $('#gd-analyze-select-search-entity').selectpicker('hide');
             return;
           }
 
@@ -98,8 +107,12 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
                   alignmentGroup.label +
                 '</option>');
           })
+
+          $('#gd-analyze-select-ag').selectpicker('refresh');
+
         }, this));
-    $('#gd-analyze-select-ag').fadeIn();
+
+    $('#gd-analyze-select-ag').selectpicker('show');
   },
 
 
@@ -138,7 +151,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     this.router.navOnAlignmentGroupSelect(alignmentGroupUid, subViewKey);
 
     // Show the entity select (i.e. Variants, VariantSets, etc.)
-    $('#gd-analyze-select-search-entity').fadeIn();
+    $('#gd-analyze-select-search-entity').selectpicker('show')
 
     // Determine the sub-view to show from the key.
     var subView = gd.TabAnalyzeBaseView.SUBVIEW_TYPE_TO_VIEW_CLASS[
@@ -185,7 +198,7 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
   /** Tear out the current subview. */
   destroySubview: function() {
     // Get rid of the current view.
-    $('#gd-analyze-subview-controls-hook').empty();
+    $('.gd-table-controls').empty();
     if (this.currentSubView) {
       this.currentSubView.destroy();
     }

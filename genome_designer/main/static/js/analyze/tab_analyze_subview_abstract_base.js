@@ -12,14 +12,15 @@ gd.TabAnalyzeSubviewAbstractBase = Backbone.View.extend({
 
   /** Override. */
   render: function() {
-    this.renderControls();
     this.renderDatatable();
+    // This needs to happen afterwards since they are now inside the table. 
+    this.renderControls();
   },
 
 
   /** Render the controls. Inheriting classes should override. */
   renderControls: function() {
-    $('#gd-analyze-subview-controls-hook').append(
+    $('.gd-table-controls').append(
         '<h3>Controls go here</h3>');
   },
 

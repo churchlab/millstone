@@ -52,7 +52,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     $.get('/_/templates/variant_filter_controls', requestData,
         _.bind(function(response) {
           // Append the DOM.
-          $('#gd-analyze-subview-controls-hook').append(response);
+          $('.gd-table-controls').append(response);
 
           // Fill in the filter if relevant.
           $('#gd-new-filter-input').val(this.model.get('filterString'));
