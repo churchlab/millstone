@@ -112,6 +112,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
       'projectUid': this.model.get('project').uid,
       'refGenomeUid': this.model.get('refGenomeUid'),
       'variantFilterString': $('#gd-new-filter-input').val(),
+      'sortBy': this.model.get('sortBy'),
       'melt': $('input:radio[name=melt]:checked').val()
     };
 
