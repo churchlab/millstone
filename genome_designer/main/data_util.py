@@ -57,7 +57,7 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
     if not is_melted:
         page_results = format_cast_objects(page_results)
 
-    num_total_variants = len(page_results)
+    num_total_variants = len(result_list)
 
     return LookupVariantsResult(page_results, num_total_variants)
 
