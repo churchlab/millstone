@@ -167,6 +167,15 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     // Reset the ui.
     this.setUIDoneLoadingState();
+
+    // Add sort column listeners. TODO make this less hacky
+    var thispage = this;
+    $('.sorting').on('click', function(e) {
+        var obj = e.target;
+        var columnName = (obj.textContent ? obj.textContent : obj.innerText).toLowerCase();
+        thispage.model.set('sortBy', columnName);
+        thispage.updateVariantList();
+    });
   },
 
 
@@ -256,6 +265,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
       'projectUid': this.model.get('project').uid,
       'refGenomeUid': this.model.get('refGenomeUid'),
       'variantFilterString': this.model.get('filterString'),
+      'sortBy': this.model.get('sortBy'),
       'melt': $('input:radio[name=melt]:checked').val()
     };
 

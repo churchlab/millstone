@@ -36,7 +36,7 @@ class LookupVariantsResult(object):
 
 
 def lookup_variants(reference_genome, combined_filter_string, is_melted,
-        pagination_start, pagination_len):
+        pagination_start, pagination_len, sort_by_column):
     """Manages the end-to-end flow of looking up Variants that match the
     given filter.
 
@@ -48,13 +48,11 @@ def lookup_variants(reference_genome, combined_filter_string, is_melted,
         LookupVariantsResult object.
     """
     # Get the Variants that pass the filter.
-    filter_eval_result = get_variants_that_pass_filter(combined_filter_string,
-            reference_genome, is_melted)
-    result_list = list(filter_eval_result.variant_set)
+    result_list = get_variants_that_pass_filter(combined_filter_string,
+            reference_genome, is_melted, sort_by_column)
 
     page_results = result_list[pagination_start :
             pagination_start + pagination_len]
-    print [result.obj_dict for result in page_results]
 
     if not is_melted:
         page_results = format_cast_objects(page_results)

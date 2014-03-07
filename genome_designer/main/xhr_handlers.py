@@ -136,6 +136,8 @@ def get_variant_list(request):
     # TODO: Combine with saved filter string.
     combined_filter_string = manual_filter_string
 
+    sort_by_column = request.GET.get('sortBy', '')
+
     # Determine whether melted or cast view.
     is_melted = request.GET.get('melt', 0) == '1'
 
@@ -151,7 +153,7 @@ def get_variant_list(request):
         # Get the list of Variants (or melted representation) to display.
         lookup_variant_result = lookup_variants(reference_genome,
                 combined_filter_string, is_melted, pagination_start,
-                pagination_len)
+                pagination_len, sort_by_column)
         variant_list = lookup_variant_result.result_list
         num_total_variants = lookup_variant_result.num_total_variants
 
