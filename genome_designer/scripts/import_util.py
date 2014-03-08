@@ -395,16 +395,10 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
         for record in reader:
             record = PseudoVCF(**record)
 
-            # Since there are no samples, we don't use the query_cache
-            # right now.
-            # Yes, it's weird that the client would know the internal
-            # working of the get_or_create_variant() method.
-            # TODO: Make this a proper query cache.
-            unused_query_cache = None
-
             # Get or create the Variant for this record.
+            # NOTE: No samples so query_cache is not necessary.
             variant, alts = get_or_create_variant(
-                reference_genome, record, dataset, unused_query_cache)
+                    reference_genome, record, dataset, query_cache=None)
 
             # Create a link between the Variant and the VariantSet if
             # it doesn't exist.

@@ -8,7 +8,6 @@ import os
 from django.conf import settings
 from django.test import TestCase
 
-from main.models import auto_generate_short_name
 from main.models import clean_filesystem_location
 from main.models import AlignmentGroup
 from main.models import Dataset
@@ -19,6 +18,7 @@ from main.models import ReferenceGenome
 from main.models import User
 from main.models import Variant
 from main.models import VariantCallerCommonData
+from main.model_utils import auto_generate_short_name
 from main.model_utils import get_dataset_with_type
 from scripts.import_util import import_reference_genome_from_local_file
 import subprocess

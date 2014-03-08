@@ -10,7 +10,6 @@ from django.db import models
 from django.db import transaction
 
 import os
-import pickle
 import re
 import stat
 
@@ -183,18 +182,3 @@ def auto_generate_short_name(long_name):
     short_name = '_'.join(tokens)
     short_name = short_name[:SHORT_NAME_CHARS]
     return short_name
-
-
-def get_flattened_unpickled_data(data):
-    """Returns a dictionary from key to string values.
-
-    Tries to unpickle the values if possible.
-    """
-    clean_data = {}
-    for key, value in data.iteritems():
-        try:
-            clean_value = pickle.loads(str(value))
-        except:
-            clean_value = str(value)
-        clean_data[key] = clean_value
-    return clean_data

@@ -4,8 +4,6 @@ Signal registration.
 See: https://docs.djangoproject.com/en/dev/topics/signals/.
 """
 
-import pickle
-
 from django.db.models.signals import m2m_changed
 from django.db.models.signals import post_save
 

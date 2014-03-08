@@ -4,7 +4,6 @@ Tests for xhr_handlers.py.
 
 import json
 import os
-import pickle
 
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
@@ -140,7 +139,7 @@ class TestGetVariantList(TestCase):
     #             ref_value='A')
 
     #     raw_data_dict = {
-    #             'INFO_EFF_EFFECT': pickle.dumps(['NON_SYNONYMOUS'])
+    #             'INFO_EFF_EFFECT': ['NON_SYNONYMOUS']
     #     }
     #     VariantCallerCommonData.objects.create(
     #             variant=variant,

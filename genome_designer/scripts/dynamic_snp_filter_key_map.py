@@ -5,10 +5,6 @@ In our setup, we may want to query against data for an entire Variant, data
 captured in VaiantCallerCommonData, or data describing the relationship between
 a single Variant and ExperimentSample, captured in VariantEvidence.
 
-Note that the fields are stored in a key-value field in the database, and
-because the values may be of different types, we just pickle the pyvcf object
-to store it.
-
 Previously, we were using a static map that we defined once, in
 generate_filter_key_map.py. Now, because every VCF we import might have
 different fields, and because SnpEFF adds fields, we need to dynamically
@@ -17,7 +13,7 @@ be stored in a JSONField in the ReferenceGenome called variant_key_map.
 
 The maps defined here specify:
     * the valid keys that can be filtered agains
-    * which data object they are located in, SNPCallerCommonData, 
+    * which data object they are located in, SNPCallerCommonData,
         SNP_Alternate_Data,
         and SNPEvidence
     * the type and number of the field (i.e. array or single, integer, float,

@@ -30,7 +30,6 @@ Implementation Notes:
 """
 
 import os
-import pickle
 import shutil
 from contextlib import contextmanager
 import tempfile
@@ -46,11 +45,9 @@ from custom_fields import PostgresJsonField
 import subprocess
 
 from model_utils import assert_unique_types
-from model_utils import auto_generate_short_name
 from model_utils import clean_filesystem_location
 from model_utils import ensure_exists_0775_dir
 from model_utils import get_dataset_with_type
-from model_utils import get_flattened_unpickled_data
 from model_utils import make_choices_tuple
 from model_utils import short_uuid
 from model_utils import UniqueUidModelMixin
@@ -946,26 +943,9 @@ class VariantCallerCommonData(Model, VisibleFieldMixin):
         See: http://docs.python.org/2/reference/datamodel.html#object.__getattr__
         """
         try:
-            return pickle.loads(self.data[name])
+            return self.data[name]
         except:
             raise AttributeError
-
-    def as_dict(self):
-        """Converts a common data object into a dictionary from key to cleaned
-        values.
-
-        Cleaned generally means that fields that had to be pickled for storage
-        are unpickled.
-
-        Note that the original object had some SQL-level fields, but most of the
-        data pased from the vcf file is in a catch-all 'data' field.
-        This method flattens the structure so that all data is available on the
-        resulting top-level object.
-
-        Returns:
-            A flattened dictionary of cleaned data.
-        """
-        return get_flattened_unpickled_data(self.data)
 
     @classmethod
     def default_view_fields(clazz):
@@ -991,23 +971,6 @@ class VariantAlternate(UniqueUidModelMixin, VisibleFieldMixin):
     def __unicode__(self):
         return 'var: ' + str(self.variant) + ', alt:' + self.alt_value
 
-    def as_dict(self):
-        """Converts a alternate object into a dictionary from key to cleaned
-        values.
-
-        Cleaned generally means that fields that had to be pickled for storage
-        are unpickled.
-
-        Note that the original object had some SQL-level fields, but most of the
-        data pased from the vcf file is in a catch-all 'data' field.
-        This method flattens the structure so that all data is available on the
-        resulting top-level object.
-
-        Returns:
-            A flattened dictionary of cleaned data.
-        """
-        return get_flattened_unpickled_data(self.data)
-
     # TODO: Do we want to explicitly link each VariantAlternate to
     # it's variant index in each VCCD object or VE object?
     # Currently it's done implicitly through the VCCD's data['ALT']
@@ -1020,7 +983,7 @@ class VariantAlternate(UniqueUidModelMixin, VisibleFieldMixin):
         """
         return [{'field':'alt_value', 'verbose':'Alt(s)'}]
 
-    
+
 class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
     """
     Evidence for a particular variant occurring in a particular
@@ -1067,13 +1030,13 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
 
         """
         try:
-            return pickle.loads(self.data[name])
+            return self.data[name]
         except:
             raise AttributeError
 
 
     def create_variant_alternate_association(self):
-        gt_bases = pickle.loads(self.data['gt_bases'])
+        gt_bases = self.data['gt_bases']
 
         # If this variant evidence is a non-call, no need to add alt alleles.
         if gt_bases is None:
@@ -1104,7 +1067,6 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
                         'allele that is not present for this variant!')
                 raise
 
-
     @property
     def sample_uid(self):
         if 'sample_uid' in self.manually_cached_data:
@@ -1112,12 +1074,6 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
 
         # Otherwise, probably do DB lookup. Guarantee correctness.
         return self.experiment_sample.uid
-
-    def as_dict(self):
-        """Returns a flattened dictionary of the unpickled element values in
-        VarantEvidence.data.
-        """
-        return get_flattened_unpickled_data(self.data)
 
     @classmethod
     def default_view_fields(clazz):
