@@ -29,11 +29,12 @@ Implementation Notes:
 
 """
 
+from contextlib import contextmanager
 import os
 import shutil
-from contextlib import contextmanager
-import tempfile
+import subprocess
 
+from custom_fields import PostgresJsonField
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
@@ -41,20 +42,17 @@ from django.db import models
 from django.db.models import Model
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
-from custom_fields import PostgresJsonField
-import subprocess
 
 from model_utils import assert_unique_types
-from model_utils import clean_filesystem_location
 from model_utils import ensure_exists_0775_dir
 from model_utils import get_dataset_with_type
 from model_utils import make_choices_tuple
-from model_utils import short_uuid
 from model_utils import UniqueUidModelMixin
 from model_utils import VisibleFieldMixin
 from settings import TOOLS_DIR
 
 BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
+
 
 ###############################################################################
 # User-related models
@@ -71,6 +69,7 @@ class UserProfile(UniqueUidModelMixin):
 
     def __unicode__(self):
         return self.user.username
+
 
 # Since the registration flow creates a django User object, we want to make
 # sure that the corresponding UserProfile is also created
@@ -532,6 +531,7 @@ class ReferenceGenome(UniqueUidModelMixin):
         return [{'field':'label'},
                 {'field':'num_chromosomes', 'verbose':'# Chromosomes'},
                 {'field':'num_bases', 'verbose':'Total Size'}]
+
 
 class ExperimentSample(UniqueUidModelMixin):
     """Model representing data for a particular experiment sample.
@@ -1190,12 +1190,6 @@ def post_variant_set_create(sender, instance, created, **kwargs):
 post_save.connect(post_variant_set_create, sender=VariantSet,
         dispatch_uid='variant_set_create')
 
-class VariantFilter(Model):
-    """Model used to save a string representation of a filter used to sift
-    through Variants.
-    """
-    pass
-
 class Region(UniqueUidModelMixin):
     """Semantic annotation for a disjoint set of intervals in a
     ReferenceGenome.
@@ -1219,6 +1213,7 @@ class Region(UniqueUidModelMixin):
 
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
+
 
 class RegionInterval(Model):
     """One of possibly several intervals that describe a single region.

@@ -13,7 +13,6 @@ from tempfile import NamedTemporaryFile
 
 from django.db import transaction
 from django.conf import settings
-from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -23,6 +22,7 @@ from main.models import VariantCallerCommonData
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from main.models import get_dataset_with_type
+from main.model_utils import clean_filesystem_location
 from scripts.vcf_parser import extract_raw_data_dict
 from scripts.vcf_parser import get_or_create_variant
 from settings import PWD

@@ -7,11 +7,11 @@ import sys
 
 from celery import task
 
-from main.models import clean_filesystem_location
 from main.models import get_dataset_with_type
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
+from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
 from read_alignment_util import ensure_bwa_index
 from scripts.import_util import add_dataset_to_entity

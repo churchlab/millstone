@@ -173,12 +173,3 @@ def get_dataset_with_type(entity, type, compressed=False):
     if len(results) > 0:
         return results[0]
     return None
-
-
-def auto_generate_short_name(long_name):
-    """Helper method to compute a short name from a long name."""
-    SHORT_NAME_CHARS = 12
-    tokens = [token.lower() for token in long_name.split()]
-    short_name = '_'.join(tokens)
-    short_name = short_name[:SHORT_NAME_CHARS]
-    return short_name

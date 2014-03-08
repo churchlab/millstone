@@ -8,10 +8,10 @@ import subprocess
 
 from celery import task
 
-from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
+from main.model_utils import clean_filesystem_location
 from read_alignment import get_insert_size
 from main.s3 import project_files_needed
 from variant_effects import run_snpeff
