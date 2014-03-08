@@ -7,7 +7,6 @@ Setup script.
 import os
 import platform
 import re
-import shutil
 import stat
 import sys
 import urllib
@@ -15,6 +14,7 @@ import zipfile
 
 from bs4 import BeautifulSoup
 
+from main.exceptions import InputError
 from settings import JBROWSE_DATA_SYMLINK_PATH
 from settings import MEDIA_ROOT
 from settings import PWD as GD_ROOT

@@ -14,7 +14,6 @@ django-celery==3.0.17
 django-nose==1.2
 django-registration==1.0
 ipython==0.13.2
--e git://github.com/Polyconseil/django-jsonfield.git@e59d3b37b9482f54644f870edf64745e7faf11de#egg=jsonfield-dev
 kombu==2.5.12
 nose==1.3.0
 psycopg2==2.5.1

@@ -4,8 +4,6 @@ Methods for reading vcf files and importing it in our database representation.
 We leverage pyvcf as much as possible.
 """
 
-import pickle
-
 from django.db import transaction
 import vcf
 
@@ -16,11 +14,20 @@ from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
-from settings import TOOLS_DIR
 
 
-TABIX_BINARY = '%s/tabix/tabix' % TOOLS_DIR
-BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
+SV_TYPES = {
+    'DEL': 'DELETION',
+    'DUP': 'DUPLICATION',
+    'INV': 'INVERSION'
+}
+
+UNKNOWN_VARIANT_TYPE = 'unknown'
+
+IGNORE_VCF_RECORD_KEYS = [
+    # Bug in pyvcf where some alleles are some sort of object rather than str.
+    'alleles'
+]
 
 
 class QueryCache(object):
@@ -44,15 +51,18 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
 def parse_vcf(vcf_dataset, reference_genome):
     """Parses the VCF and creates Variant models relative to ReferenceGenome.
     """
+    # This helper object will help prevent repeated calls to the database.
+    # We'll use it at least for ExperimentSamples.
     query_cache = QueryCache()
 
-    # First count the number of records to give output.
+    # First count the number of records to give helpful status debug output.
     record_count = 0
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
         for record in vcf_reader:
             record_count += 1
 
+    # Now iterate through the vcf file again and parse the data.
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
 
@@ -87,35 +97,26 @@ def extract_raw_data_dict(vcf_record):
         Dictionary representation of the record.
     """
     # Keys that we need to do extra work with in order to copy.
-    MANUAL_KEYS = ['INFO', 'samples', 'ALT']
+    MANUAL_KEYS = ['INFO', 'samples']
 
     data_dict = {}
 
-    # Copy over non-manual keys
+    # Extract keys that do not need to be handled manually.
     for key, value in vcf_record.__dict__.iteritems():
-        if not key in MANUAL_KEYS:
-            # For now, we pickle (and later un-pickle values) because
-            # they come in different types, and we haven't figured out a good
-            # way to deal with this quite yet.
-            data_dict[str(key)] = pickle.dumps(value)
-
-    # The ALT key is a fancy _AltRecord object (or possibly subclassed
-    # as a substitution or an SV, so for now, just pass its __str__()
-    data_dict['ALT'] = pickle.dumps(vcf_record.ALT)
-
-    def expand_type(svtype):
-        svtypes = {'DEL': 'DELETION', 'DUP': 'DUPLICATION', 'INV': 'INVERSION'}
-        return svtypes[svtype] if svtype in svtypes else 'unknown'
+        if key in IGNORE_VCF_RECORD_KEYS or key in MANUAL_KEYS:
+            continue
+        data_dict[str(key)] = value
 
     # The TYPE is just a property of the record object.
     # TODO: Do we care about the var_subtype()? (ts/tv/complex/sv type/etc?)
     # sv callers store the type in vcf_record.INFO['SVTYPE']
     if hasattr(vcf_record, 'INFO') and 'SVTYPE' in dict(vcf_record.INFO):
-        data_dict['TYPE'] = expand_type(dict(vcf_record.INFO)['SVTYPE'])
+        data_dict['TYPE'] = SV_TYPES.get(dict(vcf_record.INFO)['SVTYPE'],
+                UNKNOWN_VARIANT_TYPE)
     elif hasattr(vcf_record, 'var_type'):
         data_dict['TYPE'] = str(vcf_record.var_type)
     else:
-        data_dict['TYPE'] = 'unknown'
+        data_dict['TYPE'] = UNKNOWN_VARIANT_TYPE
 
     # Populate 'INFO'
     if hasattr(vcf_record, 'INFO'):
@@ -129,88 +130,44 @@ def populate_common_data_info(data_dict, vcf_record):
     """
     for key, value in vcf_record.INFO.iteritems():
         effective_key = 'INFO_' + key
-        data_dict[effective_key] = pickle.dumps(value)
+        data_dict[effective_key] = value
 
-def vcf_to_vcftabix(vcf_dataset):
-    """Generates a compressed version of a vcf file and index it with
-    samtools tabix. Add a new dataset model instance for this compressed
-    version, with the same related objects. Flag is as compressed,
-    indexed, etc.
-    """
-
-    # 1. Check if dataset is compressed. If not, then grab the compressed
-    # version or make a compressed version.
-    if not vcf_dataset.is_compressed():
-        # Check for existing compressed version using related model.
-        # Assume that the first model will do.
-        related_model = vcf_dataset.get_related_model_set().all()[:1]
-        compressed_dataset = get_dataset_with_type(
-                entity=related_model,
-                type=vcf_dataset.type,
-                compressed=True)
-        # If there is no compressed dataset, then make it
-        if compressed_dataset is None:
-            compressed_dataset = vcf_dataset.make_compressed('.bgz')
-    else:
-        compressed_dataset = vcf_dataset
-
-    if compressed_dataset.filesystem_idx_location == '':
-
-        # Set the tabix index location
-        compressed_dataset.filesystem_idx_location = (
-                compressed_dataset.filesystem_location + '.tbi')
-
-        # Make tabix index
-        subprocess.check_call([
-            TABIX_BINARY,
-            '-p', 'vcf',
-            compressed_dataset.get_absolute_location()
-        ])
-    else:
-        # If it's already here, then make sure the index is right
-        assert compressed_dataset.filesystem_idx_location == (
-                compressed_dataset.filesystem_location + '.tbi'), (
-                'Tabix index file location is not correct.')
-        assert os.path.exists(
-                compressed_dataset.get_absolute_idx_location()), (
-                'Tabix index file does not exist on filesystem.')
-
-    return compressed_dataset
 
 def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
-        query_cache):
-    """Create a variant if it doesn't already exist, along with
-    its child VariantCallerCommonData object and VariantEvidencye
-    and VariantAlternate children.
+        query_cache=None):
+    """Create a variant and its relations.
+
+    A new Variant is only created if it doesn't exist already. The following
+    relations are created:
+        * VariantCallerCommonData
+        * VariantEvidence
+        * VariantAlternate
+
+    Also go through all per-alt keys and add them as a json field
+    to the VariantAlternate object.
 
     Right now this assumes we are always using Freebayes for alignment.
 
     Args:
         reference_genome: The ReferenceGenome.
-        raw_data_dict: Data dictionary with at least the following keys:
-            * CHROM
-            * POS
-            * REF
-            * ALT
-
-        Also go through all per-alt keys and add them as a json field
-        to the VariantAlternate object.
+        vcf_record: pyvcf Record object.
+        vcf_dataset: Source Dataset for this data.
+        query_cache: QueryCache helper object for making queries.
 
     Returns:
         Tuple (Variant, List<VariantAlt>)
     """
-
     # Build a dictionary of data for this record.
     raw_data_dict = extract_raw_data_dict(vcf_record)
 
-    # Extract the relevant fields from the common data object.
+    # Extract the REQUIRED fields from the common data object.
     type = str(raw_data_dict.pop('TYPE'))
-    chromosome = pickle.loads(str(raw_data_dict.pop('CHROM')))
-    position = int(pickle.loads(str(raw_data_dict.pop('POS'))))
-    ref_value = pickle.loads(str(raw_data_dict.pop('REF')))
-    alt_values = pickle.loads(str(raw_data_dict.pop('ALT')))
+    chromosome = raw_data_dict.pop('CHROM')
+    position = int(raw_data_dict.pop('POS'))
+    ref_value = raw_data_dict.pop('REF')
+    alt_values = raw_data_dict.pop('ALT')
 
-    # Try to find an existing one, or create it.
+    # Try to find an existing Variant, or create it.
     variant, created = Variant.objects.get_or_create(
             reference_genome=reference_genome,
             type=type,
@@ -225,37 +182,38 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
 
     for alt_idx, alt_value in enumerate(alt_values):
 
-        # Unpickle the list and then repickle the single index needed
-        alt_data = dict([
-                (k, pickle.dumps(pickle.loads(raw_data_dict[k])[alt_idx])) 
-                for k in raw_alt_keys])
+        # Grab the alt data for this alt index.
+        alt_data = dict([(k, raw_data_dict[k][alt_idx]) for k in raw_alt_keys])
 
         var_alt, var_created = VariantAlternate.objects.get_or_create(
                 variant=variant,
                 alt_value=alt_value)
 
         # If this is a new alternate, initialize the data dictionary
-        if var_created: var_alt.data = {}
-        # TODO: we are overwriting keys here; not sure this is desired behavior
+        if var_created:
+            var_alt.data = {}
+
+        # TODO: We are overwriting keys here. Is this desired?
         var_alt.data.update(alt_data)
-        # Removing the ALT key since it is stored 
         var_alt.save()
 
         alts.append(var_alt)
 
-    # Remove all per-alt keys from raw_data_dict before passing to VCC create
+    # Remove all per-alt keys from raw_data_dict before passing to VCC create.
     [raw_data_dict.pop(k, None) for k in raw_alt_keys]
 
     # Create a common data object for this variant.
-    common_data_obj, created = VariantCallerCommonData.objects.get_or_create(
+    # NOTE: raw_data_dict only contains the values that were not popped until
+    # this point.
+    common_data_obj = VariantCallerCommonData.objects.create(
             variant=variant,
             source_dataset=vcf_dataset,
             data=raw_data_dict
     )
 
     # TODO: What about num -2 objects? I'm really not excited about
-    # creating a VariantGenotype object, nor do I think it will 
-    # be necessary, so skipping it for now, and keeping that data in 
+    # creating a VariantGenotype object, nor do I think it will
+    # be necessary, so skipping it for now, and keeping that data in
     # the VCC object.
 
     # Create a VariantEvidence object for each ExperimentSample.
@@ -269,7 +227,7 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
             sample_obj = query_cache.uid_to_experiment_sample_map[sample_uid]
         else:
             sample_obj = ExperimentSample.objects.get(uid=sample_uid)
-        ve = VariantEvidence.objects.create(
+        VariantEvidence.objects.create(
                 experiment_sample=sample_obj,
                 variant_caller_common_data=common_data_obj,
                 data=sample_data_dict)
@@ -278,11 +236,10 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
 
 
 def extract_sample_data_dict(s):
-    """Manually serializes a pyvcf _Call object because their internal use of
-    __slots__ breaks python pickle.
+    """Extract sample data from the pyvcf _Call object.
 
     Args:
-        pyvcf _Call object.
+        s: pyvcf _Call object.
 
     Returns:
         A dictionary representing the object.
@@ -292,7 +249,7 @@ def extract_sample_data_dict(s):
         be extra paranoid when parsing it.
         """
         try:
-            result_dict[key] = eval('pickle.dumps(s.' + eval_string + ')')
+            result_dict[key] = getattr(s, eval_string)
         except AttributeError:
             result_dict[key] = None
 
@@ -308,19 +265,15 @@ def extract_sample_data_dict(s):
         ('is_het', 'is_het'),
         ('is_variant', 'is_variant'),
         ('phased', 'phased'),
-        ('AO', 'data.AO'),
-        ('DP', 'data.DP'),
-        ('GL', 'data.GL'),
-        ('GT', 'data.GT'),
-        ('QA', 'data.QA'),
-        ('QR', 'data.QR'),
-        ('RO', 'data.RO')
     )
-
-    # TODO: Add support for SnpEff data. I don't remember why I was hard-coding
-    # the above fields before, but it would be nice to avoid hard-coding if
-    # possible.
-
     for key, eval_string in key_eval_string_pairs:
         _add_property(result, s, key, eval_string)
+
+    # Add data fields in slightly different way.
+    # These include fields like 'AO' and 'GT', etc.
+    if hasattr(s, 'data'):
+        result.update(s.data.__dict__)
+
+    # TODO: Add support for SnpEff data.
+
     return result

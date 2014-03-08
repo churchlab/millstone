@@ -187,4 +187,4 @@ class TestImportVariantSetFromVCFFile(TestCase):
 
         v_553 = Variant.objects.get(reference_genome=self.ref_genome,
                 position=553)
-        self.assertEqual(['C','G'], v_553.get_alternates())
+        self.assertEqual(set(['C','G']), set(v_553.get_alternates()))
