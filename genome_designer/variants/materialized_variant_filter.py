@@ -19,14 +19,17 @@ class VariantFilterEvaluator(object):
         '(position > 5) in ALL(sample1, sample2)'
     """
 
-    def __init__(self, raw_filter_string, ref_genome,
-            is_melted, sort_by_column, scope=None):
+    def __init__(self, query_args, ref_genome, scope=None):
         """Constructor.
 
         Args:
-            raw_filter_string: String representing the raw filter.
-            is_melted: True if melted view, false if cast view.
-            sort_by_column: A column name to sort by, or an empty string otherwise.
+            query_args: a dictionary with the following arguments:
+                filter_string: String representing the raw filter.
+                is_melted: True if melted view, false if cast view.
+                sort_by_column: A column name to sort by, or an empty string otherwise.
+                count_only: True if only want to return a count
+                pagination_start: Offset of the returned query
+                pagination_len: Maximum number of returned variants
             ref_genome: ReferenceGenome these variants are relative to.
             scope: Optional FilterScope object which restricts the results
                 to the samples according to the semantic setting of the scope.
@@ -41,11 +44,14 @@ class VariantFilterEvaluator(object):
         if scope is not None:
             assert isinstance(scope, FilterScope)
 
-        self.raw_filter_string = raw_filter_string
-        self.clean_filter_string = raw_filter_string
+        # Load args into arguments directly
+        self.filter_string = query_args['filter_string']
+        self.is_melted = query_args['is_melted']
+        self.sort_by_column = query_args['sort_by_column']
+        self.count_only = query_args['count_only']
+        self.pagination_start = query_args['pagination_start']
+        self.pagination_len = query_args['pagination_len']
         self.ref_genome = ref_genome
-        self.is_melted = is_melted
-        self.sort_by_column = sort_by_column
         self.scope = scope
 
 
@@ -77,19 +83,27 @@ class VariantFilterEvaluator(object):
         # Handle global SQL keys. Perform the initial SQL query to constrain
         # the results.
         cursor = connection.cursor()
-        sql_statement = 'SELECT %s FROM %s ' % (select_clause, table_name)
+        if self.count_only:
+            sql_statement = 'SELECT COUNT(*) FROM %s ' % (table_name)
+        else:
+            sql_statement = 'SELECT %s FROM %s ' % (select_clause, table_name)
 
         # Maybe add WHERE clause.
-        if self.clean_filter_string:
-            sql_statement += 'WHERE (' + self.clean_filter_string + ') '
+        if self.filter_string:
+            sql_statement += 'WHERE (' + self.filter_string + ') '
 
-        # If cast, need to group by position for array_agg to work.
-        if not self.is_melted:
-            sql_statement += 'GROUP BY position '
+        if not self.count_only:
+            # If cast, need to group by position for array_agg to work.
+            if not self.is_melted:
+                sql_statement += 'GROUP BY position '
 
-        # Add optional sort clause.
-        if self.sort_by_column:
-            sql_statement += 'ORDER BY %s ' % self.sort_by_column
+            # Add optional sort clause.
+            if self.sort_by_column:
+                sql_statement += 'ORDER BY %s ' % self.sort_by_column
+
+            # Add limit and offset clause.
+            sql_statement += 'LIMIT %d OFFSET %d ' % (self.pagination_len,
+                    self.pagination_start)
 
         # Execute the query and store the results in hashable representation
         # so that they can be combined through boolean operators with other
@@ -104,8 +118,7 @@ class VariantFilterEvaluator(object):
 # Main client method.
 ###############################################################################
 
-def get_variants_that_pass_filter(filter_string, ref_genome,
-        is_melted, sort_by_column):
+def get_variants_that_pass_filter(query_args, ref_genome):
     """Takes a complete filter string and returns the variants that pass the
     filter.
 
@@ -116,9 +129,13 @@ def get_variants_that_pass_filter(filter_string, ref_genome,
     for special values.
 
     Args:
-        filter_string: Query string from the user.
-        is_melted: True if melted view, false if cast view.
-        sort_by_column: A column name to sort by, or an empty string otherwise.
+        query_args: a dictionary with the following arguments:
+            filter_string: String representing the raw filter.
+            is_melted: True if melted view, false if cast view.
+            sort_by_column: A column name to sort by, or an empty string otherwise.
+            count_only: True if only want to return a count
+            pagination_start: Offset of the returned query
+            pagination_len: Maximum number of returned variants
         ref_genome: The ReferenceGenome this is limited to. This is a hard-coded
             parameter of sorts, since at the least we always limit comparisons
             among Variant objects to those that share a ReferenceGenome.
@@ -127,6 +144,5 @@ def get_variants_that_pass_filter(filter_string, ref_genome,
         List of dictionary objects representing melted Variants.
         See materialized_view_manager.py.
     """
-    evaluator = VariantFilterEvaluator(filter_string, ref_genome,
-            is_melted, sort_by_column)
+    evaluator = VariantFilterEvaluator(query_args, ref_genome)
     return evaluator.evaluate()
