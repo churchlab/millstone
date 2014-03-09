@@ -281,7 +281,8 @@ def extract_sample_data_dict(s):
     ]
     if hasattr(s, 'data'):
         for key in SAMPLE_DATA_FIELDS:
-            result[key] = getattr(s.data, key)
+            if hasattr(s.data, key):
+                result[key] = getattr(s.data, key)
 
     # TODO: Add support for SnpEff data.
 
