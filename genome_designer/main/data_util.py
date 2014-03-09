@@ -49,9 +49,11 @@ def lookup_variants(query_args, reference_genome):
     # Get the Variants that pass the filter.
     page_results = get_variants_that_pass_filter(query_args, reference_genome)
 
+    # Now get all results that pass the filter (remove limit clause)
     query_args['count_only'] = True
+    query_args['pagination_start'] = 0
+    query_args['pagination_len'] = -1  # for no limit
     num_total_variants = get_variants_that_pass_filter(query_args, reference_genome)[0]['count']
-    print num_total_variants
 
     if not query_args['is_melted']:
         page_results = format_cast_objects(page_results)

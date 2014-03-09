@@ -29,7 +29,7 @@ class VariantFilterEvaluator(object):
                 sort_by_column: A column name to sort by, or an empty string otherwise.
                 count_only: True if only want to return a count
                 pagination_start: Offset of the returned query
-                pagination_len: Maximum number of returned variants
+                pagination_len: Maximum number of returned variants, or -1 for no limit
             ref_genome: ReferenceGenome these variants are relative to.
             scope: Optional FilterScope object which restricts the results
                 to the samples according to the semantic setting of the scope.
@@ -83,27 +83,27 @@ class VariantFilterEvaluator(object):
         # Handle global SQL keys. Perform the initial SQL query to constrain
         # the results.
         cursor = connection.cursor()
-        if self.count_only:
-            sql_statement = 'SELECT COUNT(*) FROM %s ' % (table_name)
-        else:
-            sql_statement = 'SELECT %s FROM %s ' % (select_clause, table_name)
+        sql_statement = 'SELECT %s FROM %s ' % (select_clause, table_name)
 
         # Maybe add WHERE clause.
         if self.filter_string:
             sql_statement += 'WHERE (' + self.filter_string + ') '
 
-        if not self.count_only:
-            # If cast, need to group by position for array_agg to work.
-            if not self.is_melted:
-                sql_statement += 'GROUP BY position '
+        # If cast, need to group by position for array_agg to work.
+        if not self.is_melted:
+            sql_statement += 'GROUP BY position '
 
-            # Add optional sort clause.
-            if self.sort_by_column:
-                sql_statement += 'ORDER BY %s ' % self.sort_by_column
+        # Add optional sort clause.
+        if self.sort_by_column:
+            sql_statement += 'ORDER BY %s ' % self.sort_by_column
 
-            # Add limit and offset clause.
-            sql_statement += 'LIMIT %d OFFSET %d ' % (self.pagination_len,
-                    self.pagination_start)
+        # Add limit and offset clause.
+        if self.pagination_len != -1:
+            sql_statement += 'LIMIT %d ' % self.pagination_len
+        sql_statement += 'OFFSET %d ' % self.pagination_start
+
+        if self.count_only:
+            sql_statement = 'SELECT count(*) FROM (' + sql_statement + ') subresult';
 
         # Execute the query and store the results in hashable representation
         # so that they can be combined through boolean operators with other
