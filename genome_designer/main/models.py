@@ -29,12 +29,12 @@ Implementation Notes:
 
 """
 
-import os
-import pickle
-import shutil
 from contextlib import contextmanager
-import tempfile
+import os
+import shutil
+import subprocess
 
+from custom_fields import PostgresJsonField
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
@@ -42,22 +42,17 @@ from django.db import models
 from django.db.models import Model
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
-from jsonfield import JSONField
-import subprocess
 
 from model_utils import assert_unique_types
-from model_utils import auto_generate_short_name
-from model_utils import clean_filesystem_location
 from model_utils import ensure_exists_0775_dir
 from model_utils import get_dataset_with_type
-from model_utils import get_flattened_unpickled_data
 from model_utils import make_choices_tuple
-from model_utils import short_uuid
 from model_utils import UniqueUidModelMixin
 from model_utils import VisibleFieldMixin
 from settings import TOOLS_DIR
 
 BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
+
 
 ###############################################################################
 # User-related models
@@ -74,6 +69,7 @@ class UserProfile(UniqueUidModelMixin):
 
     def __unicode__(self):
         return self.user.username
+
 
 # Since the registration flow creates a django User object, we want to make
 # sure that the corresponding UserProfile is also created
@@ -423,9 +419,9 @@ class ReferenceGenome(UniqueUidModelMixin):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
         verbose_name="Datasets")
 
-    # a key/value list of all possible VCF fields, stored as a JSONField
+    # a key/value list of all possible VCF fields, stored as a PostgresJsonField
     # and dynamically updated by dynamic_snp_filter_key_map.py
-    variant_key_map = JSONField()
+    variant_key_map = PostgresJsonField()
 
     def __unicode__(self):
         return self.label
@@ -535,6 +531,7 @@ class ReferenceGenome(UniqueUidModelMixin):
         return [{'field':'label'},
                 {'field':'num_chromosomes', 'verbose':'# Chromosomes'},
                 {'field':'num_bases', 'verbose':'Total Size'}]
+
 
 class ExperimentSample(UniqueUidModelMixin):
     """Model representing data for a particular experiment sample.
@@ -930,7 +927,7 @@ class VariantCallerCommonData(Model, VisibleFieldMixin):
     source_dataset = models.ForeignKey('Dataset')
 
     # Catch-all key-value data store.
-    data = JSONField()
+    data = PostgresJsonField()
 
     def __getattr__(self, name):
         """Automatically called if an attribute is not found in the typical
@@ -946,26 +943,9 @@ class VariantCallerCommonData(Model, VisibleFieldMixin):
         See: http://docs.python.org/2/reference/datamodel.html#object.__getattr__
         """
         try:
-            return pickle.loads(self.data[name])
+            return self.data[name]
         except:
             raise AttributeError
-
-    def as_dict(self):
-        """Converts a common data object into a dictionary from key to cleaned
-        values.
-
-        Cleaned generally means that fields that had to be pickled for storage
-        are unpickled.
-
-        Note that the original object had some SQL-level fields, but most of the
-        data pased from the vcf file is in a catch-all 'data' field.
-        This method flattens the structure so that all data is available on the
-        resulting top-level object.
-
-        Returns:
-            A flattened dictionary of cleaned data.
-        """
-        return get_flattened_unpickled_data(self.data)
 
     @classmethod
     def default_view_fields(clazz):
@@ -986,27 +966,10 @@ class VariantAlternate(UniqueUidModelMixin, VisibleFieldMixin):
     is_primary = models.BooleanField(default='False')
 
     # this json fields holds all PER ALT data (INFO data with num -1)
-    data = JSONField()
+    data = PostgresJsonField()
 
     def __unicode__(self):
         return 'var: ' + str(self.variant) + ', alt:' + self.alt_value
-
-    def as_dict(self):
-        """Converts a alternate object into a dictionary from key to cleaned
-        values.
-
-        Cleaned generally means that fields that had to be pickled for storage
-        are unpickled.
-
-        Note that the original object had some SQL-level fields, but most of the
-        data pased from the vcf file is in a catch-all 'data' field.
-        This method flattens the structure so that all data is available on the
-        resulting top-level object.
-
-        Returns:
-            A flattened dictionary of cleaned data.
-        """
-        return get_flattened_unpickled_data(self.data)
 
     # TODO: Do we want to explicitly link each VariantAlternate to
     # it's variant index in each VCCD object or VE object?
@@ -1020,7 +983,7 @@ class VariantAlternate(UniqueUidModelMixin, VisibleFieldMixin):
         """
         return [{'field':'alt_value', 'verbose':'Alt(s)'}]
 
-    
+
 class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
     """
     Evidence for a particular variant occurring in a particular
@@ -1041,7 +1004,7 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
 
     # Catch-all key-value set of data.
     # TODO: Extract interesting keys (e.g. gt_type) into their own SQL fields.
-    data = JSONField()
+    data = PostgresJsonField()
 
     def __init__(self, *args, **kwargs):
         # HACK: Manually cache data to avoid expensive lookups.
@@ -1067,13 +1030,13 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
 
         """
         try:
-            return pickle.loads(self.data[name])
+            return self.data[name]
         except:
             raise AttributeError
 
 
     def create_variant_alternate_association(self):
-        gt_bases = pickle.loads(self.data['gt_bases'])
+        gt_bases = self.data['gt_bases']
 
         # If this variant evidence is a non-call, no need to add alt alleles.
         if gt_bases is None:
@@ -1104,7 +1067,6 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
                         'allele that is not present for this variant!')
                 raise
 
-
     @property
     def sample_uid(self):
         if 'sample_uid' in self.manually_cached_data:
@@ -1112,12 +1074,6 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
 
         # Otherwise, probably do DB lookup. Guarantee correctness.
         return self.experiment_sample.uid
-
-    def as_dict(self):
-        """Returns a flattened dictionary of the unpickled element values in
-        VarantEvidence.data.
-        """
-        return get_flattened_unpickled_data(self.data)
 
     @classmethod
     def default_view_fields(clazz):
@@ -1234,12 +1190,6 @@ def post_variant_set_create(sender, instance, created, **kwargs):
 post_save.connect(post_variant_set_create, sender=VariantSet,
         dispatch_uid='variant_set_create')
 
-class VariantFilter(Model):
-    """Model used to save a string representation of a filter used to sift
-    through Variants.
-    """
-    pass
-
 class Region(UniqueUidModelMixin):
     """Semantic annotation for a disjoint set of intervals in a
     ReferenceGenome.
@@ -1263,6 +1213,7 @@ class Region(UniqueUidModelMixin):
 
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
+
 
 class RegionInterval(Model):
     """One of possibly several intervals that describe a single region.

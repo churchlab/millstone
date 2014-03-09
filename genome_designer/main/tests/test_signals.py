@@ -3,14 +3,13 @@ Tests for signals.py.
 """
 
 import os
-import pickle
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
 from main.models import Dataset
-from main.models import ExperimentSample 
+from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
@@ -82,7 +81,7 @@ class TestSignals(TestCase):
 
         # Test creating VE with ref gt.
         ve_ref_data = {
-            'gt_bases': pickle.dumps('A/A')
+            'gt_bases': 'A/A'
         }
         ve_with_ref_data = VariantEvidence.objects.create(
                 experiment_sample=sample_1,
@@ -92,7 +91,7 @@ class TestSignals(TestCase):
 
         # Test creating VE with alt gt.
         ve_alt_data = {
-            'gt_bases': pickle.dumps('G/G')
+            'gt_bases': 'G/G'
         }
         ve_with_alt_data = VariantEvidence.objects.create(
                 experiment_sample=sample_1,

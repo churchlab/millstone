@@ -124,7 +124,7 @@ def get_variants_that_pass_filter(query_args, ref_genome):
 
     We have a hybrid implementation for field values, where some of the field
     values are actually columns in the respective database tables, while others
-    are serialized (pickled) as part of a single key-value string. We provide
+    are serialized as part of a single key-value string. We provide
     filtering using SQL as much as possible, resorting to per-key filtering
     for special values.
 

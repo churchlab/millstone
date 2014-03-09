@@ -7,14 +7,10 @@ import json
 import os
 import subprocess
 
-
-from import_util import generate_fasta_from_genbank
 from main.models import Dataset
 from main.models import get_dataset_with_type
 from main.models import ReferenceGenome
-from scripts.vcf_parser import vcf_to_vcftabix
 from settings import JBROWSE_BIN_PATH
-from settings import JBROWSE_DATA_SYMLINK_PATH
 from settings import JBROWSE_DATA_URL_ROOT
 from settings import S3_BUCKET
 from settings import TOOLS_DIR

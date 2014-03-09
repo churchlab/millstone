@@ -2,7 +2,6 @@
 Tests for materialized_variant_filter.py.
 """
 
-import pickle
 import os
 
 from django.db import connection
@@ -360,8 +359,8 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         raw_sample_data_dict = {
                 'called': True,
-                'gt_type': pickle.dumps(2),
-                'gt_bases': pickle.dumps('G/G')
+                'gt_type': 2,
+                'gt_bases': 'G/G'
         }
         sample_1_evidence = VariantEvidence.objects.create(
                 experiment_sample=self.sample_obj_1,
@@ -370,8 +369,8 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         raw_sample_data_dict = {
                 'called': True,
-                'gt_type': pickle.dumps(2),
-                'gt_bases': pickle.dumps('T/T')
+                'gt_type': 2,
+                'gt_bases': 'T/T'
         }
         sample_2_evidence = VariantEvidence.objects.create(
                 experiment_sample=self.sample_obj_2,

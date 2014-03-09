@@ -5,11 +5,6 @@ In our setup, we may want to query against data for an entire Variant, data
 captured in VaiantCallerCommonData, or data describing the relationship between
 a single Variant and ExperimentSample, captured in VariantEvidence.
 
-
-Note that the fields are stored in a key-value field in the database, and
-because the values may be of different types, we just pickle the pyvcf object
-to store it.
-
 Previously, we were using a static map that we defined once, in
 generate_filter_key_map.py. Now, because every VCF we import might have
 different fields, and because SnpEFF adds fields, we need to dynamically
@@ -18,7 +13,7 @@ be stored in a JSONField in the ReferenceGenome called variant_key_map.
 
 The maps defined here specify:
     * the valid keys that can be filtered agains
-    * which data object they are located in, SNPCallerCommonData, 
+    * which data object they are located in, SNPCallerCommonData,
         SNP_Alternate_Data,
         and SNPEvidence
     * the type and number of the field (i.e. array or single, integer, float,
@@ -27,9 +22,10 @@ The maps defined here specify:
 """
 
 import copy
-import pprint
 
 import vcf
+
+from main.exceptions import InputError
 
 
 # Hard-coded keys to be used during parsing.
@@ -82,7 +78,8 @@ def update_filter_key_map(ref_genome, source_vcf):
     The strategy is to use pyvcf to do the heavy-lifting of parsing the vcf
     header and get the types for each key out of there.
 
-    We store a map of these types in a JSONField object per reference-genome.
+    We store a map of these types in a ReferenceGenome.variant_key_map,
+    whose underlying representation is a Postgres json column.
 
     TODO: Handle potential INFO ID name collisions (i.e. two different
         vcf files that have two non-identical ID fields with the same name.
@@ -92,13 +89,12 @@ def update_filter_key_map(ref_genome, source_vcf):
     'A' is stored as -1, which means that a single value is held for every
     ALTERATE allele. 'G' is stored as -2, which means there is a different value
     for every possible  genotype combination of alleles (which would be a choose
-    n where n is the called  ploidy and a is the number of alleles). 
+    n where n is the called  ploidy and a is the number of alleles).
 
     All of the -1 fields are stored in a subdict corresponding to
     MAP_KEY__ALTERNATE, and the JSONField data in the VariantEvidence object
     stores the per-alt data after doing the equivalent of 'zip()ing' it per
     object.
-
     """
 
     #First try the source_vcf as a vcf file

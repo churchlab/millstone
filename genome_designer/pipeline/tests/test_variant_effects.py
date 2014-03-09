@@ -16,7 +16,6 @@ import re
 import itertools
 
 from main.models import AlignmentGroup
-from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment

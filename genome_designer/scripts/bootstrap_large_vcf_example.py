@@ -12,10 +12,10 @@ from util import setup_django_env
 setup_django_env()
 
 from main.models import AlignmentGroup
-from main.models import clean_filesystem_location
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
+from main.model_utils import clean_filesystem_location
 from scripts.bootstrap_data import get_or_create_user
 from scripts.import_util import import_reference_genome_from_local_file
 from snpeff_util import get_snpeff_vcf_output_path

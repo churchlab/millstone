@@ -21,6 +21,7 @@ from django.shortcuts import render
 from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
+from main.exceptions import InputError
 from main.forms import ProjectForm
 from main.model_views import MeltedVariantView
 from main.models import AlignmentGroup
@@ -42,18 +43,6 @@ import settings
 # Tags used to indicate which tab we are on.
 TAB_ROOT__DATA = 'DATA'
 TAB_ROOT__ANALYZE = 'ANALYZE'
-
-
-class InputError(Exception):
-    """Exception raised for errors in the input.
-
-    I assume this is what DBG wanted in d922023e8a1d4e7757bfa3e68aba3ace89f2a749.
-
-    Attributes:
-        msg  -- explanation of the error
-    """
-    def __init__(self, msg):
-        self.msg = msg
 
 
 def home_view(request):
