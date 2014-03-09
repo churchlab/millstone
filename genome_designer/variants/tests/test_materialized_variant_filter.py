@@ -109,15 +109,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                     variant_set=self.catchall_variant_set)
 
         # Test querying Variants with position > 5.
-        result = get_variants_that_pass_filter('position > 5', self.ref_genome)
-        variants_above_5 = result.variant_set
+        variants_above_5 = self.run_query('position > 5', self.ref_genome)
         self.assertEqual(4, len(variants_above_5))
         for var in variants_above_5:
             self.assertTrue(var['position'] > 5)
 
         # Test querying Variants with position >= 5.
-        result = get_variants_that_pass_filter('position >= 5', self.ref_genome)
-        variants_above_5 = result.variant_set
+        variants_above_5 = self.run_query('position >= 5', self.ref_genome)
         self.assertEqual(5, len(variants_above_5))
         for var in variants_above_5:
             self.assertTrue(var['position'] >= 5)
@@ -161,9 +159,8 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                     variant_set=self.catchall_variant_set)
 
         def _assert_results(chromosome_value, num_results):
-            result = get_variants_that_pass_filter(
+            variants = self.run_query(
                     'chromosome = %s'% chromosome_value, self.ref_genome)
-            variants = result.variant_set
             self.assertEqual(num_results, len(variants))
             for var in variants:
                 self.assertEqual(chromosome_value, var['chromosome'])
@@ -211,8 +208,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         def _assert_results(query, num_results, chromosome_value,
                 position_value, position_delim):
-            result = get_variants_that_pass_filter(query, self.ref_genome)
-            variants = result.variant_set
+            variants = self.run_query(query, self.ref_genome)
             self.assertEqual(num_results, len(variants))
             for var in variants:
                 self.assertEqual(chromosome_value, var['chromosome'])
@@ -247,7 +243,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         QUERY_STRING = 'dinosaur > 4 & chromosome = chrom'
         with self.assertRaises(ParseError):
-            get_variants_that_pass_filter(QUERY_STRING, self.ref_genome)
+            self.run_query(QUERY_STRING, self.ref_genome)
 
 
     def test_filter__by_position_complex(self):
@@ -273,20 +269,19 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         # Test AND case.
         QUERY_STRING = 'position < 1 & position > 7'
-        result = get_variants_that_pass_filter(QUERY_STRING,
+        result = self.run_query(QUERY_STRING,
                 self.ref_genome)
-        self.assertEqual(0, len(result.variant_set))
+        self.assertEqual(0, len(result))
 
         # Test OR case.
         QUERY_STRING = 'position < 1 | position > 7'
-        result = get_variants_that_pass_filter(QUERY_STRING,
+        variant_list = self.run_query(QUERY_STRING,
                 self.ref_genome)
-        variant_list = result.variant_set
         self.assertEqual(3, len(variant_list))
         for pos in [0, 8, 9]:
             found = False
             for var in variant_list:
-                if var.position == pos:
+                if var['position'] == pos:
                     found = True
                     break
             self.assertTrue(found, "Expected variant at pos %d not found" % pos)
@@ -313,22 +308,22 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
             VariantToVariantSet.objects.create(variant=var,
                     variant_set=self.catchall_variant_set)
 
-        variants = get_variants_that_pass_filter('position == 5',
-                self.ref_genome).variant_set
+        variants = self.run_query('position == 5',
+                self.ref_genome)
         self.assertEqual(1, len(variants))
-        self.assertEqual(5, variants.pop().position)
+        self.assertEqual(5, variants.pop()['position'])
 
-        variants = get_variants_that_pass_filter('position = 5',
-                self.ref_genome).variant_set
+        variants = self.run_query('position = 5',
+                self.ref_genome)
         self.assertEqual(1, len(variants))
         for var in variants:
-            self.assertEqual(5, var.position)
+            self.assertEqual(5, var['position'])
 
-        variants = get_variants_that_pass_filter('position != 5',
-                self.ref_genome).variant_set
+        variants = self.run_query('position != 5',
+                self.ref_genome)
         self.assertEqual(9, len(variants))
         for var in variants:
-            self.assertNotEqual(5, var.position)
+            self.assertNotEqual(5, var['position'])
 
 
     def test_filter__no_sets(self):
@@ -377,10 +372,9 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict)
 
-        result = get_variants_that_pass_filter('', self.ref_genome)
+        variants = self.run_query('', self.ref_genome)
 
         # We expect 2 rows of results.
-        variants = result.variant_set
         self.assertEqual(2, len(variants))
 
         # Account for all results.
@@ -421,15 +415,20 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         # This query runs without errors.
         QUERY_STRING = 'position < 1'
-        variants = get_variants_that_pass_filter(QUERY_STRING,
-                ref_genome_2).variant_set
+        variants = self.run_query(QUERY_STRING,
+                ref_genome_2)
         self.assertEqual(0, len(variants))
 
         # This throws an error since INFO_XRM is not a recognized key.
         with self.assertRaises(ParseError):
             QUERY_STRING = 'position < 1 & INFO_XRM > 0'
-            variants = get_variants_that_pass_filter(QUERY_STRING,
-                    ref_genome_2).variant_set
+            variants = self.run_query(QUERY_STRING,
+                    ref_genome_2)
+
+
+    def run_query(self, filter_string, ref_genome):
+        query_args = {'filter_string': filter_string}
+        return get_variants_that_pass_filter(query_args, ref_genome)
 
 
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
@@ -439,15 +438,15 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
     def test_variant_filter_constructor(self):
         """Tests the constructor.
         """
-        raw_filter_string = 'position > 5'
-        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
+        query_args = {'filter_string': 'position > 5'}
+        evaluator = VariantFilterEvaluator(query_args, self.ref_genome)
         EXPECTED_SYMBOLIC_REP = sympify('A')
         self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
         self.assertEqual('position > 5',
                 evaluator.symbol_to_expression_map['A'])
 
-        raw_filter_string = 'position>5 & chromosome= chrom1'
-        evaluator = VariantFilterEvaluator(raw_filter_string, self.ref_genome)
+        query_args = {'filter_string': 'position>5 & chromosome= chrom1'}
+        evaluator = VariantFilterEvaluator(query_args, self.ref_genome)
         EXPECTED_SYMBOLIC_REP = sympify('A & B')
         self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
         self.assertEqual('position>5',

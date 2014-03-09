@@ -123,74 +123,77 @@ def get_variant_list(request):
     reference_genome = get_object_or_404(ReferenceGenome,
             project__uid=project_uid, uid=ref_genome_uid)
 
-    # Pagination.
-    pagination_start = int(request.GET.get('iDisplayStart', 0))
-    pagination_len = int(request.GET.get('iDisplayLength', 100))
+    # Dictionary to hold all query specific parameters.
+    query_args = {}
 
     # Get inputs to perform the query for Variants data.
-    if VARIANT_LIST_REQUEST_KEY__FILTER_STRING in request.GET:
-        manual_filter_string = request.GET.get(
-                VARIANT_LIST_REQUEST_KEY__FILTER_STRING)
-    else:
-        manual_filter_string = ''
     # TODO: Combine with saved filter string.
-    combined_filter_string = manual_filter_string
+    query_args['filter_string'] = request.GET.get(
+            VARIANT_LIST_REQUEST_KEY__FILTER_STRING, '')
 
     # Determine whether melted or cast view.
-    is_melted = request.GET.get('melt', 0) == '1'
+    query_args['is_melted'] = request.GET.get('melt', 0) == '1'
+
+    # Get optional column to sort by.
+    query_args['sort_by_column'] = request.GET.get('sortBy', '')
+
+    # Want all results listed, so set count_only to false.
+    query_args['count_only'] = False
+
+    # Pagination.
+    query_args['pagination_start'] = int(request.GET.get('iDisplayStart', 0))
+    query_args['pagination_len'] = int(request.GET.get('iDisplayLength', 100))
 
     # Any exception from here should be caused by a malformed query from the
     # user and the data should return an error string, rather than throw a 500.
     # Of course, it is possible that we have our bugs right now so devs should
     # be wary of this big try-except.
-    try:
-        # Determine the visible keys.
-        visible_key_names = _determine_visible_field_names(request,
-                combined_filter_string, reference_genome)
+    #try:
+    # Determine the visible keys.
+    visible_key_names = _determine_visible_field_names(request,
+            query_args['filter_string'], reference_genome)
 
-        # Get the list of Variants (or melted representation) to display.
-        lookup_variant_result = lookup_variants(reference_genome,
-                combined_filter_string, is_melted, pagination_start,
-                pagination_len)
-        variant_list = lookup_variant_result.result_list
-        num_total_variants = lookup_variant_result.num_total_variants
+    # Get the list of Variants (or melted representation) to display.
+    lookup_variant_result = lookup_variants(query_args, reference_genome)
+    variant_list = lookup_variant_result.result_list
+    num_total_variants = lookup_variant_result.num_total_variants
 
-        # Adapt the Variants to display for the frontend.
-        if is_melted:
-            variant_list_json = adapt_new_melted_variant_view_to_frontend(
-                    variant_list)
-        else:
-            variant_list_json = adapt_new_cast_variant_view_to_frontend(
-                    variant_list)
+    # Adapt the Variants to display for the frontend.
+    if query_args['is_melted']:
+        variant_list_json = adapt_new_melted_variant_view_to_frontend(
+                variant_list)
+    else:
+        variant_list_json = adapt_new_cast_variant_view_to_frontend(
+                variant_list)
 
-        # Get all VariantSets that exist for this ReferenceGenome.
-        variant_set_list = VariantSet.objects.filter(
-                reference_genome=reference_genome)
+    # Get all VariantSets that exist for this ReferenceGenome.
+    variant_set_list = VariantSet.objects.filter(
+            reference_genome=reference_genome)
 
-        # Query the keys valid for ReferenceGenome, and mark the ones that
-        # will be displayed so that the checkmarks in the visible field select
-        # are pre-filled in case the user wishes to change these.
-        variant_key_map_with_active_fields_marked = copy.deepcopy(
-                reference_genome.variant_key_map)
-        _mark_active_keys_in_variant_key_map(
+    # Query the keys valid for ReferenceGenome, and mark the ones that
+    # will be displayed so that the checkmarks in the visible field select
+    # are pre-filled in case the user wishes to change these.
+    variant_key_map_with_active_fields_marked = copy.deepcopy(
+            reference_genome.variant_key_map)
+    _mark_active_keys_in_variant_key_map(
+            variant_key_map_with_active_fields_marked)
+
+    # Package up the response.
+    response_data = {
+        VARIANT_LIST_RESPONSE_KEY__LIST: variant_list_json,
+        VARIANT_LIST_RESPONSE_KEY__TOTAL: num_total_variants,
+        VARIANT_LIST_RESPONSE_KEY__SET_LIST: adapt_model_to_frontend(VariantSet,
+                obj_list=variant_set_list),
+        VARIANT_LIST_RESPONSE_KEY__KEY_MAP: json.dumps(
                 variant_key_map_with_active_fields_marked)
+    }
 
-        # Package up the response.
-        response_data = {
-            VARIANT_LIST_RESPONSE_KEY__LIST: variant_list_json,
-            VARIANT_LIST_RESPONSE_KEY__TOTAL: num_total_variants,
-            VARIANT_LIST_RESPONSE_KEY__SET_LIST: adapt_model_to_frontend(VariantSet,
-                    obj_list=variant_set_list),
-            VARIANT_LIST_RESPONSE_KEY__KEY_MAP: json.dumps(
-                    variant_key_map_with_active_fields_marked)
-        }
-
-    except Exception as e:
-        # TODO: More readable error reporting.
-        exception_as_string = str(type(e)) + ' ' +  str(e)
-        response_data = {
-            VARIANT_LIST_RESPONSE_KEY__ERROR: exception_as_string
-        }
+#    except Exception as e:
+#        # TODO: More readable error reporting.
+#        exception_as_string = str(type(e)) + ' ' +  str(e)
+#        response_data = {
+#            VARIANT_LIST_RESPONSE_KEY__ERROR: exception_as_string
+#        }
 
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
