@@ -7,7 +7,17 @@ from scratch.
 """
 
 from django.db import connection
+from sympy.logic import boolalg
 
+from variants.common import EXPRESSION_REGEX
+from variants.common import SAMPLE_SCOPE_REGEX
+from variants.common import GENE_REGEX
+from variants.common import SET_REGEX
+from variants.common import convert_delim_key_value_triple_to_expr
+from variants.common import get_all_key_map
+from variants.common import get_delim_key_value_triple
+from variants.common import hashablefetchall
+from variants.common import SymbolGenerator
 from variants.materialized_view_manager import MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
 from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
@@ -45,14 +55,80 @@ class VariantFilterEvaluator(object):
             assert isinstance(scope, FilterScope)
 
         # Load args into arguments directly
-        self.filter_string = query_args['filter_string']
-        self.is_melted = query_args['is_melted']
-        self.sort_by_column = query_args['sort_by_column']
-        self.count_only = query_args['count_only']
-        self.pagination_start = query_args['pagination_start']
-        self.pagination_len = query_args['pagination_len']
+        self.filter_string = query_args.get('filter_string', None)
+        self.is_melted = query_args.get('is_melted', True)
+        self.sort_by_column = query_args.get('sort_by_column', None)
+        self.count_only = query_args.get('count_only', False)
+        self.pagination_start = query_args.get('pagination_start', 0)
+        self.pagination_len = query_args.get('pagination_len', -1)
         self.ref_genome = ref_genome
+
+        self.all_key_map = get_all_key_map(self.ref_genome)
+        self.variant_caller_common_map = (
+                self.ref_genome.get_variant_caller_common_map())
+        self.variant_alternate_map = (
+                self.ref_genome.get_variant_alternate_map())
+        self.variant_evidence_map = (
+                self.ref_genome.get_variant_evidence_map())
         self.scope = scope
+
+        # Generator object that provides symbols in alphabetical order.
+        self.symbol_maker = SymbolGenerator()
+
+        # Catch trivial, no filter case.
+        if self.filter_string == '':
+            self.sympy_representation = ''
+        else:
+            self._create_symbolic_representation()
+
+    def _create_symbolic_representation(self):
+        """Creates a symbolic representation of the query to enable, among
+        other things, manipulation with sympy so we can get to disjunctive
+        normal form (DNF).
+        """
+        # Find all the expressions and replace them with symbols.
+        self.symbol_to_expression_map = {}
+
+        symbolified_string = self.filter_string
+        for regex in [SAMPLE_SCOPE_REGEX, EXPRESSION_REGEX, SET_REGEX,
+                GENE_REGEX]:
+            symbolified_string = self._symbolify_string_for_regex(
+                    symbolified_string, regex)
+
+        self.sympy_representation = boolalg.to_dnf(symbolified_string)
+
+
+    def _symbolify_string_for_regex(self, start_string, regex):
+        """Iterates through the string tokenized by the regex and replaces
+        the matching tokens with symbols.
+        """
+        tokens = regex.split(start_string)
+        symbolified_tokens = []
+        for token in tokens:
+            if regex.match(token):
+                symbol = self.symbol_maker.next()
+                self.symbol_to_expression_map[symbol] = token
+                symbolified_tokens.append(symbol)
+            else:
+                symbolified_tokens.append(token)
+        symbolified_string = ''.join(symbolified_tokens)
+        return symbolified_string
+
+
+    def get_condition_string_for_symbol(self, symbol):
+        """Returns the condition string that the symbol replaced.
+
+        Args:
+            symbol: A sympy.core.symbol.Symbol or string.
+
+        Returns:
+            A string representing a query condition.
+        """
+        if isinstance(symbol, str):
+            symbol_str = symbol
+        else:
+            symbol_str = str(symbol)
+        return self.symbol_to_expression_map[symbol_str]
 
 
     def evaluate(self):
@@ -86,8 +162,11 @@ class VariantFilterEvaluator(object):
         sql_statement = 'SELECT %s FROM %s ' % (select_clause, table_name)
 
         # Maybe add WHERE clause.
-        if self.filter_string:
-            sql_statement += 'WHERE (' + self.filter_string + ') '
+        if self.sympy_representation:
+            where_clause, where_clause_args = self._where_clause()
+            sql_statement += 'WHERE (' + where_clause + ') '
+        else:
+            where_clause_args = []
 
         # If cast, need to group by position for array_agg to work.
         if not self.is_melted:
@@ -108,10 +187,111 @@ class VariantFilterEvaluator(object):
         # Execute the query and store the results in hashable representation
         # so that they can be combined through boolean operators with other
         # evaluations.
-        cursor.execute(sql_statement)
+        cursor.execute(sql_statement, where_clause_args)
         result_list = [dict(zip([col[0] for col in cursor.description], row))
                 for row in cursor.fetchall()]
         return result_list
+
+
+    def _where_clause(self):
+        # Returns None if no where clause, or
+        #   a tuple (where clause, arguments)
+        if not self.sympy_representation:
+            return None
+
+        # On a high level, the algorithm breaks down into doing as much
+        # filtering on the SQL side, and then doing the rest in application
+        # memory. Fields that we currently handle in memory include those that
+        # are part of the catch-all serialized data field, as well as SQL
+        # fields which we must then use to establish the specific relationship
+        # between Variants and ExperimentSamples.
+
+        # First we bin the individual symbols in the clause according to how
+        # they should be handled. The binning decision works according to:
+        #     * Symbols that can be handled in SQL are picked out.
+        #         * They are all turned into Q objects.
+        #         * Those that are relevant to per-sample filtering are saved
+        #           for further analysis along with remaining triples below.
+        #     * Symbols that are a scoped expression are handled recursively
+        #       and the FilterEvalResult object returned.
+        #     * Non-SQL triples (part of serialized string) are saved for
+        #       for processing in-memory at the end.
+        #
+        # Order doesn't matter since this is a conjunction (AND) clause.
+
+        # Store the results of binning in these data structures.
+        def _conjuntion_clause(conjunction_clause):
+            filter_eval_results = []
+            sql_ready_symbol_list = []
+            remaining_triples = []
+
+            # Bin the parts of the query, potentially making recursive calls
+            # if we have scoped filters (e.g. per-sample).
+            if not conjunction_clause == '':
+                # Handle the case where a conjunction might be a single condition.
+                if not conjunction_clause.is_Boolean:
+                    symbol_list = [conjunction_clause]
+                else:
+                    symbol_list = conjunction_clause.args
+
+                # Bin.
+                for symbol in symbol_list:
+                    updated_structs = self._single_symbol_mux(
+                            symbol, filter_eval_results, sql_ready_symbol_list,
+                            remaining_triples)
+                    (filter_eval_results, sql_ready_symbol_list,
+                            remaining_triples) = updated_structs
+
+            where_clause_conjunctive_expr_list = []
+            where_clause_args = []
+            for triple in remaining_triples:
+                (expr, arg) = convert_delim_key_value_triple_to_expr(triple)
+                where_clause_conjunctive_expr_list.append(expr)
+                where_clause_args.append(arg)
+            return (' AND '.join(where_clause_conjunctive_expr_list),
+                    where_clause_args)
+
+        # If only one conjunction clause, evaluate directly
+        if not isinstance(self.sympy_representation, boolalg.Or):
+            return _conjuntion_clause(self.sympy_representation)
+        else:
+            conjunction_clause_info = [_conjuntion_clause(conjunction_clause)
+                    for conjunction_clause in self.sympy_representation.args]
+            where_clause = ' OR '.join(['(' + info[0] + ')'
+                for info in conjunction_clause_info])
+            args = []
+            for info in conjunction_clause_info:
+                args.extend(info[1])
+            return (where_clause, args)
+
+
+    def _single_symbol_mux(self, symbol, filter_eval_results, q_list,
+            remaining_triples):
+        """Helper method for evaluating a single symbol.
+        """
+        result = self._handle_single_symbol(symbol)
+        remaining_triples.append(result)
+        return (filter_eval_results, q_list, remaining_triples)
+
+
+    def _handle_single_symbol(self, symbol):
+        """Returns one of:
+            * A FilterEvalResult object if the symbol represents a scoped
+                filter condition.
+            * A Tuple pair (Q_OBJ_TYPE, Django Q object), if the symbol
+                represents a condition that
+            can be evaluated against the SQL database.
+            * A triple of delim, key, value if the condition must be evaluated
+                in-memory.
+        """
+        # Look up the expression that the symbol represents.
+        condition_string = self.get_condition_string_for_symbol(symbol)
+
+        # Finally, if here, then this should be a basic, delimiter-separated
+        # expression.
+        (delim, key, value) = get_delim_key_value_triple(condition_string,
+                self.all_key_map)
+        return (delim, key, value)
 
 
 ###############################################################################

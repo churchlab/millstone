@@ -148,52 +148,52 @@ def get_variant_list(request):
     # user and the data should return an error string, rather than throw a 500.
     # Of course, it is possible that we have our bugs right now so devs should
     # be wary of this big try-except.
-    try:
-        # Determine the visible keys.
-        visible_key_names = _determine_visible_field_names(request,
-                query_args['filter_string'], reference_genome)
+    #try:
+    # Determine the visible keys.
+    visible_key_names = _determine_visible_field_names(request,
+            query_args['filter_string'], reference_genome)
 
-        # Get the list of Variants (or melted representation) to display.
-        lookup_variant_result = lookup_variants(query_args, reference_genome)
-        variant_list = lookup_variant_result.result_list
-        num_total_variants = lookup_variant_result.num_total_variants
+    # Get the list of Variants (or melted representation) to display.
+    lookup_variant_result = lookup_variants(query_args, reference_genome)
+    variant_list = lookup_variant_result.result_list
+    num_total_variants = lookup_variant_result.num_total_variants
 
-        # Adapt the Variants to display for the frontend.
-        if query_args['is_melted']:
-            variant_list_json = adapt_new_melted_variant_view_to_frontend(
-                    variant_list)
-        else:
-            variant_list_json = adapt_new_cast_variant_view_to_frontend(
-                    variant_list)
+    # Adapt the Variants to display for the frontend.
+    if query_args['is_melted']:
+        variant_list_json = adapt_new_melted_variant_view_to_frontend(
+                variant_list)
+    else:
+        variant_list_json = adapt_new_cast_variant_view_to_frontend(
+                variant_list)
 
-        # Get all VariantSets that exist for this ReferenceGenome.
-        variant_set_list = VariantSet.objects.filter(
-                reference_genome=reference_genome)
+    # Get all VariantSets that exist for this ReferenceGenome.
+    variant_set_list = VariantSet.objects.filter(
+            reference_genome=reference_genome)
 
-        # Query the keys valid for ReferenceGenome, and mark the ones that
-        # will be displayed so that the checkmarks in the visible field select
-        # are pre-filled in case the user wishes to change these.
-        variant_key_map_with_active_fields_marked = copy.deepcopy(
-                reference_genome.variant_key_map)
-        _mark_active_keys_in_variant_key_map(
+    # Query the keys valid for ReferenceGenome, and mark the ones that
+    # will be displayed so that the checkmarks in the visible field select
+    # are pre-filled in case the user wishes to change these.
+    variant_key_map_with_active_fields_marked = copy.deepcopy(
+            reference_genome.variant_key_map)
+    _mark_active_keys_in_variant_key_map(
+            variant_key_map_with_active_fields_marked)
+
+    # Package up the response.
+    response_data = {
+        VARIANT_LIST_RESPONSE_KEY__LIST: variant_list_json,
+        VARIANT_LIST_RESPONSE_KEY__TOTAL: num_total_variants,
+        VARIANT_LIST_RESPONSE_KEY__SET_LIST: adapt_model_to_frontend(VariantSet,
+                obj_list=variant_set_list),
+        VARIANT_LIST_RESPONSE_KEY__KEY_MAP: json.dumps(
                 variant_key_map_with_active_fields_marked)
+    }
 
-        # Package up the response.
-        response_data = {
-            VARIANT_LIST_RESPONSE_KEY__LIST: variant_list_json,
-            VARIANT_LIST_RESPONSE_KEY__TOTAL: num_total_variants,
-            VARIANT_LIST_RESPONSE_KEY__SET_LIST: adapt_model_to_frontend(VariantSet,
-                    obj_list=variant_set_list),
-            VARIANT_LIST_RESPONSE_KEY__KEY_MAP: json.dumps(
-                    variant_key_map_with_active_fields_marked)
-        }
-
-    except Exception as e:
-        # TODO: More readable error reporting.
-        exception_as_string = str(type(e)) + ' ' +  str(e)
-        response_data = {
-            VARIANT_LIST_RESPONSE_KEY__ERROR: exception_as_string
-        }
+#    except Exception as e:
+#        # TODO: More readable error reporting.
+#        exception_as_string = str(type(e)) + ' ' +  str(e)
+#        response_data = {
+#            VARIANT_LIST_RESPONSE_KEY__ERROR: exception_as_string
+#        }
 
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
