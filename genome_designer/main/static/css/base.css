@@ -52,8 +52,31 @@ body {
 
 .gd-sidebar {
   width: 180px;
-  height: 120px;
   float: left;
+}
+
+.gd-sidebar-analyze-buttons {
+  width: 180px;
+}
+
+.gd-sidebar-analyze-buttons > .bootstrap-select.btn-group {
+  margin-bottom: 0px;
+  border-bottom: 0px;
+}
+.gd-sidebar-analyze-buttons > .bootstrap-select.btn-group > .btn {  
+  position: relative;
+  display: block;
+  padding: 10px 15px;
+  margin-bottom: -1px;
+  background-color: #ffffff;
+  border: 1px solid #dddddd;
+  color: #555555;
+  font-weight: 200;
+}
+
+.gd-sidebar-analyze-buttons.btn-group-vertical > .bootstrap-select.btn-group:nth-child(2)  > .btn {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
 }
 
 .gd-main-content { 
@@ -101,7 +124,12 @@ input.gd-form-tall {
   border: 1px dotted black;
   margin-bottom: 10px;
   padding: 10px 0 10px 10px;
+}
 
+
+/* nav-pills bottom margin for the inside of modals */
+.modal-body > .nav {
+  margin-bottom: 10px;
 }
 
 /* GD Checkboxes for Datatables, checkbox td changes color */
@@ -142,7 +170,12 @@ th.gd-dt-cb-div {
 
 /* fix tr.odd row coloring */
 table.dataTable tr.odd {
-  background-color: #dddddd
+  background-color: #f9f9f9
+}
+
+table.dataTable > tbody > tr > td {
+  padding-top: 3px;
+  padding-bottom: 3px;
 }
 
 /* fix DataTables extra vertical space above */
@@ -164,6 +197,15 @@ table.dataTable tr.odd {
   float:none;  
   padding-left: 5px;
   padding-right: 5px;
+}
+
+/* We don't want to pad this specific component on the dataTable*/
+#gd-snp-filter-component {
+  vertical-align: middle;
+  display: inline;
+  float:none;  
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 .gd-table-controls > div:nth-of-type(1) {

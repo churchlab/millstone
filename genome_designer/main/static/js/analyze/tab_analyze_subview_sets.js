@@ -20,7 +20,7 @@ gd.TabAnalyzeSubviewSets = gd.TabAnalyzeSubviewAbstractBase.extend({
     // TODO: Client-side template support.
     $.get('/_/templates/variant_set_controls', _.bind(function(response) {
       // Append the DOM.
-      $('#gd-analyze-subview-controls-hook').append(response);
+      $('.gd-table-controls').append(response);
 
       // Register event listeners.
       $('#submitFormFromFile').click(
@@ -60,6 +60,8 @@ gd.TabAnalyzeSubviewSets = gd.TabAnalyzeSubviewAbstractBase.extend({
 
     $.get('/_/sets', requestData,
         _.bind(this.handleGetVariantSetListResponse, this));
+    this.listenTo(this.datatableComponent, 'DONE_LOADING',
+        _.bind(this.renderControls, this));
   },
 
 

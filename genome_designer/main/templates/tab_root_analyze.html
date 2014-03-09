@@ -1,11 +1,15 @@
 {% extends "tab_base.html" %}
 
 {% block content %}
-  <div id="gd-analyze-subview-controls-hook" class="row-fluid gd-analyze-subview-controls-hook">
+
+  <div class="gd-header h3">
+    Choose a reference genome, an alignment, and an entity to analyze.
   </div>
 
   <div id="gd-datatable-hook">
   </div>
+
+  {% include "filter_field_select_modal.html" %}
 
   <script type="text/javascript">
     VIEW_TAG = 'ANALYZE';
