@@ -68,6 +68,9 @@ def initialize_filter_key_map(ref_genome):
         MAP_KEY__EVIDENCE: copy.deepcopy(
                 SNP_EVIDENCE_HARD_CODED)
     }
+
+    _assert_unique_keys(ref_genome.variant_key_map)
+
     ref_genome.save()
 
 
@@ -110,8 +113,8 @@ def update_filter_key_map(ref_genome, source_vcf):
         except:
             raise InputError('Bad source_vcf arg: not filename or vcf_reader')
 
-    common_data_map = ref_genome.variant_key_map[MAP_KEY__COMMON_DATA]
-    alternate_map = ref_genome.variant_key_map[MAP_KEY__ALTERNATE]
+    common_data_map = ref_genome.variant_key_map.get(MAP_KEY__COMMON_DATA, {})
+    alternate_map = ref_genome.variant_key_map.get(MAP_KEY__ALTERNATE, {})
     for orig_key, value in vcf_reader.infos.iteritems():
         key = 'INFO_' + orig_key
         inner_map = {}
@@ -126,11 +129,13 @@ def update_filter_key_map(ref_genome, source_vcf):
 
     # Update the reference genome's variant key maps with these (ostensibly)
     # new fields, overwriting previous data
-    ref_genome.variant_key_map[MAP_KEY__COMMON_DATA].update(common_data_map)
-    ref_genome.variant_key_map[MAP_KEY__ALTERNATE].update(alternate_map)
+    ref_genome.variant_key_map.get(MAP_KEY__COMMON_DATA, {}).update(
+            common_data_map)
+    ref_genome.variant_key_map.get(MAP_KEY__ALTERNATE, {}).update(
+            alternate_map)
 
     # Update all of the per-sample fields.
-    evidence_data_map = ref_genome.variant_key_map[MAP_KEY__EVIDENCE]
+    evidence_data_map = ref_genome.variant_key_map.get(MAP_KEY__EVIDENCE, {})
     for orig_key, value in vcf_reader.formats.iteritems():
         key = orig_key
         inner_map = {}
@@ -138,6 +143,25 @@ def update_filter_key_map(ref_genome, source_vcf):
         inner_map['num'] = value.num
         evidence_data_map[key] = inner_map
 
-    ref_genome.variant_key_map[MAP_KEY__EVIDENCE].update(evidence_data_map)
+    ref_genome.variant_key_map.get(MAP_KEY__EVIDENCE, {}).update(
+            evidence_data_map)
+
+    _assert_unique_keys(ref_genome.variant_key_map)
 
     ref_genome.save()
+
+
+def _assert_unique_keys(variant_key_map):
+    """Checks that the keys are unique across different submaps.
+
+    Other parts of the code make the assumption that they subkeys are unique.
+    I'm open to changing this requirement as long as we do it safely.
+    """
+    field_name_sets = [set(variant_key_map[submap].keys())
+            for submap in variant_key_map.keys()]
+    # Check all pairs for intersections.
+    for i in range(len(field_name_sets)):
+        for j in range(len(field_name_sets)):
+            if i <= j:
+                continue
+            assert not (field_name_sets[i] & field_name_sets[j])
