@@ -141,6 +141,9 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
       this.model.set('refGenomeUid', opt_refGenomeUid);
     }
 
+    // Display the AG dropdown if not already shown
+    $('#gd-analyze-select-ag').selectpicker('show');
+
     // Determine the subview.
     var subViewKey = 'variants'; // Default
     if (this.model.has('subView')) {

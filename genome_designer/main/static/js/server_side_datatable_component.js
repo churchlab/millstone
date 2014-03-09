@@ -210,8 +210,11 @@ gd.ServerSideDataTableComponent = Backbone.View.extend({
     this.$el.find(".gd-dt-cb.master").empty();
     this.$el.find(".gd-dt-cb.master").append(
       '<div class="gd-dt-cb-div master pull-right btn-group">' +
-        '<button class="btn btn-default"><input type="checkbox" class="gd-dt-cb master" id="' + masterCheckboxElId + '"></button>' +
-        '<button class="btn btn-default dropdown-toggle" style="min-height: 26px" data-toggle="dropdown">' +
+        '<button class="btn btn-default">' +
+        '<input type="checkbox" class="gd-dt-cb master" id="' + 
+          masterCheckboxElId + '"></button>' +
+        '<button class="btn btn-default dropdown-toggle"' +
+        ' style="min-height: 26px" data-toggle="dropdown">' +
           '<span><i class="caret"></i></span>' +
         '</button>' +
         '<ul class="dropdown-menu" id="' + this.datatableId + '-dropdown">' +
@@ -292,14 +295,14 @@ gd.ServerSideDataTableComponent = Backbone.View.extend({
           // i is the row info 
           // p is pagination
           // gd-dt-cb is our master checkbox
-          "<'panel panel-default'" +      // start panel containing table
-          "<'panel-body'" +               // start panel containing table
-          "<'gd-table-controls'" +    // first make the top container
-          "<'gd-new-button'>" +  // green button
-          "l" +               // records per row
+          "<'panel panel-default'" +         // start panel containing table
+          "<'panel-body'" +                  // start panel containing table
+          "<'gd-table-controls'" +           // first make the top container
+          "<'gd-new-button'>" +              // green button
+          "l" +                              // records per row
           "<'gd-dt-cb master pull-right'>" + // master cb
-          ">>" +  // close panel body, container, row
-            "t" + // THE TABLE
+          ">>" +                             // close panel body, container, row
+            "t" +   // THE TABLE
           "<'panel-footer'<'container-fluid'<'row'" +    // bottom container/row
             "<'col-sm-4'i><'col-sm-8'p>" + // info, pagination
           ">>>>", // close row, bottom container, panel footer, panel
@@ -338,10 +341,12 @@ gd.ServerSideDataTableComponent = Backbone.View.extend({
 
     this.datatable = $('#' + this.datatableId).dataTable(datatableParams);
 
-    // // Initialize options for action dropdown menu (next to master checkbox).
+    // Draw the entity-specific controls that listen for this trigger
+    this.trigger('DONE_TABLE_REDRAW');
+    // Initialize options for action dropdown menu (next to master checkbox).
     this.createMasterCheckbox();
     this.listenToCheckboxes();
-    this.renderControls();
+    
   },
 
 
@@ -419,20 +424,4 @@ gd.ServerSideDataTableComponent = Backbone.View.extend({
     return selectedUids;
   },
 
-  /** DBG: this is just copied from analyze_subview, we should do it 
-      more modularly when gleb refactors this with datatable_component * **/
-  renderControls: function() {
-    // Request the filter control html from the server for now.
-    // TODO: Client-side template support.
-    $.get('/_/templates/variant_set_controls', _.bind(function(response) {
-      // Append the DOM.
-      $('.gd-table-controls').append(response);
-
-      // Register event listeners.
-      $('#submitFormFromFile').click(
-          _.bind(this.handleFormSubmitFromFile, this));
-      $('#gd-variant-set-form-empty-submit').click(
-          _.bind(this.handleFormSubmitEmpty, this));
-    }, this));
-  },
 });

@@ -14,7 +14,6 @@ gd.TabAnalyzeSubviewAbstractBase = Backbone.View.extend({
   render: function() {
     this.renderDatatable();
     // This needs to happen afterwards since they are now inside the table. 
-    this.renderControls();
   },
 
 

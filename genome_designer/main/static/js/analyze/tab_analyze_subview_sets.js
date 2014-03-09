@@ -60,6 +60,8 @@ gd.TabAnalyzeSubviewSets = gd.TabAnalyzeSubviewAbstractBase.extend({
 
     $.get('/_/sets', requestData,
         _.bind(this.handleGetVariantSetListResponse, this));
+    this.listenTo(this.datatableComponent, 'DONE_LOADING',
+        _.bind(this.renderControls, this));
   },
 
 

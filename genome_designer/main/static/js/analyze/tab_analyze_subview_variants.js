@@ -49,8 +49,12 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
       'refGenomeUid': this.model.get('refGenomeUid')
     };
 
+    // we aren't using the new button, so remove it
+    $('.gd-table-controls > .gd-new-button').remove()
+
     $.get('/_/templates/variant_filter_controls', requestData,
         _.bind(function(response) {
+          
           // Append the DOM.
           $('.gd-table-controls').append(response);
 
@@ -96,6 +100,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         _.bind(this.setUIStartLoadingState, this));
     this.listenTo(this.datatableComponent, 'DONE_LOADING',
         _.bind(this.setUIDoneLoadingState, this));
+    this.listenTo(this.datatableComponent, 'DONE_TABLE_REDRAW',
+        _.bind(this.renderControls, this));
   },
 
 
@@ -200,6 +206,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         {'model': variantFieldSelectModel});
     this.listenTo(this.variantFieldSelect, 'updateSelectedFields',
         _.bind(this.handleUpdateSelectedFields, this));
+
   },
 
 

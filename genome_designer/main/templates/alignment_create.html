@@ -1,46 +1,63 @@
 {% extends "tab_base.html" %}
 
 {% block content %}
-<h1>Create Alignment</h1>
-<ul id="modalFromFileTab" class="nav nav-tabs">
-  <li class="active"><a href="#alignCreateTab_name" data-toggle="tab">1. Name</a></li>
-  <li><a href="#alignCreateTab_ref_genome" data-toggle="tab">2. Reference Genome</a></li>
-  <li><a href="#alignCreateTab_samples" data-toggle="tab">3. Samples</a></li>
-  <li><a href="#alignCreateTab_options" data-toggle="tab">4. Alignment Options</a></li>
-  <li><a href="#alignCreateTab_submit" data-toggle="tab">5. Submit</a></li>
-</ul>
-<div id="alignCreateTabs" class="tab-content">
-  <div class="tab-pane fade in active" id="alignCreateTab_name">
-    <h3>1. Choose a name</h3>
-    <input id="gd-alignment-create-name-input" type="text" name="alignment-name" placeholder="Name...">
-  </div>
-  <div class="tab-pane fade in" id="alignCreateTab_ref_genome">
-    <h3>2. Choose Reference Genome</h3>
-    <p>Select a genome sequence to which the reads will be aligned.</p>
-    <div id="gd-datatable-ref_genome-hook">
-    </div>
-  </div>
-  <div class="tab-pane fade in" id="alignCreateTab_samples">
-    <h3>3. Choose Samples</h3>
-    <p>Select one or more samples whose FASTQ reads will be aligned. Variants for these samples will be called together in one VCF file.</p>
-    <div id="gd-datatable-samples-hook">
-    </div>
-  </div>
-  <div class="tab-pane fade in" id="alignCreateTab_options">
-    <h3>4. Choose Alignment Options</h3>
-    <p>Select aligner to use and set the aligner's options.</p>
-  </div>
-  <div class="tab-pane fade in" id="alignCreateTab_submit">
-    <div id="gd-align-create-submit-error" class="alert alert-error alert-block" style="display:none">
-      <button type="button" class="close" data-dismiss="alert">&times;</button>
-      <h4>Error</h4>
-      <span id="gd-align-create-submit-error-msg"></span>
-    </div>
+<div class="gd-header h1">
+  Reference Genomes
+</div>
+<div class="panel panel-default">
+  <div class="panel-body">
 
-    <h3>5. Submit</h3>
-    <button class="btn" id="gd-align-create-submit-btn">Submit</button>
+    <ul id="createAlignmentTabs" class="nav nav-pills">
+      <li class="active"><a href="#alignCreateTab_name" data-toggle="tab">
+        1. Name</a></li>
+      <li><a href="#alignCreateTab_ref_genome" data-toggle="tab">2. Reference Genome</a></li>
+      <li><a href="#alignCreateTab_samples" data-toggle="tab">3. Samples</a></li>
+      <li><a href="#alignCreateTab_options" data-toggle="tab">4. Alignment Options</a></li>
+      <li><a href="#alignCreateTab_submit" data-toggle="tab">5. Submit</a></li>
+    </ul>
+    <div id="alignCreateTabs" class="tab-content">
+      <!-- name -->
+      <div class="tab-pane fade in active" id="alignCreateTab_name">
+        <h2>Choose a name</h2>
+        <p class="lead">A brief and informative name for the alignment</p>
+        <input id="gd-alignment-create-name-input" class="form-control" type="text" name="alignment-name" placeholder="Name...">
+      </div>
+      <!-- genome -->
+      <div class="tab-pane fade in" id="alignCreateTab_ref_genome">
+        <h2>2. Choose Reference Genome</h2>
+        <p class="lead">Select a genome sequence to which the reads will be aligned.</p>
+        <div id="gd-datatable-ref_genome-hook">
+        </div>
+      </div>
+      <!-- samples -->
+      <div class="tab-pane fade in" id="alignCreateTab_samples">
+        <h2>3. Choose Samples</h2>
+        <p class="lead">Select one or more samples whose FASTQ reads will be aligned. Variants for these samples will be called together in one VCF file.</p>
+        <div id="gd-datatable-samples-hook">
+        </div>
+      </div>
+      <!-- options -->
+      <div class="tab-pane fade in" id="alignCreateTab_options">
+        <h2>4. Choose Alignment Options</h2>
+        <p class="lead">Select aligner to use and set the aligner's options.</p>
+      </div>
+      <!-- submit -->
+      <div class="tab-pane fade in" id="alignCreateTab_submit">
+        <div id="gd-align-create-submit-error" class="alert alert-error alert-block" style="display:none">
+          <button type="button" class="close" data-dismiss="alert">&times;</button>
+          <h4>Error</h4>
+          <span id="gd-align-create-submit-error-msg"></span>
+        </div>
+        <h2>5. Run Alignment</h2>
+        <p class="lead">The alignment will run in the background and will show as READY when completed.</p>
+        <div class="text-center">
+          <button class="btn btn-success btn-lg" id="gd-align-create-submit-btn">Run Alignment</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
 <script type="text/javascript">
   VIEW_TAG = 'ALIGNMENT_CREATE';
 
