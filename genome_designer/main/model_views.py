@@ -326,7 +326,8 @@ class GeneView(object):
         ]
 
 
-def adapt_non_recursive(obj_list, field_dict_list):
+def adapt_non_recursive(obj_list, field_dict_list,
+        reference_genome=None, visible_key_names=None):
     """Adapts of list of objects that doesn't require recursive calling.
 
     Returns:
@@ -340,12 +341,14 @@ def adapt_non_recursive(obj_list, field_dict_list):
         if 'verbose' in fdict:
             return fdict['verbose']
         else:
-            return string.capwords(fdict['field'],'_').replace('_',' ')
+            return string.capwords(fdict['field'], '_').replace('_', ' ')
     field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
 
     # Create frontend representations of the objects.
     fe_obj_list = []
     for melted_variant_obj in obj_list:
+        print melted_variant_obj.obj_dict
+        break
         # Get (key, value) pairs for visible fields.
         visible_field_pairs = []
         for field in field_list:
@@ -367,10 +370,25 @@ def adapt_non_recursive(obj_list, field_dict_list):
     })
 
 
-def adapt_new_melted_variant_view_to_frontend(obj_list):
-    """Returns JSON string.
+def adapt_new_melted_variant_view_to_frontend(obj_list, reference_genome,
+        visible_key_names):
+    """Convert the dictionary objects returned by Postgres into the form that
+    the Datatables.js component can display.
+
+    Args:
+        obj_list: List of dictionaries representing melted entities returned
+            by a raw SQL call directly to Postgres.
+        reference_genome: The ReferenceGenome. We pass this so that we have a
+            handle to the valid key map so we can handle additional
+            visible key names properly.
+        visible_key_names: List of key names that we want to include in the
+            response.
+
+    Returns:
+        JSON string with the objects in the form that can be drawn by the
+        Datatables component.
     """
-    field_dict_list = [
+    default_field_dict_list = [
         {'field': 'uid'},
         {'field': 'position'},
         {'field': 'ref'},
@@ -378,7 +396,9 @@ def adapt_new_melted_variant_view_to_frontend(obj_list):
         {'field': 'variant_set_label'},
         {'field': 'experiment_sample_uid'},
     ]
-    return adapt_non_recursive(obj_list, field_dict_list)
+
+    return adapt_non_recursive(obj_list, default_field_dict_list,
+            reference_genome, visible_key_names)
 
 
 def adapt_new_cast_variant_view_to_frontend(obj_list):

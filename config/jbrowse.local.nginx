@@ -2,7 +2,7 @@ server {
   server_name localhost;
 
   location /jbrowse {
-    alias /Users/dbgoodman/Documents/Projects/genome-designer-v2/jbrowse;
+    alias /home/glebk/Projects/churchlab/genome-designer-v2/jbrowse;
   }
 
   location / {
