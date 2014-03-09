@@ -25,7 +25,8 @@ def variant_filter_controls(request):
 
     context = {
         'csrf': csrf,
-        'ref_genome': ref_genome
+        'ref_genome': ref_genome,
+        'is_melted': True
     }
 
     return HttpResponse(

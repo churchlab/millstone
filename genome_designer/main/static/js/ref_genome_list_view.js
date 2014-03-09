@@ -70,22 +70,26 @@ gd.RefGenomeListView = Backbone.View.extend({
 
   decorate_new_button: function() {
 
-    $("div.gd-new-button").html(
+    html_string = (
       '<div class="btn-group">' +
       '  <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">' +
       '    New' +
       '    <span class="caret"></span>' +
       '  </a>' +
       '  <ul class="dropdown-menu">' +
-      '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From Variant Set...</a></li>' +
-      '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>' +
-      '    {% if project.is_s3_backed %}' +
-      '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">Upload to S3...</a></li>' +
-      '    {% endif %}' +
+      '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>'
+    );
+
+    if (IS_S3_BACKEND) {
+      html_string = html_string + 
+        '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">From S3 Bucket...</a></li>';
+    };
+    html_string = html_string + 
       '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromNCBI" data-toggle="modal">From NCBI Accession...</a></li>' +
       '  </ul>' +
       '</div>'
-    );
+
+    $("div.gd-new-button").html(html_string);
   }
 
 });

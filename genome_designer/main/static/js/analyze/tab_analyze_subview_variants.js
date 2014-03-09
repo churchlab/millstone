@@ -49,10 +49,14 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
       'refGenomeUid': this.model.get('refGenomeUid')
     };
 
+    // we aren't using the new button, so remove it
+    $('.gd-table-controls > .gd-new-button').remove()
+
     $.get('/_/templates/variant_filter_controls', requestData,
         _.bind(function(response) {
+          
           // Append the DOM.
-          $('#gd-analyze-subview-controls-hook').append(response);
+          $('.gd-table-controls').append(response);
 
           // Fill in the filter if relevant.
           $('#gd-new-filter-input').val(this.model.get('filterString'));
@@ -96,6 +100,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         _.bind(this.setUIStartLoadingState, this));
     this.listenTo(this.datatableComponent, 'DONE_LOADING',
         _.bind(this.setUIDoneLoadingState, this));
+    this.listenTo(this.datatableComponent, 'DONE_TABLE_REDRAW',
+        _.bind(this.renderControls, this));
   },
 
 
@@ -112,6 +118,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
       'projectUid': this.model.get('project').uid,
       'refGenomeUid': this.model.get('refGenomeUid'),
       'variantFilterString': $('#gd-new-filter-input').val(),
+      'sortBy': this.model.get('sortBy'),
       'melt': $('input:radio[name=melt]:checked').val()
     };
 
@@ -167,6 +174,15 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     // Reset the ui.
     this.setUIDoneLoadingState();
+
+    // Add sort column listeners. TODO make this less hacky
+    var thispage = this;
+    $('.sorting').on('click', function(e) {
+        var obj = e.target;
+        var columnName = (obj.textContent ? obj.textContent : obj.innerText).toLowerCase();
+        thispage.model.set('sortBy', columnName);
+        thispage.updateVariantList();
+    });
   },
 
 
@@ -200,6 +216,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         {'model': variantFieldSelectModel});
     this.listenTo(this.variantFieldSelect, 'updateSelectedFields',
         _.bind(this.handleUpdateSelectedFields, this));
+
   },
 
 
@@ -256,6 +273,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
       'projectUid': this.model.get('project').uid,
       'refGenomeUid': this.model.get('refGenomeUid'),
       'variantFilterString': this.model.get('filterString'),
+      'sortBy': this.model.get('sortBy'),
       'melt': $('input:radio[name=melt]:checked').val()
     };
 

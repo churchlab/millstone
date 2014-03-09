@@ -177,7 +177,7 @@ gd.DataTableComponent = Backbone.View.extend({
     this.$el.find(".gd-dt-cb.master").empty();
     this.$el.find(".gd-dt-cb.master").append(
       '<div class="gd-dt-cb-div master pull-right btn-group">' +
-        '<button class="btn btn-default"><input type="checkbox" class="gd-dt-cb master" id="' + masterCheckboxElId + '"></button>' +
+        '<button class="btn btn-default"><input type="checkbox" class="gd-dt-cb master" id="blah"></button>' +
         '<button class="btn btn-default dropdown-toggle" style="min-height: 26px" data-toggle="dropdown">' +
           '<span><i class="caret"></i></span>' +
         '</button>' +
@@ -296,5 +296,6 @@ gd.DataTableComponent = Backbone.View.extend({
       }
     });
     return selectedUids;
-  }
+  },
+
 });

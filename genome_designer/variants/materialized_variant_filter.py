@@ -19,8 +19,8 @@ from variants.common import get_delim_key_value_triple
 from variants.common import hashablefetchall
 from variants.common import SymbolGenerator
 from variants.materialized_view_manager import MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
+from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
-from variants.filter_eval_result import FilterEvalResult
 from variants.filter_scope import FilterScope
 
 
@@ -29,11 +29,17 @@ class VariantFilterEvaluator(object):
         '(position > 5) in ALL(sample1, sample2)'
     """
 
-    def __init__(self, raw_filter_string, ref_genome, scope=None):
+    def __init__(self, query_args, ref_genome, scope=None):
         """Constructor.
 
         Args:
-            raw_filter_string: String representing the raw filter.
+            query_args: a dictionary with the following arguments:
+                filter_string: String representing the raw filter.
+                is_melted: True if melted view, false if cast view.
+                sort_by_column: A column name to sort by, or an empty string otherwise.
+                count_only: True if only want to return a count
+                pagination_start: Offset of the returned query
+                pagination_len: Maximum number of returned variants, or -1 for no limit
             ref_genome: ReferenceGenome these variants are relative to.
             scope: Optional FilterScope object which restricts the results
                 to the samples according to the semantic setting of the scope.
@@ -48,9 +54,15 @@ class VariantFilterEvaluator(object):
         if scope is not None:
             assert isinstance(scope, FilterScope)
 
-        self.raw_filter_string = raw_filter_string
-        self.clean_filter_string = raw_filter_string
+        # Load args into arguments directly
+        self.filter_string = query_args.get('filter_string', None)
+        self.is_melted = query_args.get('is_melted', True)
+        self.sort_by_column = query_args.get('sort_by_column', None)
+        self.count_only = query_args.get('count_only', False)
+        self.pagination_start = query_args.get('pagination_start', 0)
+        self.pagination_len = query_args.get('pagination_len', -1)
         self.ref_genome = ref_genome
+
         self.all_key_map = get_all_key_map(self.ref_genome)
         self.variant_caller_common_map = (
                 self.ref_genome.get_variant_caller_common_map())
@@ -64,11 +76,10 @@ class VariantFilterEvaluator(object):
         self.symbol_maker = SymbolGenerator()
 
         # Catch trivial, no filter case.
-        if self.clean_filter_string == '':
+        if self.filter_string == '':
             self.sympy_representation = ''
         else:
             self._create_symbolic_representation()
-
 
     def _create_symbolic_representation(self):
         """Creates a symbolic representation of the query to enable, among
@@ -78,7 +89,7 @@ class VariantFilterEvaluator(object):
         # Find all the expressions and replace them with symbols.
         self.symbol_to_expression_map = {}
 
-        symbolified_string = self.clean_filter_string
+        symbolified_string = self.filter_string
         for regex in [SAMPLE_SCOPE_REGEX, EXPRESSION_REGEX, SET_REGEX,
                 GENE_REGEX]:
             symbolified_string = self._symbolify_string_for_regex(
@@ -121,44 +132,73 @@ class VariantFilterEvaluator(object):
 
 
     def evaluate(self):
-        """Evaluates the conditions in the filter string.
+        """Evaluates the given database query.
 
         Returns:
             A FilterEvalResult object.
         """
-        return self.evaluate_disjunction(self.sympy_representation)
-
-
-    def evaluate_disjunction(self, disjunction_clause):
-        """Evaluate a disjunction (OR) clause.
-
-        Args:
-            disjunction_clause: sympy.logic.boolalg.Or clause, or equivalent.
-
-        Returns:
-            A FilterEvalResult object.
-        """
-        # The disjunction may contain a single condition.
-        if not isinstance(disjunction_clause, boolalg.Or):
-            return self.evaluate_conjunction(disjunction_clause)
+        # Create select clause. If melted, normal select clause with all columns.
+        # If cast, then array_agg alt and arbitrarily choose one of all
+        # other fields except for position (by arbitrarily we choose min)
+        if self.is_melted:
+            select_clause = MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
         else:
-            result = FilterEvalResult(set())
-            for conjunction_clause in disjunction_clause.args:
-                result |= self.evaluate_conjunction(conjunction_clause)
-            return result
+            columns = MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
+            def fix(column):
+                if column == 'position':
+                    return column
+                elif column == 'alt':
+                    return 'array_agg(alt) as alt'
+                else:
+                    return 'min(' + column + ') as ' + column
+            select_clause = ', '.join(map(fix, columns))
+
+        # Get table name
+        table_name = self.materialized_view_manager.get_table_name()
+
+        # Handle global SQL keys. Perform the initial SQL query to constrain
+        # the results.
+        cursor = connection.cursor()
+        sql_statement = 'SELECT %s FROM %s ' % (select_clause, table_name)
+
+        # Maybe add WHERE clause.
+        if self.sympy_representation:
+            where_clause, where_clause_args = self._where_clause()
+            sql_statement += 'WHERE (' + where_clause + ') '
+        else:
+            where_clause_args = []
+
+        # If cast, need to group by position for array_agg to work.
+        if not self.is_melted:
+            sql_statement += 'GROUP BY position '
+
+        # Add optional sort clause.
+        if self.sort_by_column:
+            sql_statement += 'ORDER BY %s ' % self.sort_by_column
+
+        # Add limit and offset clause.
+        if self.pagination_len != -1:
+            sql_statement += 'LIMIT %d ' % self.pagination_len
+        sql_statement += 'OFFSET %d ' % self.pagination_start
+
+        if self.count_only:
+            sql_statement = 'SELECT count(*) FROM (' + sql_statement + ') subresult';
+
+        # Execute the query and store the results in hashable representation
+        # so that they can be combined through boolean operators with other
+        # evaluations.
+        cursor.execute(sql_statement, where_clause_args)
+        result_list = [dict(zip([col[0] for col in cursor.description], row))
+                for row in cursor.fetchall()]
+        return result_list
 
 
-    def evaluate_conjunction(self, conjunction_clause):
-        """Evaluate a conjunction condition. That is all symbols are ANDed.
+    def _where_clause(self):
+        # Returns None if no where clause, or
+        #   a tuple (where clause, arguments)
+        if not self.sympy_representation:
+            return None
 
-        This is where the meat of the filtering computation happens.
-
-        Args:
-            conjunction_clause: sympy.logic.boolalg.And clause, or equivalent.
-
-        Returns:
-            A FilterEvalResult object.
-        """
         # On a high level, the algorithm breaks down into doing as much
         # filtering on the SQL side, and then doing the rest in application
         # memory. Fields that we currently handle in memory include those that
@@ -180,54 +220,49 @@ class VariantFilterEvaluator(object):
         # Order doesn't matter since this is a conjunction (AND) clause.
 
         # Store the results of binning in these data structures.
-        filter_eval_results = []
-        sql_ready_symbol_list = []
-        remaining_triples = []
+        def _conjuntion_clause(conjunction_clause):
+            filter_eval_results = []
+            sql_ready_symbol_list = []
+            remaining_triples = []
 
-        # Bin the parts of the query, potentially making recursive calls
-        # if we have scoped filters (e.g. per-sample).
-        if not conjunction_clause == '':
-            # Handle the case where a conjunction might be a single condition.
-            if not conjunction_clause.is_Boolean:
-                symbol_list = [conjunction_clause]
-            else:
-                symbol_list = conjunction_clause.args
+            # Bin the parts of the query, potentially making recursive calls
+            # if we have scoped filters (e.g. per-sample).
+            if not conjunction_clause == '':
+                # Handle the case where a conjunction might be a single condition.
+                if not conjunction_clause.is_Boolean:
+                    symbol_list = [conjunction_clause]
+                else:
+                    symbol_list = conjunction_clause.args
 
-            # Bin.
-            for symbol in symbol_list:
-                updated_structs = self._single_symbol_mux(
-                        symbol, filter_eval_results, sql_ready_symbol_list,
-                        remaining_triples)
-                (filter_eval_results, sql_ready_symbol_list,
-                        remaining_triples) = updated_structs
+                # Bin.
+                for symbol in symbol_list:
+                    updated_structs = self._single_symbol_mux(
+                            symbol, filter_eval_results, sql_ready_symbol_list,
+                            remaining_triples)
+                    (filter_eval_results, sql_ready_symbol_list,
+                            remaining_triples) = updated_structs
 
-        # Handle global SQL keys. Perform the initial SQL query to constrain
-        # the results.
-        cursor = connection.cursor()
-        sql_statement = (
-                'SELECT %s '
-                'FROM %s '
-                % (MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE,
-                        self.materialized_view_manager.get_table_name())
-        )
+            where_clause_conjunctive_expr_list = []
+            where_clause_args = []
+            for triple in remaining_triples:
+                (expr, arg) = convert_delim_key_value_triple_to_expr(triple)
+                where_clause_conjunctive_expr_list.append(expr)
+                where_clause_args.append(arg)
+            return (' AND '.join(where_clause_conjunctive_expr_list),
+                    where_clause_args)
 
-        # Maybe add WHERE clause.
-        where_clause_conjunctive_expr_list = []
-        where_clause_args = []
-        for triple in remaining_triples:
-            (expr, arg) = convert_delim_key_value_triple_to_expr(triple)
-            where_clause_conjunctive_expr_list.append(expr)
-            where_clause_args.append(arg)
-        where_clause_content = ' AND '.join(where_clause_conjunctive_expr_list)
-        if where_clause_content:
-            sql_statement += 'WHERE (' + where_clause_content + ') '
-
-        # Execute the query and store the results in hashable representation
-        # so that they can be combined through boolean operators with other
-        # evaluations.
-        cursor.execute(sql_statement, where_clause_args)
-        result_list = hashablefetchall(cursor)
-        return FilterEvalResult(result_list)
+        # If only one conjunction clause, evaluate directly
+        if not isinstance(self.sympy_representation, boolalg.Or):
+            return _conjuntion_clause(self.sympy_representation)
+        else:
+            conjunction_clause_info = [_conjuntion_clause(conjunction_clause)
+                    for conjunction_clause in self.sympy_representation.args]
+            where_clause = ' OR '.join(['(' + info[0] + ')'
+                for info in conjunction_clause_info])
+            args = []
+            for info in conjunction_clause_info:
+                args.extend(info[1])
+            return (where_clause, args)
 
 
     def _single_symbol_mux(self, symbol, filter_eval_results, q_list,
@@ -263,7 +298,7 @@ class VariantFilterEvaluator(object):
 # Main client method.
 ###############################################################################
 
-def get_variants_that_pass_filter(filter_string, ref_genome):
+def get_variants_that_pass_filter(query_args, ref_genome):
     """Takes a complete filter string and returns the variants that pass the
     filter.
 
@@ -274,7 +309,13 @@ def get_variants_that_pass_filter(filter_string, ref_genome):
     for special values.
 
     Args:
-        filter_string: Query string from the user.
+        query_args: a dictionary with the following arguments:
+            filter_string: String representing the raw filter.
+            is_melted: True if melted view, false if cast view.
+            sort_by_column: A column name to sort by, or an empty string otherwise.
+            count_only: True if only want to return a count
+            pagination_start: Offset of the returned query
+            pagination_len: Maximum number of returned variants
         ref_genome: The ReferenceGenome this is limited to. This is a hard-coded
             parameter of sorts, since at the least we always limit comparisons
             among Variant objects to those that share a ReferenceGenome.
@@ -283,5 +324,5 @@ def get_variants_that_pass_filter(filter_string, ref_genome):
         List of dictionary objects representing melted Variants.
         See materialized_view_manager.py.
     """
-    evaluator = VariantFilterEvaluator(filter_string, ref_genome)
+    evaluator = VariantFilterEvaluator(query_args, ref_genome)
     return evaluator.evaluate()
