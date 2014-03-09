@@ -270,9 +270,18 @@ def extract_sample_data_dict(s):
         _add_property(result, s, key, eval_string)
 
     # Add data fields in slightly different way.
-    # These include fields like 'AO' and 'GT', etc.
+    SAMPLE_DATA_FIELDS = [
+        'AO',
+        'DP',
+        'GL',
+        'GT',
+        'QA',
+        'QR',
+        'RO',
+    ]
     if hasattr(s, 'data'):
-        result.update(s.data.__dict__)
+        for key in SAMPLE_DATA_FIELDS:
+            result[key] = getattr(s.data, key)
 
     # TODO: Add support for SnpEff data.
 
