@@ -34,6 +34,10 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
       this.model.set('filterString', filterString);
     }
 
+    // Set the view to cast as default.
+    // TODO: Url support.
+    this.model.set('is_melted', false);
+
     gd.TabAnalyzeSubviewAbstractBase.prototype.initialize.call(this);
   },
 
@@ -54,16 +58,24 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     $.get('/_/templates/variant_filter_controls', requestData,
         _.bind(function(response) {
-          
           // Append the DOM.
           $('.gd-table-controls').append(response);
 
           // Fill in the filter if relevant.
           $('#gd-new-filter-input').val(this.model.get('filterString'));
 
+          // Decorate the cast/melt toggle.
+          if (this.model.get('is_melted')) {
+            $('#gd-snp-filter-melt-toggle-melt').addClass('active');
+          } else {
+            $('#gd-snp-filter-melt-toggle-cast').addClass('active');
+          }
+
           // Register listeners.
           $('#gd-filter-box-apply-btn').click(
               _.bind(this.handleApplyFilterClick, this));
+          $('.gd-snp-filter-melt-toggle').click(
+              _.bind(this.handleMeltedToggleClick, this));
           $('#gd-filter-field-select-btn').click(
               _.bind(this.handleShowFieldSelect, this));
           $('#gd-filter-refresh-materialized').click(
@@ -274,7 +286,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
       'refGenomeUid': this.model.get('refGenomeUid'),
       'variantFilterString': this.model.get('filterString'),
       'sortBy': this.model.get('sortBy'),
-      'melt': $('input:radio[name=melt]:checked').val()
+      'melt': this.model.get('is_melted') ? 1 : 0
     };
 
     if (this.visibleKeyNames) {
@@ -299,6 +311,13 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     this.trigger('NAVIGATE', {'path': updatedPath});
 
     // Kick off request to update the Variant data being displayed.
+    this.updateVariantList();
+  },
+
+
+  /** Handles a click on one of the melted toggle buttons. */
+  handleMeltedToggleClick: function(e) {
+    this.model.set('is_melted', Boolean($(e.target).data('melted')));
     this.updateVariantList();
   },
 
