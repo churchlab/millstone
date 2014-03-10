@@ -483,7 +483,7 @@ def _prepare_visible_key_name_for_adapting_to_fe(key_name, key_to_parent_map):
     result = {
         'field': key_name,
     }
-    parent_col = key_to_parent_map[key_name]
+    parent_col = key_to_parent_map.get(key_name, None)
     if parent_col is not None:
         result['is_subkey'] = True
         result['parent_col'] = parent_col
