@@ -347,8 +347,6 @@ def adapt_non_recursive(obj_list, field_dict_list,
     # Create frontend representations of the objects.
     fe_obj_list = []
     for melted_variant_obj in obj_list:
-        print melted_variant_obj.obj_dict
-        break
         # Get (key, value) pairs for visible fields.
         visible_field_pairs = []
         for field in field_list:

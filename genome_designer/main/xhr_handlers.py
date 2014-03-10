@@ -161,10 +161,10 @@ def get_variant_list(request):
         # Adapt the Variants to display for the frontend.
         if query_args['is_melted']:
             variant_list_json = adapt_new_melted_variant_view_to_frontend(
-                    variant_list, reference_genome, visible_key_names)
+                    variant_list)
         else:
             variant_list_json = adapt_new_cast_variant_view_to_frontend(
-                    variant_list, reference_genome, visible_key_names)
+                    variant_list)
 
         # Get all VariantSets that exist for this ReferenceGenome.
         variant_set_list = VariantSet.objects.filter(

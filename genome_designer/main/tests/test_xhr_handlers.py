@@ -101,18 +101,22 @@ class TestGetVariantList(TestCase):
 
         self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
 
-        EXPECTED_RESPONSE_KEYS = [
+        response_data = json.loads(response.content)
+
+        # Make sure expected keys in response.
+        EXPECTED_RESPONSE_KEYS = set([
             VARIANT_LIST_RESPONSE_KEY__LIST,
             VARIANT_LIST_RESPONSE_KEY__TOTAL,
             VARIANT_LIST_RESPONSE_KEY__SET_LIST,
             VARIANT_LIST_RESPONSE_KEY__KEY_MAP,
-        ]
-
-        response_data = json.loads(response.content)
-
-        # Make sure expected keys in response.
-        if not all(key in response_data for key in EXPECTED_RESPONSE_KEYS):
-            self.fail('Missing keys in response')
+        ])
+        self.assertEqual(EXPECTED_RESPONSE_KEYS, set(response_data.keys()),
+                "Missing keys %s\nGot keys %s" % (
+                        str(EXPECTED_RESPONSE_KEYS -
+                                set(response_data.keys())),
+                        str(set(response_data.keys()))))
+        # if not all(key in response_data for key in EXPECTED_RESPONSE_KEYS):
+        #     self.fail('Missing keys in response')
 
         # TODO(gleb): Uncomment when we fix total counts.
         # self.assertEqual(TOTAL_NUM_VARIANTS,
