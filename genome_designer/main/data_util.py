@@ -11,14 +11,6 @@ This module interacts closely with the ModelViews in model_views.py.
 from collections import defaultdict
 from itertools import groupby
 
-from django.db import connection
-
-from main.model_views import CastVariantView
-from main.model_views import MeltedVariantView
-from main.models import ExperimentSample
-from main.models import Variant
-from main.models import VariantEvidence
-from variants.common import dictfetchall
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 
 
@@ -55,6 +47,7 @@ def lookup_variants(query_args, reference_genome):
     query_args['pagination_len'] = -1  # for no limit
     num_total_variants = get_variants_that_pass_filter(query_args, reference_genome)[0]['count']
 
+    # Maybe cast the results.
     if not query_args['is_melted']:
         page_results = format_cast_objects(page_results)
 
@@ -79,80 +72,26 @@ def format_cast_objects(page_results):
     return page_results
 
 
-def cast_joined_variant_objects(melted_variant_list):
-    """Converts the list of melted variants into a cast representation.
+def cast_object_list_field_as_bucket_string(cast_object_dict_list, field):
+    """Converts a Cast object's field as a list into a string where values
+    have been bucketed by unique type, with counts in parens.
 
-    This means returning one row per variant, compressing columns
-    into an aggregate representation. For example, in this initial
-    implementation, the 'experiment_sample_uid' column becomes 'total_samples'.
+    TODO: This doesn't really make sense for fields that take on continuous
+    number values. Figure out what to do with these kinds of fields.
     """
-    cast_obj_list = []
+    # First, extract the relevant fields.
+    value_list = []
+    for cast_object_dict in cast_object_dict_list:
+        if cast_object_dict is None:
+            value_list.append('NONE')
+        else:
+            value_list.append(cast_object_dict.get(field, ''))
 
-    # First, we build a structure from variant id to list of result rows.
-    variant_id_to_result_row = defaultdict(list)
-    for result in melted_variant_list:
-        variant_id_to_result_row[result['id']].append(result)
+    # Count.
+    buckets = defaultdict(lambda: 0)
+    for val in value_list:
+        buckets[str(val)] += 1
 
-    for variant_id, result_row_list in variant_id_to_result_row.iteritems():
-        assert len(result_row_list), "Not expected. Debug."
-        position = result_row_list[0]['position']
-        uid = result_row_list[0]['uid']
-
-        # Count total samples.
-        total_samples = 0
-        all_sample_uids = set()
-        for row in result_row_list:
-            if row['experiment_sample_uid']:
-                all_sample_uids.add(row['experiment_sample_uid'])
-        total_samples = len(all_sample_uids)
-
-        # Aggregate sets.
-        variant_set_samples = defaultdict(set)
-        for row in result_row_list:
-            if row['variant_set_label']:
-                variant_set_samples[row['variant_set_label']].add(
-                        row['experiment_sample_uid'])
-        variant_set_string_parts = []
-        for label, sample_set in variant_set_samples.iteritems():
-            none_null_samples = set()
-            for sample in sample_set:
-                if sample:
-                    none_null_samples.add(sample)
-            variant_set_string_parts.append(
-                    label + ' (%d)' % len(none_null_samples))
-        variant_set_string = ' | '.join(variant_set_string_parts)
-
-        # Aggregate Variant alternates.
-        total_alt_count = 0
-        variant_alt_to_sample_dict = defaultdict(set)
-        for row in result_row_list:
-            if row['alt']:
-                variant_alt_to_sample_dict[row['alt']].add(
-                        row['experiment_sample_uid'])
-        variant_alt_string_parts = []
-        for alt, sample_set in variant_alt_to_sample_dict.iteritems():
-            none_null_samples = set()
-            for sample in sample_set:
-                if sample:
-                    none_null_samples.add(sample)
-            variant_alt_string_parts.append(
-                    alt + ' (%d)' % len(none_null_samples))
-            total_alt_count += len(none_null_samples)
-        variant_alt_string = ' | '.join(variant_alt_string_parts)
-
-        # Now we can write the ref string.
-        ref_string = result_row_list[0]['ref'] + ' (%d)' % (
-                total_samples - total_alt_count)
-
-        # Combine the aggregates into a single Cast object.
-        cast_obj_list.append({
-            'id': variant_id,
-            'uid': uid,
-            'position': position,
-            'ref': ref_string,
-            'alt': variant_alt_string,
-            'total_samples': total_samples,
-            'variant_sets': variant_set_string,
-        })
-
-    return cast_obj_list
+    # Create string.
+    return (' | '.join(['%s (%d)' % (key, count)
+            for key, count in buckets.iteritems()]))

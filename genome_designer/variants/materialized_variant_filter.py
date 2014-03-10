@@ -144,11 +144,17 @@ class VariantFilterEvaluator(object):
             select_clause = MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
         else:
             columns = MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
+
             def fix(column):
+                """Helper to fix the aggregate query.
+
+                We GROUP BY position, so all other fields need to be explicitly
+                aggregated.
+                """
                 if column == 'position':
                     return column
-                elif column == 'alt':
-                    return 'array_agg(alt) as alt'
+                elif column in ['alt', 'va_data', 'vccd_data', 've_data']:
+                    return 'array_agg(' + column + ') as ' + column
                 else:
                     return 'min(' + column + ') as ' + column
             select_clause = ', '.join(map(fix, columns))

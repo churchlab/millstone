@@ -9,6 +9,7 @@ from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
 from main.constants import UNDEFINED_STRING
+from main.data_util import cast_object_list_field_as_bucket_string
 from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
@@ -354,9 +355,17 @@ def adapt_non_recursive(obj_list, field_dict_list,
             field = fdict['field']
             if fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
-                parent_dict = melted_variant_obj.get(fdict['parent_col'], {})
-                if parent_dict is not None:
+                parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'], {})
+                if isinstance(parent_dict_or_list, dict):
+                    # melted
+                    parent_dict = parent_dict_or_list
                     value = str(parent_dict.get(field, ''))
+                elif isinstance(parent_dict_or_list, list):
+                    # cast
+                    value = cast_object_list_field_as_bucket_string(
+                            parent_dict_or_list, field)
+                else:
+                    value = None
             else:
                 value = melted_variant_obj.get(field, '')
 
@@ -481,10 +490,11 @@ def _prepare_visible_key_name_for_adapting_to_fe(key_name, key_to_parent_map):
     return result
 
 
-def adapt_new_cast_variant_view_to_frontend(obj_list):
+def adapt_new_cast_variant_view_to_frontend(obj_list, reference_genome,
+        visible_key_names):
     """Returns JSON string.
     """
-    field_dict_list = [
+    default_field_dict_list = [
         {'field': 'uid'},
         {'field': 'position'},
         {'field': 'ref'},
@@ -492,4 +502,12 @@ def adapt_new_cast_variant_view_to_frontend(obj_list):
         {'field': 'variant_sets'},
         {'field': 'total_samples'},
     ]
-    return adapt_non_recursive(obj_list, field_dict_list)
+
+    # Prepare additional fields for adaptation.
+    additional_visible_field_dict_list = _prepare_additional_visible_keys(
+            visible_key_names, reference_genome)
+
+    all_field_dict_list = (default_field_dict_list +
+            additional_visible_field_dict_list)
+
+    return adapt_non_recursive(obj_list, all_field_dict_list)
