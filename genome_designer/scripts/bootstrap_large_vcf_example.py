@@ -16,9 +16,9 @@ from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
 from main.model_utils import clean_filesystem_location
+from pipeline.variant_effects import get_snpeff_vcf_output_path
 from scripts.bootstrap_data import get_or_create_user
 from scripts.import_util import import_reference_genome_from_local_file
-from snpeff_util import get_snpeff_vcf_output_path
 from settings import PWD as GD_ROOT
 from vcf_parser import parse_alignment_group_vcf
 
