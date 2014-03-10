@@ -39,6 +39,8 @@ gd.VariantFieldSelectComponent = Backbone.View.extend({
 
   /** Renders a table row for each filter key in the key map. */
   renderKeyMapSection: function(key_map, targetElId) {
+    $('#' + targetElId).empty();
+
     // First, put the keys in alphabetical order.
     sorted_keys = _.keys(key_map).sort();
 

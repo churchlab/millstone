@@ -176,7 +176,7 @@ def get_variant_list(request):
         variant_key_map_with_active_fields_marked = copy.deepcopy(
                 reference_genome.variant_key_map)
         _mark_active_keys_in_variant_key_map(
-                variant_key_map_with_active_fields_marked)
+                variant_key_map_with_active_fields_marked, visible_key_names)
 
         # Package up the response.
         response_data = {
@@ -218,7 +218,7 @@ def _determine_visible_field_names(request, filter_string, ref_genome):
     return list(set(visible_key_names) | set(fields_from_filter_string))
 
 
-def _mark_active_keys_in_variant_key_map(variant_key_map):
+def _mark_active_keys_in_variant_key_map(variant_key_map, visible_key_names):
     """Mutates variant_key_map to mark fields that should be active based
     on model class defaults.
     """
@@ -227,10 +227,15 @@ def _mark_active_keys_in_variant_key_map(variant_key_map):
 
     def _update_model_class_key_map(model_class, variant_key_submap):
         """Helper method."""
-        default_keys = [el['field'] for el in model_class.get_field_order()]
-        for key in default_keys:
+        for key in visible_key_names:
             if key in variant_key_submap:
                 variant_key_submap[key]['checked'] = True
+
+        # TODO: Do we want to bring back this old default?
+        # default_keys = [el['field'] for el in model_class.get_field_order()]
+        # for key in default_keys:
+        #     if key in variant_key_submap:
+        #         variant_key_submap[key]['checked'] = True
 
     _update_model_class_key_map(VariantCallerCommonData,
             variant_key_map[MAP_KEY__COMMON_DATA])
