@@ -350,11 +350,13 @@ def adapt_non_recursive(obj_list, field_dict_list,
     for melted_variant_obj in obj_list:
         visible_field_pairs = []
         for fdict in field_dict_list:
+            value = None
             field = fdict['field']
             if fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
-                value = str(melted_variant_obj.get(fdict['parent_col'], {}).get(
-                        field, ''))
+                parent_dict = melted_variant_obj.get(fdict['parent_col'], {})
+                if parent_dict is not None:
+                    value = str(parent_dict.get(field, ''))
             else:
                 value = melted_variant_obj.get(field, '')
 

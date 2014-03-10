@@ -133,7 +133,7 @@ MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE = ', '.join(
 MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS = [
         schema_obj['joined_table_col_name']
         for schema_obj in MELTED_VARIANT_SCHEMA
-] + ['vccd_data', 've_data']
+] + ['va_data', 'vccd_data', 've_data']
 MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE = ', '.join(
         MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS)
 
