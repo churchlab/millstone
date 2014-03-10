@@ -47,7 +47,7 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     parse_vcf(vcf_dataset, alignment_group.reference_genome)
 
 
-@transaction.commit_on_success
+# @transaction.commit_on_success
 def parse_vcf(vcf_dataset, reference_genome):
     """Parses the VCF and creates Variant models relative to ReferenceGenome.
     """
