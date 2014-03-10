@@ -58,6 +58,10 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     $.get('/_/templates/variant_filter_controls', requestData,
         _.bind(function(response) {
+          // NOTE: This masks a bug where we are somtimes making this request
+          // multiple times in a row.
+          $('.gd-table-controls').empty();
+
           // Append the DOM.
           $('.gd-table-controls').append(response);
 
