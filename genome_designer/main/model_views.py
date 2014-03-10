@@ -14,6 +14,7 @@ from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
+from scripts.dynamic_snp_filter_key_map import MAP_KEY__VARIANT
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
@@ -333,7 +334,7 @@ def adapt_non_recursive(obj_list, field_dict_list,
     Returns:
         JSON string representation of frontend objects.
     """
-     # Parse the list of field names.
+    # Parse the list of field names.
     field_list = [fdict['field'] for fdict in field_dict_list]
 
     # Get the verbose names for the fields.
@@ -344,16 +345,28 @@ def adapt_non_recursive(obj_list, field_dict_list,
             return string.capwords(fdict['field'], '_').replace('_', ' ')
     field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
 
-    # Create frontend representations of the objects.
+    # Aggregate list of objects that are ready for display by the frontend.
     fe_obj_list = []
     for melted_variant_obj in obj_list:
-        # Get (key, value) pairs for visible fields.
         visible_field_pairs = []
-        for field in field_list:
-            value = melted_variant_obj[field]
-            if not value:
+        for fdict in field_dict_list:
+            field = fdict['field']
+            if fdict.get('is_subkey', False):
+                assert 'parent_col' in fdict
+                value = str(melted_variant_obj.get(fdict['parent_col'], {}).get(
+                        field, ''))
+            else:
+                value = melted_variant_obj.get(field, '')
+
+            # Pass empty string when no value present.
+            if value is None:
                 value = ''
+
+            # Append (key, value) to list so we can create dict at the end.
+            # Order doesn't matter here since it's determined in the
+            # field config object constructed separately below.
             visible_field_pairs.append((field, value))
+
         fe_obj_list.append(dict(visible_field_pairs))
 
     # Create the config dict required by DataTables.js.
@@ -395,8 +408,75 @@ def adapt_new_melted_variant_view_to_frontend(obj_list, reference_genome,
         {'field': 'experiment_sample_uid'},
     ]
 
-    return adapt_non_recursive(obj_list, default_field_dict_list,
+    # Prepare additional fields for adaptation.
+    additional_visible_field_dict_list = _prepare_additional_visible_keys(
+            visible_key_names, reference_genome)
+
+    all_field_dict_list = (default_field_dict_list +
+            additional_visible_field_dict_list)
+
+    return adapt_non_recursive(obj_list, all_field_dict_list,
             reference_genome, visible_key_names)
+
+
+# Map from ReferenceGenome.variant_key_map submap name to the corresponding
+# column in Postgres.
+VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP = {
+    MAP_KEY__VARIANT: None,
+    MAP_KEY__ALTERNATE: 'va_data',
+    MAP_KEY__COMMON_DATA: 'vccd_data',
+    MAP_KEY__EVIDENCE: 've_data',
+}
+
+
+def _prepare_additional_visible_keys(visible_key_list, reference_genome):
+    """Prepare all additional keys.
+    """
+    # Some of the keys are actually inside of catch-all data objects. Our
+    # materialized view has separate columns for each of these, so we need
+    # a structure that maps from key name to column name.
+    # NOTE: We enforce unique keys when dynamically generating
+    # ReferenceGenome.variant_key_map.
+    key_to_parent_map = _generate_key_to_materialized_view_parent_col(
+            reference_genome)
+
+    # Now we use this map to construct the field dictionary objects that can
+    # be used for further processing.
+    return [_prepare_visible_key_name_for_adapting_to_fe(key,
+            key_to_parent_map) for key in visible_key_list]
+
+
+def _generate_key_to_materialized_view_parent_col(reference_genome):
+    key_to_parent_map = {}
+    for submap_name, submap in reference_genome.variant_key_map.iteritems():
+        for key in submap.iterkeys():
+            assert not key in key_to_parent_map
+            key_to_parent_map[key] = (
+                    VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP.get(
+                            submap_name, None))
+    return key_to_parent_map
+
+
+def _prepare_visible_key_name_for_adapting_to_fe(key_name, key_to_parent_map):
+    """Prepare single key for adapting to frontend.
+
+    Returns:
+        Dictionary representation of the field that can be handled by
+        the next adaptation method like adapt_non_recursive(), e.g.:
+        {
+            'field': 'gt_nums',
+            'is_subkey': True,
+            'parent_col': 've_data'
+        }
+    """
+    result = {
+        'field': key_name,
+    }
+    parent_col = key_to_parent_map[key_name]
+    if parent_col is not None:
+        result['is_subkey'] = True
+        result['parent_col'] = parent_col
+    return result
 
 
 def adapt_new_cast_variant_view_to_frontend(obj_list):

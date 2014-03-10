@@ -89,6 +89,7 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', 'chromosome',
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', 'ref', False, True)
 
 # VariantAlternate
+SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.id', 'va_id', False, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', False, True)
 
 # Key-value data.
@@ -132,7 +133,7 @@ MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE = ', '.join(
 MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS = [
         schema_obj['joined_table_col_name']
         for schema_obj in MELTED_VARIANT_SCHEMA
-]
+] + ['vccd_data', 've_data']
 MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE = ', '.join(
         MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS)
 
@@ -208,14 +209,18 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                     ') '
                     'ORDER BY position, experiment_sample_uid DESC '
                 ') ' # melted_variant_data
+                ', va_data_table AS ('
+                    'SELECT id, data AS va_data from main_variantalternate'
+                ') ' # va_data_table
                 ', vccd_data_table AS ('
                     'SELECT id, data AS vccd_data from main_variantcallercommondata'
                 ') ' # vccd_data_table
                 ', ve_data_table AS ('
                     'SELECT id, data AS ve_data from main_variantevidence'
                 ') ' # ve_data_table
-                'SELECT melted_variant_data.*, vccd_data, ve_data '
+                'SELECT melted_variant_data.*, va_data, vccd_data, ve_data '
                     'FROM melted_variant_data '
+                        'LEFT JOIN va_data_table ON va_data_table.id = melted_variant_data.va_id '
                         'LEFT JOIN ve_data_table ON ve_data_table.id = melted_variant_data.ve_id '
                         'LEFT JOIN vccd_data_table ON vccd_data_table.id = melted_variant_data.vccd_id'
             ')'
