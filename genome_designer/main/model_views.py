@@ -328,8 +328,7 @@ class GeneView(object):
         ]
 
 
-def adapt_non_recursive(obj_list, field_dict_list,
-        reference_genome=None, visible_key_names=None):
+def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
     """Adapts of list of objects that doesn't require recursive calling.
 
     Returns:
@@ -353,7 +352,13 @@ def adapt_non_recursive(obj_list, field_dict_list,
         for fdict in field_dict_list:
             value = None
             field = fdict['field']
-            if fdict.get('is_subkey', False):
+
+            # Special handling for jbrowse field.
+            if field == 'jbrowse':
+                value = _create_jbrowse_link_for_variant_object(
+                        melted_variant_obj, reference_genome)
+
+            elif fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
                 parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'], {})
                 if isinstance(parent_dict_or_list, dict):
@@ -364,8 +369,6 @@ def adapt_non_recursive(obj_list, field_dict_list,
                     # cast
                     value = cast_object_list_field_as_bucket_string(
                             parent_dict_or_list, field)
-                else:
-                    value = None
             else:
                 value = melted_variant_obj.get(field, '')
 
@@ -392,8 +395,41 @@ def adapt_non_recursive(obj_list, field_dict_list,
     })
 
 
-def adapt_new_melted_variant_view_to_frontend(obj_list, reference_genome,
-        visible_key_names):
+def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome):
+    """Constructs a JBrowse link for the Variant.
+    """
+    assert 'position' in variant_as_dict
+    ref_genome_jbrowse_link = reference_genome.get_client_jbrowse_link()
+    location_param = '&loc=' + str(variant_as_dict['position'])
+    full_href = ref_genome_jbrowse_link + location_param
+    # TODO: Add alignment track param if this is a sample-specific view.
+    return '<a href="' + full_href + '">jbrowse</a>'
+
+
+
+MELTED_VARIANT_FIELD_DICT_LIST = [
+    {'field': 'uid'},
+    {'field': 'jbrowse'},
+    {'field': 'position'},
+    {'field': 'ref'},
+    {'field': 'alt'},
+    {'field': 'variant_set_label'},
+    {'field': 'experiment_sample_uid'},
+]
+
+CAST_VARIANT_FIELD_DICT_LIST = [
+    {'field': 'uid'},
+    {'field': 'jbrowse'},
+    {'field': 'position'},
+    {'field': 'ref'},
+    {'field': 'alt'},
+    {'field': 'variant_sets'},
+    {'field': 'total_samples'},
+]
+
+
+def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
+        melted=False):
     """Convert the dictionary objects returned by Postgres into the form that
     the Datatables.js component can display.
 
@@ -410,14 +446,10 @@ def adapt_new_melted_variant_view_to_frontend(obj_list, reference_genome,
         JSON string with the objects in the form that can be drawn by the
         Datatables component.
     """
-    default_field_dict_list = [
-        {'field': 'uid'},
-        {'field': 'position'},
-        {'field': 'ref'},
-        {'field': 'alt'},
-        {'field': 'variant_set_label'},
-        {'field': 'experiment_sample_uid'},
-    ]
+    if melted:
+        default_field_dict_list = MELTED_VARIANT_FIELD_DICT_LIST
+    else:
+        default_field_dict_list = CAST_VARIANT_FIELD_DICT_LIST
 
     # Prepare additional fields for adaptation.
     additional_visible_field_dict_list = _prepare_additional_visible_keys(
@@ -426,8 +458,7 @@ def adapt_new_melted_variant_view_to_frontend(obj_list, reference_genome,
     all_field_dict_list = (default_field_dict_list +
             additional_visible_field_dict_list)
 
-    return adapt_non_recursive(obj_list, all_field_dict_list,
-            reference_genome, visible_key_names)
+    return adapt_non_recursive(obj_list, all_field_dict_list, reference_genome)
 
 
 # Map from ReferenceGenome.variant_key_map submap name to the corresponding
@@ -488,26 +519,3 @@ def _prepare_visible_key_name_for_adapting_to_fe(key_name, key_to_parent_map):
         result['is_subkey'] = True
         result['parent_col'] = parent_col
     return result
-
-
-def adapt_new_cast_variant_view_to_frontend(obj_list, reference_genome,
-        visible_key_names):
-    """Returns JSON string.
-    """
-    default_field_dict_list = [
-        {'field': 'uid'},
-        {'field': 'position'},
-        {'field': 'ref'},
-        {'field': 'alt'},
-        {'field': 'variant_sets'},
-        {'field': 'total_samples'},
-    ]
-
-    # Prepare additional fields for adaptation.
-    additional_visible_field_dict_list = _prepare_additional_visible_keys(
-            visible_key_names, reference_genome)
-
-    all_field_dict_list = (default_field_dict_list +
-            additional_visible_field_dict_list)
-
-    return adapt_non_recursive(obj_list, all_field_dict_list)
