@@ -354,7 +354,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
             field = fdict['field']
 
             # Special handling for jbrowse field.
-            if field == 'jbrowse':
+            if field == 'position':
                 value = _create_jbrowse_link_for_variant_object(
                         melted_variant_obj, reference_genome)
 
@@ -399,17 +399,17 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome):
     """Constructs a JBrowse link for the Variant.
     """
     assert 'position' in variant_as_dict
+    position = variant_as_dict['position']
     ref_genome_jbrowse_link = reference_genome.get_client_jbrowse_link()
-    location_param = '&loc=' + str(variant_as_dict['position'])
+    location_param = '&loc=' + str(position)
     full_href = ref_genome_jbrowse_link + location_param
     # TODO: Add alignment track param if this is a sample-specific view.
-    return '<a href="' + full_href + '">jbrowse</a>'
-
+    return ('<a href="' + full_href + '" target="_blank">' + str(position) +
+            '</a>')
 
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
     {'field': 'uid'},
-    {'field': 'jbrowse'},
     {'field': 'position'},
     {'field': 'ref'},
     {'field': 'alt'},
@@ -419,7 +419,6 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
 
 CAST_VARIANT_FIELD_DICT_LIST = [
     {'field': 'uid'},
-    {'field': 'jbrowse'},
     {'field': 'position'},
     {'field': 'ref'},
     {'field': 'alt'},
