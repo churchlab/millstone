@@ -151,7 +151,6 @@ def tab_root_analyze(request, project_uid, alignment_group_uid=None, sub_view=No
         'init_js_data': json.dumps(init_js_data),
         'tab_root': TAB_ROOT__ANALYZE,
     })
-    print context
 
     return render(request, 'tab_root_analyze.html', context)
 
