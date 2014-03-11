@@ -7,12 +7,63 @@
 
 gd.AbstractDataTableComponent = Backbone.View.extend({
 
+  /** Prevent initialization. */
+  initialize: function() {
+    throw "Don't initialize abstract class!";
+  },
+
   /** Destroys the datable. */
   destroy: function() {
     if (this.datatable) {
       this.datatable.fnDestroy(true);
     }
     this.datatable = null;
+  },
+
+  /** Make the list of objects into a displayable form. */
+  makeDisplayableObjectList: function(objList) {
+    var displayableObjList = [];
+
+    _.each(objList, function(obj) {
+      var displayableObj = {}
+
+      // Parse through the fields. For any nested objects:
+      //     If there is an 'href' and a 'label' key, create an anchor link.
+      //     Else if there is only a 'label' key, use only the label.
+      //     Else we don't know how to handle this so no change.
+      _.each(_.pairs(obj), function(pair) {
+        var key = pair[0];
+        var value = pair[1];
+        var displayValue = value;
+        if (_.isArray(value)) {
+          displayValue = _.map(value, this.makeDisplayableObject).join(' ');
+        }
+        else if (typeof(value) == 'object') {
+          displayValue = this.makeDisplayableObject(value)
+        }
+        displayableObj[key] = displayValue;
+      }, this);
+
+      // For the object itself, if there is a label and href key,
+      // change value keyed by value to be an anchor.
+      if ('label' in obj && 'href' in obj) {
+        displayableObj['label'] =
+            '<a href="' + obj.href + '">' + obj.label + '</>';
+      }
+
+      // Add a checkbox.
+      var uid = 'undefined';
+      if ('uid' in displayableObj) {
+        uid = displayableObj['uid'];
+      }
+
+      displayableObj['checkbox'] =
+          '<input type="checkbox" class="gd-dt-cb" name="gd-row-select" value="' + uid + '">';
+
+      displayableObjList.push(displayableObj);
+    }, this);
+
+    return displayableObjList;
   },
 
   /** Returns a string for the displayable representation of obj. */
