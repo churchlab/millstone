@@ -353,8 +353,11 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
             value = None
             field = fdict['field']
 
-            # Special handling for jbrowse field.
-            if field == 'position':
+            # HACK: Special handling for certain fields.
+            if field == 'label':
+                value = _create_single_variant_page_link_for_variant_object(
+                        melted_variant_obj, reference_genome)
+            elif field == 'position':
                 value = _create_jbrowse_link_for_variant_object(
                         melted_variant_obj, reference_genome)
 
@@ -395,6 +398,18 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
     })
 
 
+def _create_single_variant_page_link_for_variant_object(variant_as_dict,
+        reference_genome):
+    """Constructs the label as an anchor that links to the single variant view.
+    """
+    full_href = reverse('main.views.single_variant_view',
+                args=(reference_genome.project.uid, reference_genome.uid,
+                        variant_as_dict['uid']))
+    # Generate label from variant data.
+    label = 'mut_' + str(variant_as_dict['position'])
+    return '<a href="' + full_href + '">' + label + '</a>'
+
+
 def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome):
     """Constructs a JBrowse link for the Variant.
     """
@@ -409,7 +424,7 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome):
 
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
-    {'field': 'uid'},
+    {'field': 'label', 'verbose': 'label'},
     {'field': 'position'},
     {'field': 'ref'},
     {'field': 'alt'},
@@ -418,7 +433,7 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
 ]
 
 CAST_VARIANT_FIELD_DICT_LIST = [
-    {'field': 'uid'},
+    {'field': 'label', 'verbose': 'label'},
     {'field': 'position'},
     {'field': 'ref'},
     {'field': 'alt'},
