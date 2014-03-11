@@ -9,8 +9,12 @@
     <div class="col-sm-4 col-sm-offset-4">
       <div class="panel panel-default">
         <div class="panel-body text-center">
-    
           <form action="/accounts/login/" method="post">{% csrf_token %}
+            {% for error in form.non_field_errors %}
+              <p class="gd-error-text">
+                {{error}}
+              </p>
+            {% endfor %}
             <p>
               <input id="id_username" maxlength="254" name="username" type="text" class="form-control" placeholder="Username"/>
             </p>
