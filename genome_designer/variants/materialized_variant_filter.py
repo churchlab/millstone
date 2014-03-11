@@ -16,7 +16,6 @@ from variants.common import SET_REGEX
 from variants.common import convert_delim_key_value_triple_to_expr
 from variants.common import get_all_key_map
 from variants.common import get_delim_key_value_triple
-from variants.common import hashablefetchall
 from variants.common import SymbolGenerator
 from variants.materialized_view_manager import MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
 from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
@@ -62,14 +61,7 @@ class VariantFilterEvaluator(object):
         self.pagination_start = query_args.get('pagination_start', 0)
         self.pagination_len = query_args.get('pagination_len', -1)
         self.ref_genome = ref_genome
-
         self.all_key_map = get_all_key_map(self.ref_genome)
-        self.variant_caller_common_map = (
-                self.ref_genome.get_variant_caller_common_map())
-        self.variant_alternate_map = (
-                self.ref_genome.get_variant_alternate_map())
-        self.variant_evidence_map = (
-                self.ref_genome.get_variant_evidence_map())
         self.scope = scope
 
         # Generator object that provides symbols in alphabetical order.

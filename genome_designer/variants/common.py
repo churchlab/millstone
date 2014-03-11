@@ -5,6 +5,8 @@ Helpers and utils for working with Variants.
 from collections import OrderedDict
 import re
 
+from materialized_view_manager import MATERIALIZED_TABLE_QUERYABLE_FIELDS_MAP
+
 
 ###############################################################################
 # DEBUG (uncomment)
@@ -22,53 +24,12 @@ import re
 # Constants
 ###############################################################################
 
-# Q-object types. This is used to determine whether we need to perform a
-# query per sample.
-Q_OBJECT_TYPE__GLOBAL = 'global'
-Q_OBJECT_TYPE__PER_SAMPLE = 'per_sample'
-
-# SQL key constants
-VARIANT_TABLE_KEY__ID = 'id'
-VARIANT_TABLE_KEY__SAMPLE = (
-        'variantalternate__variantevidence__experiment_sample')
-
-# SQL fields describing a Variant
-VARIANT_MODEL_FIELDS = ('id', 'uid', 'type', 'reference_genome_id',
-        'chromosome', 'position', 'ref_value')
-
-###############################################################################
-# Hard-coded query keys.
-# These are hard-coded to the model definitions in main/models.py.
-#     * sql_key is relative to Variant model.
-###############################################################################
-
-# Keys corresponding to columns in the Variant model.
-MELTED_VARIANT_SQL_KEY_MAP = {
-    'chromosome': {
-        'type': 'String',
-        'num': 1,
-    },
-    'position': {
-        'type': 'Integer',
-        'num': 1,
-    },
-    'variant_set_uid': {
-        'type': 'String',
-        'num': 1,
-    },
-}
-
-ALL_SQL_KEY_MAP_LIST = [
-    MELTED_VARIANT_SQL_KEY_MAP
-]
-
 TYPE_TO_SUPPORTED_OPERATIONS = {
         'Float': ['=', '!=', '>=', '<=', '>', '<'],
         'Integer': ['=', '==', '!=', '>=', '<=', '>', '<'],
         'String': ['=', '==', '!='],
         'Boolean': ['=', '==', '!=']
 }
-
 
 
 ################################################################################
@@ -171,12 +132,12 @@ def get_delim_key_value_triple(raw_string, all_key_map):
                 # Make sure this is a valid key and valid delimeter.
                 if key in data_map:
                     specs = data_map[key]
-                    if specs['num'] in (-1,1):
+                    if specs['num'] in (-1, 1):
                         return tuple([delimeter] + split_result)
                     else:
-                        raise ParseError(raw_string, 
+                        raise ParseError(raw_string,
                                 'Key type {:d} not yet supported.'.format(
-                                specs['num']))
+                                        specs['num']))
             # If we got here, the key was not found in any data_map.
             raise ParseError(raw_string, 'Unrecognized filter key: %s' % key)
 
@@ -202,7 +163,8 @@ def _clean_delim(raw_delim):
 
 
 def get_all_key_map(ref_genome):
-    return ALL_SQL_KEY_MAP_LIST + ref_genome.variant_key_map.values()
+    return ([MATERIALIZED_TABLE_QUERYABLE_FIELDS_MAP] +
+            ref_genome.variant_key_map.values())
 
 
 def extract_filter_keys(filter_expr, ref_genome):
@@ -297,48 +259,5 @@ def dictfetchall(cursor):
     desc = cursor.description
     return [
         dict(zip([col[0] for col in desc], row))
-        for row in cursor.fetchall()
-    ]
-
-
-class HashableVariantDict(object):
-    """Hashable version of Variant Dict.
-
-    The Variant id and Sample id uniquely identify the row.
-    """
-
-    def __init__(self, obj_dict):
-        self.obj_dict = obj_dict
-
-    def __hash__(self):
-        return hash((self.obj_dict['id'],
-            self.obj_dict['experiment_sample_id']))
-
-    def __getitem__(self, key):
-        return self.obj_dict[key]
-
-    def __setitem__(self, key, value):
-        self.obj_dict[key] = value
-
-    def __getattr__(self, attr):
-        """Override.
-
-        Since we changed the code from using python objects and instead
-        dictionaries, there are plenty of places using 'dot' attribute access
-        so rather than looking for all of those places I'm going to try making
-        this small hack and see how it works out.
-        """
-        try:
-            return self.obj_dict[attr]
-        except KeyError:
-            raise AttributeError
-
-
-def hashablefetchall(cursor):
-    """Returns all rows from a cursor as hashable object.
-    """
-    desc = cursor.description
-    return [
-        HashableVariantDict(dict(zip([col[0] for col in desc], row)))
         for row in cursor.fetchall()
     ]
