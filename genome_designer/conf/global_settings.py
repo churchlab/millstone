@@ -243,6 +243,9 @@ ACCOUNT_ACTIVATION_DAYS = 7
 
 LOGIN_REDIRECT_URL = '/'
 
+# Override to True to enable registration.
+REGISTRATION_OPEN = False
+
 
 ###############################################################################
 # Django Celery - async task queue management
