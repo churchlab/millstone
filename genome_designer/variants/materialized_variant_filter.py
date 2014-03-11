@@ -14,10 +14,10 @@ from variants.common import SAMPLE_SCOPE_REGEX
 from variants.common import GENE_REGEX
 from variants.common import SET_REGEX
 from variants.common import convert_delim_key_value_triple_to_expr
+from variants.common import generate_key_to_materialized_view_parent_col
 from variants.common import get_all_key_map
 from variants.common import get_delim_key_value_triple
 from variants.common import SymbolGenerator
-from variants.common import VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP
 from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.filter_scope import FilterScope
@@ -203,13 +203,8 @@ class VariantFilterEvaluator(object):
         """Returns the list of cols to fetch.
         """
         # First build the key to parent map.
-        key_to_parent_map = {}
-        for submap_name, submap in self.ref_genome.variant_key_map.iteritems():
-            for key in submap.iterkeys():
-                assert not key in key_to_parent_map
-                key_to_parent_map[key] = (
-                        VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP.get(
-                                submap_name, None))
+        key_to_parent_map = generate_key_to_materialized_view_parent_col(
+                self.ref_genome)
 
         # Now figure out which of the cols to select.
         cols_to_fetch = set()

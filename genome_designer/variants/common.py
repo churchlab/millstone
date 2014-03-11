@@ -273,3 +273,17 @@ def dictfetchall(cursor):
         dict(zip([col[0] for col in desc], row))
         for row in cursor.fetchall()
     ]
+
+
+def generate_key_to_materialized_view_parent_col(reference_genome):
+    """Generates a map from searchable key to which materialized view column
+    contains that key.
+    """
+    key_to_parent_map = {}
+    for submap_name, submap in reference_genome.variant_key_map.iteritems():
+        for key in submap.iterkeys():
+            assert not key in key_to_parent_map
+            key_to_parent_map[key] = (
+                    VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP.get(
+                            submap_name, None))
+    return key_to_parent_map

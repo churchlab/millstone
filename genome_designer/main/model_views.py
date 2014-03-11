@@ -18,7 +18,7 @@ from main.models import VariantSet
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-from variants.common import VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP
+from variants.common import generate_key_to_materialized_view_parent_col
 
 
 class BaseVariantView(object):
@@ -484,24 +484,13 @@ def _prepare_additional_visible_keys(visible_key_list, reference_genome):
     # a structure that maps from key name to column name.
     # NOTE: We enforce unique keys when dynamically generating
     # ReferenceGenome.variant_key_map.
-    key_to_parent_map = _generate_key_to_materialized_view_parent_col(
+    key_to_parent_map = generate_key_to_materialized_view_parent_col(
             reference_genome)
 
     # Now we use this map to construct the field dictionary objects that can
     # be used for further processing.
     return [_prepare_visible_key_name_for_adapting_to_fe(key,
             key_to_parent_map) for key in visible_key_list]
-
-
-def _generate_key_to_materialized_view_parent_col(reference_genome):
-    key_to_parent_map = {}
-    for submap_name, submap in reference_genome.variant_key_map.iteritems():
-        for key in submap.iterkeys():
-            assert not key in key_to_parent_map
-            key_to_parent_map[key] = (
-                    VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP.get(
-                            submap_name, None))
-    return key_to_parent_map
 
 
 def _prepare_visible_key_name_for_adapting_to_fe(key_name, key_to_parent_map):
