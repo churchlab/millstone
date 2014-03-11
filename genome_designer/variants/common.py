@@ -6,6 +6,10 @@ from collections import OrderedDict
 import re
 
 from materialized_view_manager import MATERIALIZED_TABLE_QUERYABLE_FIELDS_MAP
+from scripts.dynamic_snp_filter_key_map import MAP_KEY__VARIANT
+from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
+from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
+from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 
 
 ###############################################################################
@@ -31,6 +35,14 @@ TYPE_TO_SUPPORTED_OPERATIONS = {
         'Boolean': ['=', '==', '!=']
 }
 
+# Map from ReferenceGenome.variant_key_map submap name to the corresponding
+# column in Postgres.
+VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP = {
+    MAP_KEY__VARIANT: None,
+    MAP_KEY__ALTERNATE: 'va_data',
+    MAP_KEY__COMMON_DATA: 'vccd_data',
+    MAP_KEY__EVIDENCE: 've_data',
+}
 
 ################################################################################
 # Parsing Regular Expressions

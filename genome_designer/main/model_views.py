@@ -15,10 +15,11 @@ from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__VARIANT
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from variants.common import VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP
+
 
 class BaseVariantView(object):
     """Common methods for model views.
@@ -473,16 +474,6 @@ def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
             additional_visible_field_dict_list)
 
     return adapt_non_recursive(obj_list, all_field_dict_list, reference_genome)
-
-
-# Map from ReferenceGenome.variant_key_map submap name to the corresponding
-# column in Postgres.
-VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP = {
-    MAP_KEY__VARIANT: None,
-    MAP_KEY__ALTERNATE: 'va_data',
-    MAP_KEY__COMMON_DATA: 'vccd_data',
-    MAP_KEY__EVIDENCE: 've_data',
-}
 
 
 def _prepare_additional_visible_keys(visible_key_list, reference_genome):

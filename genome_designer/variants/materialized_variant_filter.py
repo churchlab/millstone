@@ -17,7 +17,7 @@ from variants.common import convert_delim_key_value_triple_to_expr
 from variants.common import get_all_key_map
 from variants.common import get_delim_key_value_triple
 from variants.common import SymbolGenerator
-from variants.materialized_view_manager import MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
+from variants.common import VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP
 from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.filter_scope import FilterScope
@@ -60,6 +60,7 @@ class VariantFilterEvaluator(object):
         self.count_only = query_args.get('count_only', False)
         self.pagination_start = query_args.get('pagination_start', 0)
         self.pagination_len = query_args.get('pagination_len', -1)
+        self.visible_key_names = query_args.get('visible_key_names', [])
         self.ref_genome = ref_genome
         self.all_key_map = get_all_key_map(self.ref_genome)
         self.scope = scope
@@ -129,35 +130,13 @@ class VariantFilterEvaluator(object):
         Returns:
             A FilterEvalResult object.
         """
-        # Create select clause. If melted, normal select clause with all columns.
-        # If cast, then array_agg alt and arbitrarily choose one of all
-        # other fields except for position (by arbitrarily we choose min)
-        if self.is_melted:
-            select_clause = MATERIALIZED_TABLE_MINIMAL_QUERY_SELECT_CLAUSE
-        else:
-            columns = MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
+        select_clause = self._select_clause()
 
-            def fix(column):
-                """Helper to fix the aggregate query.
-
-                We GROUP BY position, so all other fields need to be explicitly
-                aggregated.
-                """
-                if column == 'position':
-                    return column
-                elif column in ['alt', 'va_data', 'vccd_data', 've_data']:
-                    return 'array_agg(' + column + ') as ' + column
-                else:
-                    return 'min(' + column + ') as ' + column
-            select_clause = ', '.join(map(fix, columns))
-
-        # Get table name
-        table_name = self.materialized_view_manager.get_table_name()
-
-        # Handle global SQL keys. Perform the initial SQL query to constrain
-        # the results.
         cursor = connection.cursor()
-        sql_statement = 'SELECT %s FROM %s ' % (select_clause, table_name)
+
+        # Minimal sql_statement has select clause.
+        sql_statement = 'SELECT %s FROM %s ' % (select_clause,
+                self.materialized_view_manager.get_table_name())
 
         # Maybe add WHERE clause.
         if self.sympy_representation:
@@ -180,7 +159,8 @@ class VariantFilterEvaluator(object):
         sql_statement += 'OFFSET %d ' % self.pagination_start
 
         if self.count_only:
-            sql_statement = 'SELECT count(*) FROM (' + sql_statement + ') subresult';
+            sql_statement = (
+                    'SELECT count(*) FROM (' + sql_statement + ') subresult')
 
         # Execute the query and store the results in hashable representation
         # so that they can be combined through boolean operators with other
@@ -190,6 +170,54 @@ class VariantFilterEvaluator(object):
                 for row in cursor.fetchall()]
         return result_list
 
+    def _select_clause(self):
+        """Determines the SELECT clause for the materialized view.
+
+        If melted, normal select clause with all columns.
+        If cast, then array_agg alt and arbitrarily choose one of all
+        other fields except for position (by arbitrarily we choose min)
+
+        Returns:
+            String representing select clause.
+        """
+        cols = (MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS +
+                self._identify_catch_all_data_fields_to_select())
+        if self.is_melted:
+            return ', '.join(cols)
+        else:
+            def fix(column):
+                """Helper to fix the aggregate query.
+
+                We GROUP BY position, so all other fields need to be explicitly
+                aggregated.
+                """
+                if column == 'position':
+                    return column
+                elif column in ['alt', 'va_data', 'vccd_data', 've_data']:
+                    return 'array_agg(' + column + ') as ' + column
+                else:
+                    return 'min(' + column + ') as ' + column
+            return ', '.join(map(fix, cols))
+
+    def _identify_catch_all_data_fields_to_select(self):
+        """Returns the list of cols to fetch.
+        """
+        # First build the key to parent map.
+        key_to_parent_map = {}
+        for submap_name, submap in self.ref_genome.variant_key_map.iteritems():
+            for key in submap.iterkeys():
+                assert not key in key_to_parent_map
+                key_to_parent_map[key] = (
+                        VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP.get(
+                                submap_name, None))
+
+        # Now figure out which of the cols to select.
+        cols_to_fetch = set()
+        for extra_key in self.visible_key_names:
+            col = key_to_parent_map.get(extra_key, None)
+            if col is not None:
+                cols_to_fetch.add(col)
+        return list(cols_to_fetch)
 
     def _where_clause(self):
         # Returns None if no where clause, or
