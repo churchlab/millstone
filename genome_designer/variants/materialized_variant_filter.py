@@ -312,7 +312,33 @@ class VariantFilterEvaluator(object):
         # expression.
         (delim, key, value) = get_delim_key_value_triple(condition_string,
                 self.all_key_map)
-        return (delim, key, value)
+
+        # Rewrite the key if it is in a json field of the materialized view
+        rewritten_key = self._rewrite_arg_if_json_field(key)
+
+        return (delim, rewritten_key, value)
+
+
+    def _rewrite_arg_if_json_field(self, arg):
+        # Check if arg is a special json field, and rewrite if so, using the appropriate type cast
+        # For example, if arg = 'INFO_AO', which is an integer field under snp_alternate_data (ve_data)
+        #   then this function will return "(ve_data->>INFO_AO)::Integer"
+        json_field = generate_key_to_materialized_view_parent_col(self.ref_genome).get(arg, None)
+        json_field_expanded = {'vccd_data': 'snp_caller_common_data',
+                'va_data': 'snp_alternate_data',
+                've_data': 'snp_evidence_data'}.get(json_field, None)
+        if json_field_expanded:
+            # Get the type of the field from the original variant_key_map
+            field_type = self.ref_genome.variant_key_map[json_field_expanded][arg]['type']
+            field_type_expanded = {'Integer': '::Integer',  # support these data types
+                    'Float': '::Float',
+                    'Boolean': '::Boolean',
+                    'String': ''}.get(field_type, None)  # string doesn't need to be cast
+            if field_type_expanded:
+                return "(%s->>'%s')%s" % (json_field, arg, field_type_expanded)
+
+        # default to returning arg exactly as is
+        return arg
 
 
 ###############################################################################
