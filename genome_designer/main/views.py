@@ -371,13 +371,14 @@ def alignment_create_view(request, project_uid):
         return HttpResponse(json.dumps(response_data),
                 content_type='application/json')
 
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(project)
+    })
+
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
-        'samples_list_json': adapt_model_to_frontend(ExperimentSample,
-                {'project':project}),
-        'ref_genomes_list_json': adapt_model_to_frontend(ReferenceGenome,
-                {'project':project})
+        'init_js_data': init_js_data
     }
     return render(request, 'alignment_create.html', context)
 

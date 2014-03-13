@@ -117,12 +117,10 @@ input.gd-form-tall {
   padding-left: 0px;
 }
 
-.gd-analyze-subview-controls-hook {
-  border: 1px dotted black;
-  margin-bottom: 10px;
-  padding: 10px 0 10px 10px;
+/* TODO: make this stretch properly - doesn't seem easy;*/
+#gd-new-filter-input {
+  width: 300px;
 }
-
 
 /* nav-pills bottom margin for the inside of modals */
 .modal-body > .nav {
