@@ -13,9 +13,10 @@ from django.template.loader import render_to_string
 from main.models import ReferenceGenome
 from main.models import Project
 
+
 # Controls ====================================================================
-# These are request for model-specific dropdown buttons that go inside the 
-# dataTable sDom. These templates also includes any matching modals. 
+# These are request for model-specific dropdown buttons that go inside the
+# dataTable sDom. These templates also includes any matching modals.
 
 def variant_filter_controls(request):
     """Returns the Variant filter control box.
@@ -33,13 +34,11 @@ def variant_filter_controls(request):
         'is_melted': True
     }
 
-    if 'tableId' in request.GET:
-        context['table_id'] = request.GET.get('tableId')
-    else:
-        context['table_id'] = 'sample-list-datatable'
+    context['table_id'] = request.GET.get('tableId', 'sample-list-datatable')
 
     return HttpResponse(
             render_to_string('controls/variant_filter_controls.html', context))
+
 
 def reference_genome_list_controls(request):
     """Returns the Reference Genome List control box.
@@ -56,14 +55,15 @@ def reference_genome_list_controls(request):
         'project': project,
     }
 
-    # If the request passed a tableId, then give it to Django to decorate the controls. 
-    if 'tableId' in request.GET:
-        context['table_id'] = request.GET.get('tableId')
-    else:
-        context['table_id'] = 'reference-genome-list-datatable'
+    # If the request passed a tableId, then give it to Django to decorate the
+    # controls.
+    context['table_id'] = request.GET.get('tableId',
+            'reference-genome-list-datatable')
 
     return HttpResponse(
-            render_to_string('controls/reference_genome_list_controls.html', context))
+            render_to_string('controls/reference_genome_list_controls.html',
+                    context))
+
 
 def sample_list_controls(request):
     """Returns the Sample List control box.
@@ -80,15 +80,14 @@ def sample_list_controls(request):
         'project': project,
     }
 
-    # If the request passed a tableId, then give it to Django to decorate the controls. 
-    if 'tableId' in request.GET:
-        context['table_id'] = request.GET.get('tableId')
-    else:
-        context['table_id'] = 'sample-list-datatable'
+    # If the request passed a tableId, then give it to Django to decorate the
+    # controls.
+    context['table_id'] = request.GET.get('tableId', 'sample-list-datatable')
 
     return HttpResponse(
-            render_to_string('controls/sample_list_controls.html', 
+            render_to_string('controls/sample_list_controls.html',
             context))
+
 
 def alignment_list_controls(request):
     """Returns the Alignment List control box.
@@ -103,28 +102,25 @@ def alignment_list_controls(request):
         'project': project
     }
 
-    # If the request passed a tableId, then give it to Django to decorate the controls. 
-    if 'tableId' in request.GET:
-        context['table_id'] = request.GET.get('tableId')
-    else:
-        context['table_id'] = 'sample-list-datatable'
+    # If the request passed a tableId, then give it to Django to decorate the
+    # controls.
+    context['table_id'] = request.GET.get('tableId', 'sample-list-datatable')
 
     return HttpResponse(
             render_to_string('controls/alignment_list_controls.html',
             context))
+
 
 def variant_set_list_controls(request):
     """Returns the Variant Set List control box.
         Requires no model.
     """
     context = {}
-    # If the request passed a tableId, then give it to Django to decorate the controls. 
-    if 'tableId' in request.GET:
-        context['table_id'] = request.GET.get('tableId')
-    else:
-        context['table_id'] = 'sample-list-datatable'
+
+    # If the request passed a tableId, then give it to Django to decorate the
+    # controls.
+    context['table_id'] = request.GET.get('tableId', 'sample-list-datatable')
 
     return HttpResponse(
             render_to_string('controls/variant_set_list_controls.html',
             context))
-    

@@ -31,7 +31,7 @@ gd.App.prototype.run = function() {
       break;
 
     case 'SAMPLE':
-    var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var model = new Backbone.Model(INIT_JS_DATA.entity);
       var view = new gd.SampleView({'model': model});
       break;
 

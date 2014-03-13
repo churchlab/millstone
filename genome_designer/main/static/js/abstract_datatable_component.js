@@ -161,18 +161,17 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
     * Adds html controls (a dropdown button above the table and accompanying
     * modals. Takes a templateURL that is handled by template_xhrs.py and a
     * requestData object with the required data. Both of these should be
-    * passed by whatever asks for the table to be drawn, via this.options. 
+    * passed by whatever asks for the table to be drawn, via this.options.
     */
   addControlsFromTemplate: function(templateURL, requestData) {
 
-    /** add the id of this datatable to the request. That way, we'll
-      * know where to add the control box in case there are multiple
-      * tables. 
-      */
+    // Add the id of this datatable to the request. That way, we'll
+    // know where to add the control box in case there are multiple
+    // tables.
     requestData['tableId'] = this.$el.attr('id');
 
     $.get(templateURL, requestData, _.bind(function(response) {
-      
+
       // get the location for the buttons
       var controls_div = $("#"+this.$el.attr('id')).find('.gd-datatable-controlbox');
 
@@ -185,9 +184,8 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
       // Then, move the .gd-datatable-control stuff into the controlbox.
       $('#' + this.$el.attr('id') +'-control').appendTo(controls_div);
 
-      /* Some views need to do stuff to these controls afterwards, so
-       * let them know we're done.
-       */
+      // Some views need to do stuff to these controls afterwards, so
+      // let them know we're done.
       this.trigger('DONE_CONTROLS_REDRAW');
     }, this));
   }
