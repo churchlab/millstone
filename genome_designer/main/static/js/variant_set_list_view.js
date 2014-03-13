@@ -8,7 +8,6 @@ gd.VariantSetListView = Backbone.View.extend({
 
   initialize: function() {
     this.render();
-    this.decorate_new_button();
   },
 
   render: function() {
@@ -16,8 +15,9 @@ gd.VariantSetListView = Backbone.View.extend({
 
     this.datatable = new gd.DataTableComponent({
         el: $('#gd-variant_set_list_view-datatable-hook'),
-        objList: VARIANT_SET_LIST_DATA['obj_list'],
-        fieldConfig: VARIANT_SET_LIST_DATA['field_config']
+        serverTarget: '/_/sets',
+        controlsTemplate: '/_/templates/variant_set_list_controls',
+        requestData: {projectUid: this.model.get('uid')}
     });
   },
 
@@ -32,21 +32,6 @@ gd.VariantSetListView = Backbone.View.extend({
 
   handleFormSubmitEmpty: function() {
     $("#gd-variant-set-form-empty").submit();
-  },
-
-  decorate_new_button: function() {
-
-    $("div.gd-new-button").html(
-      '<div class="btn-group">' +
-      '  <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">' +
-      '    Create New' +
-      '    <span class="caret"></span>' +
-      '  </a>' +
-      '  <ul class="dropdown-menu">' +
-      '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From File...</a></li>' +
-      '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalEmpty" data-toggle="modal">Empty</a></li>' +
-      '  </ul>' +
-      '</div>'
-    );
   }
+
 });

@@ -16,15 +16,13 @@
 <div id="gd-sample-list-view-datatable-hook">
 </div>
 
-{% include "sample_controls.html" %}
-
 <script type="text/javascript">
   VIEW_TAG = 'SAMPLE';
   IS_S3_BACKEND = '{{project.is_s3_backed}}';
 
   {% autoescape off %}
-    SAMPLE_LIST_DATA = {{sample_list_json}};
-
+    INIT_JS_DATA = {{init_js_data}};
   {% endautoescape %}
+  
 </script>
 {% endblock %}

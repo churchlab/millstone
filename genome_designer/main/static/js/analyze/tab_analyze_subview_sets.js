@@ -15,19 +15,15 @@ gd.TabAnalyzeSubviewSets = gd.TabAnalyzeSubviewAbstractBase.extend({
 
 
   /** @override */
-  renderControls: function() {
+  listenToControls: function() {
     // Request the filter control html from the server for now.
     // TODO: Client-side template support.
-    $.get('/_/templates/variant_set_controls', _.bind(function(response) {
-      // Append the DOM.
-      $('.gd-table-controls').append(response);
 
-      // Register event listeners.
-      $('#submitFormFromFile').click(
-          _.bind(this.handleFormSubmitFromFile, this));
-      $('#gd-variant-set-form-empty-submit').click(
-          _.bind(this.handleFormSubmitEmpty, this));
-    }, this));
+    // Register event listeners.
+    $('#submitFormFromFile').click(
+        _.bind(this.handleFormSubmitFromFile, this));
+    $('#gd-variant-set-form-empty-submit').click(
+        _.bind(this.handleFormSubmitEmpty, this));
   },
 
 
@@ -60,8 +56,8 @@ gd.TabAnalyzeSubviewSets = gd.TabAnalyzeSubviewAbstractBase.extend({
 
     $.get('/_/sets', requestData,
         _.bind(this.handleGetVariantSetListResponse, this));
-    this.listenTo(this.datatableComponent, 'DONE_LOADING',
-        _.bind(this.renderControls, this));
+    this.listenTo(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
+        _.bind(this.listenToControls, this));    
   },
 
 
@@ -81,7 +77,9 @@ gd.TabAnalyzeSubviewSets = gd.TabAnalyzeSubviewAbstractBase.extend({
     this.datatableComponent = new gd.DataTableComponent({
         el: $('#gd-datatable-hook'),
         objList: objList,
-        fieldConfig: fieldConfig
+        fieldConfig: fieldConfig,
+        controlsTemplate: '/_/templates/variant_set_list_controls',
+        requestData: {},
     });
   }
 });

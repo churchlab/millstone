@@ -10,10 +10,10 @@
 
 <script type="text/javascript">
   VIEW_TAG = 'ALIGNMENT_LIST';
+  IS_S3_BACKEND = '{{project.is_s3_backed}}';
 
   {% autoescape off %}
-    ALIGNMENT_LIST_DATA = {{alignment_list_json}};
-    NEW_ALIGNMENT_LINK = "{% url 'main.views.alignment_create_view' project.uid %}"
+    INIT_JS_DATA = {{init_js_data}};
   {% endautoescape %}
 </script>
 {% endblock %}

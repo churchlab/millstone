@@ -16,6 +16,15 @@
 <div id="gd-ref-genome-list-view-datatable-hook">
 </div>
 
-{% include "ref_genome_controls.html" %}
+<script type="text/javascript">
+
+  VIEW_TAG = 'REF_GENOME_LIST';
+
+  {% autoescape off %}
+  IS_S3_BACKEND = '{{project.is_s3_backend}}';
+  INIT_JS_DATA = {{init_js_data}};    
+  {% endautoescape %}
+
+</script>
 
 {% endblock %}

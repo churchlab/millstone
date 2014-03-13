@@ -26,11 +26,13 @@ gd.App.prototype.run = function() {
       break;
 
     case 'REF_GENOME_LIST':
-      var view = new gd.RefGenomeListView();
+      var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var view = new gd.RefGenomeListView({'model': model});
       break;
 
     case 'SAMPLE':
-      var view = new gd.SampleView();
+    var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var view = new gd.SampleView({'model': model});
       break;
 
     case 'ALIGNMENT':
@@ -39,7 +41,8 @@ gd.App.prototype.run = function() {
       break;
 
     case 'ALIGNMENT_LIST':
-      var view = new gd.AlignmentListView();
+      var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var view = new gd.AlignmentListView({'model': model});
       break;
 
     case 'ALIGNMENT_CREATE':
@@ -51,7 +54,8 @@ gd.App.prototype.run = function() {
       break;
 
     case 'VARIANT_SET_LIST':
-      var view = new gd.VariantSetListView();
+      var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var view = new gd.VariantSetListView({'model': model});
       break;
 
     case 'SINGLE_VARIANT_VIEW':

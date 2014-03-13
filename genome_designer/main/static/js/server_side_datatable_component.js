@@ -162,7 +162,7 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
 
 
   /**
-   * Updates the datatable view based on the data available.
+ * Updates the datatable view based on the data available.
    *
    * @param {array} objList List of objects to display
    * @param {array} fieldConfig List of column config objects. These must
@@ -205,8 +205,7 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
           // gd-dt-cb is our master checkbox
           "<'panel panel-default'" +         // start panel containing table
           "<'panel-body'" +                  // start panel containing table
-          "<'gd-table-controls'" +           // first make the top container
-          "<'gd-new-button'>" +              // green button
+          "<'gd-datatable-controlbox'" +           // first make the top container
           "l" +                              // records per row
           "<'gd-dt-cb master pull-right'>" + // master cb
           ">>" +                             // close panel body, container, row
@@ -251,6 +250,14 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
 
     // Draw the entity-specific controls that listen for this trigger
     this.trigger('DONE_TABLE_REDRAW');
+
+    // Draw the control buttons at the top-left of the dable component,
+    // if passed, the proper template. 
+    if (this.options.controlsTemplate) {
+      this.addControlsFromTemplate(this.options.controlsTemplate, 
+          this.options.requestData);
+    }
+
     // Initialize options for action dropdown menu (next to master checkbox).
     this.createMasterCheckbox();
     this.listenToCheckboxes();

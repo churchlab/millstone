@@ -13,22 +13,50 @@ gd.DataTableComponent = gd.AbstractDataTableComponent.extend({
     // Handle that will store the reference to the datatable.
     this.datatable = null;
 
-    // Objects converted into displayable form.
-    this.displayableObjList = this.makeDisplayableObjectList(
-        this.options.objList);
+    if (this.options.hasOwnProperty('serverTarget')) {
+      this.initializeFromServerTarget();
+    } else {
 
-    // Display fields.
-    this.displayableFieldConfig = this.makeDisplayableFieldConfig(
-        this.options.fieldConfig);
+      this.displayableObjList = this.makeDisplayableObjectList(
+          this.options.objList);
 
-    this.render();
+      // Display fields.
+      this.displayableFieldConfig = this.makeDisplayableFieldConfig(
+          this.options.fieldConfig);
+
+      this.render();
+    };
+
   },
 
+  initializeFromServerTarget: function() {
+    // If passed a serverTarget, then get the ObjList and FieldConfig
+    // from the url via JSON.
+    $.get(this.options.serverTarget, this.options.requestData, 
+        _.bind(function(response) {
+          this.options.objList = response.obj_list;
+          this.options.fieldConfig = response.field_config;
+
+          this.displayableObjList = this.makeDisplayableObjectList(
+              this.options.objList);
+
+          this.displayableFieldConfig = this.makeDisplayableFieldConfig(
+              this.options.fieldConfig);
+
+          this.render();
+
+        }, this));
+  },
 
   /** Override. */
   render: function() {
     // Draw the Datatable.
     this.updateDatatable(this.displayableObjList, this.displayableFieldConfig);
+
+    // Draw controls if the template was supplied.
+    if (this.options.hasOwnProperty('controlsTemplate')) {
+      this.addControlsFromTemplate(this.options.controlsTemplate, this.options.requestData);
+    };
 
     // Activate selectpicker on the dropdowns.
     length_select = $("div.dataTables_length > label > select")
@@ -126,8 +154,8 @@ gd.DataTableComponent = gd.AbstractDataTableComponent.extend({
           // gd-dt-cb is our master checkbox
           "<'panel panel-default'" +      // start panel containing table
           "<'panel-body'" +               // start panel containing table
-          "<'gd-table-controls'" +    // first make the top container
-          "<'gd-new-button'>" +  // green button
+          "<'gd-datatable-top-container'" +    // first make the top container
+          "<'gd-datatable-controlbox'>" +  // model-specific control buttons
           "l" +               // records per row
           "<'gd-dt-cb master pull-right'>" + // master cb
           ">>" +  // close panel body, container, row

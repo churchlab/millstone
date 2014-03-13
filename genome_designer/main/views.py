@@ -186,11 +186,14 @@ def reference_genome_list_view(request, project_uid):
         except Exception as e:
             error_string = 'Import error: ' + str(e)
 
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(project)
+    })
+
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
-        'ref_genome_list_json': adapt_model_to_frontend(ReferenceGenome,
-                {'project':project}),
+        'init_js_data': init_js_data,
         'error_string': error_string
     }
 
@@ -231,11 +234,15 @@ def sample_list_view(request, project_uid):
         except Exception as e:
             error_string = 'Import error: ' + str(e)
 
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(project)
+    })
+
+
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
-        'sample_list_json': adapt_model_to_frontend(
-                ExperimentSample, {'project': project}),
+        'init_js_data': init_js_data,
         'error_string': error_string
     }
     return render(request, 'sample_list.html', context)
@@ -267,12 +274,16 @@ def alignment_list_view(request, project_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(project)
+    })    
+
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
-        'alignment_list_json': adapt_model_to_frontend(AlignmentGroup,
-                {'reference_genome__project':project})
+        'init_js_data': init_js_data,
     }
+
     return render(request, 'alignment_list.html', context)
 
 
@@ -431,12 +442,16 @@ def variant_set_list_view(request, project_uid):
     # (for choosing which ref genome a new variant set goes into).
     ref_genome_list = ReferenceGenome.objects.filter(project=project)
 
+    # Initial javascript data.
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(project)
+    })
+
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
-        'ref_genome_list': ref_genome_list,
-        'variant_set_list_json': adapt_model_to_frontend(VariantSet,
-                {'reference_genome__project':project}),
+        'ref_genome_list' : ref_genome_list,
+        'init_js_data' : init_js_data,
         'error_string': error_string
     }
 

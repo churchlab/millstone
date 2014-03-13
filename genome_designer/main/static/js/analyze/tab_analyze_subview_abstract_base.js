@@ -17,10 +17,8 @@ gd.TabAnalyzeSubviewAbstractBase = Backbone.View.extend({
   },
 
 
-  /** Render the controls. Inheriting classes should override. */
-  renderControls: function() {
-    $('.gd-table-controls').append(
-        '<h3>Controls go here</h3>');
+  /** Register control listeners. Inheriting classes should override. */
+  listenToControls: function() {
   },
 
 

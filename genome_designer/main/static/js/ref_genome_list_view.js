@@ -8,7 +8,6 @@ gd.RefGenomeListView = Backbone.View.extend({
 
   initialize: function() {
     this.render();
-    this.decorate_new_button();
   },
 
   render: function() {
@@ -17,8 +16,9 @@ gd.RefGenomeListView = Backbone.View.extend({
 
     this.datatable = new gd.DataTableComponent({
         el: $('#gd-ref-genome-list-view-datatable-hook'),
-        objList: REF_GENOME_LIST_DATA['obj_list'],
-        fieldConfig: REF_GENOME_LIST_DATA['field_config']
+        serverTarget: '/_/ref_genomes',
+        controlsTemplate: '/_/templates/reference_genome_list_controls',
+        requestData: {projectUid: this.model.get('uid')},
     });
 
     this.uploader = this.$("#uploadDiv").fineUploaderS3({
@@ -67,29 +67,5 @@ gd.RefGenomeListView = Backbone.View.extend({
             }
       );}, this));
   },
-
-  decorate_new_button: function() {
-
-    html_string = (
-      '<div class="btn-group">' +
-      '  <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">' +
-      '    New' +
-      '    <span class="caret"></span>' +
-      '  </a>' +
-      '  <ul class="dropdown-menu">' +
-      '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>'
-    );
-
-    if (IS_S3_BACKEND) {
-      html_string = html_string + 
-        '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">From S3 Bucket...</a></li>';
-    };
-    html_string = html_string + 
-      '    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromNCBI" data-toggle="modal">From NCBI Accession...</a></li>' +
-      '  </ul>' +
-      '</div>'
-
-    $("div.gd-new-button").html(html_string);
-  }
 
 });

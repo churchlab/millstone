@@ -1,3 +1,21 @@
+<!-- Control Box -->
+<div id='{{table_id}}-control' class="gd-datatable-control btn-group">
+  <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
+    New
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu">
+    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>
+    {% if project.is_s3_backed %}
+    <li role="presentation">
+      <a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">
+        From S3 Bucket...</a></li>
+    {% endif %}    
+    <li role="presentation">
+      <a role="menuitem" tabindex="-1" href="#modalFromNCBI" data-toggle="modal">
+        From NCBI Accession...</a></li>
+  </ul>
+</div>
 
 <!-- ModalFromFile -->
 <div id="modalFromFile" class="modal fade" tabindex="-1" role="dialog">
@@ -70,19 +88,6 @@
     </form>
   </div></div>
 </div>
-
-<script type="text/javascript">
-  VIEW_TAG = 'REF_GENOME_LIST';
-  {% with is_s3_backend=project.is_s3_backend %}
-  IS_S3_BACKEND = '{{is_s3_backend}}';
-  {% endwith %}
-
-  {% autoescape off %}
-  REF_GENOME_LIST_DATA = {{ref_genome_list_json}};
-    
-  {% endautoescape %}
-
-</script>
 
 <!-- ModalFromS3 -->
 {% if project.is_s3_backed %}

@@ -50,7 +50,7 @@
 
   <script type="text/javascript" src="{% static "js/project_view.js" %}"></script>
   <script type="text/javascript" src="{% static "js/ref_genome_list_view.js" %}"></script>
-  <script type="text/javascript" src="{% static "js/sample_view.js" %}"></script>
+  <script type="text/javascript" src="{% static "js/sample_list_view.js" %}"></script>
   <script type="text/javascript" src="{% static "js/alignment_list_view.js" %}"></script>
   <script type="text/javascript" src="{% static "js/alignment_view.js" %}"></script>
   <script type="text/javascript" src="{% static "js/alignment_create_view.js" %}"></script>
@@ -74,8 +74,8 @@
   <!-- Main
 ================================================== -->
 
-  <div id="gd-page-container" class="gd-page-container">
-    <div class="container-fluid">
+  <div id="gd-page-container container-fluid" class="gd-page-container">
+    <div class="row">
     {% block tabs_or_splash%}{% endblock %}
     </div>
   </div><!--/#gd-page-container --> 

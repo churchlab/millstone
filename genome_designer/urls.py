@@ -98,11 +98,15 @@ urlpatterns = patterns('',
     url(r'^_/variants/export_as_csv$',
             'main.xhr_handlers.export_variants_as_csv'),
     url(r'^_/alignmentgroups$',
-            'main.xhr_handlers.get_alignment_groups_for_ref_genome'),
+            'main.xhr_handlers.get_alignment_groups'),
+    url(r'^_/samples$',
+            'main.xhr_handlers.get_samples'),
     url(r'^_/genes$',
-                'main.xhr_handlers.get_gene_list'),
+            'main.xhr_handlers.get_gene_list'),
     url(r'^projects/([\w-]+)/delete$',
             'main.xhr_handlers.project_delete'),
+    url(r'^_/ref_genomes$',
+            'main.xhr_handlers.get_ref_genomes'),
 
 
     ###########################################################################
@@ -112,8 +116,14 @@ urlpatterns = patterns('',
 
     url(r'^_/templates/variant_filter_controls$',
             'main.template_xhrs.variant_filter_controls'),
-    url(r'^_/templates/variant_set_controls$',
-            'main.template_xhrs.variant_set_controls'),
+    url(r'^_/templates/variant_set_list_controls$',
+            'main.template_xhrs.variant_set_list_controls'),
+    url(r'^_/templates/alignment_list_controls$',
+            'main.template_xhrs.alignment_list_controls'),
+    url(r'^_/templates/reference_genome_list_controls$',
+            'main.template_xhrs.reference_genome_list_controls'),
+    url(r'^_/templates/sample_list_controls$',
+            'main.template_xhrs.sample_list_controls'),
 
 )
 

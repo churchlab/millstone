@@ -20,8 +20,6 @@ body {
 
 .gd-logo {
   height: 38px;
-  width: 38px;
-  margin-top: 5px;
   margin-bottom: 5px;
   margin-right: 8px;
 }
@@ -39,7 +37,6 @@ body {
 .gd-navbar .navbar { min-height:40px;} 
 
 .gd-navbar .navbar .navbar-brand { 
-  float: none; 
   font-size: 18px;
   margin-top: 3px;
 }
@@ -50,13 +47,17 @@ body {
   line-height: 20px;
 }
 
-.gd-sidebar {
-  width: 180px;
-  float: left;
+.gd-navbar-brand {
+  padding-top: 0px;
+}
+
+.gd-page-container {
+  margin-right: 15px;
+  margin-left: 15px;
 }
 
 .gd-sidebar-analyze-buttons {
-  width: 180px;
+  max-width: 183px;
 }
 
 .gd-sidebar-analyze-buttons > .bootstrap-select.btn-group {
@@ -72,15 +73,6 @@ body {
   border: 1px solid #dddddd;
   color: #555555;
   font-weight: 200;
-}
-
-.gd-sidebar-analyze-buttons.btn-group-vertical > .bootstrap-select.btn-group:nth-child(2)  > .btn {
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
-}
-
-.gd-main-content { 
-    margin-left: 180px;
 }
 
 .gd-data-analyze-group {
@@ -120,6 +112,13 @@ input.gd-form-tall {
   margin-bottom: 20px;
 }
 
+.gd-main-content, 
+.gd-main-content > .container-fluid {
+  padding-left: 0px;
+}
+
+
+
 .gd-analyze-subview-controls-hook {
   border: 1px dotted black;
   margin-bottom: 10px;
@@ -131,6 +130,16 @@ input.gd-form-tall {
 .modal-body > .nav {
   margin-bottom: 10px;
 }
+
+/* is this a bootstrap 3 bug? 
+ * adjacent btn-groups don't get the margin in-between
+ * inside a btn-toolbar as expected, because of 
+ * a css priority in bootstrap.css.
+ * this should fix.
+ */
+ .btn-toolbar > .btn-group {
+  margin-left: 5px !important;
+ }
 
 /* GD Checkboxes for Datatables, checkbox td changes color */
 
@@ -187,11 +196,13 @@ table.dataTable > tbody > tr > td {
   padding-bottom: 0px;
 } 
 
-.gd-new-button {
-  padding-left: 0px;
-}
+.dataTables_wrapper > div.panel > div.panel-body {
+  padding-bottom: 5px;
+  padding-left: 10px;
+  padding-right: 10px;
+} 
 
-.gd-table-controls > div {
+.gd-datatable-top-container > div {
   vertical-align: middle;
   display: inline-block;
   float:none;  
@@ -199,13 +210,8 @@ table.dataTable > tbody > tr > td {
   padding-right: 5px;
 }
 
-/* We don't want to pad this specific component on the dataTable*/
-#gd-snp-filter-component {
-  vertical-align: middle;
-  display: inline;
-  float:none;  
-  padding-left: 0px;
-  padding-right: 0px;
+.dataTables_length > label {
+  margin-bottom: 0px;
 }
 
 .gd-table-controls > div:nth-of-type(1) {

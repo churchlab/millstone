@@ -1,3 +1,23 @@
+<!-- Controls -->
+<div id='{{table_id}}-control' class="gd-datatable-control btn-group">
+  <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
+    Create New
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu">
+    <li role="presentation">
+      <a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">
+        From File...
+      </a>
+    </li>
+    <li role="presentation">
+      <a role="menuitem" tabindex="-1" href="#modalEmpty" data-toggle="modal">
+        Empty
+      </a>
+    </li>
+  </ul>
+</div>
+
 <!-- From file modal -->
 <div id="modalFromFile" class="modal fade" tabindex="-1" role="dialog">
   <div class="modal-dialog"><div class="modal-content">

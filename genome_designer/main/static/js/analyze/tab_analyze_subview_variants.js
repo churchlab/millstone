@@ -43,52 +43,30 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
 
   /** @override */
-  renderControls: function() {
-    // Request the filter control html from the server for now.
-    // TODO: Client-side template support.
+  listenToControls: function() {
+    // Fill in the filter if relevant.
+    $('#gd-new-filter-input').val(this.model.get('filterString'));
 
+    // Decorate the cast/melt toggle.
+    if (this.model.get('is_melted')) {
+      $('#gd-snp-filter-melt-toggle-melt').addClass('active');
+    } else {
+      $('#gd-snp-filter-melt-toggle-cast').addClass('active');
+    }
 
-    var requestData = {
-      'csrf': gd.getCookie('csrftoken'),
-      'refGenomeUid': this.model.get('refGenomeUid')
-    };
-
-    // we aren't using the new button, so remove it
-    $('.gd-table-controls > .gd-new-button').remove()
-
-    $.get('/_/templates/variant_filter_controls', requestData,
-        _.bind(function(response) {
-          // NOTE: This masks a bug where we are somtimes making this request
-          // multiple times in a row.
-          $('.gd-table-controls').empty();
-
-          // Append the DOM.
-          $('.gd-table-controls').append(response);
-
-          // Fill in the filter if relevant.
-          $('#gd-new-filter-input').val(this.model.get('filterString'));
-
-          // Decorate the cast/melt toggle.
-          if (this.model.get('is_melted')) {
-            $('#gd-snp-filter-melt-toggle-melt').addClass('active');
-          } else {
-            $('#gd-snp-filter-melt-toggle-cast').addClass('active');
-          }
-
-          // Register listeners.
-          $('#gd-filter-box-apply-btn').click(
-              _.bind(this.handleApplyFilterClick, this));
-          $('.gd-snp-filter-melt-toggle').click(
-              _.bind(this.handleMeltedToggleClick, this));
-          $('#gd-filter-field-select-btn').click(
-              _.bind(this.handleShowFieldSelect, this));
-          $('#gd-filter-refresh-materialized').click(
-              _.bind(this.handleRefreshMaterializedView, this));
-          $('#gd-filter-export-csv').click(
-              _.bind(this.handleExportCsv, this));
-          $('#gd-snp-filter-error-close-btn').click(
-              _.bind(this.handleErrorAlertClose, this));
-        }, this));
+    // Register listeners.
+    $('#gd-filter-box-apply-btn').click(
+        _.bind(this.handleApplyFilterClick, this));
+    $('.gd-snp-filter-melt-toggle').click(
+        _.bind(this.handleMeltedToggleClick, this));
+    $('#gd-filter-field-select-btn').click(
+        _.bind(this.handleShowFieldSelect, this));
+    $('#gd-filter-refresh-materialized').click(
+        _.bind(this.handleRefreshMaterializedView, this));
+    $('#gd-filter-export-csv').click(
+        _.bind(this.handleExportCsv, this));
+    $('#gd-snp-filter-error-close-btn').click(
+        _.bind(this.handleErrorAlertClose, this));
   },
 
 
@@ -107,6 +85,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     this.datatableComponent = new gd.ServerSideDataTableComponent({
         el: $('#gd-datatable-hook'),
         serverTarget: '/_/variants',
+        controlsTemplate: '/_/templates/variant_filter_controls',
+        requestData: {'refGenomeUid': this.model.get('refGenomeUid')},
         serverParamsInjector: _.bind(
             this.addFilterDataServerSideRequest, this)
     });
@@ -116,8 +96,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         _.bind(this.setUIStartLoadingState, this));
     this.listenTo(this.datatableComponent, 'DONE_LOADING',
         _.bind(this.setUIDoneLoadingState, this));
-    this.listenTo(this.datatableComponent, 'DONE_TABLE_REDRAW',
-        _.bind(this.renderControls, this));
+    this.listenTo(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
+        _.bind(this.listenToControls, this));
   },
 
 

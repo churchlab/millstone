@@ -25,6 +25,7 @@ from main.data_util import lookup_variants
 from main.model_views import adapt_variant_to_frontend
 from main.model_views import GeneView
 from main.models import AlignmentGroup
+from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Region
@@ -286,23 +287,56 @@ def modify_variant_in_set_membership(request):
 @login_required
 @require_GET
 def get_variant_set_list(request):
-    # Parse the GET params.
-    ref_genome_uid = request.GET.get('refGenomeUid')
 
-    reference_genome = get_object_or_404(ReferenceGenome,
-            project__owner=request.user.get_profile(),
-            uid=ref_genome_uid)
+    if 'refGenomeUid' in request.GET:
+        # Parse the GET params.
+        ref_genome_uid = request.GET.get('refGenomeUid')
 
-    # Grab the VariantSet data.
-    variant_set_list = VariantSet.objects.filter(
-            reference_genome=reference_genome)
+        reference_genome = get_object_or_404(ReferenceGenome,
+                project__owner=request.user.get_profile(),
+                uid=ref_genome_uid)
 
-    response_data = {
-        'variant_set_list_json': adapt_model_to_frontend(VariantSet,
-                obj_list=variant_set_list),
-    }
+        # Grab the VariantSet data.
+        variant_set_list = VariantSet.objects.filter(
+                reference_genome=reference_genome)
 
-    return HttpResponse(json.dumps(response_data),
+        response_data = {
+            'variant_set_list_json': adapt_model_to_frontend(VariantSet,
+                    obj_list=variant_set_list)
+        }
+        return HttpResponse(json.dumps(response_data),
+                content_type='application/json')
+
+    elif 'projectUid' in request.GET:
+        project_uid = request.GET.get('projectUid')
+
+        # Lookup the model and verify the owner is the user
+        project = get_object_or_404(Project,
+                owner=request.user.get_profile(),
+                uid=project_uid)
+
+        response_data = adapt_model_to_frontend(VariantSet,
+                {'reference_genome__project':project})
+
+        return HttpResponse(response_data,
+                content_type='application/json')
+
+
+@login_required
+@require_GET
+def get_samples(request):
+
+    project_uid = request.GET.get('projectUid')
+
+    # Lookup the model and verify the owner is the user
+    project = get_object_or_404(Project,
+            owner=request.user.get_profile(),
+            uid=project_uid)
+
+    response_data = adapt_model_to_frontend(ExperimentSample,
+            {'project' :project})
+
+    return HttpResponse(response_data,
             content_type='application/json')
 
 
@@ -370,25 +404,69 @@ def export_variants_as_csv(request):
 
 @login_required
 @require_GET
-def get_alignment_groups_for_ref_genome(request):
+def get_alignment_groups(request):
+    """Get list of AlignmentGroups for the provided ReferenceGenome uid.
+
+        If the request has a refGenomeUid, only return alignments for that
+        individual reference genome.
+        If the request has a projectUid, return all alignments for that 
+        project.
+    """
+    if 'refGenomeUid' in request.GET:
+
+        # Parse the GET params.
+        ref_genome_uid = request.GET.get('refGenomeUid')
+
+        # Lookup the model and verify the owner is hte user
+        reference_genome = get_object_or_404(ReferenceGenome,
+                project__owner=request.user.get_profile(),
+                uid=ref_genome_uid)
+
+        alignment_group_list = AlignmentGroup.objects.filter(
+                reference_genome=reference_genome)
+
+        response_data = [{
+            'label': ag.label,
+            'uid': ag.uid
+        } for ag in alignment_group_list]
+
+        return HttpResponse(json.dumps(response_data),
+                content_type='application/json')
+
+    elif 'projectUid' in request.GET:
+
+        # Parse the GET params.
+        project_uid = request.GET.get('projectUid')
+
+        # Lookup the model and verify the owner is hte user
+        project = get_object_or_404(Project,
+                owner=request.user.get_profile(),
+                uid=project_uid)
+
+        response_data = adapt_model_to_frontend(AlignmentGroup, 
+                {'reference_genome__project' : project})
+
+        return HttpResponse(response_data,
+                content_type='application/json')
+
+
+@login_required
+@require_GET
+def get_ref_genomes(request):
     """Get list of AlignmentGroups for the provided ReferenceGenome uid.
     """
     # Parse the GET params.
-    ref_genome_uid = request.GET.get('refGenomeUid')
+    project_uid = request.GET.get('projectUid')
 
-    # Lookup the model and verify the owner is hte user
-    reference_genome = get_object_or_404(ReferenceGenome,
-            project__owner=request.user.get_profile(),
-            uid=ref_genome_uid)
+    # Lookup the model and verify the owner is the user
+    project = get_object_or_404(Project,
+            owner=request.user.get_profile(),
+            uid=project_uid)
 
-    alignment_group_list = AlignmentGroup.objects.filter(
-            reference_genome=reference_genome)
-    response_data = [{
-        'label': ag.label,
-        'uid': ag.uid
-    } for ag in alignment_group_list]
+    response_data = adapt_model_to_frontend(ReferenceGenome, 
+            {'project' : project})
 
-    return HttpResponse(json.dumps(response_data),
+    return HttpResponse(response_data,
             content_type='application/json')
 
 

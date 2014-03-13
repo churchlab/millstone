@@ -1,3 +1,35 @@
+<!-- Control -->
+<div id='{{table_id}}-control' class="gd-datatable-control btn-group">
+  <form class="form-search">
+    <div class="btn-group">
+      <a class="btn dropdown-toggle btn-primary" 
+      data-toggle="dropdown" href="#">
+        New
+        <span class="caret"></span>
+      </a>
+      <ul class="dropdown-menu">
+        <li role="presentation">
+          <a role="menuitem" tabindex="-1" href="#">From URL...</a>
+        </li>
+        <li role="presentation">
+          <a role="menuitem" tabindex="-1" 
+          href="#modalFromFile" data-toggle="modal">
+            From Server Location...
+          </a>
+        </li>
+        {% if project.is_s3_backed %}
+        <li role="presentation">
+          <a role="menuitem" tabindex="-1" href="#modalUpload" 
+          data-toggle="modal">
+            Upload To S3...
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </form>
+</div>
+
 <!-- Modal -->
 <div id="modalFromFile" class="modal fade" tabindex="-1" role="dialog">
   <div class="modal-dialog"><div class="modal-content">

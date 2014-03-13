@@ -8,7 +8,6 @@ gd.SampleView = Backbone.View.extend({
 
   initialize: function() {
     this.render();
-    this.decorate_new_button();
     this.uuid = qq.getUniqueId();
   },
 
@@ -17,8 +16,9 @@ gd.SampleView = Backbone.View.extend({
 
     this.datatable = new gd.DataTableComponent({
         el: $('#gd-sample-list-view-datatable-hook'),
-        objList: SAMPLE_LIST_DATA['obj_list'],
-        fieldConfig: SAMPLE_LIST_DATA['field_config']
+        serverTarget: '/_/samples',
+        controlsTemplate: '/_/templates/sample_list_controls',
+        requestData: {projectUid: this.model.get('uid')},
     });
 
     if (this.$("#uploadDiv")) {
@@ -143,40 +143,6 @@ gd.SampleView = Backbone.View.extend({
 
   handleFormSubmit: function() {
     $("#formFromFile").submit();
-  },
-
-  decorate_new_button: function() {
-
-    button_html = (
-      '<form class="form-search">' +
-      '  <div class="btn-group">' +
-      '    <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">' +
-      '      New' +
-      '      <span class="caret"></span>' +
-      '    </a>' +
-      '    <ul class="dropdown-menu">' +
-      '      <li role="presentation"><a role="menuitem" tabindex="-1" href="#">From URL...</a></li>' +
-      '      <li role="presentation">' +
-      '        <a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">' +
-      '          From Server Location...' +
-      '        </a>' +
-      '      </li>'
-    );
-    if (IS_S3_BACKEND == 'True') {
-      button_html = button_html + (
-      '        <li role="presentation">' +
-      '          <a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">' +
-      '            Upload To S3...' +
-      '          </a>' +
-      '        </li>');
-    };
-    button_html = button_html + (
-      '    </ul>' +
-      '  </div>' +
-      '</form>'
-    );
-    $("div.gd-new-button").html(button_html);
   }
-
 
 });

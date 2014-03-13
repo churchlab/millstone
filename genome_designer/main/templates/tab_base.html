@@ -8,7 +8,7 @@
 
     <!-- Side Nav
 ================================================== -->  
-  <div class="gd-sidebar">
+  <div class="gd-sidebar sidebar col-sm-2">
       <div class="btn-group btn-group-justified gd-data-analyze-group">
         <a href="/projects/{{project.uid}}/data" type="button" class="btn btn-default {% if tab_root == 'DATA' %}active{% endif %}">Data</a>
         <a href="/projects/{{project.uid}}/analyze" type="button" class="btn btn-default {% if tab_root == 'ANALYZE' %}active{% endif %}">Analyze</a>
@@ -27,7 +27,7 @@
   <!-- Content Area
 ================================================== -->  
   
-  <div class="gd-main-content">
+  <div class="gd-main-content col-sm-10">
     <div class="container-fluid">
     {% block content %}
       No content.

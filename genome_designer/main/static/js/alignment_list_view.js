@@ -8,7 +8,6 @@ gd.AlignmentListView = Backbone.View.extend({
 
   initialize: function() {
     this.render();
-    this.decorate_new_button();
   },
 
   render: function() {
@@ -16,18 +15,9 @@ gd.AlignmentListView = Backbone.View.extend({
 
     this.datatable = new gd.DataTableComponent({
         el: $('#gd-alignment_list_view-datatable-hook'),
-        objList: ALIGNMENT_LIST_DATA['obj_list'],
-        fieldConfig: ALIGNMENT_LIST_DATA['field_config']
+        serverTarget: '/_/alignmentgroups',
+        controlsTemplate: '/_/templates/alignment_list_controls',
+        requestData: {projectUid: this.model.get('uid')},
     });
-  },
-
-  decorate_new_button: function() {
-
-    $("div.gd-new-button").html(
-      '<a href=' + NEW_ALIGNMENT_LINK + '>' +
-        '<button type="submit" class="btn btn-primary">New...</button>' +
-      '</a>'
-    );
   }
-
 });

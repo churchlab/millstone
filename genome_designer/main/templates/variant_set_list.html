@@ -14,13 +14,13 @@
 <div id="gd-variant_set_list_view-datatable-hook">
 </div>
 
-{% include "variant_set_controls.html" %}
-
 <script type="text/javascript">
   VIEW_TAG = 'VARIANT_SET_LIST';
+  IS_S3_BACKEND = '{{project.is_s3_backed}}';
 
   {% autoescape off %}
-    VARIANT_SET_LIST_DATA = {{variant_set_list_json}};
+    INIT_JS_DATA = {{init_js_data}};
   {% endautoescape %}
+
 </script>
 {% endblock %}
