@@ -38,7 +38,7 @@ from scripts.data_export_util import export_melted_variant_view
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-from variants.common import extract_filter_keys
+from variants.common import determine_visible_field_names
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.variant_sets import update_variant_in_set_memberships
@@ -149,9 +149,11 @@ def get_variant_list(request):
     # Of course, it is possible that we have our bugs right now so devs should
     # be wary of this big try-except.
     try:
-        # Determine the visible keys.
-        query_args['visible_key_names'] = _determine_visible_field_names(request,
-                query_args['filter_string'], reference_genome)
+        field_select_keys = json.loads(request.GET.get(
+                VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS, json.dumps([])))
+        query_args['visible_key_names'] = determine_visible_field_names(
+                field_select_keys, query_args['filter_string'],
+                reference_genome)
 
         # Get the list of Variants (or melted representation) to display.
         lookup_variant_result = lookup_variants(query_args, reference_genome)
@@ -198,22 +200,6 @@ def get_variant_list(request):
 
 
 VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS = 'visibleKeyNames'
-
-
-def _determine_visible_field_names(request, filter_string, ref_genome):
-    """Determine which fields to show.
-    """
-    # Get visible keys explicitly marked in the UI by the user.
-    if VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS in request.GET:
-        visible_key_names = json.loads(request.GET.get(
-                VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS))
-    else:
-        visible_key_names = []
-
-    # Also show keys in the filter string.
-    fields_from_filter_string = extract_filter_keys(filter_string, ref_genome)
-
-    return list(set(visible_key_names) | set(fields_from_filter_string))
 
 
 def _mark_active_keys_in_variant_key_map(variant_key_map, visible_key_names):

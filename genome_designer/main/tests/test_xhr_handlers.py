@@ -17,7 +17,6 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantCallerCommonData
-from main.xhr_handlers import _determine_visible_field_names
 from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__PROJECT_UID
 from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__REF_GENOME_UID
 from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS
@@ -121,15 +120,6 @@ class TestGetVariantList(TestCase):
         # TODO(gleb): Uncomment when we fix total counts.
         # self.assertEqual(TOTAL_NUM_VARIANTS,
         #         response_data[VARIANT_LIST_RESPONSE_KEY__TOTAL])
-
-
-    def test_determine_visible_field_names(self):
-        EXPECTED_VISIBLE_KEYS = ['INFO_EFF_EFFECT']
-        request = HttpRequest()
-        request.GET[VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS] = json.dumps(
-                EXPECTED_VISIBLE_KEYS)
-        self.assertEqual(EXPECTED_VISIBLE_KEYS,
-                _determine_visible_field_names(request, '', self.ref_genome))
 
 
     # def test__INFO_EFF(self):

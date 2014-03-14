@@ -334,7 +334,7 @@ class VariantFilterEvaluator(object):
                     'Float': '::Float',
                     'Boolean': '::Boolean',
                     'String': ''}.get(field_type, None)  # string doesn't need to be cast
-            if field_type_expanded:
+            if field_type_expanded is not None:
                 return "(%s->>'%s')%s" % (json_field, arg, field_type_expanded)
 
         # default to returning arg exactly as is

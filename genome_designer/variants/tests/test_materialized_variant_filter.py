@@ -5,8 +5,6 @@ Tests for materialized_variant_filter.py.
 import os
 
 from django.db import connection
-from django.db import transaction
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 from sympy.core.function import sympify
@@ -21,9 +19,11 @@ from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import VariantToVariantSet
+from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
+from variants.common import determine_visible_field_names
 from variants.common import ParseError
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_variant_filter import VariantFilterEvaluator
@@ -82,6 +82,14 @@ class BaseTestVariantFilterTestCase(TestCase):
 
         self.materialized_view_manager = MeltedVariantMaterializedViewManager(
                 self.ref_genome)
+
+    def run_query(self, filter_string, ref_genome):
+        query_args = {
+            'filter_string': filter_string,
+            'visible_key_names': determine_visible_field_names(
+                [], filter_string, ref_genome)
+        }
+        return get_variants_that_pass_filter(query_args, ref_genome)
 
 
 class TestVariantFilter(BaseTestVariantFilterTestCase):
@@ -426,9 +434,51 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                     ref_genome_2)
 
 
-    def run_query(self, filter_string, ref_genome):
-        query_args = {'filter_string': filter_string}
-        return get_variants_that_pass_filter(query_args, ref_genome)
+    def test_filter_by_json_field(self):
+        """Filter using json fields.
+        """
+        # Make sure ref_genome_map has the field we are testing.
+        alternate_key_map = self.ref_genome.variant_key_map[MAP_KEY__ALTERNATE]
+        alternate_key_map['INFO_EFF_GENE'] = {
+            u'num': -1,
+            u'type': u'String'
+        }
+        self.ref_genome.save()
+
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=2,
+                ref_value='A')
+
+        alt_data_dict = {
+            'INFO_EFF_GENE': 'tolC'
+        }
+        VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='T',
+                data=alt_data_dict
+        )
+
+        common_data_obj = VariantCallerCommonData.objects.create(
+            variant=variant,
+            source_dataset=self.vcf_dataset,
+        )
+
+
+        raw_sample_data_dict = {
+            'gt_bases': 'T/T',
+            'INFO_EFF_GENE': 'tolC'
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=self.sample_obj_1,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+        passing_variants = self.run_query('INFO_EFF_GENE = tolC',
+                self.ref_genome)
+        self.assertEqual(1, len(passing_variants))
+
 
 
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):

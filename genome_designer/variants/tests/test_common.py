@@ -13,6 +13,7 @@ from main.models import ReferenceGenome
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
+from variants.common import determine_visible_field_names
 from variants.common import extract_filter_keys
 from variants.common import SymbolGenerator
 
@@ -53,6 +54,12 @@ class TestCommon(TestCase):
         EXPECTED_FILTER_KEY_SET = set(['position', 'gt_type'])
         self.assertEqual(EXPECTED_FILTER_KEY_SET,
                 set(extract_filter_keys(FILTER_EXPR, self.ref_genome)))
+
+    def test_determine_visible_field_names(self):
+        EXPECTED_VISIBLE_KEYS = ['INFO_EFF_EFFECT']
+        self.assertEqual(EXPECTED_VISIBLE_KEYS,
+                determine_visible_field_names(EXPECTED_VISIBLE_KEYS, '',
+                        self.ref_genome))
 
 
 class TestSymbolGenerator(TestCase):

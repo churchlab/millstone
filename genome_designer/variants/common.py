@@ -287,3 +287,12 @@ def generate_key_to_materialized_view_parent_col(reference_genome):
                     VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP.get(
                             submap_name, None))
     return key_to_parent_map
+
+
+def determine_visible_field_names(hard_coded_keys, filter_string,
+        ref_genome):
+    """Determine which fields to show, combining hard-coded keys and
+    the keys in the filter string.
+    """
+    fields_from_filter_string = extract_filter_keys(filter_string, ref_genome)
+    return list(set(hard_coded_keys) | set(fields_from_filter_string))
