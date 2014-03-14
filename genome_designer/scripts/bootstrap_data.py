@@ -190,8 +190,6 @@ def bootstrap_fake_data():
             title=TEST_PROJECT_NAME, owner=user.get_profile())
     (test_project_2, project_created) = Project.objects.get_or_create(
             title=SV_PROJECT_NAME, owner=user.get_profile())
-    (test_project_3, project_created) = Project.objects.get_or_create(
-            title='project3', owner=user.get_profile())
 
     ### Create some reference genomes
     ref_genome_1 = import_reference_genome_from_local_file(
