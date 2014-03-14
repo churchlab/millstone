@@ -341,6 +341,8 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
     """
     # Parse the list of field names.
     field_list = [fdict['field'] for fdict in field_dict_list]
+    # Get a mapping from field to field_dict
+    field_map = dict([(fdict['field'], fdict) for fdict in field_dict_list])
 
     # Get the verbose names for the fields.
     def _get_verbose(fdict):
@@ -405,8 +407,11 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
     # Create the config dict required by DataTables.js.
     obj_field_config = [{
         'mData': name,
-        'sTitle': verbose_name
-    } for (name, verbose_name) in zip(field_list, field_verbose_names)]
+        'sTitle': verbose_name,
+    } for (name, verbose_name) in zip(field_list, field_verbose_names) if 
+            # skip if hide field is set
+            'hide' not in  field_map[name] or 
+            field_map[name]['hide'] != 'True']
 
     return json.dumps({
         'obj_list': fe_obj_list,
@@ -459,12 +464,13 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
             '</a>')
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
-    {'field': 'label', 'verbose': 'label'},
+    {'field': 'label', 'verbose': 'Mutant'},
+    {'field': 'experiment_sample_label', 'verbose': 'Sample'},
     {'field': 'position'},
     {'field': 'ref'},
     {'field': 'alt'},
-    {'field': 'variant_set_label'},
-    {'field': 'experiment_sample_uid'},
+    {'field': 'variant_set_label', 'verbose': 'Variant Set'},
+    {'field': 'experiment_sample_uid', 'hide': 'True'}
 ]
 
 CAST_VARIANT_FIELD_DICT_LIST = [
@@ -473,7 +479,7 @@ CAST_VARIANT_FIELD_DICT_LIST = [
     {'field': 'ref'},
     {'field': 'alt'},
     {'field': 'variant_sets'},
-    {'field': 'total_samples'},
+    {'field': 'total_samples', 'verbose': '# Samples'},
 ]
 
 
