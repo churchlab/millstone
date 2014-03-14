@@ -112,6 +112,8 @@ class Dataset(UniqueUidModelMixin):
         VCF_DELLY = 'vcfd'
         VCF_USERINPUT = 'vcfu'
         VCF_FREEBAYES_SNPEFF = 'vcffe'
+        BED_CALLABLE_LOCI = 'bed_callable_loci'
+
 
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
@@ -589,7 +591,6 @@ class ExperimentSample(UniqueUidModelMixin):
         Called by the adapter.
         """
         return [
-            {'field': 'uid'},
             {'field': 'label'},
             {'field': 'group'},
             {'field': 'well'},

@@ -202,6 +202,7 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     # Generic label for now.
     # TODO: Is there a better way to come up with a label?
     label = str(sample_alignment.experiment_sample.uid) + '_' + alignment_type
+    key = str(sample_alignment.experiment_sample.label) + ' Read Alignment'
 
     # Build the JSON object.
     raw_dict_obj = {
@@ -209,7 +210,7 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
         'urlTemplate': urlTemplate,
         'label': label,
         'type': 'JBrowse/View/Track/Alignments2',
-        'key': label,
+        'key': key,
         'style' : {
             'className': 'alignment',
             'arrowheadClass': 'arrowhead',
@@ -221,6 +222,7 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
 
     # Also add a snp coverage track.
     snp_coverage_label = label + '_coverage'
+    snp_coverage_key = str(sample_alignment.experiment_sample.label) + ' Coverage'
     coverage_raw_dict_obj = {
         'storeClass': 'JBrowse/Store/SeqFeature/BAM',
         'urlTemplate': urlTemplate,

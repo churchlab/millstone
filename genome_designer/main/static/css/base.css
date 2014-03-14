@@ -248,3 +248,7 @@ table.dataTable thead th.gd-dt-cb-div {
   background-position: center;
   background-image: none;
 }
+
+div.dataTables_paginate ul.pagination {
+  margin: 0px;
+}
