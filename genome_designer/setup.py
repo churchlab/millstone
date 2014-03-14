@@ -14,7 +14,6 @@ import zipfile
 
 from bs4 import BeautifulSoup
 
-from main.exceptions import InputError
 from settings import JBROWSE_DATA_SYMLINK_PATH
 from settings import MEDIA_ROOT
 from settings import PWD as GD_ROOT
@@ -183,7 +182,7 @@ def _get_file_url_from_dropbox(dropbox_url, filename):
         url_text = urllib.urlopen(dropbox_url).read()
         url_soup = BeautifulSoup(url_text)
     except:
-        raise InputError(
+        raise Exception(
             'Could not get file %s from Dropbox URL %s. Check settings.' % (
                 filename, dropbox_url))
 
