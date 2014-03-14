@@ -1401,7 +1401,7 @@ DataTable.defaults = {
 			 *      } );
 			 *    } );
 			 */
-			"sNext": "Next",
+			"sNext": "",
 		
 		
 			/**
@@ -1422,7 +1422,7 @@ DataTable.defaults = {
 			 *      } );
 			 *    } );
 			 */
-			"sPrevious": "Previous"
+			"sPrevious": ""
 		},
 	
 		/**
