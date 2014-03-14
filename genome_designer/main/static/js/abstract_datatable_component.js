@@ -5,8 +5,8 @@
  *         * ServerSideDataTableComponent: Pagination handled by server calls.
  */
 
-gd.AbstractDataTableComponent = Backbone.View.extend({
-
+gd.AbstractDataTableComponent = Backbone.View.extend(
+{
   /** Prevent initialization. */
   initialize: function() {
     throw "Don't initialize abstract class!";
@@ -98,7 +98,7 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
     })
 
     // Add a column for a select checkbox.
-    displayableFieldConfig.push({
+    displayableFieldConfig.unshift({
         'mData': 'checkbox',
         'sTitle': ' ',
         'sClass': 'gd-dt-cb-div',
@@ -115,6 +115,48 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
     var rendered = '<li role="presentation"><a role="menuitem" tabindex="-1" onclick="' + 
         clickEvent + '">' + html + '</a></li>';
     $('#' + this.datatableId + '-dropdown').append(rendered);
+  },
+
+  /**
+   * Finds the gd-dt-master-cb checkbox class and draws a master checkbox
+   * and dropdown button that can toggles all checkboxes that are in its table
+   */
+  createMasterCheckbox: function() {
+    var masterCheckboxElId = this.datatableId + '-master-cb';
+    this.$el.find(".gd-dt-cb.master").empty();
+    this.$el.find(".gd-dt-cb.master").append(
+      '<div class="gd-dt-cb-div master pull-left btn-group">' +
+        '<button class="btn btn-default">' +
+        '<input type="checkbox" class="gd-dt-cb master" id="blah"></button>' +
+        '<button class="btn btn-default dropdown-toggle"' +
+        ' style="min-height: 26px" data-toggle="dropdown">' +
+          '<span><i class="caret"></i></span>' +
+        '</button>' +
+        '<ul class="dropdown-menu" id="' + this.datatableId + '-dropdown">' +
+        '</ul>' +
+      '</div>');
+
+    /**
+     * If the master checkbox is changed, toggle all checkboxes in the
+     * associated table with the following listener.
+     */
+
+    $('#' + masterCheckboxElId).change(_.bind(function(el) {
+      // Find all checkboxes in the associated table
+      var all_cbs = this.datatable.find('input:checkbox.gd-dt-cb');
+
+      // If none or some of the checkboxes (but not all), then check them all.
+      // If all are checked, then uncheck them all.
+
+      var all_checked = _.every(all_cbs, function(cb) {
+          return $(cb).is(':checked');})
+
+     _.each(all_cbs, function(cb) {
+            $(cb).prop('checked', !all_checked);
+            $(cb).triggerHandler('change');
+      });
+
+    }, this));
   },
 
   /**
@@ -188,5 +230,62 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
       // let them know we're done.
       this.trigger('DONE_CONTROLS_REDRAW');
     }, this));
+  },
+
+  getDataTableParams: function(dataTableObj) {
+    var dataTableParams = {
+      /**********************************************************************
+       * Display
+       *********************************************************************/
+      'sDom':
+        // Custom positioning for DataTable control elements.
+        // This disgusting string tells where to put the table subelements.
+        // http://datatables.net/ref#sDom
+        // l is the row listing
+        // C is the ColVis plugin
+        // t is the table
+        // i is the row info 
+        // p is pagination
+        // gd-dt-cb is our master checkbox
+        "<'panel panel-default'" +         // start panel containing table
+        "<'panel-body'" +                  // start panel containing table
+        "<'gd-datatable-controlbox'" +     // first make the top container
+        //"l" +                              // records per row (skipping)
+        "<'gd-dt-cb master pull-left'>" +  // master cb
+        "<'pull-right'ip>" +               // info, pagination
+        ">>" +                             // close panel body, container, row
+          "t" +                            // THE TABLE
+        "<'panel-footer'>" +               // footer with another pagination
+        ">>", // close panel footer, panel
+      /**********************************************************************
+       * Hide verbose pagination labels
+       *********************************************************************/
+      "oLanguage": {
+        "sInfo": "_START_-_END_ of _TOTAL_",
+        "oPaginate": {
+          "sPrevious": "",
+          "sNext": ""
+        }
+      },
+      /**********************************************************************
+       * Data
+       *********************************************************************/
+      'bFilter': false,
+      // Don't add visual highlights to sorted classes.
+      'bSortClasses': false,
+      // Don't automatically calculate optimal table and col widths.
+      'bAutoWidth': false,
+      /**********************************************************************
+       * Pagination
+       *********************************************************************/
+      'sPaginationType': 'bootstrap',
+      'iDisplayLength': 100,
+      /**********************************************************************
+       * Misc
+       *********************************************************************/
+      // Called each time a new row is created.
+      'fnCreatedRow': this.listenToCheckboxes()
+    };
+    return dataTableParams;
   }
 });

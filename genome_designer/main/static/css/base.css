@@ -144,9 +144,9 @@ td.gd-dt-cb-div {
     display: block;
     float: left;
     margin-bottom: 0px;
-    margin-left: -1px;
+    margin-right: -1px;
     margin-bottom: -1px;
-    margin-right: 0px;
+    margin-left: 0px;
     margin-top: 0px;
     min-width: 16px;
     padding-bottom: 4px;
@@ -223,6 +223,10 @@ table.dataTable > tbody > tr > td {
   margin-bottom: 0px;
 }
 
+.gd-dt-cb.master {
+  margin-right: 5px;
+}
+
 .gd-table-controls:after {
   clear: none;
 }
@@ -235,3 +239,12 @@ table.dataTable thead > tr > th {
   padding-left: 8px;
 }
 
+div.dataTables_info {
+  padding-top: 12px; /* to make text line up with arrows on pagination */
+  margin-right: 10px;
+}
+
+table.dataTable thead th.gd-dt-cb-div {
+  background-position: center;
+  background-image: none;
+}

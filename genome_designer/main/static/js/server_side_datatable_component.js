@@ -119,49 +119,6 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
 
 
   /**
-   * Finds the gd-dt-master-cb checkbox class and draws a master checkbox
-   * and dropdown button that can toggles all checkboxes that are in its table
-   */
-  createMasterCheckbox: function() {
-    var masterCheckboxElId = this.datatableId + '-master-cb';
-    this.$el.find(".gd-dt-cb.master").empty();
-    this.$el.find(".gd-dt-cb.master").append(
-      '<div class="gd-dt-cb-div master pull-right btn-group">' +
-        '<button class="btn btn-default">' +
-        '<input type="checkbox" class="gd-dt-cb master" id="' + 
-          masterCheckboxElId + '"></button>' +
-        '<button class="btn btn-default dropdown-toggle"' +
-        ' style="min-height: 26px" data-toggle="dropdown">' +
-          '<span><i class="caret"></i></span>' +
-        '</button>' +
-        '<ul class="dropdown-menu" id="' + this.datatableId + '-dropdown">' +
-        '</ul>' +
-      '</div>');
-
-    this.master_cb = $('#' + this.datatableId + '-master-cb');
-
-    // If the master checkbox is changed, toggle all checkboxes in the
-    // associated table with the following listener.
-    this.master_cb.change(_.bind(function(el) {
-      // Find all checkboxes in the associated table
-      var all_cbs = this.datatable.find('input:checkbox.gd-dt-cb');
-
-      // If none or some of the checkboxes (but not all), then check them all.
-      // If all are checked, then uncheck them all.
-
-      var all_checked = _.every(all_cbs, function(cb) {
-          return $(cb).is(':checked');})
-
-     _.each(all_cbs, function(cb) {
-            $(cb).prop('checked', !all_checked);
-            $(cb).triggerHandler('change');
-      });
-
-    }, this));
-  },
-
-
-  /**
  * Updates the datatable view based on the data available.
    *
    * @param {array} objList List of objects to display
@@ -183,69 +140,39 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
             'id=' + this.datatableId + '>' +
         '</table>');
 
-    var datatableParams = {
-        /**********************************************************************
-         * Data
-         *********************************************************************/
-        'aaData': objList,
-        'aoColumns': fieldConfig,
+    var datatableParams =this.getDataTableParams();
 
-        /**********************************************************************
-         * Display
-         *********************************************************************/
-        // Custom positioning for DataTable control elements.
-        'sDom': 
-          // This disgusting string tells where to put the table subelements.
-          // http://datatables.net/ref#sDom
-          // l is the row listing
-          // C is the ColVis plugin
-          // t is the table
-          // i is the row info 
-          // p is pagination
-          // gd-dt-cb is our master checkbox
-          "<'panel panel-default'" +         // start panel containing table
-          "<'panel-body'" +                  // start panel containing table
-          "<'gd-datatable-controlbox'" +           // first make the top container
-          "l" +                              // records per row
-          "<'gd-dt-cb master pull-right'>" + // master cb
-          ">>" +                             // close panel body, container, row
-            "t" +   // THE TABLE
-          "<'panel-footer'<'container-fluid'<'row'" +    // bottom container/row
-            "<'col-sm-4'i><'col-sm-8'p>" + // info, pagination
-          ">>>>", // close row, bottom container, panel footer, panel
-        'bFilter': false,
-        // Don't add visual highlights to sorted classes.
-        'bSortClasses': false,
-        // Don't automatically calculate optimal table and col widths.
-        'bAutoWidth': false,
-
-        /**********************************************************************
-         * Pagination
-         *********************************************************************/
-        'sPaginationType': 'bootstrap',
-        'bServerSide': true,
-        'sAjaxSource': this.serverTarget,
-        // Inject custom params to filter variants.
-        'fnServerParams': this.serverParamsInjector,
-        // Override the server function.
-        'fnServerData': _.bind(this.customServerDataFn, this),
-        // Locked pagination size for now.
-        'bLengthChange': false,
-        'iDisplayLength': 100,
-        // Defer initial load.
-        'iDeferLoading': numTotalVariants,
-
-        /**********************************************************************
-         * Misc
-         *********************************************************************/
-        // Called each time a new row is created.
-        'fnCreatedRow': this.listenToCheckboxes()
+    var serverSideDatatableParams = {
+      /**********************************************************************
+       * Data
+       *********************************************************************/
+      'aaData': objList,
+      'aoColumns': fieldConfig,
+      'bFilter': false,
+      // Don't add visual highlights to sorted classes.
+      /**********************************************************************
+       * Server-side options
+       *********************************************************************/
+      'bServerSide': true,
+      'sAjaxSource': this.serverTarget,
+      // Inject custom params to filter variants.
+      'fnServerParams': this.serverParamsInjector,
+      // Override the server function.
+      'fnServerData': _.bind(this.customServerDataFn, this),
+      // Locked pagination size for now.
+      'bLengthChange': false,
+      // Defer initial load.
+      'iDeferLoading': numTotalVariants
     };
 
+    // Combine common and server side params
+    _.extend(datatableParams, serverSideDatatableParams);
+
+    // Add external params that are passed in
     if (this.options.extraDatatableParams) {
       _.extend(datatableParams, this.options.extraDatatableParams);
     }
-
+    
     this.datatable = $('#' + this.datatableId).dataTable(datatableParams);
 
     // Draw the entity-specific controls that listen for this trigger
