@@ -453,7 +453,6 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
     tracks_param = '&tracks=' + ','.join(tracks)
 
     full_href = ref_genome_jbrowse_link + location_param + tracks_param
-    print full_href
 
     # TODO: Add alignment track param if this is a sample-specific view.
     return ('<a href="' + full_href + '" target="_blank">' + str(position) +
