@@ -150,7 +150,7 @@ def get_variant_list(request):
     # be wary of this big try-except.
     try:
         # Determine the visible keys.
-        visible_key_names = _determine_visible_field_names(request,
+        query_args['visible_key_names'] = _determine_visible_field_names(request,
                 query_args['filter_string'], reference_genome)
 
         # Get the list of Variants (or melted representation) to display.
@@ -160,7 +160,7 @@ def get_variant_list(request):
 
         # Adapt the Variants to display for the frontend.
         variant_list_json = adapt_variant_to_frontend(variant_list,
-                reference_genome, visible_key_names,
+                reference_genome, query_args['visible_key_names'],
                 melted=query_args['is_melted'])
 
         # Get all VariantSets that exist for this ReferenceGenome.
@@ -173,7 +173,8 @@ def get_variant_list(request):
         variant_key_map_with_active_fields_marked = copy.deepcopy(
                 reference_genome.variant_key_map)
         _mark_active_keys_in_variant_key_map(
-                variant_key_map_with_active_fields_marked, visible_key_names)
+                variant_key_map_with_active_fields_marked,
+                query_args['visible_key_names'])
 
         # Package up the response.
         response_data = {
