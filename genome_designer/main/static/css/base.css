@@ -155,6 +155,7 @@ td.gd-dt-cb-div {
     padding-top: 4px;
     position: relative;
     text-align: center;
+    border-bottom: 0px;
 }
 
 .table > tbody > tr > td.gd-dt-cb-div.active  {

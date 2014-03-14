@@ -134,7 +134,7 @@ gd.DataTableComponent = gd.AbstractDataTableComponent.extend({
     // Draw the table.
     // Create a unique id for the datatable.
     this.datatableId = this.$el.attr('id') + '-datatable';
-    this.$el.append(
+    this.$el.html(
         '<table cellpadding="0" cellspacing="0" border="0" '+
             'class="table table-striped table-bordered"' +
             'id=' + this.datatableId + '>' +

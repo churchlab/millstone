@@ -5,6 +5,8 @@ Classes that describe how a particular model should be viewed.
 import json
 import string
 
+from math import floor
+
 from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
@@ -15,11 +17,13 @@ from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
+from main.models import Dataset
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import generate_key_to_materialized_view_parent_col
 
+from settings import JBROWSE_DEFAULT_VIEW_WINDOW
 
 class BaseVariantView(object):
     """Common methods for model views.
@@ -346,6 +350,16 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
             return string.capwords(fdict['field'], '_').replace('_', ' ')
     field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
 
+
+    # We want a list of all VCF tracks for jbrowse. Makes sense to do it
+    # once and then pass the strings to each variant object for the frontend.
+    # This is a little hacky, but whatever. 
+    alignment_group_vcf_strings = []
+    for alignment_group in reference_genome.alignmentgroup_set.all():
+        alignment_group_vcf_strings.append('_'.join([
+                str(alignment_group.uid),
+                Dataset.TYPE.VCF_FREEBAYES_SNPEFF]))
+
     # Aggregate list of objects that are ready for display by the frontend.
     fe_obj_list = []
     for melted_variant_obj in obj_list:
@@ -360,7 +374,8 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
                         melted_variant_obj, reference_genome)
             elif field == 'position':
                 value = _create_jbrowse_link_for_variant_object(
-                        melted_variant_obj, reference_genome)
+                        melted_variant_obj, reference_genome, 
+                        alignment_group_vcf_strings)
 
             elif fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
@@ -400,7 +415,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
 
 
 def _create_single_variant_page_link_for_variant_object(variant_as_dict,
-        reference_genome):
+            reference_genome):
     """Constructs the label as an anchor that links to the single variant view.
     """
     full_href = reverse('main.views.single_variant_view',
@@ -411,18 +426,38 @@ def _create_single_variant_page_link_for_variant_object(variant_as_dict,
     return '<a href="' + full_href + '">' + label + '</a>'
 
 
-def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome):
+def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
+        alignment_group_vcf_strings):
     """Constructs a JBrowse link for the Variant.
     """
     assert 'position' in variant_as_dict
     position = variant_as_dict['position']
     ref_genome_jbrowse_link = reference_genome.get_client_jbrowse_link()
-    location_param = '&loc=' + str(position)
-    full_href = ref_genome_jbrowse_link + location_param
+    
+    location_str = '..'.join([str(i) for i in [
+            position - int(floor(JBROWSE_DEFAULT_VIEW_WINDOW/2)),
+            position + int(floor(JBROWSE_DEFAULT_VIEW_WINDOW/2))]])
+
+    location_param = '&loc=' + variant_as_dict['chromosome'] + ':' + str(location_str)
+
+    tracks = ['DNA','gbk']
+
+    # add all alignment VCFs to this view
+    tracks.extend(alignment_group_vcf_strings)
+
+    # if only one sample, then display its alignment
+    if 'experiment_sample_uid' in variant_as_dict and (
+            isinstance(variant_as_dict['experiment_sample_uid'], basestring)):
+        tracks.append(variant_as_dict['experiment_sample_uid'] +'_bwa_align')
+
+    tracks_param = '&tracks=' + ','.join(tracks)
+
+    full_href = ref_genome_jbrowse_link + location_param + tracks_param
+    print full_href
+
     # TODO: Add alignment track param if this is a sample-specific view.
     return ('<a href="' + full_href + '" target="_blank">' + str(position) +
             '</a>')
-
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
     {'field': 'label', 'verbose': 'label'},
@@ -472,6 +507,8 @@ def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
 
     all_field_dict_list = (default_field_dict_list +
             additional_visible_field_dict_list)
+
+    # Create a lookup from ref_genome to alignment
 
     return adapt_non_recursive(obj_list, all_field_dict_list, reference_genome)
 

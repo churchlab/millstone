@@ -878,7 +878,6 @@ class Variant(UniqueUidModelMixin):
         full_href = ref_genome_jbrowse + location_param
         return '<a href="' + full_href + '">jbrowse</a>'
 
-
     @property
     def href(self):
         """Link to url view for this model.

@@ -115,12 +115,12 @@ def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
             vcf_dataset.filesystem_idx_location)
 
     # TODO: This jbrowse vcf label really need to be more human readable.
-    label = str(alignment_group.label) + '_' + vcf_dataset.type
+    label = str(alignment_group.uid) + '_' + vcf_dataset.type
 
     # Build the JSON object.
     raw_dict_obj = {
         "label"         : label,
-        "key"           : "%s SNVs" % vcf_dataset.label,
+        "key"           : "%s SNVs" % alignment_group.label,
         "storeClass"    : "JBrowse/Store/SeqFeature/VCFTabix",
         "urlTemplate"   : urlTemplate,
         "tbiUrlTemplate": urlTemplate_idx,

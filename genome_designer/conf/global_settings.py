@@ -304,6 +304,9 @@ JBROWSE_DATA_URL_ROOT= '/jbrowse/' + JBROWSE_DATA_SYMLINK_NAME + '/'
 # dev.
 DEBUG_FORCE_JBROWSE_NGINX = False
 
+# How big of a window to view when looking at a single pos in JBrowse
+JBROWSE_DEFAULT_VIEW_WINDOW = 100
+
 ###############################################################################
 # Snp Calling
 ###############################################################################
