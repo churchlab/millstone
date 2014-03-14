@@ -21,14 +21,16 @@ gd.AlignmentCreateView = Backbone.View.extend({
 
     this.refGenomeDataTable = new gd.DataTableComponent({
         el: $('#gd-datatable-ref_genome-hook'),
-        objList: REF_GENOME_LIST_DATA['obj_list'],
-        fieldConfig: REF_GENOME_LIST_DATA['field_config']
+        serverTarget: '/_/ref_genomes',
+        controlsTemplate: '/_/templates/reference_genome_list_controls',
+        requestData: {projectUid: this.model.get('uid')},
     });
 
     this.samplesDatatable = new gd.DataTableComponent({
         el: $('#gd-datatable-samples-hook'),
-        objList: SAMPLES_LIST_DATA['obj_list'],
-        fieldConfig: SAMPLES_LIST_DATA['field_config']
+        serverTarget: '/_/samples',
+        controlsTemplate: '/_/templates/sample_list_controls',
+        requestData: {projectUid: this.model.get('uid')},
     });
   },
 
