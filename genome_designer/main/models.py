@@ -425,6 +425,12 @@ class ReferenceGenome(UniqueUidModelMixin):
     # and dynamically updated by dynamic_snp_filter_key_map.py
     variant_key_map = PostgresJsonField()
 
+    # Bit that indicates whether the materialized view is up to date.
+    # This design decision puts a lot on the developer to remember to set this
+    # false whenever any data changes that would require a refresh of the
+    # materialized view.
+    is_materialized_variant_view_valid = models.BooleanField(default=False)
+
     def __unicode__(self):
         return self.label
 

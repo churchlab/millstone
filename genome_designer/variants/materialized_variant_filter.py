@@ -47,7 +47,7 @@ class VariantFilterEvaluator(object):
         # for this ReferenceGenome.
         self.materialized_view_manager = MeltedVariantMaterializedViewManager(
                 ref_genome)
-        self.materialized_view_manager.create_if_not_exists()
+        self.materialized_view_manager.create_if_not_exists_or_invalid()
 
         # Validation.
         if scope is not None:

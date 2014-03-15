@@ -5,14 +5,27 @@ Manages the Materialized view of the Variant data for filtering.
 from django.db import connection
 from django.db import transaction
 
+from melted_variant_schema import *
+
+
 class AbstractMaterializedViewManager(object):
     """Base class for object acting as wrapper for a Postgresql materialized
-    view.
+    view (available starting Postgresql 9.3)
     """
 
     def __init(self):
+        """Child classes should implement at least these two fields.
+        """
+        # Name of the table in Postgres.
         self.view_table_name = None
 
+        # Database cursor.
+        self.cursor = None
+
+    def get_table_name(self):
+        """Get the name of the underlying SQL table.
+        """
+        raise NotImplementedError("Child classes must implement.")
 
     def create(self):
         """Creates the materialized view in the Postgresql DB.
@@ -23,140 +36,66 @@ class AbstractMaterializedViewManager(object):
         # Delegate to child class.
         self.create_internal()
 
-
     def create_internal(self):
         """Creates the materialized view in the Postgresql DB.
 
         Child classes should implement.
         """
-        pass
-
+        raise NotImplementedError("Child classes must implement.")
 
     def refresh(self):
         """Refreshes the view.
         """
+        assert self.view_table_name
+        assert self.cursor
         refresh_statement = 'REFRESH MATERIALIZED VIEW %s ' % (
                 self.view_table_name)
         self.cursor.execute(refresh_statement)
-
 
     def drop(self):
         """Drops the materialized view in the Postgresql DB.
         """
         assert self.view_table_name
+        assert self.cursor
         drop_sql_statement = "DROP MATERIALIZED VIEW IF EXISTS %s" % (
                 self.view_table_name,)
         self.cursor.execute(drop_sql_statement)
         transaction.commit_unless_managed()
 
+    def create_if_not_exists_or_invalid(self):
+        """Creates the table if it doesn't exist or is not valid.
 
-# Build the schema used to build the materialized view.
-# All of this happens on the first module import.
-# NOTE: This schema currenlty doesn't include the catch-all data field in each
-# of the VariantCallerCommonData and VariantEvidence models, which contains
-# key-value fields extracted from .vcf.
-class SchemaBuilder(object):
-    def __init__(self):
-        self.schema = []
+        NOTE: There is also a refresh() method, which would prevent having
+        to create the materialized view. As of this note, we are not using
+        refresh() anywhere.  It's not clear whether a refresh is any faster
+        than just dropping the table and create it again.
+        """
+        if not self.check_table_exists() or not self.is_valid():
+            self.create()
 
-        # Check for duplicates while building.
-        self.joined_table_col_name_set = set()
+    def is_valid(self):
+        """Indicates whether the table needs to be refreshed.
 
-    def add_melted_variant_field(self, source_col_name, joined_table_col_name,
-            is_null_in_variant_to_set_label, is_user_queryable,
-            query_schema=None):
-        assert joined_table_col_name not in self.joined_table_col_name_set
-        self.schema.append({
-            'source_col_name': source_col_name,
-            'joined_table_col_name': joined_table_col_name,
-            'is_null_in_variant_to_set_label': is_null_in_variant_to_set_label,
-            'is_user_queryable': is_user_queryable,
-            'query_schema': query_schema,
-        })
-        self.joined_table_col_name_set.add(joined_table_col_name)
+        Abstract implementation conservative.
+        """
+        return False
 
-    def get_schema(self):
-        return self.schema
+    def check_table_exists(self):
+        """Check if the table exists.
 
-SCHEMA_BUILDER = SchemaBuilder()
-# SCHEMA_BUILDER.add_melted_variant_field(<source_col_name>,
-#         <joined_table_col_named>, <is_null_in_variant_to_set_label>,
-#         <user_queryable>)
-
-# Variant
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.id', 'id', False, False)
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.uid', 'uid', False, True,
-        {'type': 'String', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.position', 'position', False, True,
-        {'type': 'Integer', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', 'chromosome', False, True,
-        {'type': 'String', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', 'ref', False, True,
-        {'type': 'String', 'num': 1})
-
-# VariantAlternate
-SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.id', 'va_id', False, False)
-SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', False, True,
-        {'type': 'String', 'num': 1})
-
-# Key-value data.
-SCHEMA_BUILDER.add_melted_variant_field('main_variantcallercommondata.id', 'vccd_id', True, False)
-SCHEMA_BUILDER.add_melted_variant_field('main_variantevidence.id', 've_id', True, False)
-
-# ExperimentSample
-SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', True, False)
-SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', 'experiment_sample_uid', True, True,
-        {'type': 'String', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.label', 'experiment_sample_label', True, True,
-        {'type': 'String', 'num': 1})
-
-# VariantSet
-SCHEMA_BUILDER.add_melted_variant_field('main_variantset.uid', 'variant_set_uid', False, True,
-        {'type': 'String', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_variantset.label', 'variant_set_label', False, True,
-        {'type': 'String', 'num': 1})
-
-# Build the schema.
-MELTED_VARIANT_SCHEMA = SCHEMA_BUILDER.get_schema()
-
-# Generate the SELECT clause for building the table.
-MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS = [
-        schema_obj['source_col_name'] + ' AS ' + schema_obj['joined_table_col_name']
-        for schema_obj in MELTED_VARIANT_SCHEMA
-]
-MATERIALIZED_TABLE_SELECT_CLAUSE = ', '.join(
-        MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS)
-
-# Generate the SELECT clause for the Variant to VariantSet.label view.
-# We perform a UNION with this table to ensure that we yield Variants that
-# are in a VariantSet without an association with any ExperimentSample.
-MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE_COMPONENTS = []
-for schema_obj in MELTED_VARIANT_SCHEMA:
-    if schema_obj['is_null_in_variant_to_set_label']:
-        MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE_COMPONENTS.append(
-                'NULL' + ' AS ' + schema_obj['joined_table_col_name'])
-    else:
-        MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE_COMPONENTS.append(
-                schema_obj['source_col_name'] + ' AS ' +
-                schema_obj['joined_table_col_name'])
-MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE = ', '.join(
-        MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE_COMPONENTS)
-
-# Generate the SELECT clause for querying the table.
-MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS = [
-        schema_obj['joined_table_col_name']
-        for schema_obj in MELTED_VARIANT_SCHEMA
-]
-
-# Map from queryable fields to schema info (e.g. type, num).
-MATERIALIZED_TABLE_QUERYABLE_FIELDS_MAP = dict([
-        (schema_obj['joined_table_col_name'], schema_obj['query_schema'])
-        for schema_obj in MELTED_VARIANT_SCHEMA
-        if schema_obj['is_user_queryable']])
-# Assert that all user queryable fields have schema defined.
-for key, query_schema in MATERIALIZED_TABLE_QUERYABLE_FIELDS_MAP.iteritems():
-    assert query_schema is not None, (
-            "Missing query schema for queryable %s" % key)
+        NOTE: Figured out the raw sql query by running psql with -E flag
+        and then calling \d. The -E flag causes the raw sql of the commands
+        to be shown.
+        """
+        assert self.view_table_name
+        assert self.cursor
+        raw_sql = (
+            'SELECT c.relname '
+            'FROM pg_catalog.pg_class c '
+            'WHERE c.relkind=%s AND c.relname=%s '
+        )
+        self.cursor.execute(raw_sql, ('m', self.view_table_name))
+        return bool(self.cursor.fetchone())
 
 
 class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
@@ -169,28 +108,15 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
         self.view_table_name = self.get_table_name()
         self.cursor = connection.cursor()
 
-
     def get_table_name(self):
-        """Get the name of the underlying SQL table.
+        """Override.
         """
         return 'materialized_melted_variant_' + self.reference_genome.uid
 
-
-    def check_table_exists(self):
-        """Check if the table exists.
-
-        NOTE: Figured out the raw sql query by running psql with -E flag
-        and then calling \d. The -E flag causes the raw sql of the commands
-        to be shown.
+    def is_valid(self):
+        """Override.
         """
-        raw_sql = (
-            'SELECT c.relname '
-            'FROM pg_catalog.pg_class c '
-            'WHERE c.relkind=%s AND c.relname=%s '
-        )
-        self.cursor.execute(raw_sql, ('m', self.view_table_name))
-        return bool(self.cursor.fetchone())
-
+        return self.reference_genome.is_materialized_variant_view_valid
 
     def create_internal(self):
         """Override.
@@ -251,6 +177,6 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
         self.cursor.execute(create_sql_statement)
         transaction.commit_unless_managed()
 
-    def create_if_not_exists(self):
-        if not self.check_table_exists():
-            self.create()
+        # Set the valid bit.
+        self.reference_genome.is_materialized_variant_view_valid = True
+        self.reference_genome.save()
