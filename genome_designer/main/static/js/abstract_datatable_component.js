@@ -255,7 +255,6 @@ gd.AbstractDataTableComponent = Backbone.View.extend(
         "<'pull-right'ip>" +               // info, pagination
         ">>" +                             // close panel body, container, row
           "t" +                            // THE TABLE
-        "<'panel-footer'>" +               // footer with another pagination
         ">>", // close panel footer, panel
       /**********************************************************************
        * Hide verbose pagination labels
