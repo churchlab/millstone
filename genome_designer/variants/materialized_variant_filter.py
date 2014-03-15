@@ -149,9 +149,11 @@ class VariantFilterEvaluator(object):
         if not self.is_melted:
             sql_statement += 'GROUP BY position '
 
-        # Add optional sort clause.
+        # Add optional sort clause, defaulting to position.
         if self.sort_by_column:
             sql_statement += 'ORDER BY %s ' % self.sort_by_column
+        else:
+            sql_statement += 'ORDER BY position '
 
         # Add limit and offset clause.
         if self.pagination_len != -1:

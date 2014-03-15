@@ -336,7 +336,7 @@ def get_gene_list(request):
 
     region_list = Region.objects.filter(
             reference_genome=reference_genome,
-            type=Region.TYPE.GENE)
+            type=Region.TYPE.GENE).order_by('regioninterval__start')
     gene_view_list = [GeneView(region) for region in region_list]
 
     response_data = {
