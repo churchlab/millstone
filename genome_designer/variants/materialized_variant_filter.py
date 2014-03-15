@@ -182,8 +182,8 @@ class VariantFilterEvaluator(object):
         Returns:
             String representing select clause.
         """
-        cols = (MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS +
-                self._identify_catch_all_data_fields_to_select())
+        cols = list(set((MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS +
+                self._identify_catch_all_data_fields_to_select())))
         if self.is_melted:
             return ', '.join(cols)
         else:

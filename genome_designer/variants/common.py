@@ -157,6 +157,23 @@ def get_delim_key_value_triple(raw_string, all_key_map):
     raise ParseError(raw_string, 'No valid filter delimeter.')
 
 
+def validate_key_against_map(key, all_key_map):
+    """Checks whether the key is valid for this key map.
+
+    Args:
+        key: String key.
+        all_key_map: Nested dictionary containing the key submaps.
+
+    Returns:
+        Boolean indicating whether key is valid for the key map.
+    """
+    for data_map in all_key_map.itervalues():
+        assert isinstance(data_map, dict)
+        if key in data_map:
+            return True
+    return False
+
+
 def convert_delim_key_value_triple_to_expr(triple):
     (delim, key, value) = triple
     # Make '==' SQL-friendly.

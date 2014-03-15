@@ -22,8 +22,10 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import generate_key_to_materialized_view_parent_col
+from variants.common import validate_key_against_map
 
 from settings import JBROWSE_DEFAULT_VIEW_WINDOW
+
 
 class BaseVariantView(object):
     """Common methods for model views.
@@ -482,6 +484,13 @@ CAST_VARIANT_FIELD_DICT_LIST = [
     {'field': 'total_samples', 'verbose': '# Samples'},
 ]
 
+# Fields that are added if they are available for the data.
+# NOTE: The source table for these must be included in
+# MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS.
+OPTIONAL_DEFAULT_FIELDS = [
+    {'field': 'INFO_EFF_GENE'}, # va_data
+]
+
 
 def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
         melted=False):
@@ -506,21 +515,6 @@ def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
     else:
         default_field_dict_list = CAST_VARIANT_FIELD_DICT_LIST
 
-    # Prepare additional fields for adaptation.
-    additional_visible_field_dict_list = _prepare_additional_visible_keys(
-            visible_key_names, reference_genome)
-
-    all_field_dict_list = (default_field_dict_list +
-            additional_visible_field_dict_list)
-
-    # Create a lookup from ref_genome to alignment
-
-    return adapt_non_recursive(obj_list, all_field_dict_list, reference_genome)
-
-
-def _prepare_additional_visible_keys(visible_key_list, reference_genome):
-    """Prepare all additional keys.
-    """
     # Some of the keys are actually inside of catch-all data objects. Our
     # materialized view has separate columns for each of these, so we need
     # a structure that maps from key name to column name.
@@ -529,6 +523,31 @@ def _prepare_additional_visible_keys(visible_key_list, reference_genome):
     key_to_parent_map = generate_key_to_materialized_view_parent_col(
             reference_genome)
 
+    # Maybe add additional optional fields.
+    optional_default_field_dict_list = []
+    for field_dict in OPTIONAL_DEFAULT_FIELDS:
+        field = field_dict['field']
+        if validate_key_against_map(field_dict['field'],
+                reference_genome.variant_key_map):
+            new_field_dict = dict(field_dict.items() +
+                    _prepare_visible_key_name_for_adapting_to_fe(
+                            field, key_to_parent_map).items())
+            optional_default_field_dict_list.append(new_field_dict)
+
+    # Prepare additional fields for adaptation.
+    additional_visible_field_dict_list = _prepare_additional_visible_keys(
+            visible_key_names, key_to_parent_map)
+
+    all_field_dict_list = (default_field_dict_list +
+            optional_default_field_dict_list +
+            additional_visible_field_dict_list)
+
+    return adapt_non_recursive(obj_list, all_field_dict_list, reference_genome)
+
+
+def _prepare_additional_visible_keys(visible_key_list, key_to_parent_map):
+    """Prepare all additional keys.
+    """
     # Now we use this map to construct the field dictionary objects that can
     # be used for further processing.
     return [_prepare_visible_key_name_for_adapting_to_fe(key,
