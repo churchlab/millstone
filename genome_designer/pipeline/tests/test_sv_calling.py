@@ -63,8 +63,13 @@ class TestSVCallers(TestCase):
     def test_call_svs(self):
         """Test running the pipeline that finds structural variants.
 
-        This test doesn't check the accuracy of the SV-calling. The test is
-        intended just to run the pipeline and make sure there are no errors.
+        The data file consists of 20,000 bases. At 5,000 bases there is
+        a 400 base deletion. At 10,000 bases there is a 400 base inversion.
+        At 15,000 bases there is a 400 base tandem duplication.
+
+        It seems that Pindel cannot find the inversion. Fortunately,
+        delly can usually find inversions; unfortunately, delly only
+        works well on large data, so we will not test it here.
         """
         # Create a new alignment group.
         alignment_group = AlignmentGroup.objects.create(
@@ -119,8 +124,15 @@ class TestSVCallers(TestCase):
         # Grab the resulting variants.
         variants = Variant.objects.filter(reference_genome=self.reference_genome)
 
-        # Check that we have one structural variant deletion.
-        self.assertEqual(1, len(variants))
-        self.assertEqual(13120, variants[0].position)
-        self.assertEqual('DELETION', variants[0].type)
-
+        # Check that there is a deletion around base 5000.
+        # Check that there is a tandem duplication around base 15000.
+        foundDeletion = False
+        foundDuplication = False
+        print [(variant.position, variant.type) for variant in variants]
+        for variant in variants:
+            if abs(variant.position - 5000) <= 3 and variant.type == 'DELETION':
+                foundDeletion = True
+            elif abs(variant.position - 15000) <= 3 and variant.type == 'DUPLICATION':
+                foundDuplication = True
+        self.assertTrue(foundDeletion)
+        self.assertTrue(foundDuplication)
