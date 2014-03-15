@@ -347,7 +347,7 @@ def bootstrap_fake_data():
 
 
 def sv_testing_bootstrap(project):
-    sv_testing_dir = os.path.join(GD_ROOT, 'test_data', 'sv_testing')
+    sv_testing_dir = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'all_svs')
     fasta = os.path.join(sv_testing_dir, 'ref.fa')
     fq1 = os.path.join(sv_testing_dir, 'simLibrary.1.fq')
     fq2 = os.path.join(sv_testing_dir, 'simLibrary.2.fq')

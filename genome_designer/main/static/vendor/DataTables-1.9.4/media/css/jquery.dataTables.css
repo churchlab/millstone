@@ -24,6 +24,9 @@ table.dataTable tfoot th {
 
 table.dataTable td {
 	padding: 3px 10px;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
 }
 
 table.dataTable td.center,

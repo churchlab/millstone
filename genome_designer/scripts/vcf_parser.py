@@ -19,6 +19,7 @@ from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 SV_TYPES = {
     'DEL': 'DELETION',
     'DUP': 'DUPLICATION',
+    'DUP:TANDEM': 'DUPLICATION',
     'INV': 'INVERSION'
 }
 
