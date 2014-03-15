@@ -61,8 +61,6 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         _.bind(this.handleMeltedToggleClick, this));
     $('#gd-filter-field-select-btn').click(
         _.bind(this.handleShowFieldSelect, this));
-    $('#gd-filter-refresh-materialized').click(
-        _.bind(this.handleRefreshMaterializedView, this));
     $('#gd-filter-export-csv').click(
         _.bind(this.handleExportCsv, this));
     $('#gd-snp-filter-error-close-btn').click(
@@ -72,11 +70,40 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
   /** @override */
   renderDatatable: function() {
+    // Always start this flow by checking whether the materialized view
+    // is valid. Then do the rest of the create after.
+    this.prepareMaterializedView(
+        _.bind(this.afterMaterializedViewReady, this));
+  },
+
+
+  afterMaterializedViewReady: function() {
     // Recreate the initial DataTable.
     this.createDatatableComponent();
 
     // Kick off request to update the Variant data being displayed.
     this.updateVariantList();
+
+  },
+
+
+  /**
+   * Checks if the underlying materialized view needs to be updated
+   * and kick off a whole ui affordance to manage that.
+   */
+  prepareMaterializedView: function(callback) {
+    // First make a request to check if needs to be refreshed.
+    var requestData = {
+      'refGenomeUid': this.model.get('refGenomeUid'),
+    };
+    $.get('/_/variants/is_materialized_view_valid', requestData,
+        _.bind(function(responseData) {
+          if (responseData.isValid) {
+            callback.call();
+          } else {
+            this.handleRefreshMaterializedView(callback);
+          }
+        }, this));
   },
 
 
@@ -127,12 +154,40 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
   /** Provide affordance while doing Variant query. */
   setUIStartLoadingState: function() {
     $('#gd-datatable-hook-datatable_wrapper').css('opacity', 0.5);
+
+    // Customize how the spinner looks.
+    // See http://fgnass.github.io/spin.js/ for config guide.
+    var leftPos =  ($(window).width() / 2) + 'px';
+    var topPos =  ($(window).height() / 2) + 'px';
+    var opts = {
+        lines: 13, // The number of lines to draw
+        length: 20, // The length of each line
+        width: 10, // The line thickness
+        radius: 30, // The radius of the inner circle
+        corners: 1, // Corner roundness (0..1)
+        rotate: 0, // The rotation offset
+        direction: 1, // 1: clockwise, -1: counterclockwise
+        color: '#000', // #rgb or #rrggbb or array of colors
+        speed: 1, // Rounds per second
+        trail: 60, // Afterglow percentage
+        shadow: false, // Whether to render a shadow
+        hwaccel: false, // Whether to use hardware acceleration
+        className: 'spinner', // The CSS class to assign to the spinner
+        zIndex: 2e9, // The z-index (defaults to 2000000000)
+        top: topPos, // Top position relative to parent in px
+        left: leftPos// Left position relative to parent in px
+    };
+    var target = document.body;
+    this.loadingSpinner = new Spinner(opts).spin(target);
   },
 
 
   /** Reset UI changes after loading complete.. */
   setUIDoneLoadingState: function() {
     $('#gd-datatable-hook-datatable_wrapper').css('opacity', 1);
+    if (this.loadingSpinner) {
+      this.loadingSpinner.stop();
+    }
   },
 
 
@@ -220,16 +275,17 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
    * Sends a request to the server to refresh the materialized data table and
    * reloads the page on success.
    */
-  handleRefreshMaterializedView: function() {
+  handleRefreshMaterializedView: function(onSuccess) {
     this.setUIStartLoadingState();
 
     var requestData = {
       'refGenomeUid': this.model.get('refGenomeUid'),
     };
     $.get('/_/variants/refresh_materialized_variant_table', requestData,
-        function(data) {
-          window.location.reload();
-        });
+        _.bind(function(data) {
+          this.setUIDoneLoadingState();
+          onSuccess();
+        }, this));
   },
 
 

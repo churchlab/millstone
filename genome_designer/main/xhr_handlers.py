@@ -9,7 +9,6 @@ import copy
 import csv
 import json
 from StringIO import StringIO
-import time
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -354,7 +353,9 @@ def refresh_materialized_variant_table(request):
     """Updates the materialized variant table corresponding to the
     ReferenceGenome whose uid is provided in the GET params.
     """
-    profiling_time_start = time.time()
+    # DEBUG: Profiling refresh time.
+    # import time
+    # profiling_time_start = time.time()
 
     ref_genome_uid = request.GET.get('refGenomeUid')
     reference_genome = get_object_or_404(ReferenceGenome,
@@ -366,7 +367,7 @@ def refresh_materialized_variant_table(request):
     mvmvm = MeltedVariantMaterializedViewManager(reference_genome)
     mvmvm.create()
 
-    print 'REFRESH TOOK', time.time() - profiling_time_start
+    # print 'REFRESH TOOK', time.time() - profiling_time_start
 
     return HttpResponse('ok')
 
@@ -435,6 +436,21 @@ def get_alignment_groups(request):
 
         return HttpResponse(response_data,
                 content_type='application/json')
+
+
+@login_required
+@require_GET
+def is_materialized_view_valid(request):
+    """Checks whether the materialized view is valid for this ReferenceGenome.
+    """
+    ref_genome_uid = request.GET.get('refGenomeUid')
+    reference_genome = get_object_or_404(ReferenceGenome,
+                project__owner=request.user.get_profile(),
+                uid=ref_genome_uid)
+    response_data = json.dumps({
+        'isValid': reference_genome.is_materialized_variant_view_valid
+    })
+    return HttpResponse(response_data, content_type='application/json')
 
 
 @login_required
