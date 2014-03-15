@@ -127,6 +127,10 @@ input.gd-form-tall {
   margin-bottom: 10px;
 }
 
+.gd-master-cb-button {
+  height: 40px;
+}
+
 /* is this a bootstrap 3 bug? 
  * adjacent btn-groups don't get the margin in-between
  * inside a btn-toolbar as expected, because of 

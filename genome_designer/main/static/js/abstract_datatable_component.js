@@ -126,10 +126,11 @@ gd.AbstractDataTableComponent = Backbone.View.extend(
     this.$el.find(".gd-dt-cb.master").empty();
     this.$el.find(".gd-dt-cb.master").append(
       '<div class="gd-dt-cb-div master pull-left btn-group">' +
-        '<button class="btn btn-default">' +
-        '<input type="checkbox" class="gd-dt-cb master" id="blah"></button>' +
-        '<button class="btn btn-default dropdown-toggle"' +
-        ' style="min-height: 26px" data-toggle="dropdown">' +
+        '<button class="btn btn-default gd-master-cb-button">' +
+          '<input type="checkbox" class="gd-dt-cb master" id="blah">' +
+        '</button>' +
+        '<button class="btn btn-default dropdown-toggle gd-master-cb-button"' +
+            ' style="min-height: 26px" data-toggle="dropdown">' +
           '<span><i class="caret"></i></span>' +
         '</button>' +
         '<ul class="dropdown-menu" id="' + this.datatableId + '-dropdown">' +
