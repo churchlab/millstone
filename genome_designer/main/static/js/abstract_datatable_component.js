@@ -5,8 +5,9 @@
  *         * ServerSideDataTableComponent: Pagination handled by server calls.
  */
 
-gd.AbstractDataTableComponent = Backbone.View.extend(
-{
+
+gd.AbstractDataTableComponent = Backbone.View.extend({
+
   /** Prevent initialization. */
   initialize: function() {
     throw "Don't initialize abstract class!";
@@ -127,7 +128,8 @@ gd.AbstractDataTableComponent = Backbone.View.extend(
     this.$el.find(".gd-dt-cb.master").append(
       '<div class="gd-dt-cb-div master pull-left btn-group">' +
         '<button class="btn btn-default gd-master-cb-button">' +
-          '<input type="checkbox" class="gd-dt-cb master" id="blah">' +
+          '<input type="checkbox" class="gd-dt-cb master" ' +
+              'id=' + masterCheckboxElId  + '>' +
         '</button>' +
         '<button class="btn btn-default dropdown-toggle gd-master-cb-button"' +
             ' style="min-height: 26px" data-toggle="dropdown">' +
