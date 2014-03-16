@@ -410,6 +410,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
     obj_field_config = [{
         'mData': name,
         'sTitle': verbose_name,
+        'bSortable': False
     } for (name, verbose_name) in zip(field_list, field_verbose_names) if 
             # skip if hide field is set
             'hide' not in  field_map[name] or 
