@@ -57,6 +57,7 @@ class VariantFilterEvaluator(object):
         self.filter_string = query_args.get('filter_string', None)
         self.is_melted = query_args.get('is_melted', True)
         self.sort_by_column = query_args.get('sort_by_column', None)
+        self.sort_by_direction = query_args.get('sort_by_direction', True)
         self.count_only = query_args.get('count_only', False)
         self.pagination_start = query_args.get('pagination_start', 0)
         self.pagination_len = query_args.get('pagination_len', -1)
@@ -154,6 +155,8 @@ class VariantFilterEvaluator(object):
             sql_statement += 'ORDER BY %s ' % self.sort_by_column
         else:
             sql_statement += 'ORDER BY position '
+        if self.sort_by_direction == 'desc':
+            sql_statement += 'DESC '
 
         # Add limit and offset clause.
         if self.pagination_len != -1:

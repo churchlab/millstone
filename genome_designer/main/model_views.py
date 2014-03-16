@@ -492,14 +492,10 @@ OPTIONAL_DEFAULT_FIELDS = [
 ]
 
 
-def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
-        melted=False):
-    """Convert the dictionary objects returned by Postgres into the form that
-    the Datatables.js component can display.
+def get_all_fields(reference_genome, visible_key_names, melted=False):
+    """Gets the list of columns that will be displayed on DataTables.
 
     Args:
-        obj_list: List of dictionaries representing melted entities returned
-            by a raw SQL call directly to Postgres.
         reference_genome: The ReferenceGenome. We pass this so that we have a
             handle to the valid key map so we can handle additional
             visible key names properly.
@@ -507,8 +503,7 @@ def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
             response.
 
     Returns:
-        JSON string with the objects in the form that can be drawn by the
-        Datatables component.
+        Tuple of default fields, optional fields, and additional fields
     """
     if melted:
         default_field_dict_list = MELTED_VARIANT_FIELD_DICT_LIST
@@ -538,9 +533,31 @@ def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
     additional_visible_field_dict_list = _prepare_additional_visible_keys(
             visible_key_names, key_to_parent_map)
 
-    all_field_dict_list = (default_field_dict_list +
+    return (default_field_dict_list +
             optional_default_field_dict_list +
             additional_visible_field_dict_list)
+
+
+def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
+        melted=False):
+    """Convert the dictionary objects returned by Postgres into the form that
+    the Datatables.js component can display.
+
+    Args:
+        obj_list: List of dictionaries representing melted entities returned
+            by a raw SQL call directly to Postgres.
+        reference_genome: The ReferenceGenome. We pass this so that we have a
+            handle to the valid key map so we can handle additional
+            visible key names properly.
+        visible_key_names: List of key names that we want to include in the
+            response.
+
+    Returns:
+        JSON string with the objects in the form that can be drawn by the
+        Datatables component.
+    """
+    all_field_dict_list = get_all_fields(
+            reference_genome, visible_key_names, melted)
 
     return adapt_non_recursive(obj_list, all_field_dict_list, reference_genome)
 

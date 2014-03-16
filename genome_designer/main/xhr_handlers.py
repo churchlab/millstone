@@ -25,6 +25,7 @@ from django.views.decorators.http import require_GET, require_POST
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.data_util import lookup_variants
+from main.model_views import get_all_fields
 from main.model_views import adapt_variant_to_frontend
 from main.model_views import GeneView
 from main.models import AlignmentGroup
@@ -139,7 +140,9 @@ def get_variant_list(request):
     query_args['is_melted'] = request.GET.get('melt', 0) == '1'
 
     # Get optional column to sort by.
-    query_args['sort_by_column'] = request.GET.get('sortBy', '')
+    # TODO shouldn't cast a client parameter to int outside of try-catch.
+    query_args['sortCol'] = int(request.GET.get('iSortCol_0', 0))
+    query_args['sort_by_direction'] = request.GET.get('sSortDir_0', 'asc')
 
     # Want all results listed, so set count_only to false.
     query_args['count_only'] = False
@@ -158,6 +161,18 @@ def get_variant_list(request):
         query_args['visible_key_names'] = determine_visible_field_names(
                 field_select_keys, query_args['filter_string'],
                 reference_genome)
+
+        if query_args['sortCol']:  # 1 indexed; 0 means no sort column
+            all_fields = get_all_fields(
+                    reference_genome, query_args['visible_key_names'],
+                    melted=query_args['is_melted'])
+            if query_args['sortCol'] <= len(all_fields):
+                query_args['sort_by_column'] = \
+                    all_fields[query_args['sortCol'] - 1]['field']
+            else:
+                query_args['sort_by_column'] = ''
+        else:
+            query_args['sort_by_column'] = ''
 
         # Get the list of Variants (or melted representation) to display.
         lookup_variant_result = lookup_variants(query_args, reference_genome)
