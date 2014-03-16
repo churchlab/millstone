@@ -1,0 +1,31 @@
+<div id="modalEmpty" class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal">×</button>
+      <h3>Create Empty Variant Set</h3>
+    </div>
+
+    <div class="modal-body">
+      <form id="gd-variant-set-form-empty" method="POST">
+        <input type="hidden" name="createSetType" value="empty">
+        <div class="form-group">
+          <input type="text" name="variantSetName" class="form-control"placeholder="Name for this Variant Set">
+        </div>
+        <div class="form-group">
+          <label>Reference Genome
+            <select name="refGenomeUid">
+              {% for obj in ref_genome_list %}
+                <option value="{{obj.uid}}">{{obj.label}}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" data-dismiss="modal">Cancel</button>
+      <button class="btn btn-primary" id="gd-variant-set-form-empty-submit">Submit</button>
+    </div>
+  </div></div>
+</div>

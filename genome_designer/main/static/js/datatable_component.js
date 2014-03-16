@@ -113,8 +113,6 @@ gd.DataTableComponent = gd.AbstractDataTableComponent.extend({
       _.extend(datatableParams, this.options.extraDatatableParams);
     }
 
-    console.log(datatableParams)
-
     this.datatable = $('#' + this.datatableId).dataTable(datatableParams);
 
     // Initialize options for action dropdown menu (next to master checkbox).

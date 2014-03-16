@@ -330,8 +330,9 @@ def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file):
         variant_set_file: Path to the variant set on disk.
     """
     # For now, variant set name must be unique even among diff ref genomes.
-    variant_set_name_exists = len(VariantSet.objects.filter(
-            label=variant_set_name)) > 0
+    variant_set_name_exists = bool(VariantSet.objects.filter(
+            reference_genome=ref_genome,
+            label=variant_set_name).count())
     assert not variant_set_name_exists, 'Variant set name must be unique.'
 
     # Create the VariantSet.

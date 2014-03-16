@@ -7,7 +7,9 @@ the html string as the response.
 """
 
 from django.http import HttpResponse
+from django.shortcuts import get_list_or_404
 from django.shortcuts import get_object_or_404
+from django.template import RequestContext
 from django.template.loader import render_to_string
 
 from main.models import ReferenceGenome
@@ -113,9 +115,13 @@ def alignment_list_controls(request):
 
 def variant_set_list_controls(request):
     """Returns the Variant Set List control box.
-        Requires no model.
     """
-    context = {}
+    assert 'projectUid' in request.GET
+    context = RequestContext(request)
+
+    context['ref_genome_list'] = get_list_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            project__uid=request.GET.get('projectUid'))
 
     # If the request passed a tableId, then give it to Django to decorate the
     # controls.

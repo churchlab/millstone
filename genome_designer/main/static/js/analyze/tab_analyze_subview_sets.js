@@ -20,7 +20,7 @@ gd.TabAnalyzeSubviewSets = gd.TabAnalyzeSubviewAbstractBase.extend({
     // TODO: Client-side template support.
 
     // Register event listeners.
-    $('#submitFormFromFile').click(
+    $('#gd-variant-set-form-from-file').click(
         _.bind(this.handleFormSubmitFromFile, this));
     $('#gd-variant-set-form-empty-submit').click(
         _.bind(this.handleFormSubmitEmpty, this));

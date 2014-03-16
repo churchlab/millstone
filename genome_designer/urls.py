@@ -89,6 +89,9 @@ urlpatterns = patterns('',
             'main.xhr_handlers.get_variant_set_list'),
     url(r'^_/sets/exportcsv$',
             'main.xhr_handlers.export_variant_set_as_csv'),
+    url(r'^_/sets/create$',
+            'main.xhr_handlers.create_variant_set'),
+
     url(r'^_/variants$',
             'main.xhr_handlers.get_variant_list'),
     url(r'^_/variants/modify_set_membership$',
@@ -99,14 +102,19 @@ urlpatterns = patterns('',
             'main.xhr_handlers.export_variants_as_csv'),
     url(r'^_/variants/is_materialized_view_valid$',
             'main.xhr_handlers.is_materialized_view_valid'),
+
     url(r'^_/alignmentgroups$',
             'main.xhr_handlers.get_alignment_groups'),
+
     url(r'^_/samples$',
             'main.xhr_handlers.get_samples'),
+
     url(r'^_/genes$',
             'main.xhr_handlers.get_gene_list'),
+
     url(r'^projects/([\w-]+)/delete$',
             'main.xhr_handlers.project_delete'),
+
     url(r'^_/ref_genomes$',
             'main.xhr_handlers.get_ref_genomes'),
 

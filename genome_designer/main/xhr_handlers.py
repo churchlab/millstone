@@ -8,12 +8,16 @@ reasonable separation point is to separate page actions from Ajax actions.
 import copy
 import csv
 import json
+import os
 from StringIO import StringIO
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.http import Http404
 from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_GET, require_POST
@@ -37,6 +41,7 @@ from scripts.data_export_util import export_melted_variant_view
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from scripts.import_util import import_variant_set_from_vcf
 from variants.common import determine_visible_field_names
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
@@ -471,6 +476,88 @@ def get_ref_genomes(request):
 
     return HttpResponse(response_data,
             content_type='application/json')
+
+
+@login_required
+@require_POST
+def create_variant_set(request):
+    print request.POST
+
+    # Get the params.
+    ref_genome_uid = request.POST.get('refGenomeUid', '')
+    variant_set_name = request.POST.get('variantSetName', '')
+    create_set_type = request.POST.get('createSetType', '')
+
+    # Basic validation.
+    try:
+        assert create_set_type in ['from-file', 'empty']
+        assert ref_genome_uid != '', "Must provide Reference Genome"
+        assert variant_set_name != '', "Must provide Variant Set name"
+    except AssertionError as e:
+        return HttpResponseBadRequest(str(e))
+
+    # Model lookup / validation.
+    ref_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)
+
+    # Create new variant set, depending on type of form submitted.
+    if create_set_type == 'from-file':
+        error_string = _create_variant_set_from_file(request, ref_genome,
+                variant_set_name)
+    else:
+        error_string = _create_variant_set_empty(ref_genome, variant_set_name)
+
+    result = {
+        'error': error_string
+    }
+
+    return HttpResponse(json.dumps(result), content_type='application/json')
+
+
+def _create_variant_set_from_file(request, ref_genome, variant_set_name):
+    """Creates a variant set from uploaded vcf file.
+
+    Returns:
+        A string indicating any errors that occurred. If no errors, then
+        the empty string.
+    """
+    error_string = ''
+
+    path = default_storage.save('tmp/tmp_varset.vcf',
+            ContentFile(request.FILES['vcfFile'].read()))
+    variant_set_file = os.path.join(settings.MEDIA_ROOT, path)
+
+    try:
+        import_variant_set_from_vcf(ref_genome, variant_set_name,
+                variant_set_file)
+    except Exception as e:
+        error_string = 'Import error: ' + str(e)
+    finally:
+        os.remove(variant_set_file)
+
+    return error_string
+
+
+def _create_variant_set_empty(ref_genome, variant_set_name):
+    """Creates an empty variant set.
+
+    A VariantSet with the given name can't exist already.
+
+    Returns:
+        A string indicating any errors that occurred. If no errors, then
+        the empty string.
+    """
+    exists_set_with_same_name = bool(VariantSet.objects.filter(
+        reference_genome=ref_genome,
+        label=variant_set_name).count())
+    if exists_set_with_same_name:
+        return 'Variant set %s exists' % variant_set_name
+
+    VariantSet.objects.create(
+            reference_genome=ref_genome,
+            label=variant_set_name)
+    return ''
 
 
 if settings.S3_ENABLED:
