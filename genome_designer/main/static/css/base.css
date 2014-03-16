@@ -57,7 +57,7 @@ body {
 }
 
 .gd-sidebar-analyze-buttons {
-  max-width: 183px;
+  width: 100%;
 }
 
 .gd-sidebar-analyze-buttons > .bootstrap-select.btn-group {
