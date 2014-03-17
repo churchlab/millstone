@@ -358,7 +358,9 @@ RUNNING_ON_EC2 = is_ec2()
 # Allows user to create an S3 backed project.
 # Set this to False if you want to run on EC2, but not allow
 # data to be stored to S3.
-S3_ENABLED = RUNNING_ON_EC2 or False
+# S3_ENABLED = RUNNING_ON_EC2 or False
+# NOTE: For now, default is no S3 support.
+S3_ENABLED = False
 
 # Don't perform any API call that changes anything on S3.
 S3_DRY_RUN = False
