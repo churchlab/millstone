@@ -8,6 +8,7 @@ import os
 from django.conf import settings
 from django.test import TestCase
 
+from scripts.import_util import import_reference_genome_from_local_file
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSample
@@ -19,7 +20,6 @@ from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
-from scripts.import_util import import_reference_genome_from_local_file
 import subprocess
 
 
@@ -49,22 +49,6 @@ class TestModels(TestCase):
             TEST_REF_GENOME_NAME,
             TEST_REF_GENOME_PATH,
             'genbank')
-
-
-    def test_snpeff_on_create_ref_genome(self):
-        """Ensure that Snpeff database is created successfully when creating
-           a new reference genome object.
-        """
-
-        # check that the genbank file was symlinked
-        assert os.path.exists(os.path.join(
-                self.test_ref_genome.get_snpeff_directory_path(),
-                'genes.gb'))
-
-        # check that the db was made
-        assert os.path.exists(os.path.join(
-                self.test_ref_genome.get_snpeff_directory_path(),
-                'snpEffectPredictor.bin'))
 
 
 class TestAlignmentGroup(TestCase):

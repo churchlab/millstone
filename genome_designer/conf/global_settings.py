@@ -307,6 +307,14 @@ DEBUG_FORCE_JBROWSE_NGINX = False
 # How big of a window to view when looking at a single pos in JBrowse
 JBROWSE_DEFAULT_VIEW_WINDOW = 100
 
+# What Genbank types to display on Jbrowse
+# got this default list by doing:
+# grep -Po '^     [^0-9 ]+ ' mg1655.genbank | sort | uniq -c | sort -n
+# and skipping gene, mat_peptide, source, and remark (not in that list)
+JBROWSE_GBK_TYPES_TO_DISPLAY = ','.join([
+    'CDS','repeat_region','tRNA','ncRNA',
+    'mobile_element','misc_feature','tmRNA'])
+
 ###############################################################################
 # Snp Calling
 ###############################################################################
@@ -331,7 +339,6 @@ SNPEFF_BUILD_DEBUG = True
 
 # Names of SnpEff summary files, which we want to delete after running.
 SNPEFF_SUMMARY_FILES = ['snpEff_genes.txt', 'snpEff_summary.html']
-
 
 ###############################################################################
 # S3

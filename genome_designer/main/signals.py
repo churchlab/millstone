@@ -18,6 +18,7 @@ from models import VariantSet
 from pipeline.read_alignment_util import ensure_bwa_index
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.import_util import generate_fasta_from_genbank
+from scripts.import_util import generate_gff_from_genbank
 from scripts.import_util import get_dataset_with_type
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
 from scripts.jbrowse_util import add_genbank_file_track
@@ -38,7 +39,7 @@ post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
 def post_add_seq_to_ref_genome(sender, instance, **kwargs):
     """ When a dataset gets added to a ref_genome, we need to do some things
     if the ref_genome is a fasta or a genbank - run snpeff, jbrowse prep, and
-    convert genbank to fasta. Each pk in pk_set is a Dataset object."""
+    convert genbank to fasta and gff. Each pk in pk_set is a Dataset object."""
 
     #Skip unless we've already added the relationship
     if kwargs['action'] != 'post_add':
@@ -60,6 +61,7 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
             if not instance.dataset_set.filter(
                     type=Dataset.TYPE.REFERENCE_GENOME_FASTA).exists():
                 generate_fasta_from_genbank(instance)
+                generate_gff_from_genbank(instance)
 
             # Run jbrowse genbank genome processing for genes
             add_genbank_file_track(instance)

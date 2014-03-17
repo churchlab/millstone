@@ -8,8 +8,16 @@ import os
 import shutil
 import re
 import vcf
+import tempfile
+import traceback
+import shutil
 from collections import namedtuple
 from tempfile import NamedTemporaryFile
+
+from BCBio import GFF
+from Bio import Entrez
+from Bio import SeqIO
+from main.s3 import project_files_needed
 
 from django.db import transaction
 from django.conf import settings
@@ -28,18 +36,12 @@ from scripts.vcf_parser import get_or_create_variant
 from settings import PWD
 from settings import EMAIL
 
-from Bio import SeqIO
-import tempfile
-import traceback
-import shutil
-from Bio import Entrez
-from main.s3 import project_files_needed
-
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
     'fasta': Dataset.TYPE.REFERENCE_GENOME_FASTA,
     'genbank': Dataset.TYPE.REFERENCE_GENOME_GENBANK,
-    'vcfu': Dataset.TYPE.VCF_USERINPUT
+    'gff': Dataset.TYPE.REFERENCE_GENOME_GFF,
+    'vcf_user': Dataset.TYPE.VCF_USERINPUT
 }
 
 if settings.S3_ENABLED:
@@ -165,7 +167,6 @@ def generate_fasta_from_genbank(ref_genome):
 
     # SnpEFF takes the name attr, but the BioPython uses the id attr to make its
     # fasta file, so overwrite the id with the name when converting to fasta.
-    
     for genome_record in genome_records:
         genome_record.id = genome_record.name
 
@@ -174,6 +175,47 @@ def generate_fasta_from_genbank(ref_genome):
     dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE['fasta']
     copy_and_add_dataset_source(ref_genome, dataset_type,
             dataset_type, fasta_filename)
+
+    return
+
+def generate_gff_from_genbank(ref_genome):
+    """If this reference genome has a genbank but not a GFF, generate
+    a GFF from the genbank. """
+
+    # If a GFF already exists, then just return.
+    if ref_genome.dataset_set.filter(
+            type=Dataset.TYPE.REFERENCE_GENOME_GFF).exists():
+        return
+
+    # Check that a genbank exists.
+    assert ref_genome.dataset_set.filter(
+            type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists()
+
+    # Get genbank path and filename components (for creating GFF file name).
+    genbank_path = get_dataset_with_type(
+            ref_genome,
+            type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).get_absolute_location()
+
+    genbank_dir, genbank_filename = os.path.split(genbank_path)
+    genbank_noext = os.path.splitext(genbank_filename)[0]
+
+    # Put the GFF file in the same dir, just change the extension to .gff.
+    gff_filename = os.path.join(genbank_dir, (genbank_noext + '.gff'))
+
+    # Get the individual records, each corresponding to a chromosome.
+    genome_records = list(SeqIO.parse(genbank_path, 'genbank'))
+
+    # SnpEFF takes the name attr, but the BioPython uses the id attr to make its
+    # GFF file, so overwrite the id with the name when converting to GFF.
+    
+    for genome_record in genome_records:
+        genome_record.id = genome_record.name
+
+    GFF.write(genome_records, open(gff_filename, 'w'))
+
+    dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE['gff']
+    copy_and_add_dataset_source(ref_genome, dataset_type,
+            dataset_type, gff_filename)
 
     return
 
@@ -341,7 +383,7 @@ def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file):
 
     # First, save this vcf as a dataset, so we can point to it from the
     # new variant common_data_objs
-    dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE['vcfu']
+    dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE['vcf_user']
     dataset = copy_and_add_dataset_source(variant_set, dataset_type,
             dataset_type, variant_set_file)
 
