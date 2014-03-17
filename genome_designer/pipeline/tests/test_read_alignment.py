@@ -19,6 +19,8 @@ from pipeline.read_alignment import FILES_TO_DELETE_AFTER_ALIGNMENT
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
+from scripts.jbrowse_util import compile_tracklist_json
+
 import settings
 
 
@@ -105,6 +107,9 @@ class TestAlignmentPipeline(TestCase):
         self.assertTrue(os.path.exists(bwa_align_dataset_path,), (
                 "No file at location %s" % bwa_align_dataset_path))
 
+        # compile the tracklist
+        compile_tracklist_json(self.reference_genome)
+
         # Check that a JBrowse track for the alignment was created.
         jbrowse_dir = self.reference_genome.get_jbrowse_directory_path()
         with open(os.path.join(jbrowse_dir, 'trackList.json')) as fh:
@@ -163,6 +168,10 @@ class TestAlignmentPipeline(TestCase):
 
         # Check that a JBrowse track for the alignment was created.
         jbrowse_dir = self.reference_genome.get_jbrowse_directory_path()
+
+        # compile the tracklist
+        compile_tracklist_json(self.reference_genome)
+
         with open(os.path.join(jbrowse_dir, 'trackList.json')) as fh:
             jbrowse_config_json = json.loads(fh.read())
             found_bam_track = False

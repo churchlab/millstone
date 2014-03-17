@@ -135,6 +135,14 @@ urlpatterns = patterns('',
     url(r'^_/templates/sample_list_controls$',
             'main.template_xhrs.sample_list_controls'),
 
+    ###########################################################################
+    # Jbrowse Redirect
+    # For re-compiling the trackList.json before redirecting to 
+    # the static jbrowse/ pages.
+    ###########################################################################
+    url(r'^jbrowse_redirect$',
+            'main.xhr_handlers.compile_jbrowse_and_redirect'),
+
 )
 
 if settings.S3_ENABLED:

@@ -101,18 +101,19 @@ class Dataset(UniqueUidModelMixin):
 
         Limit to 40-chars as per Dataset.type field def.
         """
-        REFERENCE_GENOME_FASTA = 'rgf' # fasta
-        REFERENCE_GENOME_GENBANK = 'rgg' #genbank
-        FASTQ1 = 'f1'
-        FASTQ2 = 'f2'
-        BWA_ALIGN = 'bwa_align'
-        BWA_ALIGN_ERROR = 'bwa_align_error'
-        VCF_FREEBAYES = 'vcff'
-        VCF_PINDEL = 'vcfp'
-        VCF_DELLY = 'vcfd'
-        VCF_USERINPUT = 'vcfu'
-        VCF_FREEBAYES_SNPEFF = 'vcffe'
-        BED_CALLABLE_LOCI = 'bed_callable_loci'
+        REFERENCE_GENOME_FASTA = 'Reference Genome FASTA' # fasta
+        REFERENCE_GENOME_GENBANK = 'Reference Genome Genbank' #genbank
+        REFERENCE_GENOME_GFF = 'Reference Genome GFF' #gff
+        FASTQ1 = 'FASTQ Forward'
+        FASTQ2 = 'FASTQ Reverse'
+        BWA_ALIGN = 'BWA BAM'
+        BWA_ALIGN_ERROR = 'BWA Alignment Error'
+        VCF_FREEBAYES = 'Freebayes VCF'
+        VCF_PINDEL = 'Pindel VCF'
+        VCF_DELLY = 'Delly VCF'
+        VCF_USERINPUT = 'User VCF'
+        VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
+        BED_CALLABLE_LOCI = 'BED Callable Loci'
 
 
     TYPE_CHOICES = make_choices_tuple(TYPE)
@@ -506,13 +507,13 @@ class ReferenceGenome(UniqueUidModelMixin):
                     'jbrowse')
 
     def get_client_jbrowse_link(self):
-        """Returns the link to jbrowse for this ReferenceGenome.
+        """Returns the link to jbrowse redirect for this ReferenceGenome.
 
         Example url for user with uid 'abc', and project id 'xyz', and
         refgenome id 456:
-            '/jbrowse/?data=gd_data/abc/projects/xyz/ref_genomes/456/jbrowse/'
+            '/jbrowse_redirect?data=gd_data/abc/projects/xyz/ref_genomes/456/jbrowse/'
         """
-        return '/jbrowse/index.html?data=' + self.get_client_jbrowse_data_path()
+        return '/jbrowse_redirect?data=' + self.get_client_jbrowse_data_path()
 
     def is_annotated(self):
         """For several steps (notably snpEff), we want to check that this

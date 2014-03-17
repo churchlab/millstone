@@ -88,3 +88,42 @@ def ensure_line_lengths(gb_file):
             print >> fh_tmp, line
     fh_tmp.close()
     shutil.move(fh_tmp.name, gb_file)
+
+def merge_nested_dictionaries(d1, d2, allow_update=True):
+    '''
+    Primarily for adding dictionaries to an existing json dict. 
+
+    http://stackoverflow.com/
+            questions/17857926/
+            how-merge-with-appending-two-nested-dictionaries-in-python
+
+    If update is true, keys will overwrite if not the same type.
+    '''
+
+    def merge_values(a,b):
+        if a==None or b==None:
+            return a or b
+        # now handle cases where both have values
+        if type(a) == dict and type(b) == dict:
+            return add_dict(a, b)
+        if type(a)==list and type(b) == list:
+            return a + b
+        if allow_update:
+            return b
+        else:
+            raise Exception(
+                    "Dicts don't match:\nA:{:s}\nB:{:s}".format(
+                            a,b))
+
+    def add_dict(d1,d2):
+        return dict(
+            [
+                (key,
+                 merge_values(
+                     d1.get(key,None),
+                     d2.get(key,None)))
+                for key
+                in set(d1.keys()).union(d2.keys())
+            ])
+
+    return merge_values(d1, d2)

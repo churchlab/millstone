@@ -68,3 +68,6 @@ celery_manager/celery_manager/static/COMPILED/
 
 # Ignore logs.
 *.log
+
+# Development Environment
+pyenvs/

@@ -81,4 +81,4 @@ class TestAlignmentPipeline(TestCase):
         jbrowse_dir = self.reference_genome.get_jbrowse_directory_path()
         self.assertTrue(os.path.exists(jbrowse_dir))
         self.assertTrue(os.path.exists(os.path.join(jbrowse_dir,
-                'trackList.json')))
+                'indiv_tracks')))

@@ -455,7 +455,8 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
     # if only one sample, then display its alignment
     if 'experiment_sample_uid' in variant_as_dict and (
             isinstance(variant_as_dict['experiment_sample_uid'], basestring)):
-        tracks.append(variant_as_dict['experiment_sample_uid'] +'_bwa_align')
+        tracks.append(variant_as_dict['experiment_sample_uid'] + 
+                '_' + Dataset.TYPE.BWA_ALIGN)
 
     tracks_param = '&tracks=' + ','.join(tracks)
 
