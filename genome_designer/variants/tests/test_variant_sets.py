@@ -4,93 +4,94 @@ Tests for adding and removing variants from variant_sets.
 
 import os
 
-from django.contrib.auth.models import User
-from django.core.files.uploadedfile import UploadedFile
+from django.conf import settings
 from django.test import TestCase
 
-from main.models import Project
-from main.models import ReferenceGenome
 from main.models import ExperimentSample
-from main.models import ExperimentSampleToAlignment
 from main.models import Variant
 from main.models import VariantSet
-from main.models import VariantToVariantSet
+from main.test_util import create_common_entities
 from scripts.bootstrap_data import create_fake_variants_and_variant_sets
-from scripts.import_util import import_reference_genome_from_local_file
-import settings
+from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__ADD
+from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__REMOVE
 from variants.variant_sets import update_variant_in_set_memberships
 
 
-TEST_USERNAME = 'gmcdev'
-TEST_PASSWORD = 'g3n3d3z'
-TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
-TEST_PROJECT_NAME = 'recoli'
-REF_GENOME_1_LABEL = 'mg1655'
-TEST_FASTA  = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
+TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
 SAMPLE_1_LABEL = 'sample1'
-VARIANTSET_1_LABEL = 'Set A'
-VARIANTSET_2_LABEL = 'Set B'
+VARIANTSET_1_LABEL = 'New Set A'
+VARIANTSET_2_LABEL = 'New Set B'
 
 
 class TestAddAndRemoveVariantsFromSet(TestCase):
-    """Tests for scripts.import_util.import_samples_from_targets_file().
-    """
 
     def setUp(self):
-        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
-                email=TEST_EMAIL)
-        test_project = Project.objects.create(owner=user.get_profile(),
-                title=TEST_PROJECT_NAME)
-        self.ref_genome_1 = import_reference_genome_from_local_file(
-            test_project, REF_GENOME_1_LABEL, TEST_FASTA, 'fasta')
+        common_entities = create_common_entities()
+        project = common_entities['project']
+        self.ref_genome_1 = common_entities['reference_genome']
 
         create_fake_variants_and_variant_sets(self.ref_genome_1)
 
         (self.sample_1, created) = ExperimentSample.objects.get_or_create(
-                project=test_project,
+                project=project,
                 label=SAMPLE_1_LABEL)
 
-        self.var_set1_uid = VariantSet.objects.get_or_create(
+        self.var_set1 = VariantSet.objects.create(
                 reference_genome=self.ref_genome_1,
-                label=VARIANTSET_1_LABEL)[0].uid
+                label=VARIANTSET_1_LABEL)
 
-        self.var_set2_uid = VariantSet.objects.get_or_create(
+        self.var_set2 = VariantSet.objects.create(
                 reference_genome=self.ref_genome_1,
-                label=VARIANTSET_2_LABEL)[0].uid
+                label=VARIANTSET_2_LABEL)
 
+    def test_add_and_remove(self):
+        """Test add and remove without samples involved.
 
-    def test_add_variants_to_set(self):
-        """Test add.
+        TODO: Make generating Variants deterministic. Right now we use
+        random positions.
         """
+        # No variants before adding.
+        self.assertEqual(0, self.var_set1.variants.all().count())
+
         variant_obj_list = Variant.objects.filter(
                 reference_genome=self.ref_genome_1,
                 position__gt=25,
                 chromosome='chrom')
-        variant_uids = [obj.uid for obj in variant_obj_list]
+        variant_uid_sample_uid_pair_list = [obj.uid
+                for obj in variant_obj_list]
 
+        ### Test add.
         response = update_variant_in_set_memberships(
                 self.ref_genome_1,
-                variant_uids,
-                'add',
-                self.var_set1_uid)
-
+                variant_uid_sample_uid_pair_list,
+                MODIFY_VARIANT_SET_MEMBERSHIP__ADD,
+                self.var_set1.uid)
         self.assertEqual(response['alert_type'], 'info', str(response))
+        self.assertEqual(len(variant_obj_list),
+                self.var_set1.variants.all().count())
 
-
-    def test_remove_variant_from_set(self):
-        """Test remove.
-        """
+        ### Test remove.
+        num_variants_in_set1_before_remove = (
+                self.var_set1.variants.all().count())
+        self.assertTrue(self.var_set1.variants.all().count() > 0)
         variant_obj_list = Variant.objects.filter(
                 reference_genome=self.ref_genome_1,
+                position__gt=75,
                 chromosome='chrom',
-                variantset__uid=self.var_set2_uid)
-        variant_uids = [obj.uid for obj in variant_obj_list]
+                variantset__uid=self.var_set1.uid)
+        variant_uids_to_remove = [obj.uid for obj in variant_obj_list]
+        self.assertTrue(len(variant_uids_to_remove) > 0)
 
         response = update_variant_in_set_memberships(
                 self.ref_genome_1,
-                variant_uids,
-                'remove',
-                self.var_set2_uid)
-
+                variant_uids_to_remove,
+                MODIFY_VARIANT_SET_MEMBERSHIP__REMOVE,
+                self.var_set1.uid)
         self.assertEqual(response['alert_type'], 'info', str(response))
+
+        # Check that we've reduced the number of variants.
+        self.assertEqual(
+                num_variants_in_set1_before_remove -
+                        len(variant_uids_to_remove),
+                self.var_set1.variants.all().count())

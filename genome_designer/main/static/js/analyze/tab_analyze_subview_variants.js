@@ -3,7 +3,6 @@
 
 
 gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
-/** Prototype properties */
 {
   /** @override */
   initialize: function() {
@@ -371,10 +370,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
   addVariantSetDropdownSubmenu: function(allVariantSets, varSetAction,
       varSetActionText) {
     var setListHTML = (
-      '<li class="dropdown-submenu pull-left">' +
-        '<a tabindex="-1" href="#">' +
-          varSetActionText +
-        '</a>' +
+      '<li class="dropdown-submenu">' +
+        '<a tabindex="-1" href="#">' + varSetActionText + '</a>' +
         '<ul class="dropdown-menu">' +
           _.map(allVariantSets,
             function(variantSet) {
@@ -411,7 +408,6 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     // Grab the selected rows.
     var postData = {
-        projectUid: this.model.get('project').uid,
         refGenomeUid: this.model.get('refGenomeUid'),
         variantUidList: this.datatableComponent.getCheckedRowUids(),
         variantSetAction: $(ev.target).data('variant-set-action'),
@@ -482,14 +478,4 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     }
     this.datatableComponent = null;
   }
-},
-
-/** Static properties */
-{
-  /**
-   * Default number of items to show in the DataTable at one time.
-   * @type {number}
-   */
-  DEFAULT_PAGE_SIZE: 100,
-}
-);
+});

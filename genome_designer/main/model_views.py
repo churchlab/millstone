@@ -411,10 +411,9 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
         'mData': name,
         'sTitle': verbose_name,
         'bSortable': False
-    } for (name, verbose_name) in zip(field_list, field_verbose_names) if 
+    } for (name, verbose_name) in zip(field_list, field_verbose_names) if
             # skip if hide field is set
-            'hide' not in  field_map[name] or 
-            field_map[name]['hide'] != 'True']
+            not field_map[name].get('hide', False)]
 
     return json.dumps({
         'obj_list': fe_obj_list,
@@ -473,7 +472,8 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
     {'field': 'ref'},
     {'field': 'alt'},
     {'field': 'variant_set_label', 'verbose': 'Variant Set'},
-    {'field': 'experiment_sample_uid', 'hide': 'True'}
+    {'field': 'experiment_sample_uid', 'hide': True},
+    {'field': 'uid', 'hide': True}
 ]
 
 CAST_VARIANT_FIELD_DICT_LIST = [
@@ -483,6 +483,7 @@ CAST_VARIANT_FIELD_DICT_LIST = [
     {'field': 'alt'},
     {'field': 'variant_sets'},
     {'field': 'total_samples', 'verbose': '# Samples'},
+    {'field': 'uid', 'hide': True}
 ]
 
 # Fields that are added if they are available for the data.

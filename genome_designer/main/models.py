@@ -540,6 +540,10 @@ class ReferenceGenome(UniqueUidModelMixin):
                 {'field':'num_chromosomes', 'verbose':'# Chromosomes'},
                 {'field':'num_bases', 'verbose':'Total Size'}]
 
+    def invalidate_materialized_view(self):
+        self.is_materialized_variant_view_valid = False
+        self.save()
+
 
 class ExperimentSample(UniqueUidModelMixin):
     """Model representing data for a particular experiment sample.

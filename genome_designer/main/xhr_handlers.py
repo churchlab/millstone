@@ -19,8 +19,8 @@ from django.http import Http404
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_POST
 
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
@@ -251,7 +251,7 @@ def _mark_active_keys_in_variant_key_map(variant_key_map, visible_key_names):
 
 
 @login_required
-@require_http_methods(['POST'])
+@require_POST
 def modify_variant_in_set_membership(request):
     """Action that handles modifying the membership of a Variant in a
     VariantSet.
@@ -261,24 +261,17 @@ def modify_variant_in_set_membership(request):
     # Make sure the required keys are present.
     REQUIRED_KEYS = [
             'refGenomeUid',
-            'projectUid',
             'variantUidList',
             'variantSetAction',
             'variantSetUid']
-
-    # Validate the request.
     if not all(key in request_data for key in REQUIRED_KEYS):
         return HttpResponseBadRequest("Invalid request. Missing keys.")
 
-    ref_genome_uid = request_data.get('refGenomeUid')
-    project_uid = request_data.get('projectUid')
-
     # Get the project and verify that the requesting user has the
     # right permissions.
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-    reference_genome = get_object_or_404(ReferenceGenome, project=project,
-            uid=ref_genome_uid)
+    reference_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=request_data.get('refGenomeUid'))
 
     # Add or remove the variants to the set, as per variantSetAction.
     update_memberships_result = update_variant_in_set_memberships(

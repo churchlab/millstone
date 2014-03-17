@@ -46,47 +46,4 @@
   </form>
 </div>
 
-<div id="gd-filter-key-modal" class="modal fade" tabindex="-1" role="dialog">
-  <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header">
-      <button type="button" class="close" data-dismiss="modal">x</button>
-      <h3>Change displayed fields</h3>
-    </div>
-    <div class="modal-body">
-      <ul id="modalFieldTab" class="nav nav-pills">
-        <li class="active"><a href="#gd-filter-key-modal-common" data-toggle="tab">Per Variant</a></li>
-        <li><a href="#gd-filter-key-modal-alternate" data-toggle="tab">Per Alternate</a></li>
-        <li><a href="#gd-filter-key-modal-evidence" data-toggle="tab">Per Sample</a></li>
-      </ul>
-      <div id="modalFieldTabContent" class="tab-content">
-        <div class="tab-pane active" id="gd-filter-key-modal-common">
-          <h3>Per Variant</h3>
-          <table class="table">
-            <tbody id="gd-filter-key-modal-common-tbody">
-            </tbody>
-          </table>
-        </div>
-        <div class="tab-pane" id="gd-filter-key-modal-alternate">
-          <h3>Per Alternate</h3>
-          <table class="table">
-            <tbody id="gd-filter-key-modal-alternate-tbody">
-            </tbody>
-          </table>
-        </div>
-        <div class="tab-pane" id="gd-filter-key-modal-evidence">
-          <h3>Per Sample</h3>
-          <table class="table">
-            <tbody id="gd-filter-key-modal-evidence-tbody">
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button id="gd-filter-key-modal-apply-btn" class="btn btn-success">Apply changes</button>
-      <button id="gd-filter-key-modal-dismiss-btn" class="btn btn-default" data-dismiss="modal">Cancel</button>
-    </div>
-  </div></div>
-</div>
-
-
+{% include "controls/filter_key_modal.html" %}

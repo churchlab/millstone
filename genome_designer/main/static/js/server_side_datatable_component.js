@@ -111,8 +111,8 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
     }
 
     var value = displayableObj.uid;
-    if ('sample_uid' in displayableObj) {
-      value += ',' + displayableObj.sample_uid;
+    if ('experiment_sample_uid' in displayableObj) {
+      value += ',' + displayableObj.experiment_sample_uid;
     }
     return value;
   },
