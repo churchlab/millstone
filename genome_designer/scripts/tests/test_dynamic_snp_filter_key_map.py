@@ -7,7 +7,7 @@ import os
 from django.conf import settings
 from django.test import TestCase
 
-from main.test_util import create_common_entities
+from main.testing_util import create_common_entities
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 

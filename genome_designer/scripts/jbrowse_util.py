@@ -1,17 +1,46 @@
 """
 Utility methods for creating JBrowse config files to allow data
 to be viewed using JBrowse.
+
+## Note about JSON Track Concurrency Fix:
+
+We encountered the possibility of multiple workers wanting to
+add/remove/change tracks simultaneously in the tracksList.json file. This
+results in race conditions where one worker overwrites the changes of another,
+causing missing tracks.
+
+To fix this problem, we write to a directory structure inside the jbrowse
+directory called ./indiv_tracks, where tracks are stored in subdirectories
+under the ref genome by their label.
+
+`jbrowse/indiv_tracks/{track['label']}
+
+When an alignment completes, compile_tracklist_json() is called, which gathers
+up all the tracks for a reference genome and updates the 'tracks' field of the
+json tracklist. It also needs to symlink various track subdirectories into the
+main directory. It assumes that there won't be anything to overwrite (like two
+{trackname}/seq dirs).
+
+We perform this compile_tracklist_json() every time a link is asked for. 
+
 """
 
+from distutils.dir_util import mkpath
 import json
 import os
+import shutil
 import subprocess
+import glob
+from BCBio import GFF
+from Bio import SeqIO
 
 from main.models import Dataset
 from main.models import get_dataset_with_type
 from main.models import ReferenceGenome
+from scripts.util import merge_nested_dictionaries
 from settings import JBROWSE_BIN_PATH
 from settings import JBROWSE_DATA_URL_ROOT
+from settings import JBROWSE_GBK_TYPES_TO_DISPLAY
 from settings import S3_BUCKET
 from settings import TOOLS_DIR
 
@@ -25,6 +54,117 @@ TABIX_BINARY = '%s/tabix/tabix' % TOOLS_DIR
 #         "%s does not exists. You may need to symlink it." %
 #                 JBROWSE_DATA_SYMLINK_PATH)
 
+def get_tracklist_json(reference_genome, concurrent_id=None):
+    """
+    Get trackList for jbrowse
+    """
+
+    jbrowse_path = reference_genome.get_jbrowse_directory_path()
+
+    # If this is a concurrent read, read from individual tracks 
+    # subdir, named by a concurrent_id. Update is OK if dir/id is
+    # there. 
+    if concurrent_id:
+        jbrowse_path = os.path.join(
+                jbrowse_path, 'indiv_tracks', concurrent_id)
+        assert os.path.exists(jbrowse_path), (
+                'concurrent_id for json track does not exist: %s' % (
+                    jbrowse_path))
+
+    # Load the old tracks
+    json_track_fn = os.path.join(jbrowse_path, 'trackList.json')
+    return json.loads(open(json_track_fn).read())
+
+def write_tracklist_json(reference_genome, dictionary, concurrent_id=None):
+    """
+    Overwrite trackList for jbrowse
+
+    """
+    jbrowse_path = reference_genome.get_jbrowse_directory_path()
+
+    # If this is a concurrent write, write to an individual tracks 
+    # subdir, named by a concurrent_id. Update is OK if dir/id is
+    # there. 
+    if concurrent_id: 
+        jbrowse_path = os.path.join(
+                jbrowse_path, 'indiv_tracks', concurrent_id)
+
+        # distutils makes intermediate directories only if necessary,
+        # os.makedirs isn't as forgiving
+        mkpath(jbrowse_path)
+
+    json_track_fn = os.path.join(jbrowse_path, 'trackList.json')    
+
+    # Create a new or overwrite an old tracklist
+    with open(json_track_fn, 'w') as json_track_fh:
+        json_track_fh.write(json.dumps(dictionary))
+
+def compile_tracklist_json(reference_genome):
+    """
+    Gathers all the individual tracks in the ./indiv_tracks
+    directory and creates a new 'tracks' listing, keeping
+    each track label unique. 
+    """
+    jbrowse_path = reference_genome.get_jbrowse_directory_path()
+    indiv_tracks_path = os.path.join(jbrowse_path,'indiv_tracks')
+    track_files = glob.glob(os.path.join(indiv_tracks_path,'*','trackList.json'))
+
+    # a dictionary of tracks by label. We assume here that all 
+    # tracks are unique by 'label' (which should really be called 
+    # 'key', since its a machine-readable field)
+    track_dict = {}
+    consolidated_track_list = {}
+
+    for track_fn in track_files:
+
+        this_track_list = json.loads(open(track_fn).read())
+
+        # First, pop out off 'tracks' list from the json, and 
+        # add them to the track_dict by label
+        for track in this_track_list.pop('tracks', []):
+            track_key = track['label']
+
+            track_dict[track_key] = track
+
+            # prepend the indiv_track subdir to any relative paths
+            if 'urlTemplate' in track:
+                if track['urlTemplate'].startswith('/'): continue
+
+                track['urlTemplate'] = os.path.join(
+                    'indiv_tracks',track_key, track['urlTemplate'])
+
+        
+        # Finally, symlink any subdirs (seq, etc) into the root.
+        track_dir = os.path.dirname(track_fn)
+
+        for subdir in os.listdir(track_dir):
+            abs_subdir = os.path.join(track_dir, subdir)
+            if not os.path.isdir(abs_subdir): continue
+
+            try:
+                shutil.copytree(
+                    src= abs_subdir, 
+                    dst= os.path.join(jbrowse_path,subdir),
+                    symlinks=True
+                )
+            except Exception as e:
+                print e
+                print 'Skipping dir {:s} because it already exists.'.format(
+                        subdir) + ' This should not happen.'
+
+        # (We're assuming here that any overwriting that individual
+        # files do of these fields is not important. The only field
+        # that I am aware of is 'formatVersion', and is 1 for all.)
+        consolidated_track_list = merge_nested_dictionaries(
+                consolidated_track_list, this_track_list)
+
+    # Add back all the tracks 
+    consolidated_track_list['tracks'] = track_dict.values()
+
+    # touch the other tracklist format, make it empty
+    open(os.path.join(jbrowse_path, 'tracks.conf'), 'a',).close()
+
+    write_tracklist_json(reference_genome, consolidated_track_list)
 
 
 def prepare_jbrowse_ref_sequence(reference_genome, **kwargs):
@@ -47,14 +187,32 @@ def prepare_jbrowse_ref_sequence(reference_genome, **kwargs):
 
     # Next, ensure that the jbrowse directory exists.
     reference_genome.ensure_jbrowse_dir()
-    jbrowse_path = reference_genome.get_jbrowse_directory_path()
+    jbrowse_path = os.path.join(
+            reference_genome.get_jbrowse_directory_path(),
+            'indiv_tracks',
+            'DNA')
 
     # Now run prepare-refseqs.pl to get the ReferenceGenome in.
-    subprocess.call([
+    subprocess.check_call([
         PREPARE_REFSEQS_BIN,
         '--fasta', reference_fasta,
         '--out', jbrowse_path,
     ])
+
+    json_tracks = get_tracklist_json(reference_genome, 'DNA')
+
+    # DNA track should be the first track
+    dna_track = json_tracks['tracks'][0]
+    assert dna_track['type'] == 'SequenceTrack'
+
+    # Get rid of translation and reverse strand
+    dna_track.update({
+        "showForwardStrand": True,
+        "showReverseStrand": False,
+        "showTranslation": False
+        })
+
+    write_tracklist_json(reference_genome, json_tracks, 'DNA')
 
 def add_genbank_file_track(reference_genome, **kwargs):
     """
@@ -70,23 +228,43 @@ def add_genbank_file_track(reference_genome, **kwargs):
 
     jbrowse_path = reference_genome.get_jbrowse_directory_path()
 
+    reference_gff = get_dataset_with_type(
+            reference_genome,
+            type=Dataset.TYPE.REFERENCE_GENOME_GFF).get_absolute_location()
+
+    json_update_fields = {
+        'style': {
+            'label': 'name,CDS,gene',
+            'description': 'note,function,gene_synonym',
+            'color': '#43a110'
+        }
+    }
+
     genbank_json_command = [
         FLATFILE_TRACK_BIN,
-        '--gbk', reference_gbk,
-        '--out', jbrowse_path,
-        #'--type', 'CDS',
+        '--gff', reference_gff,
+        '--out', os.path.join(jbrowse_path,'indiv_tracks','gbk'),
+        '--type', JBROWSE_GBK_TYPES_TO_DISPLAY,
         '--autocomplete','all',
         '--trackLabel','gbk',
-        '--key',"GenBank CDS",
-        '--trackType',"JBrowse/View/Track/HTMLFeatures",
+        '--key',"Genome Features",
+        '--trackType',"CanvasFeatures",
         #'--getSubfeatures',
         #'--className','transcript',
-        '--subfeatureClasses', "{\"CDS\":\"transcript-CDS\"}"
+        #'--subfeatureClasses', "{\"CDS\":\"transcript-CDS\"}"
     ]
 
-    print ' '.join(genbank_json_command)
+    subprocess.check_call(genbank_json_command)
 
-    subprocess.call(genbank_json_command)
+    # Finally, manually update tracklist json with style info
+    tracklist_json = get_tracklist_json(reference_genome, 'gbk')
+
+    for i, track in enumerate(tracklist_json['tracks']):
+        if track['key'] == 'Genome Features':
+            tracklist_json['tracks'][i] = merge_nested_dictionaries(
+                    track, json_update_fields)
+
+    write_tracklist_json(reference_genome, tracklist_json, 'gbk')
 
 def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
     """
@@ -116,19 +294,22 @@ def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
 
     # TODO: This jbrowse vcf label really need to be more human readable.
     label = str(alignment_group.uid) + '_' + vcf_dataset.type
+    key = "{:s} {:s} SNVs".format(vcf_dataset.type,alignment_group.label)
 
     # Build the JSON object.
-    raw_dict_obj = {
-        "label"         : label,
-        "key"           : "%s SNVs" % alignment_group.label,
-        "storeClass"    : "JBrowse/Store/SeqFeature/VCFTabix",
-        "urlTemplate"   : urlTemplate,
-        "tbiUrlTemplate": urlTemplate_idx,
-        "type"          : "JBrowse/View/Track/HTMLVariants"
+    raw_dict_obj = { 
+        'tracks' : [{
+            "label"         : label,
+            "key"           : key,
+            "storeClass"    : "JBrowse/Store/SeqFeature/VCFTabix",
+            "urlTemplate"   : urlTemplate,
+            "tbiUrlTemplate": urlTemplate_idx,
+            'category'      : 'VCF Tracks',
+            "type"          : "JBrowse/View/Track/HTMLVariants"
+        }]
     }
 
-    json_obj_string = json.dumps(raw_dict_obj)
-    _update_ref_genome_track_list(reference_genome, json_obj_string)
+    write_tracklist_json(reference_genome, raw_dict_obj, label)
 
 def _vcf_to_vcftabix(vcf_dataset):
     """
@@ -202,66 +383,39 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     # Generic label for now.
     # TODO: Is there a better way to come up with a label?
     label = str(sample_alignment.experiment_sample.uid) + '_' + alignment_type
-    key = str(sample_alignment.experiment_sample.label) + ' Read Alignment'
+    key = str(sample_alignment.experiment_sample.label) + ' ' + bam_dataset.type
 
     # Build the JSON object.
     raw_dict_obj = {
-        'storeClass': 'JBrowse/Store/SeqFeature/BAM',
-        'urlTemplate': urlTemplate,
-        'label': label,
-        'type': 'JBrowse/View/Track/Alignments2',
-        'key': key,
-        'style' : {
-            'className': 'alignment',
-            'arrowheadClass': 'arrowhead',
-            'labelScale': 100
+        'tracks' : [
+        {
+            'storeClass': 'JBrowse/Store/SeqFeature/BAM',
+            'urlTemplate': urlTemplate,
+            'label': label,
+            'type': 'JBrowse/View/Track/Alignments2',
+            'key': key,
+            'category': 'BAM Tracks',
+            'style' : {
+                'className': 'alignment',
+                'arrowheadClass': 'arrowhead',
+                'labelScale': 100
+            }
         }
-    }
-    json_obj_string = json.dumps(raw_dict_obj)
-    _update_ref_genome_track_list(reference_genome, json_obj_string)
+    ]}
+    write_tracklist_json(reference_genome, raw_dict_obj, label)
 
     # Also add a snp coverage track.
     snp_coverage_label = label + '_coverage'
-    snp_coverage_key = str(sample_alignment.experiment_sample.label) + ' Coverage'
+    snp_coverage_key = key + ' Coverage'
     coverage_raw_dict_obj = {
-        'storeClass': 'JBrowse/Store/SeqFeature/BAM',
-        'urlTemplate': urlTemplate,
-        'label': snp_coverage_label,
-        'type': 'JBrowse/View/Track/SNPCoverage',
-        'key': snp_coverage_label,
-    }
-    coverage_json_obj_string = json.dumps(coverage_raw_dict_obj)
-    _update_ref_genome_track_list(reference_genome, coverage_json_obj_string)
-
-
-def _update_ref_genome_track_list(reference_genome, json_obj_string):
-    """Helper method for updating the track list file for a ReferenceGenome.
-
-    Args:
-        reference_genome: A ReferenceGenome object.
-        json_obj_string: The stringified json containing the track data.
-    """
-    ADD_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'add-track-json.pl')
-
-    # Validate inputs.
-    assert isinstance(reference_genome, ReferenceGenome)
-    assert isinstance(json_obj_string, str)
-
-    # The tracklist output file should be located relative to the
-    # ReferenceGenome data dir.
-    track_list_file = os.path.join(
-            reference_genome.get_jbrowse_directory_path(), 'trackList.json')
-
-    # Use JBrowse's utility script for adding a track.
-    # The utility doesn't really do anything special beyond adding the json
-    # string in the correct place in the file, but might as well use it since
-    # it exists.
-    echo_process = subprocess.Popen([
-        'echo',
-        json_obj_string
-    ], stdout=subprocess.PIPE)
-
-    subprocess.call([
-        ADD_TRACK_BIN,
-        track_list_file
-    ], stdin=echo_process.stdout)
+        'tracks' : [
+        {
+            'storeClass': 'JBrowse/Store/SeqFeature/BAM',
+            'urlTemplate': urlTemplate,
+            'label': snp_coverage_label,
+            'type': 'JBrowse/View/Track/SNPCoverage',
+            'category': 'Coverage Tracks',
+            'key': snp_coverage_key
+        }
+    ]}
+    write_tracklist_json(reference_genome, raw_dict_obj, snp_coverage_label)

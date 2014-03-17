@@ -16,6 +16,9 @@ from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
+from main.model_utils import get_dataset_with_type
+
+from scripts.import_util import import_reference_genome_from_local_file
 
 
 TEST_USERNAME = 'testuser'
@@ -44,7 +47,44 @@ class TestSignals(TestCase):
             label='boom',
             num_chromosomes=2,
             num_bases=1000)
-        
+
+        self.test_ext_ref_genome = import_reference_genome_from_local_file(
+            self.test_project,
+            TEST_REF_GENOME_NAME,
+            TEST_REF_GENOME_PATH,
+            'genbank')
+
+    def test_post_add_seq_to_ref_genome(self):
+        """
+        Ensure that everything gets converted after creating a new reference
+        genome object, like snpeff, fasta, gff, etc.
+        """
+
+        # SNPEFF
+
+        # check that the genbank file was symlinked
+        gbk_path = os.path.join(
+                self.test_ext_ref_genome.get_snpeff_directory_path(),
+                'genes.gb')
+        assert os.path.exists(gbk_path), 'snpeff gbk conversion failed: %s' % (
+                gbk_path)
+
+        # check that the db was made
+        assert os.path.exists(os.path.join(
+                self.test_ext_ref_genome.get_snpeff_directory_path(),
+                'snpEffectPredictor.bin')), 'snpeff db was not made'
+
+        # FASTA
+        fasta = get_dataset_with_type(self.test_ext_ref_genome,
+                type=Dataset.TYPE.REFERENCE_GENOME_FASTA)
+        assert os.path.exists(fasta.get_absolute_location()), (
+                'fasta conversion failed')
+
+        # GFF
+        gff = get_dataset_with_type(self.test_ext_ref_genome,
+                type=Dataset.TYPE.REFERENCE_GENOME_GFF)
+        assert os.path.exists(gff.get_absolute_location()), (
+                'gff conversion failed')
 
     def test_post_variant_evidence_create(self):
         self.assertTrue(True)
