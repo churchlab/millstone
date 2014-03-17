@@ -22,6 +22,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 
+# from debug.debug_util import FakeException
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.data_util import lookup_variants
@@ -206,7 +207,8 @@ def get_variant_list(request):
             VARIANT_LIST_RESPONSE_KEY__KEY_MAP: json.dumps(
                     variant_key_map_with_active_fields_marked)
         }
-
+    # Toggle which of the following exceptions is commented for debugging.
+    # except FakeException as e:
     except Exception as e:
         # TODO: More readable error reporting.
         exception_as_string = str(type(e)) + ' ' + str(e)
