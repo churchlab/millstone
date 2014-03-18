@@ -21,7 +21,6 @@ from django.shortcuts import render
 from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
-from main.exceptions import InputError
 from main.model_views import MeltedVariantView
 from main.models import AlignmentGroup
 from main.models import Project
@@ -33,8 +32,6 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 from pipeline.pipeline import run_pipeline_multiple_ref_genomes
 from pipeline.pipeline import run_pipeline
-from scripts.import_util import import_reference_genome_from_local_file
-from scripts.import_util import import_reference_genome_from_ncbi
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
 import settings
@@ -173,29 +170,6 @@ def reference_genome_list_view(request, project_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
-    error_string = None
-
-    # If a POST, then we are creating a new genome.
-    if request.method == 'POST':
-        # TODO: Add more inforative error handling.
-        try:
-            if request.POST['postType'] == 'modalFromFile':
-                import_reference_genome_from_local_file(
-                        project,
-                        request.POST['refGenomeLabel'],
-                        request.POST['refGenomeFileLocation'],
-                        request.POST['importFileFormat'])
-            elif request.POST['postType'] == 'modalFromNCBI':
-                import_reference_genome_from_ncbi(
-                        project,
-                        request.POST['refGenomeLabel'],
-                        request.POST['refGenomeAccession'],
-                        request.POST['importFileFormat'])
-            else:
-                raise InputError('POST has invalid or missing postType')
-        except Exception as e:
-            error_string = 'Import error: ' + str(e)
-
     init_js_data = json.dumps({
         'entity': adapt_model_instance_to_frontend(project)
     })
@@ -204,7 +178,6 @@ def reference_genome_list_view(request, project_uid):
         'project': project,
         'tab_root': TAB_ROOT__DATA,
         'init_js_data': init_js_data,
-        'error_string': error_string
     }
 
     return render(request, 'reference_genome_list.html', context)

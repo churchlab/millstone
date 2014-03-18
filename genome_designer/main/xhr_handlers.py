@@ -48,6 +48,8 @@ from scripts.jbrowse_util import compile_tracklist_json, get_tracklist_json
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from scripts.import_util import import_reference_genome_from_local_file
+from scripts.import_util import import_reference_genome_from_ncbi
 from scripts.import_util import import_variant_set_from_vcf
 from variants.common import determine_visible_field_names
 from variants.materialized_variant_filter import get_variants_that_pass_filter
@@ -67,6 +69,56 @@ def project_delete(request, project_uid):
     response_data = {'redirect': '/'}
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
+
+
+@login_required
+@require_POST
+def create_ref_genome_from_server_location(request):
+    """Handle request to create ReferenceGenome from local file.
+    """
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.POST['projectUid'])
+
+    error_string = ''
+    try:
+        import_reference_genome_from_local_file(
+                project,
+                request.POST['refGenomeLabel'],
+                request.POST['refGenomeFileLocation'],
+                request.POST['importFileFormat'])
+    except Exception as e:
+        error_string = str(e)
+
+    result = {
+        'error': error_string,
+    }
+
+    return HttpResponse(json.dumps(result), content_type='application/json')
+
+
+@login_required
+@require_POST
+def create_ref_genome_from_ncbi(request):
+    """Handle request to create ReferenceGenome from local file.
+    """
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.POST['projectUid'])
+
+    error_string = ''
+    try:
+        import_reference_genome_from_ncbi(
+                project,
+                request.POST['refGenomeLabel'],
+                request.POST['refGenomeAccession'],
+                request.POST['importFileFormat'])
+    except Exception as e:
+        error_string = str(e)
+
+    result = {
+        'error': error_string,
+    }
+
+    return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 @login_required

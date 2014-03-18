@@ -117,6 +117,10 @@ urlpatterns = patterns('',
 
     url(r'^_/ref_genomes$',
             'main.xhr_handlers.get_ref_genomes'),
+    url(r'^_/ref_genomes/create_from_server_location$',
+            'main.xhr_handlers.create_ref_genome_from_server_location'),
+    url(r'^_/ref_genomes/create_from_ncbi$',
+            'main.xhr_handlers.create_ref_genome_from_ncbi'),
 
 
     ###########################################################################
