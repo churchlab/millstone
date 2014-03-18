@@ -10,7 +10,7 @@ from django.test import TestCase
 from main.models import ExperimentSample
 from main.models import Variant
 from main.models import VariantSet
-from main.test_util import create_common_entities
+from main.testing_util import create_common_entities
 from scripts.bootstrap_data import create_fake_variants_and_variant_sets
 from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__ADD
 from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__REMOVE
