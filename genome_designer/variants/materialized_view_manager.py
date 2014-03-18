@@ -144,7 +144,8 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                             'LEFT JOIN main_variantevidence_variantalternate_set ON ('
                                     'main_variantevidence.id = main_variantevidence_variantalternate_set.variantevidence_id) '
                             'LEFT JOIN main_variantalternate ON main_variantevidence_variantalternate_set.variantalternate_id = main_variantalternate.id '
-                        'WHERE (main_variant.reference_genome_id = %d)'
+                        'WHERE (main_variant.reference_genome_id = %d) '
+                        'GROUP BY %s'
                     ') '
                     'UNION '
                     '('
@@ -152,7 +153,8 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                             'INNER JOIN main_variantalternate ON main_variantalternate.variant_id = main_variant.id '
                             'INNER JOIN main_varianttovariantset ON main_variant.id = main_varianttovariantset.variant_id '
                             'INNER JOIN main_variantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
-                        'WHERE (main_variant.reference_genome_id = %d)'
+                        'WHERE (main_variant.reference_genome_id = %d) '
+                        'GROUP BY %s'
                     ') '
                     'ORDER BY position, experiment_sample_uid DESC '
                 ') ' # melted_variant_data
@@ -171,9 +173,17 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                         'LEFT JOIN ve_data_table ON ve_data_table.id = melted_variant_data.ve_id '
                         'LEFT JOIN vccd_data_table ON vccd_data_table.id = melted_variant_data.vccd_id'
             ')'
-            % (self.view_table_name, MATERIALIZED_TABLE_SELECT_CLAUSE, self.reference_genome.id,
-                    MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE, self.reference_genome.id)
-        )
+            % (
+                    self.view_table_name,
+
+                    MATERIALIZED_TABLE_SELECT_CLAUSE,
+                    self.reference_genome.id,
+                    MATERIALIZED_TABLE_GROUP_BY_CLAUSE,
+
+                    MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE,
+                    self.reference_genome.id,
+                    MATERIALIZED_TABLE_VTVS_GROUP_BY_CLAUSE)
+            )
         self.cursor.execute(create_sql_statement)
         transaction.commit_unless_managed()
 

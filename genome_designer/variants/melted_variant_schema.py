@@ -8,6 +8,15 @@ Build the schema used to build the materialized view.
 
 class SchemaBuilder(object):
     """Builder object for the schema.
+
+    Usage:
+        schema_builder = SchemaBuilder()
+        schema_builder.add_melted_variant_field(<source_col_name>,
+                <joined_table_col_named>, <is_null_in_variant_to_set_label>,
+                <user_queryable>)
+        schema_builder.add_melted_variant_field(...)
+        schema_builder.add_melted_variant_field(...)
+        my_schema = schema_builder.get_schema()
     """
 
     def __init__(self):
@@ -75,12 +84,32 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variantset.label', 'variant_set_la
 MELTED_VARIANT_SCHEMA = SCHEMA_BUILDER.get_schema()
 
 # Generate the SELECT clause for building the table.
-MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS = [
-        schema_obj['source_col_name'] + ' AS ' + schema_obj['joined_table_col_name']
-        for schema_obj in MELTED_VARIANT_SCHEMA
-]
+MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS = []
+for schema_obj in MELTED_VARIANT_SCHEMA:
+    if (schema_obj['source_col_name'] in [
+            'main_variantset.uid',
+            'main_variantset.label']):
+        MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS.append(
+                'array_agg(' + schema_obj['source_col_name'] + ') AS ' +
+                schema_obj['joined_table_col_name'])
+    else:
+        MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS.append(
+                schema_obj['source_col_name'] + ' AS ' +
+                schema_obj['joined_table_col_name'])
 MATERIALIZED_TABLE_SELECT_CLAUSE = ', '.join(
         MATERIALIZED_TABLE_SELECT_CLAUSE_COMPONENTS)
+
+# A GROUP BY, for dealing with repeated variant sets.
+MATERIALIZED_TABLE_GROUP_BY_CLAUSE_COMPONENTS = []
+for schema_obj in MELTED_VARIANT_SCHEMA:
+    if (schema_obj['source_col_name'] in [
+            'main_variantset.uid',
+            'main_variantset.label']):
+        continue
+    MATERIALIZED_TABLE_GROUP_BY_CLAUSE_COMPONENTS.append(
+            schema_obj['source_col_name'])
+MATERIALIZED_TABLE_GROUP_BY_CLAUSE = ', '.join(
+        MATERIALIZED_TABLE_GROUP_BY_CLAUSE_COMPONENTS)
 
 # Generate the SELECT clause for the Variant to VariantSet.label view.
 # We perform a UNION with this table to ensure that we yield Variants that
@@ -90,12 +119,32 @@ for schema_obj in MELTED_VARIANT_SCHEMA:
     if schema_obj['is_null_in_variant_to_set_label']:
         MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE_COMPONENTS.append(
                 'NULL' + ' AS ' + schema_obj['joined_table_col_name'])
+    elif (schema_obj['source_col_name'] in [
+            'main_variantset.uid',
+            'main_variantset.label']):
+        MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE_COMPONENTS.append(
+                'array_agg(' + schema_obj['source_col_name'] + ') AS ' +
+                schema_obj['joined_table_col_name'])
     else:
         MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE_COMPONENTS.append(
                 schema_obj['source_col_name'] + ' AS ' +
                 schema_obj['joined_table_col_name'])
 MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE = ', '.join(
         MATERIALIZED_TABLE_VTVS_SELECT_CLAUSE_COMPONENTS)
+
+# A GROUP BY, for dealing with repeated variant sets.
+MATERIALIZED_TABLE_VTVS_GROUP_BY_CLAUSE_COMPONENTS = []
+for schema_obj in MELTED_VARIANT_SCHEMA:
+    if schema_obj['is_null_in_variant_to_set_label']:
+        continue
+    if (schema_obj['source_col_name'] in [
+            'main_variantset.uid',
+            'main_variantset.label']):
+        continue
+    MATERIALIZED_TABLE_VTVS_GROUP_BY_CLAUSE_COMPONENTS.append(
+            schema_obj['source_col_name'])
+MATERIALIZED_TABLE_VTVS_GROUP_BY_CLAUSE = ', '.join(
+        MATERIALIZED_TABLE_VTVS_GROUP_BY_CLAUSE_COMPONENTS)
 
 # Generate the SELECT clause for querying the table.
 MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS = [

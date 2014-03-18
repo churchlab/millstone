@@ -69,6 +69,16 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
 
   /** Returns a string for the displayable representation of obj. */
   makeDisplayableObject: function(obj) {
+    // HACK 1: Need to rethink this code.
+    if (!obj) {
+      return '';
+    }
+
+    // HACK 2: Seriously.
+    if (typeof(obj) != 'object') {
+      return obj;
+    }
+
     /* Compute href for object with class information. */
     if ('href' in obj && 'label' in obj) {
 
