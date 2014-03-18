@@ -940,6 +940,10 @@ class VariantCallerCommonData(Model, VisibleFieldMixin):
     # Catch-all key-value data store.
     data = PostgresJsonField()
 
+    # TODO: This null=True is not necessary, if we ever reset south,
+    # we can take it away.
+    alignment_group = models.ForeignKey('AlignmentGroup', null=True)
+
     def __getattr__(self, name):
         """Automatically called if an attribute is not found in the typical
         place.

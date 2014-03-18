@@ -16,6 +16,7 @@ from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
+from main.models import AlignmentGroup
 from main.model_utils import get_dataset_with_type
 
 from scripts.import_util import import_reference_genome_from_local_file
@@ -96,6 +97,11 @@ class TestSignals(TestCase):
                 position=22,
                 ref_value='A')
 
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=self.test_ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
         va = VariantAlternate.objects.create(
                 variant=variant,
                 alt_value='G')
@@ -110,8 +116,9 @@ class TestSignals(TestCase):
                 filesystem_location='')
 
         common_data_obj = VariantCallerCommonData.objects.create(
-            variant=variant,
-            source_dataset=fake_source_dataset)
+                variant=variant,
+                alignment_group=alignment_group,
+                source_dataset=fake_source_dataset)
 
         # Test creating VE without data.
         ve_no_data = VariantEvidence.objects.create(

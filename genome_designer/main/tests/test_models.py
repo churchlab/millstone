@@ -215,6 +215,11 @@ class TestVariantCallerCommonData(TestCase):
             ref_value='A'
         )
 
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=reference_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
         raw_data_dict = {
             'key1': 'val1',
             'key2': 'val2',
@@ -224,6 +229,7 @@ class TestVariantCallerCommonData(TestCase):
         vccd = VariantCallerCommonData.objects.create(
             variant=variant,
             source_dataset_id=1,
+            alignment_group=alignment_group,
             data=raw_data_dict
         )
         vccd_lookup = VariantCallerCommonData.objects.get(
@@ -234,6 +240,7 @@ class TestVariantCallerCommonData(TestCase):
         vccd = VariantCallerCommonData.objects.create(
             variant=variant,
             source_dataset_id=1,
+            alignment_group=alignment_group,
             data=json.dumps(raw_data_dict)
         )
         vccd_lookup = VariantCallerCommonData.objects.get(
@@ -244,6 +251,7 @@ class TestVariantCallerCommonData(TestCase):
         vccd = VariantCallerCommonData.objects.create(
             variant=variant,
             source_dataset_id=1,
+            alignment_group=alignment_group,
         )
         self.assertEquals(0, len(vccd.data))
 
@@ -251,6 +259,7 @@ class TestVariantCallerCommonData(TestCase):
         vccd = VariantCallerCommonData.objects.create(
             variant=variant,
             source_dataset_id=1,
+            alignment_group=alignment_group,
         )
         vccd.data=json.dumps(raw_data_dict)
         vccd.save()

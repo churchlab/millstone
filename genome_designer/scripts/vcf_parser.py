@@ -45,13 +45,16 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     """Parses the VCF associated with the AlignmentGroup and saves data there.
     """
     vcf_dataset = get_dataset_with_type(alignment_group, vcf_dataset_type)
-    parse_vcf(vcf_dataset, alignment_group.reference_genome)
+    parse_vcf(vcf_dataset, alignment_group)
 
 
 # @transaction.commit_on_success
-def parse_vcf(vcf_dataset, reference_genome):
+def parse_vcf(vcf_dataset, alignment_group):
     """Parses the VCF and creates Variant models relative to ReferenceGenome.
     """
+
+    reference_genome = alignment_group.reference_genome
+
     # This helper object will help prevent repeated calls to the database.
     # We'll use it at least for ExperimentSamples.
     query_cache = QueryCache()
@@ -88,7 +91,7 @@ def parse_vcf(vcf_dataset, reference_genome):
             # also generates the alternate objects and assigns their
             # data fields as well.
             variant, alts = get_or_create_variant(reference_genome,
-                    record, vcf_dataset, query_cache)
+                    record, vcf_dataset, alignment_group, query_cache)
 
 
 def extract_raw_data_dict(vcf_record):
@@ -135,7 +138,7 @@ def populate_common_data_info(data_dict, vcf_record):
 
 
 def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
-        query_cache=None):
+        alignment_group=None, query_cache=None):
     """Create a variant and its relations.
 
     A new Variant is only created if it doesn't exist already. The following
@@ -206,11 +209,14 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     # Create a common data object for this variant.
     # NOTE: raw_data_dict only contains the values that were not popped until
     # this point.
-    common_data_obj = VariantCallerCommonData.objects.create(
-            variant=variant,
-            source_dataset=vcf_dataset,
-            data=raw_data_dict
-    )
+    # Only create a VCCD if there is an associated alignment group.
+    if alignment_group:
+        common_data_obj = VariantCallerCommonData.objects.create(
+                alignment_group= alignment_group,
+                variant=variant,
+                source_dataset=vcf_dataset,
+                data=raw_data_dict
+        )
 
     # TODO: What about num -2 objects? I'm really not excited about
     # creating a VariantGenotype object, nor do I think it will
