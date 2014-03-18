@@ -28,6 +28,10 @@ body {
   margin-bottom: 10px; 
 }
 
+.gd-navbar-new-project-text:hover {
+  color: white;
+}
+
 .gd-navbar .navbar .nav > li.dropdown.open.active > a:hover,
 
 .gd-navbar .navbar .nav.pull-right {margin-left: 10px; margin-right: 0;}
