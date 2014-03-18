@@ -140,7 +140,7 @@ urlpatterns = patterns('',
     # For re-compiling the trackList.json before redirecting to 
     # the static jbrowse/ pages.
     ###########################################################################
-    url(r'^jbrowse_redirect$',
+    url(r'^redirect_jbrowse$',
             'main.xhr_handlers.compile_jbrowse_and_redirect'),
 
 )

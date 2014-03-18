@@ -511,9 +511,9 @@ class ReferenceGenome(UniqueUidModelMixin):
 
         Example url for user with uid 'abc', and project id 'xyz', and
         refgenome id 456:
-            '/jbrowse_redirect?data=gd_data/abc/projects/xyz/ref_genomes/456/jbrowse/'
+            '/redirect_jbrowse?data=gd_data/abc/projects/xyz/ref_genomes/456/jbrowse/'
         """
-        return '/jbrowse_redirect?data=' + self.get_client_jbrowse_data_path()
+        return '/redirect_jbrowse?data=' + self.get_client_jbrowse_data_path()
 
     def is_annotated(self):
         """For several steps (notably snpEff), we want to check that this
