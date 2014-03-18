@@ -431,41 +431,49 @@ def compute_insert_metrics(bam_file_location, stderr=None):
 def compute_callable_loci(reference_genome, sample_alignment, 
             bam_file_location, stderr=None):
 
-    ref_genome_fasta_location = get_dataset_with_type(
-            reference_genome,
-            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    try:
+        ref_genome_fasta_location = get_dataset_with_type(
+                reference_genome,
+                Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
-    output = _get_callable_loci_output_filename(bam_file_location)
-    summary_file = os.path.splitext(bam_file_location)[0] + '.loci_summary.txt'
-    subprocess.check_call([
-        'java', '-Xmx1024M',
-        '-jar', '%s/gatk/GenomeAnalysisTK.jar' % TOOLS_DIR,
-        '-T', 'CallableLoci',
-        '-R', ref_genome_fasta_location,
-        '-I', bam_file_location,
-        '-summary', summary_file,
-        '-o', output,
-    ], stderr=stderr)
+        output = _get_callable_loci_output_filename(bam_file_location)
+        summary_file = os.path.splitext(bam_file_location)[0] + '.loci_summary.txt'
 
-    # Add callable loci bed as dataset
-    callable_loci_bed = Dataset.objects.create(
-            label=Dataset.TYPE.BED_CALLABLE_LOCI,
-            type=Dataset.TYPE.BED_CALLABLE_LOCI,
-            filesystem_location=clean_filesystem_location(output))
+        subprocess.check_call([
+            'java', '-Xmx1024M',
+            '-jar', '%s/gatk/GenomeAnalysisTK.jar' % TOOLS_DIR,
+            '-T', 'CallableLoci',
+            '-R', ref_genome_fasta_location,
+            '-I', bam_file_location,
+            '-summary', summary_file,
+            '-o', output,
+        ], stderr=stderr)
 
-    sample_alignment.dataset_set.add(callable_loci_bed)
-    sample_alignment.save()
+        # Add callable loci bed as dataset
+        callable_loci_bed = Dataset.objects.create(
+                label=Dataset.TYPE.BED_CALLABLE_LOCI,
+                type=Dataset.TYPE.BED_CALLABLE_LOCI,
+                filesystem_location=clean_filesystem_location(output))
 
-    callable_loci_bed_fn = callable_loci_bed.get_absolute_location()
+        sample_alignment.dataset_set.add(callable_loci_bed)
+        sample_alignment.save()
 
-    # Remove 'CALLABLE' rows
-    output = subprocess.check_output(
-            ['grep',  '-v', 'CALLABLE', callable_loci_bed_fn])
+        callable_loci_bed_fn = callable_loci_bed.get_absolute_location()
 
-    open(callable_loci_bed_fn, 'w').write(output)
+        # Remove 'CALLABLE' rows
 
-    # add it as a jbrowse track
-    add_bed_file_track(reference_genome, sample_alignment, callable_loci_bed)
+        output = subprocess.check_output(
+                ['grep',  '-v', 'CALLABLE', callable_loci_bed_fn])
+
+        open(callable_loci_bed_fn, 'w').write(output)
+
+        # add it as a jbrowse track
+        add_bed_file_track(reference_genome, sample_alignment, callable_loci_bed)
+
+    except Exception as e:
+        print >> stderr, 'WARNING: Callable Loci failed.'
+        print >> stderr, str(e)
+    
 
 def _get_metrics_output_filename(bam_file_location):
     return os.path.splitext(bam_file_location)[0] + '.insertmet.txt'
