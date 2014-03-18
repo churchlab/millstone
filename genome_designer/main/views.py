@@ -22,7 +22,6 @@ from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.exceptions import InputError
-from main.forms import ProjectForm
 from main.model_views import MeltedVariantView
 from main.models import AlignmentGroup
 from main.models import Project
@@ -66,22 +65,33 @@ def project_list_view(request):
 def project_create_view(request):
     """View where a user creates a new Project.
     """
-    if request.POST:
-        project = Project(owner=request.user.get_profile())
-        form = ProjectForm(request.POST, instance=project)
-        if form.is_valid():
-            form.title = form.cleaned_data['title']
-            form.save()
-            return HttpResponseRedirect(
-                    reverse('main.views.project_view',
-                            args=(project.uid,)))
-    else:
-        form = ProjectForm()
 
-    # form is either the form with errors from above or an empty instance.
-    context = {
-        'form': form,
-    }
+    context = {}
+
+    if request.POST:
+        print 'got project create request', request
+
+        try:
+            project_name = request.POST.get('title')
+
+            existing_proj_count = Project.objects.filter(
+                    owner=request.user.get_profile(), 
+                    title=project_name).count()
+
+            assert existing_proj_count == 0, (
+                'Project with that name already exists.')
+
+            project = Project.objects.create(
+                    owner=request.user.get_profile(), 
+                    title=project_name)
+
+            return HttpResponseRedirect(
+                    reverse('main.views.alignment_create_view',
+                            args=(project.uid,)))
+
+        except Exception as e:
+            context['error_string'] = str(e)
+
     return render(request, 'project_create.html', context)
 
 
