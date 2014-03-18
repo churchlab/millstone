@@ -108,6 +108,8 @@ urlpatterns = patterns('',
 
     url(r'^_/samples$',
             'main.xhr_handlers.get_samples'),
+    url(r'^_/samples/create_from_server_location$',
+            'main.xhr_handlers.create_samples_from_server_location'),
 
     url(r'^_/genes$',
             'main.xhr_handlers.get_gene_list'),

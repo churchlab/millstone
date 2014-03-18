@@ -14,13 +14,85 @@ gd.SampleView = Backbone.View.extend({
   render: function() {
     $('#gd-sidenav-link-samples').addClass('active');
 
-    this.datatable = new gd.DataTableComponent({
+    this.datatableComponent = new gd.DataTableComponent({
         el: $('#gd-sample-list-view-datatable-hook'),
         serverTarget: '/_/samples',
         controlsTemplate: '/_/templates/sample_list_controls',
         requestData: {projectUid: this.model.get('uid')},
     });
 
+    this.listenTo(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
+        _.bind(this.listenToControls, this));
+
+    this.maybeCreateFineS3Uploader();
+  },
+
+  listenToControls: function() {
+    $('#gd-samples-create-from-server-location-submit').click(
+        _.bind(this.handleCreateFromServerLocation, this));
+  },
+
+  handleCreateFromServerLocation: function() {
+    // We validate by parsing the input elements, but then use the HTML5
+    // FormData API to actually send the data to the server. FormData
+    // makes the file upload "just work".
+    var formDataForValidation = this.prepareRequestData(
+        'gd-samples-create-from-server-location');
+    if (!this.validateCreateFromServerLocation(formDataForValidation)) {
+      return;
+    }
+
+    var onSuccess = function(responseData) {
+      if (responseData.error.length) {
+        alert('Error creating samples: ' + responseData.error);
+        return;
+      }
+
+      // Success, reload the page.
+      window.location.reload();
+    }
+
+    var formData = new FormData(
+        $('#gd-samples-create-from-server-location')[0]);
+    $.ajax({
+      url: '/_/samples/create_from_server_location',
+      type: 'POST',
+      data: formData,
+      success: onSuccess,
+
+      // The following 3 param settings are necessary for properly passing
+      // formData. See: http://stackoverflow.com/questions/166221/how-can-i-upload-files-asynchronously-with-jquery
+      cache: false,
+      contentType: false,
+      processData: false
+    });
+  },
+
+  /** Parses the form files and prepares the data. */
+  prepareRequestData: function(formId) {
+    var requestData = {}
+    var formInputs = $('#' + formId + ' :input');
+    _.each(formInputs, function(inputObj) {
+      requestData[inputObj.name] = inputObj.value;
+    });
+    return requestData;
+  },
+
+  validateCreateFromServerLocation: function(requestData) {
+    if (!requestData['targetsFile'].length) {
+      alert('Please select a targest file to upload.');
+      return false;
+    }
+
+    return true;
+  },
+
+  /**
+   * Creates the S3 uploader if DOM target is present.
+   *
+   * TODO: Make sure this code still works.
+   */
+  maybeCreateFineS3Uploader: function() {
     if (this.$("#uploadDiv")) {
       this.uploader = this.$("#uploadDiv").fineUploaderS3({
         debug: true,
@@ -136,13 +208,4 @@ gd.SampleView = Backbone.View.extend({
       }, this));
     }
   },
-
-  events: {
-    'click #submitFormFromFile': 'handleFormSubmit',
-  },
-
-  handleFormSubmit: function() {
-    $("#formFromFile").submit();
-  }
-
 });

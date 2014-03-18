@@ -32,7 +32,6 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 from pipeline.pipeline import run_pipeline_multiple_ref_genomes
 from pipeline.pipeline import run_pipeline
-from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
 import settings
 
@@ -207,20 +206,9 @@ def sample_list_view(request, project_uid):
 
     error_string = None
 
-    # If a POST, then we are uploading new samples.
-    if request.method == 'POST':
-        # TODO: Add more informative error handling
-        try:
-            import_samples_from_targets_file(
-                    project,
-                    request.FILES['targetsFile'])
-        except Exception as e:
-            error_string = 'Import error: ' + str(e)
-
     init_js_data = json.dumps({
         'entity': adapt_model_instance_to_frontend(project)
     })
-
 
     context = {
         'project': project,
