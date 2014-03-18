@@ -113,7 +113,7 @@ class Dataset(UniqueUidModelMixin):
         VCF_DELLY = 'Delly VCF'
         VCF_USERINPUT = 'User VCF'
         VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
-        BED_CALLABLE_LOCI = 'BED Callable Loci'
+        BED_CALLABLE_LOCI = 'Flagged Regions BED'
 
 
     TYPE_CHOICES = make_choices_tuple(TYPE)

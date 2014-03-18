@@ -358,6 +358,36 @@ def _vcf_to_vcftabix(vcf_dataset):
 
     return compressed_dataset
 
+def add_bed_file_track(reference_genome, sample_alignment, dataset):
+    """ Add a bed file to Jbrowse, like that created for CallableLoci. 
+        Pass in the dataset model object directly. 
+    """
+
+    print 'adding callable loci bed!', reference_genome, sample_alignment, dataset.get_absolute_location()
+    
+    FLATFILE_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'flatfile-to-json.pl')
+
+    bed_dataset_location = dataset.get_absolute_location()
+
+    jbrowse_path = reference_genome.get_jbrowse_directory_path()
+
+    label = str(sample_alignment.experiment_sample.uid) + '_' + dataset.type
+    key = str(sample_alignment.experiment_sample.label) + ' ' + dataset.type
+
+    bed_json_command = [
+        FLATFILE_TRACK_BIN,
+        '--bed', bed_dataset_location,
+        '--out', os.path.join(jbrowse_path,'indiv_tracks',label),
+        '--trackLabel',label,
+        '--key', key,
+        '--trackType',"CanvasFeatures"
+    ]
+
+    print bed_json_command
+
+    subprocess.check_call(bed_json_command)
+
+
 def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     """Update the JBrowse track config file, trackList.json, for this
     ReferenceGenome with a track for the given sample_alignment and alignment_type.
@@ -418,4 +448,6 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
             'key': snp_coverage_key
         }
     ]}
-    write_tracklist_json(reference_genome, raw_dict_obj, snp_coverage_label)
+    write_tracklist_json(reference_genome, coverage_raw_dict_obj, 
+            snp_coverage_label)
+

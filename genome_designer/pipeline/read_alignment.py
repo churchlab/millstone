@@ -17,6 +17,7 @@ from read_alignment_util import ensure_bwa_index
 from scripts.import_util import add_dataset_to_entity
 from scripts.jbrowse_util import add_bam_file_track
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
+from scripts.jbrowse_util import add_bed_file_track
 from settings import PWD
 from settings import TOOLS_DIR
 from settings import BASH_PATH
@@ -157,7 +158,7 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
                     shell=True, executable=BASH_PATH)
 
         # Do several layers of processing on top of the initial alignment.
-        result_bam_file = process_sam_bam_file(experiment_sample,
+        result_bam_file = process_sam_bam_file(sample_alignment,
                 alignment_group.reference_genome, output_bam, error_output)
 
         # Add the resulting file to the dataset.
@@ -211,13 +212,13 @@ DEFAULT_PROCESSING_MASK = {
     'withmd': True,
 }
 
-def process_sam_bam_file(experiment_sample, reference_genome, 
+def process_sam_bam_file(sample_alignment, reference_genome, 
         sam_bam_file_location, error_output=None, 
         opt_processing_mask=DEFAULT_PROCESSING_MASK):
     """Converts to bam, sorts, and creates index.
 
     Args:
-        experiment_sample: The ExperimentSample for this alignment.
+        sample_alignment: The relationship between a sample and an alignment
         sam_bam_file_location: The full path to the .sam/.bam alignment output.
             If sam input, will be converted from sam to bam.
         error_output: File handle that can be passed as stderr to subprocess
@@ -230,6 +231,9 @@ def process_sam_bam_file(experiment_sample, reference_genome,
     Returns:
         The path of the final .bam file.
     """
+
+    experiment_sample = sample_alignment.experiment_sample
+
     # For any keys missing from the processing mask, give them the values from
     # the default mask.
     effective_mask = copy.copy(DEFAULT_PROCESSING_MASK)
@@ -337,7 +341,7 @@ def process_sam_bam_file(experiment_sample, reference_genome,
 
     # 6. Compute callable loci
     if effective_mask['compute_callable_loci']:
-        compute_callable_loci(reference_genome, 
+        compute_callable_loci(reference_genome, sample_alignment,
                 final_bam_location, error_output)
 
     # 7. Create index.
@@ -424,7 +428,8 @@ def compute_insert_metrics(bam_file_location, stderr=None):
         'VALIDATION_STRINGENCY=LENIENT' # Prevent unmapped read problems
     ], stderr=stderr)
 
-def compute_callable_loci(reference_genome, bam_file_location, stderr=None):
+def compute_callable_loci(reference_genome, sample_alignment, 
+            bam_file_location, stderr=None):
 
     ref_genome_fasta_location = get_dataset_with_type(
             reference_genome,
@@ -441,6 +446,26 @@ def compute_callable_loci(reference_genome, bam_file_location, stderr=None):
         '-summary', summary_file,
         '-o', output,
     ], stderr=stderr)
+
+    # Add callable loci bed as dataset
+    callable_loci_bed = Dataset.objects.create(
+            label=Dataset.TYPE.BED_CALLABLE_LOCI,
+            type=Dataset.TYPE.BED_CALLABLE_LOCI,
+            filesystem_location=clean_filesystem_location(output))
+
+    sample_alignment.dataset_set.add(callable_loci_bed)
+    sample_alignment.save()
+
+    callable_loci_bed_fn = callable_loci_bed.get_absolute_location()
+
+    # Remove 'CALLABLE' rows
+    output = subprocess.check_output(
+            ['grep',  '-v', 'CALLABLE', callable_loci_bed_fn])
+
+    open(callable_loci_bed_fn, 'w').write(output)
+
+    # add it as a jbrowse track
+    add_bed_file_track(reference_genome, sample_alignment, callable_loci_bed)
 
 def _get_metrics_output_filename(bam_file_location):
     return os.path.splitext(bam_file_location)[0] + '.insertmet.txt'
