@@ -32,7 +32,7 @@ gd.App.prototype.run = function() {
 
     case 'SAMPLE':
       var model = new Backbone.Model(INIT_JS_DATA.entity);
-      var view = new gd.SampleView({'model': model});
+      var view = new gd.SampleListView({'model': model});
       break;
 
     case 'ALIGNMENT':

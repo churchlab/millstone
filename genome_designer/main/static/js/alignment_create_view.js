@@ -25,6 +25,12 @@ gd.AlignmentCreateView = Backbone.View.extend({
         controlsTemplate: '/_/templates/reference_genome_list_controls',
         requestData: {projectUid: this.model.get('uid')},
     });
+    this.listenTo(this.refGenomeDataTable, 'DONE_CONTROLS_REDRAW',
+        function() {
+          new gd.RefGenomeControlsComponent({
+            el: '#gd-datatable-ref_genome-hook-control'
+          });
+        });
 
     this.samplesDatatable = new gd.DataTableComponent({
         el: $('#gd-datatable-samples-hook'),
@@ -32,6 +38,12 @@ gd.AlignmentCreateView = Backbone.View.extend({
         controlsTemplate: '/_/templates/sample_list_controls',
         requestData: {projectUid: this.model.get('uid')},
     });
+    this.listenTo(this.samplesDatatable, 'DONE_CONTROLS_REDRAW',
+        function() {
+          new gd.SamplesControlsComponent({
+            el: '#gd-datatable-samples-hook-control'
+          });
+        });
   },
 
 
