@@ -5,12 +5,12 @@
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu">
-    <li role="presentation"><a role="menuitem" tabindex="-1" href="#modalFromFile" data-toggle="modal">From Server Location...</a></li>
+    <li role="presentation"><a role="menuitem" tabindex="-1" href="#gd-ref-genome-upload-from-server-location-modal" data-toggle="modal">From Server Location...</a></li>
     {% if project.is_s3_backed %}
     <li role="presentation">
       <a role="menuitem" tabindex="-1" href="#modalUpload" data-toggle="modal">
         From S3 Bucket...</a></li>
-    {% endif %}    
+    {% endif %}
     <li role="presentation">
       <a role="menuitem" tabindex="-1" href="#modalFromNCBI" data-toggle="modal">
         From NCBI Accession...</a></li>
