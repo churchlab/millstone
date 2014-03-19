@@ -76,6 +76,7 @@ gd.AlignmentCreateView = Backbone.View.extend({
 
   events: {
     'click #gd-align-create-submit-btn': 'handleSubmitClick',
+    'click #gd-align-create-submit-error-close': 'handleErrorAlertClose'
   },
 
   /**
@@ -150,5 +151,16 @@ gd.AlignmentCreateView = Backbone.View.extend({
           is_success: true,
           error_msg: ''
     };
-  }
+  },
+
+  /**
+   * Hides the alert box.
+   *
+   * Previously, we were adding Bootstrap's data-dismiss="alert" to the dom
+   * but that was causing the entire element to be deleted so that subsequent
+   * alerts wouldn't show.
+   */
+  handleErrorAlertClose: function() {
+    $('#gd-align-create-submit-error').hide();
+  },
 });
