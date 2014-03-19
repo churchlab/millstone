@@ -175,7 +175,17 @@ def validate_key_against_map(key, all_key_map):
 
 
 def convert_delim_key_value_triple_to_expr(triple):
+    """Returns a pair (sql expression, arg) to be used in in the where
+    clause of a full query.
+    """
+    # Grab the parts for convenience.
     (delim, key, value) = triple
+
+    # HACK: Special handling for variant set keys.
+    if key in ['variant_set_label', 'variant_set_uid']:
+        assert delim in ['==', '=']
+        return ('%s = ANY (variant_set_label)', value)
+
     # Make '==' SQL-friendly.
     if delim == '==':
         delim = '='
