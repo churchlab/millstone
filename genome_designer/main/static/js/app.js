@@ -40,7 +40,7 @@ gd.App.prototype.run = function() {
       break;
 
     case 'ALIGNMENT':
-      var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var model = new Backbone.Model(INIT_JS_DATA);
       var view = new gd.AlignmentView({'model': model});
       break;
 

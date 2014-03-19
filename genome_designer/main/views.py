@@ -275,7 +275,8 @@ def alignment_view(request, project_uid, alignment_group_uid):
 
     # Initial javascript data.
     init_js_data = json.dumps({
-        'entity': adapt_model_instance_to_frontend(alignment_group)
+        'project': adapt_model_instance_to_frontend(project),
+        'alignment_group': adapt_model_instance_to_frontend(alignment_group)
     })
     context = {
         'project': project,

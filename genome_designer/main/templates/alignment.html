@@ -1,17 +1,8 @@
 {% extends "tab_base.html" %}
 
 {% block content %}
-  <div class="page-header">
-    <h1>Alignment {{alignment_group.label}}</h1>
-  </div>
-
-  <div class="btn-toolbar">
-    <button class="btn btn-primary" href="#">
-      Go to Variants for this alignment&hellip;
-    </button>
-    <button id="gd-alignments-rerun-variants-btn" class="btn btn-primary">
-      Re-run&hellip;
-    </button>
+  <div class="gd-header h1">
+    Alignment:  <i>{{alignment_group.label}}</i>
   </div>
 
   <div id="gd-alignment_view-datatable-hook">

@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.template import RequestContext
 from django.template.loader import render_to_string
 
+from main.models import AlignmentGroup
 from main.models import ReferenceGenome
 from main.models import Project
 
@@ -31,7 +32,6 @@ def variant_filter_controls(request):
     csrf = request.GET.get('csrf')
 
     context = {
-        'csrf': csrf,
         'ref_genome': ref_genome,
         'is_melted': True
     }
@@ -53,7 +53,6 @@ def reference_genome_list_controls(request):
     csrf = request.GET.get('csrf')
 
     context = {
-        'csrf_token': csrf,
         'project': project,
     }
 
@@ -78,7 +77,6 @@ def sample_list_controls(request):
     csrf = request.GET.get('csrf')
 
     context = {
-        'csrf_token': csrf,
         'project': project,
     }
 
@@ -112,6 +110,30 @@ def alignment_list_controls(request):
             render_to_string('controls/alignment_list_controls.html',
             context))
 
+def alignment_controls(request):
+    """Returns the single Alignment control box.
+        Requires no model.
+    """
+    project_uid = request.GET.get('projectUid')
+    alignment_group_uid = request.GET.get('alignmentGroupUid')
+
+    project = get_object_or_404(Project,
+            owner=request.user.get_profile(),
+            uid=project_uid)
+
+    alignment_group = get_object_or_404(AlignmentGroup,
+            reference_genome__project__owner=request.user.get_profile(),
+            uid=alignment_group_uid)
+
+    context = {
+        'project': project,
+        'table_id': request.GET.get('tableId'),
+        'alignment_group': alignment_group
+    }
+
+    return HttpResponse(
+            render_to_string('controls/alignment_controls.html',
+            context))
 
 def variant_set_list_controls(request):
     """Returns the Variant Set List control box.
