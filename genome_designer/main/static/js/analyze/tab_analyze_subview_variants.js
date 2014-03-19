@@ -205,6 +205,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
 
   handleGetVariantListError: function(errorMsg) {
+    this.setUIDoneLoadingState();
     $('#gd-snp-filter-error-msg').text(errorMsg);
     $('#gd-snp-filter-error').show();
   },
