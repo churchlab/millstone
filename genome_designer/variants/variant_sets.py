@@ -2,9 +2,11 @@
 Utility methods for manipulating variant sets.
 """
 
+from collections import defaultdict
 import re
 
 from django.core.exceptions import ObjectDoesNotExist
+from interval import interval
 
 from main.constants import UNDEFINED_STRING
 from main.models import ExperimentSample
@@ -37,7 +39,7 @@ def update_variant_in_set_memberships(ref_genome, uid_data_str_list,
             * "variant_uid"
             * "variant_uid, sample_uid"
         action: The action to perform.
-        variant_set_uid: The set to the add the variant to.
+        variant_set_uid: The set to add the variant to.
 
     Expected exceptions are caught and reported in the response object.
 
@@ -48,7 +50,7 @@ def update_variant_in_set_memberships(ref_genome, uid_data_str_list,
             * alert_type: Type of message. Either 'info', 'error', or 'warn'.
             * alert_msg: Additional information shown to the user.
     """
-    validation_result = _initialial_validation(
+    validation_result = _initial_validation(
             uid_data_str_list, action)
     if validation_result['alert_type'] == 'error':
         return validation_result
@@ -89,8 +91,83 @@ def update_variant_in_set_memberships(ref_genome, uid_data_str_list,
         'alert_msg': 'success'
     }
 
+def add_variants_to_set_from_bed(sample_alignment, bed_dataset):
+    """
+    Given a bed with feature names and a corresponding sample alignment,
+    create new variant sets for every unique feature name and assign variants
+    to that fall within these features to the new sets.
 
-def _initialial_validation(uid_data_str_list, action):
+    E.g. BED:
+
+    ...
+    NC_000913 223514 223534 POOR_MAPPING_QUALITY
+    NC_000913 223542 223734 NO_COVERAGE
+    NC_000913 223751 224756 POOR_MAPPING_QUALITY
+    ...
+
+    Add variants in 223542-223734 to NO_COVERAGE
+    Add variants in 223751-224756 and 223514-223534 to POOR_MAPPING_QUALITY
+    """
+
+    # Read in the bed file 
+    bed_dataset_fn = bed_dataset.get_absolute_location()
+    reference_genome = sample_alignment.alignment_group.reference_genome
+    experiment_sample = sample_alignment.experiment_sample
+
+    # 1. Create a dictionary of disjoint intervals, recursive defaultdict
+    f = lambda: defaultdict(f)
+    feature_disj_intervals = defaultdict(lambda: defaultdict(interval))
+    variants_to_add = defaultdict(list)
+
+    with open(bed_dataset_fn) as bed_dataset_fh:
+
+        for line in bed_dataset_fh:
+            chrom, start, end, feature = line.split()
+            # make a new interval from start to end
+            new_ivl = interval([start, end])
+
+            # add new ivl to old ivls
+            curr_ivl = feature_disj_intervals[feature][chrom] 
+            feature_disj_intervals[feature][chrom] = curr_ivl | new_ivl
+
+    # 2. Associate variants with these intervals 
+    variants = Variant.objects.filter(
+            variantcallercommondata__alignment_group=\
+                    sample_alignment.alignment_group)
+
+    for v in variants:
+        for feat, chrom_ivls in feature_disj_intervals.items():
+
+            if v.chromosome not in chrom_ivls: continue
+            if v.position in chrom_ivls[v.chromosome]:
+                variants_to_add[feat].append(v)
+
+    # 3. Make new variant sets for any features with variants, 
+    # and add the variants to them.
+
+    variant_set_to_variant_map = {}
+
+    for feat, variants in variants_to_add.items():
+
+        (feat_variant_set, created) = VariantSet.objects.get_or_create(
+                reference_genome=reference_genome,
+                label=feat)
+
+        grouped_uid_dict_list = [{
+                'sample_uid': experiment_sample.uid, 
+                'variant_uid': v.uid} for v in variants]
+
+        variant_uid_to_obj_map = dict([(v.uid,v) for v in variants])
+        sample_uid_to_obj_map = {experiment_sample.uid: experiment_sample}
+
+        _perform_add(grouped_uid_dict_list, feat_variant_set, 
+                variant_uid_to_obj_map, sample_uid_to_obj_map)
+
+        variant_set_to_variant_map[feat_variant_set] = variants
+
+    return variant_set_to_variant_map
+
+def _initial_validation(uid_data_str_list, action):
     """Initial validation, or why statically compiled languages have their
     upsides.
     """
@@ -176,6 +253,27 @@ def _get_cached_uid_to_object_maps(ref_genome, grouped_uid_dict_list):
 
 def _perform_add(grouped_uid_dict_list, variant_set, variant_uid_to_obj_map,
         sample_uid_to_obj_map):
+    """
+    TODO: Instead of looping through variants individually, 
+    create them in one fell swoop, which will be faster.
+
+    Args:
+        grouped_uid_dict_list: 
+            [ {
+                sample_uid: <SOME_SAMPLE_UID>, 
+                variant_uid: <SOME_VARIANT_UID>}, ...]
+
+        variant_set:
+             <variant set obj to add to>
+
+        variant_uid_to_obj_map:
+            { <SOME_VARIANT_UID>: <Variant object>, ...}
+
+        sample_uid_to_obj_map:
+            { <SOME_SAMPLE_UID>: <ExperimentSample object>, ...}
+
+    """
+        
     for group in grouped_uid_dict_list:
         variant = variant_uid_to_obj_map[group['variant_uid']]
         vtvs, created = VariantToVariantSet.objects.get_or_create(
