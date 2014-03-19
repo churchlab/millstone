@@ -2,10 +2,10 @@
 Classes that describe how a particular model should be viewed.
 """
 
+from collections import defaultdict
 import json
-import string
-
 from math import floor
+import string
 
 from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
@@ -354,7 +354,6 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
             return string.capwords(fdict['field'], '_').replace('_', ' ')
     field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
 
-
     # We want a list of all VCF tracks for jbrowse. Makes sense to do it
     # once and then pass the strings to each variant object for the frontend.
     # This is a little hacky, but whatever. 
@@ -380,7 +379,8 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
                 value = _create_jbrowse_link_for_variant_object(
                         melted_variant_obj, reference_genome, 
                         alignment_group_vcf_strings)
-
+            elif field == 'variant_set_label':
+                value = _adapt_variant_set_label_field(melted_variant_obj)
             elif fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
                 parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'], {})
@@ -465,6 +465,23 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
     # TODO: Add alignment track param if this is a sample-specific view.
     return ('<a href="' + full_href + '" target="_blank">' + str(position) +
             '</a>')
+
+
+def _adapt_variant_set_label_field(variant_as_dict):
+    """Constructs the label as an anchor that links to the single variant view.
+    """
+    if 'all_variant_set_label' in variant_as_dict:
+        value = ''
+        for label in sorted(variant_as_dict['all_variant_set_label']):
+            # Do some ui modification for wihch there is a Sample.
+            if label in variant_as_dict['variant_set_label']:
+                value += '<b>' + label + '</b> '
+            else:
+                value += label + ' '
+    else:
+        value = variant_as_dict['variant_set_label']
+    return value
+
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
     {'field': 'label', 'verbose': 'Mutant'},
@@ -559,10 +576,57 @@ def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
         JSON string with the objects in the form that can be drawn by the
         Datatables component.
     """
+    modified_obj_list = _modify_obj_list_for_variant_set_display(obj_list)
+
     all_field_dict_list = get_all_fields(
             reference_genome, visible_key_names, melted)
 
-    return adapt_non_recursive(obj_list, all_field_dict_list, reference_genome)
+    return adapt_non_recursive(modified_obj_list, all_field_dict_list,
+            reference_genome)
+
+
+def _modify_obj_list_for_variant_set_display(obj_list):
+    # Before we adapt the fields, we need to do some special handling because
+    # of the way that we structure the materialized view for the melted variant
+    # data. Specifically, we sometimes include an extra row for each Variant,
+    # which includes VariantSets that are not associated with any
+    # ExperimentSample. (See the part of the materialized view build query that
+    # follows UNION). The only case in which we want to show this catch-all
+    # row is whe there are no samples associated with this variant at all.
+    # Otherwise, we just want to grab the extra VariantSet data and show it
+    # in the rows that do have samples associated, with a UI affordance that
+    # indicates that the VariantSet is not explicitly associated with that
+    # Sample, even though it is associated with that Variant.
+
+    # The steps to implementing this strategy are:
+    #     1. Triage how many rows there are for each Variant.
+    #     2. For each redundant row, get rid of it, but save a reference to
+    #        its variant_set_labels.
+
+    # First count rows for each Variant.
+    variant_uid_to_count_dict = defaultdict(lambda: 0)
+    for obj in obj_list:
+        variant_uid_to_count_dict[obj['uid']] += 1
+
+    # Now, get rid of rows that have no Sample associated, when there is more
+    # than one row for that Variant.
+    variant_uid_to_deleted_row_dict = {}
+    modified_obj_list = []
+    for obj in obj_list:
+        if (not obj['experiment_sample_uid'] and
+                variant_uid_to_count_dict[obj['uid']] > 1):
+            assert obj['uid'] not in variant_uid_to_deleted_row_dict
+            variant_uid_to_deleted_row_dict[obj['uid']] = obj
+        else:
+            modified_obj_list.append(obj)
+
+    # Now add back data for all the sets associated with each Variant.
+    for obj in modified_obj_list:
+        if obj['uid'] in variant_uid_to_deleted_row_dict:
+            catch_all_obj = variant_uid_to_deleted_row_dict[obj['uid']]
+            obj['all_variant_set_label'] = catch_all_obj['variant_set_label']
+
+    return modified_obj_list
 
 
 def _prepare_additional_visible_keys(visible_key_list, key_to_parent_map):
