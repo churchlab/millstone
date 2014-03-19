@@ -227,8 +227,15 @@ From the `genome_designer` directory, run:
 NOTE: This will delete the entire dev database and re-create it with the
 hard-coded test models only.
 
+## Debugging
 
-## Profiling code
+### Accessing the Postgresql database
+
+On Ubuntu, if your database is called `gdv2db`:
+
+    sudo -u postgres psql gdv2db
+
+### Profiling code
 
 The `debug.profiler` module contains a `profile` decorator that can be added to a function. For example, to debug a view:
 
