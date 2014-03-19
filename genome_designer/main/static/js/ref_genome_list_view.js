@@ -11,8 +11,16 @@ gd.RefGenomeListView = Backbone.View.extend({
   },
 
   render: function() {
-
     $('#gd-sidenav-link-refgenomes').addClass('active');
+
+    this.redrawDatatable();
+  },
+
+  /** Draws or redraws the table. */
+  redrawDatatable: function() {
+    if (this.datatableComponent) {
+      this.datatableComponent.destroy();
+    }
 
     this.datatableComponent = new gd.DataTableComponent({
         el: $('#gd-ref-genome-list-view-datatable-hook'),
@@ -26,9 +34,12 @@ gd.RefGenomeListView = Backbone.View.extend({
   },
 
   decorateControls: function() {
+    console.log("GOT HERE 1")
     this.refGenomeControlsComponent = new gd.RefGenomeControlsComponent({
       el: '#gd-ref-genome-list-view-datatable-hook-control'
     });
-  }
 
+    this.listenTo(this.refGenomeControlsComponent, 'MODELS_UPDATED',
+        _.bind(this.redrawDatatable, this));
+  }
 });

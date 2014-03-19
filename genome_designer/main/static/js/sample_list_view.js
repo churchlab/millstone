@@ -13,6 +13,15 @@ gd.SampleListView = Backbone.View.extend({
   render: function() {
     $('#gd-sidenav-link-samples').addClass('active');
 
+    this.redrawDatatable();
+  },
+
+  /** Draws or redraws the table. */
+  redrawDatatable: function() {
+    if (this.datatableComponent) {
+      this.datatableComponent.destroy();
+    }
+
     this.datatableComponent = new gd.DataTableComponent({
         el: $('#gd-sample-list-view-datatable-hook'),
         serverTarget: '/_/samples',
@@ -28,5 +37,8 @@ gd.SampleListView = Backbone.View.extend({
     this.samplesControlComponent = new gd.SamplesControlsComponent({
       el: '#gd-sample-list-view-datatable-hook-control'
     });
+
+    this.listenTo(this.samplesControlComponent, 'MODELS_UPDATED',
+        _.bind(this.redrawDatatable, this));
   }
 });

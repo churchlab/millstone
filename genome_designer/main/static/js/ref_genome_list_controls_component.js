@@ -50,15 +50,17 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
     // Make the request.
     $.post('/_/ref_genomes/create_from_server_location', requestData,
         _.bind(function(responseData) {
+          this.exitLoadingState();
+
           // Check for error and show in ui. Don't reload the page.
           if (responseData.error.length) {
             alert('Error creating reference genome: ' + responseData.error);
-            this.exitLoadingState();
             return;
           }
 
-          // Success, reload the page.
-          window.location.reload();
+          // Success, emit an event to be handled by parent.
+          this.trigger('MODELS_UPDATED');
+          $('.modal').modal('hide');
         }, this));
   },
 
@@ -116,15 +118,17 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
     // Make the request.
     $.post('/_/ref_genomes/create_from_ncbi', requestData,
         _.bind(function(responseData) {
+          this.exitLoadingState();
+
           // Check for error and show in ui. Don't reload the page.
           if (responseData.error.length) {
             alert('Error creating reference genome: ' + responseData.error);
-            this.exitLoadingState();
             return;
           }
 
-          // Success, reload the page.
-          window.location.reload();
+          // Success, emit an event to be handled by parent.
+          this.trigger('MODELS_UPDATED');
+          $('.modal').modal('hide');
         }, this));
   },
 

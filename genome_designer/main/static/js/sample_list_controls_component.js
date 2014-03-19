@@ -8,6 +8,7 @@ gd.SamplesControlsComponent = Backbone.View.extend({
   initialize: function() {
     this.listenToControls();
 
+    this.uuid = qq.getUniqueId();
     this.maybeCreateFineS3Uploader();
   },
 
@@ -26,15 +27,16 @@ gd.SamplesControlsComponent = Backbone.View.extend({
       return;
     }
 
-    var onSuccess = function(responseData) {
+    var onSuccess = _.bind(function(responseData) {
       if (responseData.error.length) {
         alert('Error creating samples: ' + responseData.error);
         return;
       }
 
-      // Success, reload the page.
-      window.location.reload();
-    }
+      // Success, emit an event to be handled by parent.
+      this.trigger('MODELS_UPDATED');
+      $('.modal').modal('hide');
+    }, this);
 
     var formData = new FormData(
         $('#gd-samples-create-from-server-location')[0]);
