@@ -1,0 +1,19 @@
+# Removing reads around SNV 3021 in sample 2
+# (to trigger low/no coverage warning)
+# saved old sample2's to ./old/
+# fwd: AACCATTCAGTATT
+# rev: AATACTGAATGGTT
+# some reads with mismatches will be left
+
+mkdir new
+# fwd
+grep -B1 -A2 -P '(CCATTCAG|TACTGAATGG)' old/sample2.simLibrary.1.fq | diff - old/sample2.simLibrary.1.fq | sed '/^> /!d;s/^> //' > new/sample2.simLibrary.1.fq
+# rev
+grep -B1 -A2 -P '(CCATTCAG|TACTGAATGG)' old/sample2.simLibrary.2.fq | diff - old/sample2.simLibrary.2.fq | sed '/^> /!d;s/^> //' > new/sample2.simLibrary.2.fq
+mv new/* .
+
+# alternate approach, remove by number
+
+'Frag_(312|501|163|222|456|442|348|226|514|455|535|154|100|472|446)'
+
+perl -pe 's/@Frag_(\d)[^\n]*\n\w+\n\+\n[^\n]*/'

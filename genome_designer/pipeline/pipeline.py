@@ -13,9 +13,12 @@ from django.conf import settings
 from main.celery_util import CELERY_ERROR_KEY
 from main.celery_util import get_celery_worker_status
 from main.models import AlignmentGroup
+from main.models import Dataset
+from main.model_utils import get_dataset_with_type
 from read_alignment import align_with_bwa_mem
 from snv_calling import get_variant_tool_params
 from snv_calling import find_variants_with_tool
+from snv_calling import flag_variants_from_bed
 
 
 # The default alignment function.
@@ -121,7 +124,11 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
 
     whole_pipeline = chain(align_task_group, variant_caller_group)
 
+
     # now, run the whole pipeline
     whole_pipeline.apply_async()
 
     return alignment_group
+
+
+

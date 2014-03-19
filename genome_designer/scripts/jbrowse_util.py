@@ -150,7 +150,7 @@ def compile_tracklist_json(reference_genome):
             except Exception as e:
                 print e
                 print 'Skipping dir {:s} because it already exists.'.format(
-                        subdir) + ' This should not happen.'
+                        subdir)
 
         # (We're assuming here that any overwriting that individual
         # files do of these fields is not important. The only field
@@ -362,8 +362,6 @@ def add_bed_file_track(reference_genome, sample_alignment, dataset):
     """ Add a bed file to Jbrowse, like that created for CallableLoci. 
         Pass in the dataset model object directly. 
     """
-
-    print 'adding callable loci bed!', reference_genome, sample_alignment, dataset.get_absolute_location()
     
     FLATFILE_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'flatfile-to-json.pl')
 

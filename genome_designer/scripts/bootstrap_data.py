@@ -87,7 +87,7 @@ VARIANTSET_2_LABEL = 'Set B'
 # designed SNPs which are each in some of the samples.
 class FullVCFTestSet:
     TEST_DIR = os.path.join(GD_ROOT,'test_data', 'full_vcf_test_set')
-    NUM_SAMPLES = 2
+    NUM_SAMPLES = 3
     TEST_GENBANK = os.path.join(TEST_DIR, 'mg1655_tolC_through_zupT.gb')
     FASTQ1 = [os.path.join(TEST_DIR, 'sample%d.simLibrary.1.fq' % i)
              for i in range(NUM_SAMPLES)]

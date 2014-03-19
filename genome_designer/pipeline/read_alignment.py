@@ -460,8 +460,7 @@ def compute_callable_loci(reference_genome, sample_alignment,
 
         callable_loci_bed_fn = callable_loci_bed.get_absolute_location()
 
-        # Remove 'CALLABLE' rows
-
+        # Remove 'CALLABLE' rows - we assume no feature means callable
         output = subprocess.check_output(
                 ['grep',  '-v', 'CALLABLE', callable_loci_bed_fn])
 
@@ -469,7 +468,6 @@ def compute_callable_loci(reference_genome, sample_alignment,
 
         # add it as a jbrowse track
         add_bed_file_track(reference_genome, sample_alignment, callable_loci_bed)
-
     except Exception as e:
         print >> stderr, 'WARNING: Callable Loci failed.'
         print >> stderr, str(e)

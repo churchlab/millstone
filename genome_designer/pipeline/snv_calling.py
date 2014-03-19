@@ -12,12 +12,14 @@ from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
 from main.model_utils import clean_filesystem_location
+from main.model_utils import get_dataset_with_type
 from read_alignment import get_insert_size
 from main.s3 import project_files_needed
-from variant_effects import run_snpeff
 from scripts.vcf_parser import parse_alignment_group_vcf
 from scripts.jbrowse_util import add_vcf_track
 from settings import TOOLS_DIR
+from variants.variant_sets import add_variants_to_set_from_bed
+from variant_effects import run_snpeff
 
 # TODO: These VCF types should be set somewhere else. snpeff_util and vcf_parser
 # also use them, but where should they go? settings.py seems logical, but it
@@ -149,9 +151,30 @@ def find_variants_with_tool(alignment_group, variant_params):
     add_vcf_track(alignment_group.reference_genome, alignment_group,
         vcf_dataset_type)
 
-    # Parse the resulting vcf
+    # Parse the resulting vcf, grab variant objects
     parse_alignment_group_vcf(alignment_group, vcf_dataset_type)
 
+    flag_variants_from_bed(alignment_group, Dataset.TYPE.BED_CALLABLE_LOCI)
+
+def flag_variants_from_bed(alignment_group, bed_dataset_type):
+
+    sample_alignments = alignment_group.experimentsampletoalignment_set.all()
+    for sample_alignment in sample_alignments:
+
+        print sample_alignment
+
+        # If there is no callable_loci bed, skip the sample alignment.
+        # TODO: Make this extensible to other BED files we might have
+        callable_loci_bed = get_dataset_with_type(
+                entity=sample_alignment, 
+                type=Dataset.TYPE.BED_CALLABLE_LOCI)
+
+        if not callable_loci_bed: continue
+        
+        # need to add sample_alignment and bed_dataset here.
+        add_variants_to_set_from_bed(
+                sample_alignment= sample_alignment,
+                bed_dataset= callable_loci_bed)
 
 def run_freebayes(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
     """Run freebayes using the bam alignment files keyed by the alignment_type

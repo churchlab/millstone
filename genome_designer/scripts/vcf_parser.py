@@ -66,13 +66,17 @@ def parse_vcf(vcf_dataset, alignment_group):
         for record in vcf_reader:
             record_count += 1
 
-    # Now iterate through the vcf file again and parse the data.
+    # Now iterate through the vcf file again and parse the data, finally
+    # returning all variants created.
+    variants = []
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
 
         # First, update the reference_genome's key list with any new
         # keys from this VCF.
         update_filter_key_map(reference_genome, vcf_reader)
+
+
 
         for record_idx, record in enumerate(vcf_reader):
             print 'vcf_parser: Parsing %d out of %d' % (
@@ -92,7 +96,9 @@ def parse_vcf(vcf_dataset, alignment_group):
             # data fields as well.
             variant, alts = get_or_create_variant(reference_genome,
                     record, vcf_dataset, alignment_group, query_cache)
+            variants.append(variant)
 
+    return variants
 
 def extract_raw_data_dict(vcf_record):
     """Extract a dictionary of raw data from the Record.
