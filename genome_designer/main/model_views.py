@@ -341,6 +341,9 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
     Returns:
         JSON string representation of frontend objects.
     """
+    # needed for reversing urls
+    project_uid = reference_genome.project.uid 
+
     # Parse the list of field names.
     field_list = [fdict['field'] for fdict in field_dict_list]
     # Get a mapping from field to field_dict
@@ -380,7 +383,8 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
                         melted_variant_obj, reference_genome, 
                         alignment_group_vcf_strings)
             elif field == 'variant_set_label':
-                value = _adapt_variant_set_label_field(melted_variant_obj)
+                value = _adapt_variant_set_label_field(
+                        melted_variant_obj, project_uid)
             elif fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
                 parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'], {})
@@ -467,20 +471,59 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
             '</a>')
 
 
-def _adapt_variant_set_label_field(variant_as_dict):
-    """Constructs the label as an anchor that links to the single variant view.
+def _adapt_variant_set_label_field(variant_as_dict, project_uid):
+    """Constructs the labels as anchors that link to the single variant view.
     """
-    if 'all_variant_set_label' in variant_as_dict:
-        value = ''
-        for label in sorted(variant_as_dict['all_variant_set_label']):
-            # Do some ui modification for wihch there is a Sample.
-            if label in variant_as_dict['variant_set_label']:
-                value += '<b>' + label + '</b> '
-            else:
-                value += label + ' '
+
+    all_variant_set_present = 'all_variant_set_label' in variant_as_dict
+    
+    print variant_as_dict
+
+    if all_variant_set_present: 
+        v_label_field, v_uid_field = (
+                'all_variant_set_label',
+                'all_variant_set_uid')
     else:
-        value = variant_as_dict['variant_set_label']
-    return value
+        v_label_field, v_uid_field = (
+                'variant_set_label',
+                'variant_set_uid')
+    
+    # This is a dictionary of individual HTML string anchors mapped by label,
+    # so we can sort it at the very end.
+    variant_set_anchor_map = {}
+
+    # Also get a map of uid to field
+    uid_to_label_map = dict(zip(
+            variant_as_dict[v_uid_field], 
+            variant_as_dict[v_label_field]))
+
+    for uid, label in uid_to_label_map.items():
+
+        if uid is None: continue
+        
+        # this is the link to the variant set view
+        set_href = reverse('main.views.variant_set_view', 
+            args=(project_uid, uid))
+
+        # If the variant set is for this sample, then it will be filled,
+        # Otherwise, it will be outlined. 
+        # Also use outline in cast-view always.
+        set_classes = ['gd-variant-set-badge']
+        if not all_variant_set_present or not (
+                label in variant_as_dict['variant_set_label']):
+            set_classes.append('outline')
+
+        set_html = (
+                "<a href='" + set_href + "'" +
+                "class='" + ' '.join(set_classes) + "'>" +
+                label + "</a>")
+
+        variant_set_anchor_map[label] = set_html
+
+    # Finally, return these anchors alphabetically sorted by label.
+    sorted_set_labels = sorted(variant_set_anchor_map.keys())
+    return ' '.join(
+            [variant_set_anchor_map[i] for i in sorted_set_labels])
 
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
@@ -489,7 +532,7 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
     {'field': 'position'},
     {'field': 'ref'},
     {'field': 'alt'},
-    {'field': 'variant_set_label', 'verbose': 'Variant Set'},
+    {'field': 'variant_set_label', 'verbose': 'Variant Sets'},
     {'field': 'experiment_sample_uid', 'hide': True},
     {'field': 'uid', 'hide': True}
 ]
@@ -499,8 +542,8 @@ CAST_VARIANT_FIELD_DICT_LIST = [
     {'field': 'position'},
     {'field': 'ref'},
     {'field': 'alt'},
-    {'field': 'variant_sets'},
     {'field': 'total_samples', 'verbose': '# Samples'},
+    {'field': 'variant_set_label', 'verbose': 'Variant Sets'},
     {'field': 'uid', 'hide': True}
 ]
 
@@ -625,6 +668,7 @@ def _modify_obj_list_for_variant_set_display(obj_list):
         if obj['uid'] in variant_uid_to_deleted_row_dict:
             catch_all_obj = variant_uid_to_deleted_row_dict[obj['uid']]
             obj['all_variant_set_label'] = catch_all_obj['variant_set_label']
+            obj['all_variant_set_uid'] = catch_all_obj['variant_set_uid']
 
     return modified_obj_list
 
