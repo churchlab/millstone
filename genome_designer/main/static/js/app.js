@@ -25,6 +25,10 @@ gd.App.prototype.run = function() {
       var view = new gd.ProjectView({'model': model});
       break;
 
+    case 'REF_GENOME':
+      var view = new gd.RefGenomeView({});
+      break;
+
     case 'REF_GENOME_LIST':
       var model = new Backbone.Model(INIT_JS_DATA.entity);
       var view = new gd.RefGenomeListView({'model': model});
