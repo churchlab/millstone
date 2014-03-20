@@ -1,6 +1,7 @@
 import copy
 import os
 import re
+import string
 import subprocess
 from subprocess import CalledProcessError
 import sys
@@ -461,13 +462,30 @@ def compute_callable_loci(reference_genome, sample_alignment,
         callable_loci_bed_fn = callable_loci_bed.get_absolute_location()
 
         # Remove 'CALLABLE' rows - we assume no feature means callable
+        # Also convert other features to title case
+
         output = subprocess.check_output(
                 ['grep',  '-v', 'CALLABLE', callable_loci_bed_fn])
 
-        open(callable_loci_bed_fn, 'w').write(output)
+        with open(callable_loci_bed_fn, 'w') as callable_loci_bed_fh:
+            for i, line in enumerate(output.split('\n')):
+                try:
+                    chrom, start, end, feature = line.split()
+                    if feature == 'CALLABLE': 
+                        continue
+                    else:
+                        feature = feature.replace('_',' ')
+                        feature = string.capwords(feature)
 
+                    print >> callable_loci_bed_fh, '\t'.join(
+                            [chrom, start, end, feature])
+                except:
+                   print >> stderr, (
+                            'WARNING: Callable Loci line %d: (%s) couldnt be parsed.' % (
+                                    i, line)) 
         # add it as a jbrowse track
         add_bed_file_track(reference_genome, sample_alignment, callable_loci_bed)
+
     except Exception as e:
         print >> stderr, 'WARNING: Callable Loci failed.'
         print >> stderr, str(e)

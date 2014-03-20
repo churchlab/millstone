@@ -121,14 +121,18 @@ def add_variants_to_set_from_bed(sample_alignment, bed_dataset):
 
     with open(bed_dataset_fn) as bed_dataset_fh:
 
-        for line in bed_dataset_fh:
-            chrom, start, end, feature = line.split()
-            # make a new interval from start to end
-            new_ivl = interval([start, end])
+        for i, line in enumerate(bed_dataset_fh):
+            try:
+                chrom, start, end, feature = line.split('\t')
+                # make a new interval from start to end
+                new_ivl = interval([start, end])
 
-            # add new ivl to old ivls
-            curr_ivl = feature_disj_intervals[feature][chrom] 
-            feature_disj_intervals[feature][chrom] = curr_ivl | new_ivl
+                # add new ivl to old ivls
+                curr_ivl = feature_disj_intervals[feature][chrom] 
+                feature_disj_intervals[feature][chrom] = curr_ivl | new_ivl
+            except:
+                print 'WARNING: Callable Loci line %d: (%s) couldnt be parsed.' % (i, line)
+
 
     # 2. Associate variants with these intervals 
     variants = Variant.objects.filter(
