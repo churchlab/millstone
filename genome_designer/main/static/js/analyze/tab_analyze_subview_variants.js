@@ -55,7 +55,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     // Register listeners.
     $('#gd-filter-box-apply-btn').click(
-        _.bind(this.handleApplyFilterClick, this));
+        _.bind(this.updateVariantList, this));
     $('.gd-snp-filter-melt-toggle').click(
         _.bind(this.handleMeltedToggleClick, this));
     $('#gd-filter-field-select-btn').click(
@@ -283,6 +283,14 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
   /** Kicks off the process for updating the list of displayed variants. */
   updateVariantList: function() {
+    // Update the model.
+    this.model.set('filterString', $('#gd-new-filter-input').val());
+
+    // Update the url with the filter.
+    var updatedPath = gd.Util.updateQueryStringParameter(
+        gd.Util.getFullPath(), 'filter', this.model.get('filterString'));
+    this.trigger('NAVIGATE', {'path': updatedPath});
+
     // Hide any alert.
     this.handleErrorAlertClose();
 
@@ -302,23 +310,6 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     $.get('/_/variants', requestData,
         _.bind(this.handleGetVariantListResponse, this));
-  },
-
-
-  /** Handles a click on the 'Apply Filter' button. */
-  handleApplyFilterClick: function() {
-    // Update the model.
-    // NOTE: We are not being super consistent about this but can't hurt
-    //     to keep doing it where possible.
-    this.model.set('filterString', $('#gd-new-filter-input').val());
-
-    // Update the url with the filter.
-    var updatedPath = gd.Util.updateQueryStringParameter(
-        gd.Util.getFullPath(), 'filter', this.model.get('filterString'));
-    this.trigger('NAVIGATE', {'path': updatedPath});
-
-    // Kick off request to update the Variant data being displayed.
-    this.updateVariantList();
   },
 
 
@@ -406,7 +397,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         return;
       }
 
-      this.handleApplyFilterClick();
+      this.updateVariantList();
     }, this);
 
     // Execute the post. Should return a redirect response.
