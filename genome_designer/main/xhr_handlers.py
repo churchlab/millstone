@@ -29,7 +29,6 @@ from django.views.decorators.http import require_POST
 # from debug.debug_util import FakeException
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
-from main.data_util import lookup_variants
 from main.model_views import get_all_fields
 from main.model_views import adapt_variant_to_frontend
 from main.model_views import GeneView
@@ -54,6 +53,7 @@ from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
 from variants.common import determine_visible_field_names
 from variants.materialized_variant_filter import get_variants_that_pass_filter
+from variants.materialized_variant_filter import lookup_variants
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.variant_sets import update_variant_in_set_memberships
 

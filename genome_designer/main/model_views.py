@@ -3,6 +3,7 @@ Classes that describe how a particular model should be viewed.
 """
 
 from collections import defaultdict
+from itertools import groupby
 import json
 from math import floor
 import string
@@ -11,7 +12,6 @@ from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
 from main.constants import UNDEFINED_STRING
-from main.data_util import cast_object_list_field_as_bucket_string
 from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
@@ -367,6 +367,17 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     fe_obj_list = []
     for melted_variant_obj in obj_list:
         visible_field_pairs = []
+
+        # If there is an empty row (no ExperimentSample associated),
+        # then all the counts will be off by one, so we need to decrement
+        # them.
+        if not melted:
+            if None in melted_variant_obj['experiment_sample_uid']:
+                maybe_dec = 1
+            else:
+                maybe_dec = 0
+            assert maybe_dec >= 0, "maybe_dec should be positive"
+
         for fdict in field_dict_list:
             value = None
             field = fdict['field']
@@ -383,6 +394,17 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
                 value = _adapt_variant_set_label_field(
                         melted_variant_obj, reference_genome.project.uid,
                         melted)
+            elif field == 'ref' and not melted:
+                value = (melted_variant_obj['ref'] + ' (%d)' %
+                        melted_variant_obj['alt'].count(None))
+            elif field == 'alt' and not melted:
+                processed_alts = sorted(filter(
+                        lambda alt: alt, melted_variant_obj['alt']))
+                value = ' | '.join(['%s (%d)' %
+                    (val, len(list(group)) - maybe_dec)
+                    for val, group in groupby(processed_alts)])
+            elif field == 'total_samples':
+                value = len(melted_variant_obj['alt']) - maybe_dec
             elif fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
                 parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'], {})
@@ -755,3 +777,28 @@ def _prepare_visible_key_name_for_adapting_to_fe(key_name, key_to_parent_map):
         result['is_subkey'] = True
         result['parent_col'] = parent_col
     return result
+
+
+def cast_object_list_field_as_bucket_string(cast_object_dict_list, field):
+    """Converts a Cast object's field as a list into a string where values
+    have been bucketed by unique type, with counts in parens.
+
+    TODO: This doesn't really make sense for fields that take on continuous
+    number values. Figure out what to do with these kinds of fields.
+    """
+    # First, extract the relevant fields.
+    value_list = []
+    for cast_object_dict in cast_object_dict_list:
+        if cast_object_dict is None:
+            value_list.append('NONE')
+        else:
+            value_list.append(cast_object_dict.get(field, ''))
+
+    # Count.
+    buckets = defaultdict(lambda: 0)
+    for val in value_list:
+        buckets[str(val)] += 1
+
+    # Create string.
+    return (' | '.join(['%s (%d)' % (key, count)
+            for key, count in buckets.iteritems()]))

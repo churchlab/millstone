@@ -350,8 +350,42 @@ class VariantFilterEvaluator(object):
 
 
 ###############################################################################
-# Main client method.
+# Main client methods.
 ###############################################################################
+
+class LookupVariantsResult(object):
+    """Result of a call to lookup_variants.
+
+    Attributes:
+        result_list: List of cast or melted Variant objects.
+        num_total_variants: Total number of variants that match query.
+            For pagination.
+    """
+    def __init__(self, result_list, num_total_variants):
+        self.result_list = result_list
+        self.num_total_variants = num_total_variants
+
+
+def lookup_variants(query_args, reference_genome):
+    """Manages the end-to-end flow of looking up Variants that match the
+    given filter.
+
+    Returns:
+        LookupVariantsResult object which contains the list of matching
+        Variant objects as dictionaries and a count of total results.
+    """
+    # Get the Variants that pass the filter.
+    page_results = get_variants_that_pass_filter(query_args, reference_genome)
+
+    # Now get all results that pass the filter (remove limit clause)
+    query_args['count_only'] = True
+    query_args['pagination_start'] = 0
+    query_args['pagination_len'] = -1  # for no limit
+    num_total_variants = get_variants_that_pass_filter(query_args,
+            reference_genome)[0]['count']
+
+    return LookupVariantsResult(page_results, num_total_variants)
+
 
 def get_variants_that_pass_filter(query_args, ref_genome):
     """Takes a complete filter string and returns the variants that pass the
