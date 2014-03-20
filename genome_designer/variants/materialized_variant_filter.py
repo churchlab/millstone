@@ -198,7 +198,10 @@ class VariantFilterEvaluator(object):
                 """
                 if column == 'position':
                     return column
-                elif column in ['alt', 'va_data', 'vccd_data', 've_data']:
+                elif column == 'variant_set_label':
+                    # NOTE: Custom array_agg_mult created
+                    return 'array_agg_mult(' + column + ') as ' + column
+                elif column in ['alt', 'va_data', 'vccd_data', 've_data', 'experiment_sample_uid']:
                     return 'array_agg(' + column + ') as ' + column
                 else:
                     return 'min(' + column + ') as ' + column

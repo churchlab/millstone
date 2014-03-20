@@ -182,3 +182,6 @@ if settings.DEBUG:
     from django.conf.urls.static import static
     urlpatterns += static('jbrowse', document_root=settings.JBROWSE_ROOT,
             show_indexes=True)
+
+from main import startup
+startup.run()

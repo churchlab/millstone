@@ -56,6 +56,15 @@ def lookup_variants(query_args, reference_genome):
 
 def format_cast_objects(page_results):
     for page_result in page_results:
+        # If there is an empty row (no ExperimentSample associated),
+        # then all the counts will be off by one, so we need to decrement
+        # them.
+        if None in page_result['experiment_sample_uid']:
+            maybe_dec = 1
+        else:
+            maybe_dec = 0
+        assert maybe_dec >= 0, "maybe_dec should be positive"
+
         alts = page_result['alt']
 
         # Append ref with count of # variants without alt
@@ -64,11 +73,19 @@ def format_cast_objects(page_results):
         # List frequency of each alt
         processed_alts = sorted(filter(lambda alt: alt, alts))
         page_result['alt'] = ' | '.join(['%s (%d)' %
-            (val, len(list(group))) for val, group in groupby(processed_alts)])
+            (val, len(list(group)) - maybe_dec)
+            for val, group in groupby(processed_alts)])
+
+        # Combine variant sets, with frequencies.
+        variant_set_label_list = page_result['variant_set_label']
+        processed_variant_set_label_list = sorted(filter(
+                lambda vs_label: vs_label, variant_set_label_list))
+        page_result['variant_sets'] = ' | '.join(['%s (%d)' %
+            (val, len(list(group)) - maybe_dec) for val, group in groupby(
+                    processed_variant_set_label_list)])
 
         # Add additional information specific to cast view
-        page_result['variant_sets'] = ''
-        page_result['total_samples'] = len(alts)
+        page_result['total_samples'] = len(alts) - maybe_dec
     return page_results
 
 

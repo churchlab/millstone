@@ -34,13 +34,26 @@ class TempFilesystemTestSuiteRunner(NoseTestSuiteRunner):
         if os.path.exists(settings.MEDIA_ROOT):
             shutil.rmtree(settings.MEDIA_ROOT)
 
+
 class CustomTestSuiteRunner(TempFilesystemTestSuiteRunner):
     """Our custom TestSuiteRunner.
     """
 
     def setup_test_environment(self, **kwargs):
+        # Catch leftover .pyc from, say, changing git branches.
         assert_no_orphaned_pyc_files('.')
-        return super(TempFilesystemTestSuiteRunner, self).setup_test_environment()
+
+        # Make sure the startup function works.
+        from django.db.models.signals import post_syncdb
+        import main
+        post_syncdb.connect(handle_post_syncdb_startup, sender=main.models)
+
+        return super(CustomTestSuiteRunner, self).setup_test_environment()
+
+
+def handle_post_syncdb_startup(sender, **kwargs):
+    from main import startup
+    startup.run()
 
 
 def assert_no_orphaned_pyc_files(start_dir):
