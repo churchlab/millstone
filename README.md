@@ -234,6 +234,10 @@ hard-coded test models only.
 On Ubuntu, if your database is called `gdv2db`:
 
     sudo -u postgres psql gdv2db
+    
+To debug tests with pdb, add `pdb.set_trace()` checkpoints and use a command similar to:
+
+    REUSE_DB=1 ./manage.py test -s --pdb --pdb-failures main/tests/test_xhr_handlers.py:TestGetVariantList.test__basic_function
 
 ### Profiling code
 
