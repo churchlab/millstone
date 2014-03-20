@@ -1,5 +1,6 @@
 # Django settings for genome_designer project.
 
+import logging
 import os
 
 from django.conf import global_settings
@@ -390,6 +391,10 @@ TEST_RUNNER = 'test_suite_runner.CustomTestSuiteRunner'
 TEST_FILESYSTEM_DIR = os.path.join(PWD, 'temp_test_data')
 
 TEST_S3 = False
+
+# Don'w show south DEBUG logs.
+south_logger = logging.getLogger('south')
+south_logger.setLevel(logging.INFO)
 
 
 ###############################################################################
