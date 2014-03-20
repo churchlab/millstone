@@ -198,7 +198,7 @@ class VariantFilterEvaluator(object):
                 """
                 if column == 'position':
                     return column
-                elif column == 'variant_set_label':
+                elif column in ['variant_set_label', 'variant_set_uid']:
                     # NOTE: Custom array_agg_mult created
                     return 'array_agg_mult(' + column + ') as ' + column
                 elif column in ['alt', 'va_data', 'vccd_data', 've_data', 'experiment_sample_uid']:

@@ -335,15 +335,12 @@ class GeneView(object):
         ]
 
 
-def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
+def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     """Adapts of list of objects that doesn't require recursive calling.
 
     Returns:
         JSON string representation of frontend objects.
     """
-    # needed for reversing urls
-    project_uid = reference_genome.project.uid 
-
     # Parse the list of field names.
     field_list = [fdict['field'] for fdict in field_dict_list]
     # Get a mapping from field to field_dict
@@ -359,7 +356,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
 
     # We want a list of all VCF tracks for jbrowse. Makes sense to do it
     # once and then pass the strings to each variant object for the frontend.
-    # This is a little hacky, but whatever. 
+    # This is a little hacky, but whatever.
     alignment_group_vcf_strings = []
     for alignment_group in reference_genome.alignmentgroup_set.all():
         alignment_group_vcf_strings.append('_'.join([
@@ -380,11 +377,12 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome=None):
                         melted_variant_obj, reference_genome)
             elif field == 'position':
                 value = _create_jbrowse_link_for_variant_object(
-                        melted_variant_obj, reference_genome, 
+                        melted_variant_obj, reference_genome,
                         alignment_group_vcf_strings)
             elif field == 'variant_set_label':
                 value = _adapt_variant_set_label_field(
-                        melted_variant_obj, project_uid)
+                        melted_variant_obj, reference_genome.project.uid,
+                        melted)
             elif fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
                 parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'], {})
@@ -471,54 +469,103 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
             '</a>')
 
 
-def _adapt_variant_set_label_field(variant_as_dict, project_uid):
+def _adapt_variant_set_label_field(variant_as_dict, project_uid, melted):
     """Constructs the labels as anchors that link to the single variant view.
     """
-
-    all_variant_set_present = 'all_variant_set_label' in variant_as_dict
-    
-    print variant_as_dict
-
-    if all_variant_set_present: 
-        v_label_field, v_uid_field = (
-                'all_variant_set_label',
-                'all_variant_set_uid')
+    if melted:
+        return _adapt_variant_set_label_field__melted(
+                variant_as_dict, project_uid)
     else:
-        v_label_field, v_uid_field = (
-                'variant_set_label',
-                'variant_set_uid')
-    
-    # This is a dictionary of individual HTML string anchors mapped by label,
+        return _adapt_variant_set_label_field__cast(
+                variant_as_dict, project_uid)
+
+
+def _adapt_variant_set_label_field__melted(variant_as_dict, project_uid):
+    # Build a dictionary of individual HTML string anchors mapped by label,
     # so we can sort it at the very end.
     variant_set_anchor_map = {}
 
-    # Also get a map of uid to field
+    # Also get a map of uid to field.
     uid_to_label_map = dict(zip(
-            variant_as_dict[v_uid_field], 
-            variant_as_dict[v_label_field]))
-
+            variant_as_dict['all_variant_set_uid'],
+            variant_as_dict['all_variant_set_label']))
     for uid, label in uid_to_label_map.items():
+        if uid is None or label is None:
+            continue
 
-        if uid is None: continue
-        
-        # this is the link to the variant set view
-        set_href = reverse('main.views.variant_set_view', 
-            args=(project_uid, uid))
+        # This is the link to the variant set view.
+        variant_set_href = reverse('main.views.variant_set_view',
+                args=(project_uid, uid))
 
         # If the variant set is for this sample, then it will be filled,
-        # Otherwise, it will be outlined. 
-        # Also use outline in cast-view always.
-        set_classes = ['gd-variant-set-badge']
-        if not all_variant_set_present or not (
-                label in variant_as_dict['variant_set_label']):
-            set_classes.append('outline')
+        # Otherwise, it will be outlined. Cast view always uses outline.
+        variant_set_classes = ['gd-variant-set-badge']
+        if not label in variant_as_dict['variant_set_label']:
+            variant_set_classes.append('outline')
 
-        set_html = (
-                "<a href='" + set_href + "'" +
-                "class='" + ' '.join(set_classes) + "'>" +
+        # Build the html to display.
+        variant_set_html = (
+                "<a href='" + variant_set_href + "'" +
+                "class='" + ' '.join(variant_set_classes) + "'>" +
                 label + "</a>")
 
-        variant_set_anchor_map[label] = set_html
+        # Store it in the map.
+        variant_set_anchor_map[label] = variant_set_html
+
+    # Finally, return these anchors alphabetically sorted by label.
+    sorted_set_labels = sorted(variant_set_anchor_map.keys())
+    return ' '.join(
+            [variant_set_anchor_map[i] for i in sorted_set_labels])
+
+
+def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
+    # If there is an empty row (no ExperimentSample associated),
+    # then all the counts will be off by one, so we need to decrement
+    # them.
+    if None in variant_as_dict['experiment_sample_uid']:
+        maybe_dec = 1
+    else:
+        maybe_dec = 0
+    assert maybe_dec >= 0, "Remaining code expects maybe_dec to be positive"
+
+    # Bucket the labels and count occurrences.
+    variant_set_label_to_count_map = defaultdict(lambda: 0)
+    for label in variant_as_dict['variant_set_label']:
+        if not label:
+            continue
+        variant_set_label_to_count_map[label] += 1
+
+    # Apply decrement if applicable.
+    for label, count in variant_set_label_to_count_map.iteritems():
+        variant_set_label_to_count_map[label] = count - maybe_dec
+
+    # Build a map from label to uid so we can make hrefs.
+    variant_set_label_to_uid_map = dict(zip(
+            variant_as_dict['variant_set_label'],
+            variant_as_dict['variant_set_uid']))
+
+    # Build a dictionary of individual HTML string anchors mapped by label.
+    # Sort at the end.
+    variant_set_anchor_map = {}
+    for label, count in variant_set_label_to_count_map.iteritems():
+        uid = variant_set_label_to_uid_map[label]
+
+        # This is the link to the variant set view.
+        variant_set_href = reverse('main.views.variant_set_view',
+                args=(project_uid, uid))
+
+        # If the variant set is for this sample, then it will be filled,
+        # Otherwise, it will be outlined. Cast view always uses outline.
+        variant_set_classes = ['gd-variant-set-badge', 'outline']
+
+        # Build the html to display.
+        variant_set_html = (
+                "<a href='" + variant_set_href + "'" +
+                "class='" + ' '.join(variant_set_classes) + "'>" +
+                label + ": " + str(count) + "</a>")
+
+        # Store it in the map.
+        variant_set_anchor_map[label] = variant_set_html
 
     # Finally, return these anchors alphabetically sorted by label.
     sorted_set_labels = sorted(variant_set_anchor_map.keys())
@@ -619,13 +666,16 @@ def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
         JSON string with the objects in the form that can be drawn by the
         Datatables component.
     """
-    modified_obj_list = _modify_obj_list_for_variant_set_display(obj_list)
+    if melted:
+        modified_obj_list = _modify_obj_list_for_variant_set_display(obj_list)
+    else:
+        modified_obj_list = obj_list
 
     all_field_dict_list = get_all_fields(
             reference_genome, visible_key_names, melted)
 
     return adapt_non_recursive(modified_obj_list, all_field_dict_list,
-            reference_genome)
+            reference_genome, melted)
 
 
 def _modify_obj_list_for_variant_set_display(obj_list):
@@ -669,6 +719,9 @@ def _modify_obj_list_for_variant_set_display(obj_list):
             catch_all_obj = variant_uid_to_deleted_row_dict[obj['uid']]
             obj['all_variant_set_label'] = catch_all_obj['variant_set_label']
             obj['all_variant_set_uid'] = catch_all_obj['variant_set_uid']
+        else:
+            obj['all_variant_set_label'] = []
+            obj['all_variant_set_uid'] = []
 
     return modified_obj_list
 
