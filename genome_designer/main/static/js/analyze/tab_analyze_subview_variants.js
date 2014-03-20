@@ -36,6 +36,10 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     // Set the view to cast as default.
     // TODO: Url support.
     this.model.set('is_melted', false);
+    if ('melt' in paramObject) {
+      var isMelted = (paramObject['melt'] == '1');
+      this.model.set('is_melted', isMelted);
+    }
 
     gd.TabAnalyzeSubviewAbstractBase.prototype.initialize.call(this);
   },
@@ -289,6 +293,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     // Update the url with the filter.
     var updatedPath = gd.Util.updateQueryStringParameter(
         gd.Util.getFullPath(), 'filter', this.model.get('filterString'));
+    updatedPath = gd.Util.updateQueryStringParameter(
+        updatedPath, 'melt', this.model.get('is_melted') ? '1' : '0');
     this.trigger('NAVIGATE', {'path': updatedPath});
 
     // Hide any alert.
