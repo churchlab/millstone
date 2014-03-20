@@ -1,21 +1,21 @@
-#
-Chromosome	2241	.	G	A	.	.	.
-Chromosome	75	.	C	A	.	.	.
-Chromosome	3169	.	T	C	.	.	.
-Chromosome	1622	.	G	C	.	.	.
-Chromosome	3878	.	A	G	.	.	.
-Chromosome	3111	.	A	T	.	.	.
-Chromosome	1576	.	C	T	.	.	.
-Chromosome	5351	.	G	A	.	.	.
-Chromosome	4385	.	A	T	.	.	.
-Chromosome	1166	.	G	T	.	.	.
-Chromosome	5424	.	T	A	.	.	.
-Chromosome	950	.	C	A	.	.	.
-Chromosome	3992	.	A	G	.	.	.
-Chromosome	225	.	G	C	.	.	.
-Chromosome	2938	.	T	G	.	.	.
-Chromosome	91	.	C	A	.	.	.
-Chromosome	5562	.	A	C	.	.	.
-Chromosome	4445	.	A	C	.	.	.
-Chromosome	606	.	A	G	.	.	.
-Chromosome	5087	.	A	T	.	.	.
+#CHROM	POS	ID	REF	ALT
+NC_000913	2242	.	G	A
+NC_000913	76	.	C	A
+NC_000913	3170	.	T	C
+NC_000913	1623	.	G	C
+NC_000913	3879	.	A	G
+NC_000913	3112	.	A	T
+NC_000913	1577	.	C	T
+NC_000913	5352	.	G	A
+NC_000913	4386	.	A	T
+NC_000913	1167	.	G	T
+NC_000913	5425	.	T	A
+NC_000913	951	.	C	A
+NC_000913	3993	.	A	G
+NC_000913	226	.	G	C
+NC_000913	2939	.	T	G
+NC_000913	92	.	C	A
+NC_000913	5563	.	A	C
+NC_000913	4446	.	A	C
+NC_000913	607	.	A	G
+NC_000913	5088	.	A	T

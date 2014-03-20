@@ -598,6 +598,7 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
 MELTED_VARIANT_FIELD_DICT_LIST = [
     {'field': 'label', 'verbose': 'Mutant'},
     {'field': 'experiment_sample_label', 'verbose': 'Sample'},
+    {'field': 'chromosome'},
     {'field': 'position'},
     {'field': 'ref'},
     {'field': 'alt'},
@@ -608,6 +609,7 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
 
 CAST_VARIANT_FIELD_DICT_LIST = [
     {'field': 'label', 'verbose': 'label'},
+    {'field': 'chromosome'},
     {'field': 'position'},
     {'field': 'ref'},
     {'field': 'alt'},

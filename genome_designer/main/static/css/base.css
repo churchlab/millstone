@@ -304,6 +304,11 @@ div.dataTables_paginate ul.pagination {
   vertical-align: baseline;
   white-space: nowrap;
   text-align: center;
+  box-sizing: border-box;
+  padding: 2px 6px;
+  min-width: 8px;
+  
   border: solid 1px #43a110;
   background-color: #ffffff;
+
 }

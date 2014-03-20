@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from sympy.core.function import sympify
 
+from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -355,9 +356,15 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 alt_value='T')
         variant.variantalternate_set.add(alt_T)
 
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=self.ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
         common_data_obj = VariantCallerCommonData.objects.create(
                 variant=variant,
                 source_dataset=self.vcf_dataset,
+                alignment_group= alignment_group
         )
 
         raw_sample_data_dict = {
@@ -365,6 +372,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 'gt_type': 2,
                 'gt_bases': 'G/G'
         }
+
         sample_1_evidence = VariantEvidence.objects.create(
                 experiment_sample=self.sample_obj_1,
                 variant_caller_common_data=common_data_obj,
@@ -461,11 +469,16 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 data=alt_data_dict
         )
 
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=self.ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
         common_data_obj = VariantCallerCommonData.objects.create(
             variant=variant,
             source_dataset=self.vcf_dataset,
+            alignment_group=alignment_group
         )
-
 
         raw_sample_data_dict = {
             'gt_bases': 'T/T',

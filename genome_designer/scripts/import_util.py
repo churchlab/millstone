@@ -420,6 +420,11 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
         # Check that the required columns are present.
         REQUIRED_HEADER_PART = ['CHROM','POS','ID','REF','ALT']
 
+        assert (len(reader.fieldnames) >= len(REQUIRED_HEADER_PART)), (
+            'Header for PseudoVCF %s is too short, should have [%s], has %s' % (
+                    variant_set_file, ' '.join(REQUIRED_HEADER_PART),
+                    ' '.join(reader.fieldnames)))
+
         for col, check in zip(reader.fieldnames[0:len(REQUIRED_HEADER_PART)],
                 REQUIRED_HEADER_PART):
             assert col == check, (
@@ -436,6 +441,7 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
                 self.__dict__['samples'] = []
 
         for record in reader:
+
             record = PseudoVCF(**record)
 
             # Get or create the Variant for this record.

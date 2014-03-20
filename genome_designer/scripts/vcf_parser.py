@@ -180,11 +180,18 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     # Try to find an existing Variant, or create it.
     variant, created = Variant.objects.get_or_create(
             reference_genome=reference_genome,
-            type=type,
             chromosome=chromosome,
             position=position,
             ref_value=ref_value
     )
+
+    # We don't want to search by type above, but we do want to save
+    # the type here. There are weird cases where we might be overwriting
+    # the type (i.e. two SNVs with identical ref/alt but different types),
+    # but I think this is OK for now. 
+    if type:
+        variant.type = type
+        variant.save()
 
     alts = []
     all_alt_keys = reference_genome.get_variant_alternate_map().keys()

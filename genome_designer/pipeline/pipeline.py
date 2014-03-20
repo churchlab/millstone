@@ -6,8 +6,11 @@ and carry out the gauntlet of steps to perform alignments, alignment
 cleaning, snv calling, and effect prediction.
 """
 
+from datetime import datetime
+
 from celery import chain
 from celery import group
+from celery import task
 from django.conf import settings
 
 from main.celery_util import CELERY_ERROR_KEY
@@ -122,13 +125,34 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
 
     variant_caller_group = group(variant_callers)
 
-    whole_pipeline = chain(align_task_group, variant_caller_group)
+    pipeline_completion = pipeline_completion_tasks.s(
+            alignment_group=alignment_group)
 
+    whole_pipeline = chain(
+            align_task_group, 
+            variant_caller_group, 
+            pipeline_completion)
 
     # now, run the whole pipeline
     whole_pipeline.apply_async()
 
     return alignment_group
 
+@task
+def pipeline_completion_tasks(variant_caller_group_result, alignment_group):
+    """
+    Things that happen when the pipeline completes that don't need
+    to be run in parallel.
+    """
+    
+    if hasattr(variant_caller_group_result, 'join'):
+        variant_caller_group_result.join()
 
+    print 'FINISHING PIPELINE.'
 
+    # The alignment group is now officially complete.
+    alignment_group.status = AlignmentGroup.STATUS.COMPLETED
+    alignment_group.end_time = datetime.now()
+    alignment_group.save()
+
+    print alignment_group.status

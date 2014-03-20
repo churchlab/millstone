@@ -1,4 +1,5 @@
 import copy
+from datetime import datetime
 import os
 import re
 import string
@@ -91,6 +92,13 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
             'bwa_align.error')
     error_output = open(error_path, 'w')
 
+    # The alignment group is now officially ALIGNING.
+    if alignment_group.status != AlignmentGroup.STATUS.ALIGNING:
+        alignment_group.status = AlignmentGroup.STATUS.ALIGNING
+        alignment_group.start_time = datetime.now()
+        alignment_group.end_time = None
+        alignment_group.save()
+
     # Create a Dataset object and set the state to COMPUTING.
     bwa_dataset = Dataset.objects.create(
             label=Dataset.TYPE.BWA_ALIGN,
@@ -102,7 +110,6 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
     # We wrap the alignment logic in a try-except so that if an error occurs,
     # we record it and update the status of the Dataset to FAILED if anything
     # should fail.
-
     try:
         # Build index if the index doesn't exist.
         # NOTE: When aligning multiple samples to the same reference genome
@@ -474,8 +481,11 @@ def compute_callable_loci(reference_genome, sample_alignment,
                     if feature == 'CALLABLE': 
                         continue
                     else:
+
                         feature = feature.replace('_',' ')
                         feature = string.capwords(feature)
+                        # Bed feature can't have spaces =(
+                        feature = feature.replace(' ','_')
 
                     print >> callable_loci_bed_fh, '\t'.join(
                             [chrom, start, end, feature])

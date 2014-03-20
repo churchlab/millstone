@@ -44,6 +44,7 @@ from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
 from scripts.import_util import import_reference_genome_from_local_file
+from scripts.import_util import import_variant_set_from_vcf
 
 from settings import PWD as GD_ROOT
 
@@ -288,6 +289,9 @@ def bootstrap_fake_data():
     # reference genome's uid.
     full_vcf_alignment_group = run_pipeline(
             'test_align', full_vcf_reference_genome, full_vcf_samples)
+
+    import_variant_set_from_vcf(full_vcf_reference_genome, 'Designed',
+            FullVCFTestSet.TEST_DESIGNED_SNPS)
 
     def _create_region_intervals(region, interval_tuple_list):
         """Helper method to create RegionIntervals for a Region.

@@ -8,6 +8,7 @@ import subprocess
 
 from celery import task
 
+from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
@@ -111,6 +112,12 @@ def find_variants_with_tool(alignment_group, variant_params):
     common_params = get_common_tool_params(alignment_group)
     tool_name, vcf_dataset_type, tool_function = variant_params
 
+    # Finding variants means that all the aligning is complete, so now we
+    # are VARIANT_CALLING.
+    alignment_group.status = AlignmentGroup.STATUS.VARIANT_CALLING
+    alignment_group.save()
+
+
     # Create subdirectory for this tool
     tool_dir = os.path.join(common_params['output_dir'], tool_name)
     ensure_exists_0775_dir(tool_dir)
@@ -155,6 +162,8 @@ def find_variants_with_tool(alignment_group, variant_params):
     parse_alignment_group_vcf(alignment_group, vcf_dataset_type)
 
     flag_variants_from_bed(alignment_group, Dataset.TYPE.BED_CALLABLE_LOCI)
+
+    return True
 
 def flag_variants_from_bed(alignment_group, bed_dataset_type):
 

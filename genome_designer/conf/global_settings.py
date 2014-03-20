@@ -261,6 +261,7 @@ BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_IMPORTS = (
         'pipeline.read_alignment',
         'pipeline.snv_calling',
+        'pipeline.pipeline'
 )
 
 # When True, forces synchronous behavior so that it's not necessary

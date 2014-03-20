@@ -156,7 +156,10 @@ class Dataset(UniqueUidModelMixin):
         Limit to 40-chars as per Dataset.status field def.
         """
         UNKNOWN = 'UNKNOWN'
+        NOT_STARTED = 'NOT_STARTED'
         COMPUTING = 'COMPUTING'
+        ALIGNING = 'ALIGNING'
+        VARIANT_CALLING = 'VARIANT_CALLING'
         READY = 'READY'
         FAILED = 'FAILED'
     STATUS_CHOICES = make_choices_tuple(STATUS)
@@ -637,31 +640,29 @@ class AlignmentGroup(UniqueUidModelMixin):
     aligner = models.CharField(max_length=10, choices=ALIGNER_CHOICES)
 
     # Times for the alignment run.
-    start_time = models.DateTimeField(auto_now=True)
-    end_time = models.DateTimeField(auto_now=True)
+    start_time = models.DateTimeField(blank=True, null=True)
+    end_time = models.DateTimeField(blank=True, null=True)
 
     # Datasets pointing to files on the system (e.g. .fasta files, etc.)
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
             verbose_name="Datasets")
 
-    @property
-    def status(self):
-        """Returns an aggregate status.
+    class STATUS:
         """
-        any_computing = False
-        for alignment in self.experimentsampletoalignment_set.all():
-            alignment_dataset = get_dataset_with_type(alignment,
-                    Dataset.TYPE.BWA_ALIGN)
-            if not alignment_dataset:
-                return Dataset.STATUS.UNKNOWN
-            if (alignment_dataset.status in [
-                    Dataset.STATUS.FAILED, Dataset.STATUS.UNKNOWN]):
-                return alignment_dataset.status
-            if alignment_dataset.status == Dataset.STATUS.COMPUTING:
-                any_computing = True
-        if any_computing:
-            return Dataset.STATUS.COMPUTING
-        return Dataset.STATUS.READY
+        The status of running this Dataset.
+
+        Limit to 40-chars as per Dataset.status field def.
+        """
+        NOT_STARTED = 'NOT_STARTED'
+        ALIGNING = 'ALIGNING'
+        VARIANT_CALLING = 'VARIANT_CALLING'
+        COMPLETED = 'COMPLETED'
+        FAILED = 'FAILED'
+        UNKNOWN = 'UNKNOWN'
+    STATUS_CHOICES = make_choices_tuple(STATUS)
+    
+    status = models.CharField('Alignment Status', 
+            max_length=40, choices=STATUS_CHOICES, default=STATUS.NOT_STARTED)
 
     def __unicode__(self):
         return self.label
@@ -940,9 +941,7 @@ class VariantCallerCommonData(Model, VisibleFieldMixin):
     # Catch-all key-value data store.
     data = PostgresJsonField()
 
-    # TODO: This null=True is not necessary, if we ever reset south,
-    # we can take it away.
-    alignment_group = models.ForeignKey('AlignmentGroup', null=True)
+    alignment_group = models.ForeignKey('AlignmentGroup')
 
     def __getattr__(self, name):
         """Automatically called if an attribute is not found in the typical
