@@ -22,6 +22,7 @@ DEMO_SAFE_VIEWS = [
     'main.xhr_handlers.get_variant_list',
     'main.xhr_handlers.get_variant_set_list',
     'main.xhr_handlers.get_gene_list',
+    'main.xhr_handlers.refresh_materialized_variant_table',
     'main.xhr_handlers.get_alignment_groups',
     'main.xhr_handlers.is_materialized_view_valid',
     'main.xhr_handlers.get_ref_genomes',
