@@ -415,7 +415,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
                 value = len(melted_variant_obj[MELTED_SCHEMA_KEY__ALT]) - maybe_dec
             elif fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
-                parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'], {})
+                parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'].upper(), {})
                 if isinstance(parent_dict_or_list, dict):
                     # melted
                     parent_dict = parent_dict_or_list
