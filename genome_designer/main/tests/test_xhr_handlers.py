@@ -4,22 +4,22 @@ Tests for xhr_handlers.py.
 
 import json
 import os
+import re
 
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
-from django.http.request import HttpRequest
 from django.test import Client
 from django.test import TestCase
 
-from main.adapters import OBJ_LIST
+from main.models import AlignmentGroup
 from main.models import Dataset
+from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
+from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
-from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__PROJECT_UID
-from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__REF_GENOME_UID
-from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__VISIBLE_KEYS
+from main.models import VariantEvidence
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__TOTAL
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__SET_LIST
@@ -27,6 +27,7 @@ from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__KEY_MAP
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
 
 
 TEST_USERNAME = 'testusername'
@@ -40,6 +41,7 @@ STATUS_CODE__NOT_FOUND = 404
 STATUS_CODE__NOT_LOGGED_IN = 302
 STATUS_CODE__SUCCESS = 200
 
+
 class TestGetVariantList(TestCase):
 
     url = reverse('main.xhr_handlers.get_variant_list')
@@ -52,6 +54,9 @@ class TestGetVariantList(TestCase):
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(project=self.project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
+        self.sample_obj_1 = ExperimentSample.objects.create(
+                project=self.project, label='fake sample', group='Plate 1',
+                well='A01', num_reads=100)
 
         # Make sure the reference genome has the required vcf keys.
         initialize_filter_key_map(self.ref_genome)
@@ -83,14 +88,38 @@ class TestGetVariantList(TestCase):
     def test__basic_function(self):
         """Basic test.
         """
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=self.ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
         TOTAL_NUM_VARIANTS = 10
         for pos in range(TOTAL_NUM_VARIANTS):
-            Variant.objects.create(
+            # We need all these models for testing because this is what the
+            # materialized view create requires to return non-null results.
+            variant = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.ref_genome,
                     chromosome='chrom',
                     position=pos,
                     ref_value='A')
+
+            VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='G')
+
+            common_data_obj = VariantCallerCommonData.objects.create(
+                variant=variant,
+                source_dataset=self.vcf_dataset,
+                alignment_group=alignment_group)
+
+            VariantEvidence.objects.create(
+                experiment_sample=self.sample_obj_1,
+                variant_caller_common_data=common_data_obj)
+
+        # Sanity check that the Variants were actually created.
+        self.assertEqual(TOTAL_NUM_VARIANTS, Variant.objects.filter(
+                reference_genome=self.ref_genome,).count())
 
         request_data = {
             'refGenomeUid': self.ref_genome.uid,
@@ -114,9 +143,20 @@ class TestGetVariantList(TestCase):
                         str(EXPECTED_RESPONSE_KEYS -
                                 set(response_data.keys())),
                         str(set(response_data.keys()))))
-        # if not all(key in response_data for key in EXPECTED_RESPONSE_KEYS):
-        #     self.fail('Missing keys in response')
 
-        # TODO(gleb): Uncomment when we fix total counts.
-        # self.assertEqual(TOTAL_NUM_VARIANTS,
-        #         response_data[VARIANT_LIST_RESPONSE_KEY__TOTAL])
+        self.assertEqual(TOTAL_NUM_VARIANTS,
+                response_data[VARIANT_LIST_RESPONSE_KEY__TOTAL])
+
+        # Check total variants returned is correct.
+        variant_data_obj = json.loads(response_data[
+                VARIANT_LIST_RESPONSE_KEY__LIST])
+        variant_obj_list = variant_data_obj['obj_list']
+        self.assertTrue(TOTAL_NUM_VARIANTS, len(variant_obj_list))
+
+        # Check positions are correct.
+        def _get_position_from_frontend_object(fe_obj):
+            return int(re.match('<.*>([0-9]+)<.*', fe_obj[
+                    MELTED_SCHEMA_KEY__POSITION]).group(1))
+        variant_position_set = set([_get_position_from_frontend_object(obj)
+                for obj in variant_obj_list])
+        self.assertEqual(set(range(TOTAL_NUM_VARIANTS)), variant_position_set)

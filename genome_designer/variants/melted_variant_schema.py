@@ -41,6 +41,9 @@ class SchemaBuilder(object):
     def get_schema(self):
         return self.schema
 
+# Schema keys.
+# TODO: Convert other keys to use constants.
+MELTED_SCHEMA_KEY__POSITION = 'position'
 
 SCHEMA_BUILDER = SchemaBuilder()
 # SCHEMA_BUILDER.add_melted_variant_field(<source_col_name>,
@@ -51,7 +54,7 @@ SCHEMA_BUILDER = SchemaBuilder()
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.id', 'id', False, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.uid', 'uid', False, True,
         {'type': 'String', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.position', 'position', False, True,
+SCHEMA_BUILDER.add_melted_variant_field('main_variant.position', MELTED_SCHEMA_KEY__POSITION, False, True,
         {'type': 'Integer', 'num': 1})
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', 'chromosome', False, True,
         {'type': 'String', 'num': 1})
