@@ -55,6 +55,9 @@ MELTED_SCHEMA_KEY__ES_LABEL = 'EXPERIMENT_SAMPLE_LABEL'
 MELTED_SCHEMA_KEY__VS_UID = 'VARIANT_SET_UID'
 MELTED_SCHEMA_KEY__VS_LABEL = 'VARIANT_SET_LABEL'
 
+# Used for aggregate total sample count in Postgres query.
+CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT = 'SAMPLE_COUNT'
+
 SCHEMA_BUILDER = SchemaBuilder()
 # SCHEMA_BUILDER.add_melted_variant_field(<source_col_name>,
 #         <joined_table_col_named>, <is_null_in_variant_to_set_label>,

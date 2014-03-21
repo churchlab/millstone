@@ -24,6 +24,7 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import generate_key_to_materialized_view_parent_col
 from variants.common import validate_key_against_map
+from variants.melted_variant_schema import CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_LABEL
@@ -411,8 +412,9 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
                 value = ' | '.join(['%s (%d)' %
                     (val, len(list(group)) - maybe_dec)
                     for val, group in groupby(processed_alts)])
-            elif field == 'total_samples':
-                value = len(melted_variant_obj[MELTED_SCHEMA_KEY__ALT]) - maybe_dec
+            elif field == CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT:
+                value = (melted_variant_obj[
+                        CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT] - maybe_dec)
             elif fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
                 parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'].upper(), {})
@@ -621,7 +623,7 @@ CAST_VARIANT_FIELD_DICT_LIST = [
     {'field': MELTED_SCHEMA_KEY__POSITION},
     {'field': MELTED_SCHEMA_KEY__REF},
     {'field': MELTED_SCHEMA_KEY__ALT},
-    {'field': 'total_samples', 'verbose': '# Samples'},
+    {'field': CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT, 'verbose': '# Samples'},
     {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Variant Sets'},
     {'field': MELTED_SCHEMA_KEY__UID, 'hide': True}
 ]

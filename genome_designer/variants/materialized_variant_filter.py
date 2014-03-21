@@ -20,13 +20,10 @@ from variants.common import get_delim_key_value_triple
 from variants.common import SymbolGenerator
 from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
-from variants.melted_variant_schema import MELTED_SCHEMA_KEY__UID
+from variants.melted_variant_schema import CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
-from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
-from variants.melted_variant_schema import MELTED_SCHEMA_KEY__REF
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
-from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_LABEL
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
 from variants.filter_scope import FilterScope
@@ -199,6 +196,11 @@ class VariantFilterEvaluator(object):
         if self.is_melted:
             return ', '.join(cols)
         else:
+            # Add count column.
+            cols.append(CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT)
+
+            # Rewrite the columns to allow for casting during the Postgres
+            # query.
             def fix(column):
                 """Helper to fix the aggregate query.
 
@@ -207,6 +209,8 @@ class VariantFilterEvaluator(object):
                 """
                 if column == MELTED_SCHEMA_KEY__POSITION:
                     return column
+                elif column == CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT:
+                    return 'count(*) as ' + CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT
                 elif column in [MELTED_SCHEMA_KEY__VS_LABEL, MELTED_SCHEMA_KEY__VS_UID]:
                     # NOTE: Custom array_agg_mult created
                     return 'array_agg_mult(' + column + ') as ' + column
