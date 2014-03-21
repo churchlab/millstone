@@ -392,6 +392,10 @@ def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file):
     _read_variant_set_file_as_csv(variant_set_file, ref_genome, dataset,
             variant_set)
 
+    # These actions invalidate the materialized view.
+    ref_genome.invalidate_materialized_view()
+
+
 def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
         dataset, variant_set):
     """If reading the variant set file as a vcf fails (because we arent using
