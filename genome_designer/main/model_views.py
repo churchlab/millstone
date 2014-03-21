@@ -350,19 +350,6 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     Returns:
         JSON string representation of frontend objects.
     """
-    # Parse the list of field names.
-    field_list = [fdict['field'] for fdict in field_dict_list]
-    # Get a mapping from field to field_dict
-    field_map = dict([(fdict['field'], fdict) for fdict in field_dict_list])
-
-    # Get the verbose names for the fields.
-    def _get_verbose(fdict):
-        if 'verbose' in fdict:
-            return fdict['verbose']
-        else:
-            return string.capwords(fdict['field'], '_').replace('_', ' ')
-    field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
-
     # We want a list of all VCF tracks for jbrowse. Makes sense to do it
     # once and then pass the strings to each variant object for the frontend.
     # This is a little hacky, but whatever.
@@ -440,14 +427,17 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
 
         fe_obj_list.append(dict(visible_field_pairs))
 
-    # Create the config dict required by DataTables.js.
-    obj_field_config = [{
-        'mData': name,
-        'sTitle': verbose_name,
-        'bSortable': False
-    } for (name, verbose_name) in zip(field_list, field_verbose_names) if
-            # skip if hide field is set
-            not field_map[name].get('hide', False)]
+    # Create the config dict that tells DataTables js how to display each col.
+    obj_field_config = []
+    for fdict in field_dict_list:
+        if fdict.get('hide', False):
+            continue
+        obj_field_config.append({
+            'mData': fdict['field'],
+            'sTitle': fdict.get('verbose',
+                    string.capwords(fdict['field'], '_').replace('_', ' ')),
+            'bSortable': fdict.get('sortable', False)
+        })
 
     return json.dumps({
         'obj_list': fe_obj_list,
@@ -620,10 +610,17 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
 CAST_VARIANT_FIELD_DICT_LIST = [
     {'field': 'label', 'verbose': 'label'},
     {'field': MELTED_SCHEMA_KEY__CHROMOSOME},
-    {'field': MELTED_SCHEMA_KEY__POSITION},
+    {
+        'field': MELTED_SCHEMA_KEY__POSITION,
+        'sortable': True
+    },
     {'field': MELTED_SCHEMA_KEY__REF},
     {'field': MELTED_SCHEMA_KEY__ALT},
-    {'field': CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT, 'verbose': '# Samples'},
+    {
+        'field': CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT,
+        'verbose': '# Samples',
+        'sortable': True
+    },
     {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Variant Sets'},
     {'field': MELTED_SCHEMA_KEY__UID, 'hide': True}
 ]
