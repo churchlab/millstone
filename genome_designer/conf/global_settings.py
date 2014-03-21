@@ -404,3 +404,11 @@ south_logger.setLevel(logging.INFO)
 
 # Directory where profiler logs will be stored. See README.md.
 PROFILE_LOG_BASE = None
+
+###############################################################################
+# Demo
+###############################################################################
+
+# Setting True does at least the following:
+#     * Automatic login.
+DEMO_MODE = False

@@ -1,9 +1,9 @@
+from django.conf import settings
 from django.conf.urls import include
 from django.conf.urls import patterns
 from django.conf.urls import url
 from django.views.generic import RedirectView
 
-import settings
 
 urlpatterns = patterns('',
     url(r'^$', 'main.views.home_view'),
@@ -66,20 +66,6 @@ urlpatterns = patterns('',
 
     url(r'^templates/variant_set_upload_template.vcf$',
             'main.views.variant_set_upload_template'),
-
-
-    ###########################################################################
-    # Auth
-    ###########################################################################
-
-    # django-registration defaults
-    # (further delgates to django.contrib.auth.url)
-    (r'^accounts/', include('registration.backends.simple.urls')),
-
-    # The default behavior of registration is redirect to 'users/<username>'.
-    # For now let's catch this request here and just redirect to '/'.
-    (r'^users/', RedirectView.as_view(url='/')),
-
 
     ###########################################################################
     # XHR Actions
@@ -152,6 +138,45 @@ urlpatterns = patterns('',
             'main.xhr_handlers.compile_jbrowse_and_redirect'),
 
 )
+
+
+###########################################################################
+# Auth
+###########################################################################
+
+urlpatterns += patterns('',
+        # The default behavior of registration is redirect to 'users/<username>'.
+        # For now let's catch this request here and just redirect to '/'.
+        (r'^users/', RedirectView.as_view(url='/')),
+)
+
+if settings.DEMO_MODE:
+    from django.contrib.auth import views as auth_views
+    urlpatterns += patterns('',
+        # Automatically log users in during demo.
+        url(r'^accounts/login/$',
+                'main.demo_view_overrides.login_demo_account',
+                name='auto_login'),
+        url(r'^accounts/logout/$',
+               auth_views.logout,
+               {'template_name': 'registration/logout.html'},
+               name='auth_logout'),
+    )
+else:
+    urlpatterns += patterns('',
+        # django-registration defaults
+        # (further delgates to django.contrib.auth.url)
+        (r'^accounts/', include('registration.backends.simple.urls')),
+
+        # The default behavior of registration is redirect to 'users/<username>'.
+        # For now let's catch this request here and just redirect to '/'.
+        (r'^users/', RedirectView.as_view(url='/')),
+    )
+
+
+###########################################################################
+# S3
+###########################################################################
 
 if settings.S3_ENABLED:
     urlpatterns += patterns('',
