@@ -8,6 +8,7 @@ import json
 from math import floor
 import string
 
+from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
@@ -23,8 +24,15 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from variants.common import generate_key_to_materialized_view_parent_col
 from variants.common import validate_key_against_map
-
-from settings import JBROWSE_DEFAULT_VIEW_WINDOW
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_LABEL
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__REF
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__UID
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
 
 
 class BaseVariantView(object):
@@ -327,7 +335,7 @@ class GeneView(object):
     @classmethod
     def get_field_order(clazz, **kwargs):
         return [
-            {'field':'uid'},
+            {'field':MELTED_SCHEMA_KEY__UID},
             {'field':'label'},
             {'field':'start'},
             {'field':'end'},
@@ -372,7 +380,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
         # then all the counts will be off by one, so we need to decrement
         # them.
         if not melted:
-            if None in melted_variant_obj['experiment_sample_uid']:
+            if None in melted_variant_obj[MELTED_SCHEMA_KEY__ES_UID]:
                 maybe_dec = 1
             else:
                 maybe_dec = 0
@@ -386,25 +394,25 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             if field == 'label':
                 value = _create_single_variant_page_link_for_variant_object(
                         melted_variant_obj, reference_genome)
-            elif field == 'position':
+            elif field == MELTED_SCHEMA_KEY__POSITION:
                 value = _create_jbrowse_link_for_variant_object(
                         melted_variant_obj, reference_genome,
                         alignment_group_vcf_strings)
-            elif field == 'variant_set_label':
+            elif field == MELTED_SCHEMA_KEY__VS_LABEL:
                 value = _adapt_variant_set_label_field(
                         melted_variant_obj, reference_genome.project.uid,
                         melted)
-            elif field == 'ref' and not melted:
-                value = (melted_variant_obj['ref'] + ' (%d)' %
-                        melted_variant_obj['alt'].count(None))
-            elif field == 'alt' and not melted:
+            elif field == MELTED_SCHEMA_KEY__REF and not melted:
+                value = (melted_variant_obj[MELTED_SCHEMA_KEY__REF] + ' (%d)' %
+                        melted_variant_obj[MELTED_SCHEMA_KEY__ALT].count(None))
+            elif field == MELTED_SCHEMA_KEY__ALT and not melted:
                 processed_alts = sorted(filter(
-                        lambda alt: alt, melted_variant_obj['alt']))
+                        lambda alt: alt, melted_variant_obj[MELTED_SCHEMA_KEY__ALT]))
                 value = ' | '.join(['%s (%d)' %
                     (val, len(list(group)) - maybe_dec)
                     for val, group in groupby(processed_alts)])
             elif field == 'total_samples':
-                value = len(melted_variant_obj['alt']) - maybe_dec
+                value = len(melted_variant_obj[MELTED_SCHEMA_KEY__ALT]) - maybe_dec
             elif fdict.get('is_subkey', False):
                 assert 'parent_col' in fdict
                 parent_dict_or_list = melted_variant_obj.get(fdict['parent_col'], {})
@@ -451,9 +459,9 @@ def _create_single_variant_page_link_for_variant_object(variant_as_dict,
     """
     full_href = reverse('main.views.single_variant_view',
                 args=(reference_genome.project.uid, reference_genome.uid,
-                        variant_as_dict['uid']))
+                        variant_as_dict[MELTED_SCHEMA_KEY__UID]))
     # Generate label from variant data.
-    label = 'mut_' + str(variant_as_dict['position'])
+    label = 'mut_' + str(variant_as_dict[MELTED_SCHEMA_KEY__POSITION])
     return '<a href="' + full_href + '">' + label + '</a>'
 
 
@@ -461,15 +469,15 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
         alignment_group_vcf_strings):
     """Constructs a JBrowse link for the Variant.
     """
-    assert 'position' in variant_as_dict
-    position = variant_as_dict['position']
+    assert MELTED_SCHEMA_KEY__POSITION in variant_as_dict
+    position = variant_as_dict[MELTED_SCHEMA_KEY__POSITION]
     ref_genome_jbrowse_link = reference_genome.get_client_jbrowse_link()
     
     location_str = '..'.join([str(i) for i in [
-            position - int(floor(JBROWSE_DEFAULT_VIEW_WINDOW/2)),
-            position + int(floor(JBROWSE_DEFAULT_VIEW_WINDOW/2))]])
+            position - int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2)),
+            position + int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2))]])
 
-    location_param = '&loc=' + variant_as_dict['chromosome'] + ':' + str(location_str)
+    location_param = '&loc=' + variant_as_dict[MELTED_SCHEMA_KEY__CHROMOSOME] + ':' + str(location_str)
 
     tracks = ['DNA','gbk']
 
@@ -477,9 +485,9 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
     tracks.extend(alignment_group_vcf_strings)
 
     # if only one sample, then display its alignment
-    if 'experiment_sample_uid' in variant_as_dict and (
-            isinstance(variant_as_dict['experiment_sample_uid'], basestring)):
-        tracks.append(variant_as_dict['experiment_sample_uid'] + 
+    if MELTED_SCHEMA_KEY__ES_UID in variant_as_dict and (
+            isinstance(variant_as_dict[MELTED_SCHEMA_KEY__ES_UID], basestring)):
+        tracks.append(variant_as_dict[MELTED_SCHEMA_KEY__ES_UID] +
                 '_' + Dataset.TYPE.BWA_ALIGN)
 
     tracks_param = '&tracks=' + ','.join(tracks)
@@ -522,7 +530,7 @@ def _adapt_variant_set_label_field__melted(variant_as_dict, project_uid):
         # If the variant set is for this sample, then it will be filled,
         # Otherwise, it will be outlined. Cast view always uses outline.
         variant_set_classes = ['gd-variant-set-badge']
-        if not label in variant_as_dict['variant_set_label']:
+        if not label in variant_as_dict[MELTED_SCHEMA_KEY__VS_LABEL]:
             variant_set_classes.append('outline')
 
         # Build the html to display.
@@ -544,7 +552,7 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
     # If there is an empty row (no ExperimentSample associated),
     # then all the counts will be off by one, so we need to decrement
     # them.
-    if None in variant_as_dict['experiment_sample_uid']:
+    if None in variant_as_dict[MELTED_SCHEMA_KEY__ES_UID]:
         maybe_dec = 1
     else:
         maybe_dec = 0
@@ -552,7 +560,7 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
 
     # Bucket the labels and count occurrences.
     variant_set_label_to_count_map = defaultdict(lambda: 0)
-    for label in variant_as_dict['variant_set_label']:
+    for label in variant_as_dict[MELTED_SCHEMA_KEY__VS_LABEL]:
         if not label:
             continue
         variant_set_label_to_count_map[label] += 1
@@ -563,8 +571,8 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
 
     # Build a map from label to uid so we can make hrefs.
     variant_set_label_to_uid_map = dict(zip(
-            variant_as_dict['variant_set_label'],
-            variant_as_dict['variant_set_uid']))
+            variant_as_dict[MELTED_SCHEMA_KEY__VS_LABEL],
+            variant_as_dict[MELTED_SCHEMA_KEY__VS_UID]))
 
     # Build a dictionary of individual HTML string anchors mapped by label.
     # Sort at the end.
@@ -597,25 +605,25 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
     {'field': 'label', 'verbose': 'Mutant'},
-    {'field': 'experiment_sample_label', 'verbose': 'Sample'},
-    {'field': 'chromosome'},
-    {'field': 'position'},
-    {'field': 'ref'},
-    {'field': 'alt'},
-    {'field': 'variant_set_label', 'verbose': 'Variant Sets'},
-    {'field': 'experiment_sample_uid', 'hide': True},
-    {'field': 'uid', 'hide': True}
+    {'field': MELTED_SCHEMA_KEY__ES_LABEL, 'verbose': 'Sample'},
+    {'field': MELTED_SCHEMA_KEY__CHROMOSOME},
+    {'field': MELTED_SCHEMA_KEY__POSITION},
+    {'field': MELTED_SCHEMA_KEY__REF},
+    {'field': MELTED_SCHEMA_KEY__ALT},
+    {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Variant Sets'},
+    {'field': MELTED_SCHEMA_KEY__ES_UID, 'hide': True},
+    {'field': MELTED_SCHEMA_KEY__UID, 'hide': True}
 ]
 
 CAST_VARIANT_FIELD_DICT_LIST = [
     {'field': 'label', 'verbose': 'label'},
-    {'field': 'chromosome'},
-    {'field': 'position'},
-    {'field': 'ref'},
-    {'field': 'alt'},
+    {'field': MELTED_SCHEMA_KEY__CHROMOSOME},
+    {'field': MELTED_SCHEMA_KEY__POSITION},
+    {'field': MELTED_SCHEMA_KEY__REF},
+    {'field': MELTED_SCHEMA_KEY__ALT},
     {'field': 'total_samples', 'verbose': '# Samples'},
-    {'field': 'variant_set_label', 'verbose': 'Variant Sets'},
-    {'field': 'uid', 'hide': True}
+    {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Variant Sets'},
+    {'field': MELTED_SCHEMA_KEY__UID, 'hide': True}
 ]
 
 # Fields that are added if they are available for the data.
@@ -723,26 +731,26 @@ def _modify_obj_list_for_variant_set_display(obj_list):
     # First count rows for each Variant.
     variant_uid_to_count_dict = defaultdict(lambda: 0)
     for obj in obj_list:
-        variant_uid_to_count_dict[obj['uid']] += 1
+        variant_uid_to_count_dict[obj[MELTED_SCHEMA_KEY__UID]] += 1
 
     # Now, get rid of rows that have no Sample associated, when there is more
     # than one row for that Variant.
     variant_uid_to_deleted_row_dict = {}
     modified_obj_list = []
     for obj in obj_list:
-        if (not obj['experiment_sample_uid'] and
-                variant_uid_to_count_dict[obj['uid']] > 1):
-            assert obj['uid'] not in variant_uid_to_deleted_row_dict
-            variant_uid_to_deleted_row_dict[obj['uid']] = obj
+        if (not obj[MELTED_SCHEMA_KEY__ES_UID] and
+                variant_uid_to_count_dict[obj[MELTED_SCHEMA_KEY__UID]] > 1):
+            assert obj[MELTED_SCHEMA_KEY__UID] not in variant_uid_to_deleted_row_dict
+            variant_uid_to_deleted_row_dict[obj[MELTED_SCHEMA_KEY__UID]] = obj
         else:
             modified_obj_list.append(obj)
 
     # Now add back data for all the sets associated with each Variant.
     for obj in modified_obj_list:
-        if obj['uid'] in variant_uid_to_deleted_row_dict:
-            catch_all_obj = variant_uid_to_deleted_row_dict[obj['uid']]
-            obj['all_variant_set_label'] = catch_all_obj['variant_set_label']
-            obj['all_variant_set_uid'] = catch_all_obj['variant_set_uid']
+        if obj[MELTED_SCHEMA_KEY__UID] in variant_uid_to_deleted_row_dict:
+            catch_all_obj = variant_uid_to_deleted_row_dict[obj[MELTED_SCHEMA_KEY__UID]]
+            obj['all_variant_set_label'] = catch_all_obj[MELTED_SCHEMA_KEY__VS_LABEL]
+            obj['all_variant_set_uid'] = catch_all_obj[MELTED_SCHEMA_KEY__VS_UID]
         else:
             obj['all_variant_set_label'] = []
             obj['all_variant_set_uid'] = []

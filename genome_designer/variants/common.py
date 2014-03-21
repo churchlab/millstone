@@ -140,6 +140,7 @@ def get_delim_key_value_triple(raw_string, all_key_map):
         delimeter = _clean_delim(raw_delim)
         if len(split_result) == 2:
             key, value = split_result
+            key = key.upper()
             for data_map in all_key_map:
                 # Make sure this is a valid key and valid delimeter.
                 if key in data_map:

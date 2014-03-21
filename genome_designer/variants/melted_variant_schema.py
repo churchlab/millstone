@@ -41,9 +41,19 @@ class SchemaBuilder(object):
     def get_schema(self):
         return self.schema
 
-# Schema keys.
-# TODO: Convert other keys to use constants.
-MELTED_SCHEMA_KEY__POSITION = 'position'
+# User-queryable schema keys.
+# These are all caps to match our code logic of capitalizing the keys in a
+# a user's query before handling the filter.
+# TODO: Convert all uses of these keys to refer to these constants.
+MELTED_SCHEMA_KEY__UID = 'UID'
+MELTED_SCHEMA_KEY__POSITION = 'POSITION'
+MELTED_SCHEMA_KEY__CHROMOSOME = 'CHROMOSOME'
+MELTED_SCHEMA_KEY__REF = 'REF'
+MELTED_SCHEMA_KEY__ALT = 'ALT'
+MELTED_SCHEMA_KEY__ES_UID = 'EXPERIMENT_SAMPLE_UID'
+MELTED_SCHEMA_KEY__ES_LABEL = 'EXPERIMENT_SAMPLE_LABEL'
+MELTED_SCHEMA_KEY__VS_UID = 'VARIANT_SET_UID'
+MELTED_SCHEMA_KEY__VS_LABEL = 'VARIANT_SET_LABEL'
 
 SCHEMA_BUILDER = SchemaBuilder()
 # SCHEMA_BUILDER.add_melted_variant_field(<source_col_name>,
@@ -52,18 +62,18 @@ SCHEMA_BUILDER = SchemaBuilder()
 
 # Variant
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.id', 'id', False, False)
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.uid', 'uid', False, True,
+SCHEMA_BUILDER.add_melted_variant_field('main_variant.uid', MELTED_SCHEMA_KEY__UID, False, True,
         {'type': 'String', 'num': 1})
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.position', MELTED_SCHEMA_KEY__POSITION, False, True,
         {'type': 'Integer', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', 'chromosome', False, True,
+SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', MELTED_SCHEMA_KEY__CHROMOSOME, False, True,
         {'type': 'String', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', 'ref', False, True,
+SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', MELTED_SCHEMA_KEY__REF, False, True,
         {'type': 'String', 'num': 1})
 
 # VariantAlternate
 SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.id', 'va_id', False, False)
-SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', 'alt', False, True,
+SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', MELTED_SCHEMA_KEY__ALT, False, True,
         {'type': 'String', 'num': 1})
 
 # Key-value data.
@@ -72,15 +82,15 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variantevidence.id', 've_id', True
 
 # ExperimentSample
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', True, False)
-SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', 'experiment_sample_uid', True, True,
+SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', MELTED_SCHEMA_KEY__ES_UID, True, True,
         {'type': 'String', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.label', 'experiment_sample_label', True, True,
+SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.label', MELTED_SCHEMA_KEY__ES_LABEL, True, True,
         {'type': 'String', 'num': 1})
 
 # VariantSet
-SCHEMA_BUILDER.add_melted_variant_field('main_variantset.uid', 'variant_set_uid', False, True,
+SCHEMA_BUILDER.add_melted_variant_field('main_variantset.uid', MELTED_SCHEMA_KEY__VS_UID, False, True,
         {'type': 'String', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_variantset.label', 'variant_set_label', False, True,
+SCHEMA_BUILDER.add_melted_variant_field('main_variantset.label', MELTED_SCHEMA_KEY__VS_LABEL, False, True,
         {'type': 'String', 'num': 1})
 
 # Build the schema.

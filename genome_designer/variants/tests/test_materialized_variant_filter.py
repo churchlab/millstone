@@ -29,6 +29,8 @@ from variants.common import ParseError
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_variant_filter import VariantFilterEvaluator
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
 
 
 TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
@@ -121,13 +123,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         variants_above_5 = self.run_query('position > 5', self.ref_genome)
         self.assertEqual(4, len(variants_above_5))
         for var in variants_above_5:
-            self.assertTrue(var['position'] > 5)
+            self.assertTrue(var[MELTED_SCHEMA_KEY__POSITION] > 5)
 
         # Test querying Variants with position >= 5.
         variants_above_5 = self.run_query('position >= 5', self.ref_genome)
         self.assertEqual(5, len(variants_above_5))
         for var in variants_above_5:
-            self.assertTrue(var['position'] >= 5)
+            self.assertTrue(var[MELTED_SCHEMA_KEY__POSITION] >= 5)
 
 
     def test_filter__by_chromosome(self):
@@ -172,7 +174,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                     'chromosome = %s'% chromosome_value, self.ref_genome)
             self.assertEqual(num_results, len(variants))
             for var in variants:
-                self.assertEqual(chromosome_value, var['chromosome'])
+                self.assertEqual(chromosome_value, var[MELTED_SCHEMA_KEY__CHROMOSOME])
         _assert_results(CHROM_1, 6)
         _assert_results(CHROM_2, 9)
 
@@ -220,9 +222,9 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
             variants = self.run_query(query, self.ref_genome)
             self.assertEqual(num_results, len(variants))
             for var in variants:
-                self.assertEqual(chromosome_value, var['chromosome'])
+                self.assertEqual(chromosome_value, var[MELTED_SCHEMA_KEY__CHROMOSOME])
                 self.assertTrue(eval(
-                        str(var['position']) + position_delim +
+                        str(var[MELTED_SCHEMA_KEY__POSITION]) + position_delim +
                                 str(position_value)))
 
         QUERY_STRING = 'position > 4 & chromosome = chrom'
@@ -290,7 +292,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         for pos in [0, 8, 9]:
             found = False
             for var in variant_list:
-                if var['position'] == pos:
+                if var[MELTED_SCHEMA_KEY__POSITION] == pos:
                     found = True
                     break
             self.assertTrue(found, "Expected variant at pos %d not found" % pos)
@@ -320,19 +322,19 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         variants = self.run_query('position == 5',
                 self.ref_genome)
         self.assertEqual(1, len(variants))
-        self.assertEqual(5, variants.pop()['position'])
+        self.assertEqual(5, variants.pop()[MELTED_SCHEMA_KEY__POSITION])
 
         variants = self.run_query('position = 5',
                 self.ref_genome)
         self.assertEqual(1, len(variants))
         for var in variants:
-            self.assertEqual(5, var['position'])
+            self.assertEqual(5, var[MELTED_SCHEMA_KEY__POSITION])
 
         variants = self.run_query('position != 5',
                 self.ref_genome)
         self.assertEqual(9, len(variants))
         for var in variants:
-            self.assertNotEqual(5, var['position'])
+            self.assertNotEqual(5, var[MELTED_SCHEMA_KEY__POSITION])
 
 
     def test_filter__no_sets(self):

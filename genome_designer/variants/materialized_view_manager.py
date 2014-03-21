@@ -156,7 +156,7 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                         'WHERE (main_variant.reference_genome_id = %d) '
                         'GROUP BY %s'
                     ') '
-                    'ORDER BY position, experiment_sample_uid DESC '
+                    'ORDER BY POSITION, EXPERIMENT_SAMPLE_UID DESC '
                 ') ' # melted_variant_data
                 ', va_data_table AS ('
                     'SELECT id, data AS va_data from main_variantalternate'

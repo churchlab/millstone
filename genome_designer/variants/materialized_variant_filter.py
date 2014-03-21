@@ -20,6 +20,15 @@ from variants.common import get_delim_key_value_triple
 from variants.common import SymbolGenerator
 from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__UID
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__REF
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_LABEL
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
 from variants.filter_scope import FilterScope
 
 
@@ -47,7 +56,8 @@ class VariantFilterEvaluator(object):
         # for this ReferenceGenome.
         self.materialized_view_manager = MeltedVariantMaterializedViewManager(
                 ref_genome)
-        self.materialized_view_manager.create_if_not_exists_or_invalid()
+        # self.materialized_view_manager.create_if_not_exists_or_invalid()
+        self.materialized_view_manager.create() # DO NOT COMMIT
 
         # Validation.
         if scope is not None:
@@ -148,13 +158,13 @@ class VariantFilterEvaluator(object):
 
         # If cast, need to group by position for array_agg to work.
         if not self.is_melted:
-            sql_statement += 'GROUP BY position '
+            sql_statement += 'GROUP BY %s ' % MELTED_SCHEMA_KEY__POSITION
 
         # Add optional sort clause, defaulting to position.
         if self.sort_by_column:
             sql_statement += 'ORDER BY %s ' % self.sort_by_column
         else:
-            sql_statement += 'ORDER BY position '
+            sql_statement += 'ORDER BY %s ' % MELTED_SCHEMA_KEY__POSITION
         if self.sort_by_direction == 'desc':
             sql_statement += 'DESC '
 
@@ -171,7 +181,7 @@ class VariantFilterEvaluator(object):
         # so that they can be combined through boolean operators with other
         # evaluations.
         cursor.execute(sql_statement, where_clause_args)
-        result_list = [dict(zip([col[0] for col in cursor.description], row))
+        result_list = [dict(zip([col[0].upper() for col in cursor.description], row))
                 for row in cursor.fetchall()]
         return result_list
 
@@ -196,12 +206,12 @@ class VariantFilterEvaluator(object):
                 We GROUP BY position, so all other fields need to be explicitly
                 aggregated.
                 """
-                if column == 'position':
+                if column == MELTED_SCHEMA_KEY__POSITION:
                     return column
-                elif column in ['variant_set_label', 'variant_set_uid']:
+                elif column in [MELTED_SCHEMA_KEY__VS_LABEL, MELTED_SCHEMA_KEY__VS_UID]:
                     # NOTE: Custom array_agg_mult created
                     return 'array_agg_mult(' + column + ') as ' + column
-                elif column in ['alt', 'va_data', 'vccd_data', 've_data', 'experiment_sample_uid']:
+                elif column in [MELTED_SCHEMA_KEY__ALT, 'va_data', 'vccd_data', 've_data', MELTED_SCHEMA_KEY__ES_UID]:
                     return 'array_agg(' + column + ') as ' + column
                 else:
                     return 'min(' + column + ') as ' + column
@@ -382,7 +392,7 @@ def lookup_variants(query_args, reference_genome):
     query_args['pagination_start'] = 0
     query_args['pagination_len'] = -1  # for no limit
     num_total_variants = get_variants_that_pass_filter(query_args,
-            reference_genome)[0]['count']
+            reference_genome)[0]['COUNT']
 
     return LookupVariantsResult(page_results, num_total_variants)
 

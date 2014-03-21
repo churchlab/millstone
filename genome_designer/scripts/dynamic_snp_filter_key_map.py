@@ -43,8 +43,8 @@ SNP_VARIANT_HARD_CODED = {
 }
 
 SNP_EVIDENCE_HARD_CODED = {
-    'gt_type': {'type': 'Integer', 'num': 1},
-    'is_het': {'type': 'Boolean', 'num': 1}
+    'GT_TYPE': {'type': 'Integer', 'num': 1},
+    'IS_HET': {'type': 'Boolean', 'num': 1}
 }
 
 MAP_KEY__VARIANT = 'variant_data'
