@@ -1050,7 +1050,7 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
 
 
     def create_variant_alternate_association(self):
-        gt_bases = self.data['gt_bases']
+        gt_bases = self.data['GT_BASES']
 
         # If this variant evidence is a non-call, no need to add alt alleles.
         if gt_bases is None:

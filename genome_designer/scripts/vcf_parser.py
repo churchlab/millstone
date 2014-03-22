@@ -269,9 +269,9 @@ def extract_sample_data_dict(s):
         be extra paranoid when parsing it.
         """
         try:
-            result_dict[key] = getattr(s, eval_string)
+            result_dict[key.upper()] = getattr(s, eval_string)
         except AttributeError:
-            result_dict[key] = None
+            result_dict[key.upper()] = None
 
     result = {}
 

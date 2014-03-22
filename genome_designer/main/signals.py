@@ -84,7 +84,7 @@ m2m_changed.connect(post_add_seq_to_ref_genome,
 
 def post_variant_evidence_create(sender, instance, created, **kwargs):
     """Add existing VariantAlternates to this VariantEvidence Object."""
-    if not created or not 'gt_bases' in instance.data:
+    if not created or not 'GT_BASES' in instance.data:
         return
     instance.create_variant_alternate_association()
 post_save.connect(post_variant_evidence_create, sender=VariantEvidence,

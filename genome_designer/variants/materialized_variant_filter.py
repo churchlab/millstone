@@ -179,6 +179,7 @@ class VariantFilterEvaluator(object):
         cursor.execute(sql_statement, where_clause_args)
         result_list = [dict(zip([col[0].upper() for col in cursor.description], row))
                 for row in cursor.fetchall()]
+        print result_list
         return result_list
 
     def _select_clause(self):

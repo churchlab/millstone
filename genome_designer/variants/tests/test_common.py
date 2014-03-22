@@ -46,12 +46,12 @@ class TestCommon(TestCase):
         """Tests extracting filter keys.
         """
         FILTER_EXPR = 'position > 5'
-        EXPECTED_FILTER_KEY_SET = set(['position'])
+        EXPECTED_FILTER_KEY_SET = set(['POSITION'])
         self.assertEqual(EXPECTED_FILTER_KEY_SET,
                 set(extract_filter_keys(FILTER_EXPR, self.ref_genome)))
 
         FILTER_EXPR = '(position < 5 & gt_type = 2) in ANY(1234, 4567)'
-        EXPECTED_FILTER_KEY_SET = set(['position', 'gt_type'])
+        EXPECTED_FILTER_KEY_SET = set(['POSITION', 'GT_TYPE'])
         self.assertEqual(EXPECTED_FILTER_KEY_SET,
                 set(extract_filter_keys(FILTER_EXPR, self.ref_genome)))
 

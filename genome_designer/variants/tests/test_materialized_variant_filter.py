@@ -483,17 +483,100 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         )
 
         raw_sample_data_dict = {
-            'gt_bases': 'T/T',
+            'GT_BASES': 'T/T',
             'INFO_EFF_GENE': 'tolC'
         }
         VariantEvidence.objects.create(
                 experiment_sample=self.sample_obj_1,
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict)
+
         passing_variants = self.run_query('INFO_EFF_GENE = tolC',
                 self.ref_genome)
         self.assertEqual(1, len(passing_variants))
 
+
+    def test_case_insensitive(self):
+        """Filter keys should not be case sensitive.
+
+        Here we test a few. We might want more exhaustive tests.
+        """
+        # Fake the key map.
+        alternate_key_map = self.ref_genome.variant_key_map[MAP_KEY__ALTERNATE]
+        alternate_key_map['INFO_EFF_GENE'] = {
+            u'num': -1,
+            u'type': u'String'
+        }
+        self.ref_genome.save()
+
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.ref_genome,
+                chromosome='chrom',
+                position=2,
+                ref_value='A')
+
+        alt_data_dict = {
+            'INFO_EFF_GENE': 'tolC'
+        }
+        VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='T',
+                data=alt_data_dict
+        )
+
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=self.ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
+        common_data_obj = VariantCallerCommonData.objects.create(
+            variant=variant,
+            source_dataset=self.vcf_dataset,
+            alignment_group=alignment_group)
+
+        raw_sample_data_dict = {
+            'GT_BASES': 'T/T',
+            'GT_TYPE': 2,
+            'INFO_EFF_GENE': 'tolC'
+        }
+        VariantEvidence.objects.create(
+                experiment_sample=self.sample_obj_1,
+                variant_caller_common_data=common_data_obj,
+                data=raw_sample_data_dict)
+
+        # Test empty query that should return everything.
+        passing_variants = self.run_query('',
+                self.ref_genome)
+        self.assertEqual(1, len(passing_variants))
+
+        # Test basic position query.
+        passing_variants = self.run_query('position = 2',
+                self.ref_genome)
+        self.assertEqual(1, len(passing_variants))
+
+        # Test both cases.
+        passing_variants = self.run_query('POSITION = 2',
+                self.ref_genome)
+        self.assertEqual(1, len(passing_variants))
+
+        # Test JSON field, uppercase.
+        passing_variants = self.run_query('INFO_EFF_GENE = tolC',
+                self.ref_genome)
+        self.assertEqual(1, len(passing_variants))
+
+        # Test JSON field, lowercase.
+        passing_variants = self.run_query('info_eff_gene = tolC',
+                self.ref_genome)
+        self.assertEqual(1, len(passing_variants))
+
+        # VariantEvidence data.
+        passing_variants = self.run_query('gt_type = 2',
+                self.ref_genome)
+        self.assertEqual(1, len(passing_variants))
+        passing_variants = self.run_query('GT_TYPE = 2',
+                self.ref_genome)
+        self.assertEqual(1, len(passing_variants))
 
 
 class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):

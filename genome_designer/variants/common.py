@@ -146,7 +146,7 @@ def get_delim_key_value_triple(raw_string, all_key_map):
                 if key in data_map:
                     specs = data_map[key]
                     if specs['num'] in (-1, 1):
-                        return tuple([delimeter] + split_result)
+                        return tuple([delimeter, key, value])
                     else:
                         raise ParseError(raw_string,
                                 'Key type {:d} not yet supported.'.format(
