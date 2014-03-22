@@ -26,7 +26,6 @@ class DisabledInDemoModeMiddleware(object):
             for view_path in demo_settings.DEMO_SAFE_VIEWS:
                 view = self._get_view(view_path)
                 self.safe_views.append(view)
-        print self.safe_views
 
     def _get_view(self, view_path):
         """Get the View from the path to help build the list of safe views.
