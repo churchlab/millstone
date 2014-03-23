@@ -10,6 +10,8 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__VARIANT
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
 
 
 ###############################################################################
@@ -183,7 +185,7 @@ def convert_delim_key_value_triple_to_expr(triple):
     (delim, key, value) = triple
 
     # HACK: Special handling for variant set keys.
-    if key in ['variant_set_label', 'variant_set_uid']:
+    if key in [MELTED_SCHEMA_KEY__VS_LABEL, MELTED_SCHEMA_KEY__VS_UID]:
         assert delim in ['==', '=']
         return ('%s = ANY (variant_set_label)', value)
 
