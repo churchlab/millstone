@@ -93,6 +93,13 @@ body {
   margin-bottom: 8px;
 }
 
+.gd-header.page-header {
+  margin-top: 0px;
+  border-bottom: 1px solid #dddddd;
+  margin-bottom: 8px;
+}
+
+
 .gd-header > h1 {
   margin-top: 0px;
   margin-bottom: 6px;

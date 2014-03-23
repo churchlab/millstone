@@ -1,12 +1,19 @@
-{% extends "tab_base.html" %}
-
-{% block content%}
-  <h1>Projects</h1>
-
-  <ul>
-  {% for project in project_list %}
-    <li><a href="{% url 'main.views.project_view' project.uid %}">{{project.title}}</a></li>
-  {% endfor %}
-  </ul>
-
-{% endblock %}
+<div class="page-header gd-header">
+  <h1>Select a project.</h1>
+</div>
+<div class="container">
+  <div class="row">
+    <div class="col-sm-4 col-sm-offset-4">
+      <ul class="list-group">
+        <a href="/projects/create" class="list-group-item text-center text-primary">
+          <span class="text-primary">New project...</span>
+        </a>
+        {% for project in project_list %}
+          <a href="{% url 'main.views.project_view' project.uid %}" class="list-group-item text-center">
+            {{project.title}}
+          </a>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>

@@ -43,7 +43,7 @@ TAB_ROOT__ANALYZE = 'ANALYZE'
 def home_view(request):
     """The main landing page.
     """
-    context = {}
+    context = { 'is_demo': settings.DEMO_MODE }
     return render(request, 'home.html', context)
 
 def demo_splash_view(request):
