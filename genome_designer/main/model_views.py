@@ -580,11 +580,17 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
         # Otherwise, it will be outlined. Cast view always uses outline.
         variant_set_classes = ['gd-variant-set-badge', 'outline']
 
+        # If there are no samples associated, then don't display ': 0'
+        if count > 0:
+            text_content = label + ": " + str(count)
+        else:
+            text_content = label
+
         # Build the html to display.
         variant_set_html = (
                 "<a href='" + variant_set_href + "'" +
                 "class='" + ' '.join(variant_set_classes) + "'>" +
-                label + ": " + str(count) + "</a>")
+                text_content + "</a>")
 
         # Store it in the map.
         variant_set_anchor_map[label] = variant_set_html
