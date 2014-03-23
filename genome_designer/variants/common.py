@@ -187,7 +187,7 @@ def convert_delim_key_value_triple_to_expr(triple):
     # HACK: Special handling for variant set keys.
     if key in [MELTED_SCHEMA_KEY__VS_LABEL, MELTED_SCHEMA_KEY__VS_UID]:
         assert delim in ['==', '=']
-        return ('%s = ANY (variant_set_label)', value)
+        return ('%s = ANY (' + key + ')', value)
 
     # Make '==' SQL-friendly.
     if delim == '==':
