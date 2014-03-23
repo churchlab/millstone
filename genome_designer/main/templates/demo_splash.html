@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block tabs_or_splash %}
+<div class="container">
+  <div class="page-header gd-header">
+    <h1>Welcome to Millstone.</h1>
+  </div>
+  <div class="row">
+    <div class="col-sm-6 col-sm-offset-3">
+      <div class="panel panel-default">
+        <div class="panel-body">  
+          <p class="lead" style="color:#43a110">This is an interactive demo of Millstone.</p>
+          <p>Millstone is a distributed 
+          bioinformatics software platform designed to facilitate 
+          genome engineering for synthetic biology. Millstone automates iterative design, analysis, and debugging for projects involving hundreds of bacterial genomes.</p>
+
+          </br>
+
+          <p>This demo server is deployed on an Amazon AWS instance, and 
+            contains 18 of the 76 genomes from the Genetically Recoded Organism project, also known as rE. coli. </p>
+
+          </br>
+
+          <p>The genomes have already been aligned, and variants have been called and annotated. You can compare, visualize, and explore the effects of both the designed and unintended variants within them.</p>
+
+          Uploading samples, performing new alignments, and creating and manipulating variant sets are all disabled for this demo.
+
+          </br></br>
+
+          <p>Finally, this is an alpha build. There will be bugs.</p>
+
+          <p class='text-center'><a class="btn btn-lg btn-success" href="#" role="button">OK, let's go!</a></p>
+
+        </div>
+        <div class="modal-footer">
+          <h4>Contact us to become a beta tester!</h4>
+            <o>If you'd like to use 
+            Millstone for your genome engineering or analysis project, please email </p>
+
+          <p class='h3'><a href='mailto:millstonebio@gmail.com'>millstonebio@gmail.com</a>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

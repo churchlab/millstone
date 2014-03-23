@@ -46,6 +46,12 @@ def home_view(request):
     context = {}
     return render(request, 'home.html', context)
 
+def demo_splash_view(request):
+    """The main landing page.
+    """
+    context = {}
+    return render(request, 'demo_splash.html', context)
+
 
 @login_required
 def project_list_view(request):
