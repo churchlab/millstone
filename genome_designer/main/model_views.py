@@ -13,6 +13,7 @@ from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
 from main.constants import UNDEFINED_STRING
+from main.models import AlignmentGroup
 from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
@@ -359,6 +360,10 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
                 str(alignment_group.uid),
                 Dataset.TYPE.VCF_FREEBAYES_SNPEFF]))
 
+    # HACK: Only one AlignmentGroup right now.
+    hack_single_alignment_group = AlignmentGroup.objects.get(
+            reference_genome=reference_genome)
+
     # Aggregate list of objects that are ready for display by the frontend.
     fe_obj_list = []
     for melted_variant_obj in obj_list:
@@ -381,7 +386,8 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             # HACK: Special handling for certain fields.
             if field == 'label':
                 value = _create_single_variant_page_link_for_variant_object(
-                        melted_variant_obj, reference_genome)
+                        melted_variant_obj, reference_genome,
+                        hack_single_alignment_group)
             elif field == MELTED_SCHEMA_KEY__POSITION:
                 value = _create_jbrowse_link_for_variant_object(
                         melted_variant_obj, reference_genome,
@@ -446,14 +452,20 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
 
 
 def _create_single_variant_page_link_for_variant_object(variant_as_dict,
-            reference_genome):
+            reference_genome, alignment_group):
     """Constructs the label as an anchor that links to the single variant view.
     """
-    full_href = reverse('main.views.single_variant_view',
-                args=(reference_genome.project.uid, reference_genome.uid,
-                        variant_as_dict[MELTED_SCHEMA_KEY__UID]))
+    # Generate link to Analyze view for this single variant.
+    root_href = reverse('main.views.tab_root_analyze',
+            args=(reference_genome.project.uid,
+                    alignment_group.uid, 'variants'))
+    filter_part = '?filter=UID=%s&melt=1' % (variant_as_dict['UID'],)
+    full_href = root_href + filter_part
+
     # Generate label from variant data.
     label = 'mut_' + str(variant_as_dict[MELTED_SCHEMA_KEY__POSITION])
+
+    # Create the full string.
     return '<a href="' + full_href + '">' + label + '</a>'
 
 
