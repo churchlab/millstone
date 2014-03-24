@@ -5,9 +5,11 @@
   <div class="row">
     <div class="col-sm-4 col-sm-offset-4">
       <ul class="list-group">
-        <a href="/projects/create" class="list-group-item text-center text-primary">
-          <span class="text-primary">New project...</span>
-        </a>
+        {% if not is_demo %}
+          <a href="/projects/create" class="list-group-item text-center text-primary">
+            <span class="text-primary">New project...</span>
+          </a>
+        {% endif %}
         {% for project in project_list %}
           <a href="{% url 'main.views.project_view' project.uid %}" class="list-group-item text-center">
             {{project.title}}
