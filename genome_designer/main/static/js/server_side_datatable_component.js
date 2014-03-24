@@ -106,13 +106,13 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
    * HACK: Hard-coded for the Variant view.
    */
   getCheckboxValueFromDisplayableObj: function(displayableObj) {
-    if (!('uid' in displayableObj)) {
-      return 'undefined';
+    if (!('UID' in displayableObj)) {
+      throw "Unexpected format for displayable object.";
     }
 
-    var value = displayableObj.uid;
-    if ('experiment_sample_uid' in displayableObj) {
-      value += ',' + displayableObj.experiment_sample_uid;
+    var value = displayableObj.UID;
+    if ('EXPERIMENT_SAMPLE_UID' in displayableObj) {
+      value += ',' + displayableObj.EXPERIMENT_SAMPLE_UID;
     }
     return value;
   },
