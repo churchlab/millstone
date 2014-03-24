@@ -395,7 +395,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             elif field == MELTED_SCHEMA_KEY__VS_LABEL:
                 value = _adapt_variant_set_label_field(
                         melted_variant_obj, reference_genome.project.uid,
-                        melted)
+                        melted, reference_genome, alignment_group)
             elif field == MELTED_SCHEMA_KEY__REF and not melted:
                 value = (melted_variant_obj[MELTED_SCHEMA_KEY__REF] + ' (%d)' %
                         melted_variant_obj[MELTED_SCHEMA_KEY__ALT].count(None))
@@ -503,18 +503,22 @@ def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
             '</a>')
 
 
-def _adapt_variant_set_label_field(variant_as_dict, project_uid, melted):
+def _adapt_variant_set_label_field(variant_as_dict, project_uid, melted,
+        reference_genome, alignment_group):
     """Constructs the labels as anchors that link to the single variant view.
     """
     if melted:
         return _adapt_variant_set_label_field__melted(
-                variant_as_dict, project_uid)
+                variant_as_dict, project_uid, reference_genome,
+                alignment_group)
     else:
         return _adapt_variant_set_label_field__cast(
-                variant_as_dict, project_uid)
+                variant_as_dict, project_uid, reference_genome,
+                alignment_group)
 
 
-def _adapt_variant_set_label_field__melted(variant_as_dict, project_uid):
+def _adapt_variant_set_label_field__melted(variant_as_dict, project_uid,
+        reference_genome, alignment_group):
     # Build a dictionary of individual HTML string anchors mapped by label,
     # so we can sort it at the very end.
     variant_set_anchor_map = {}
@@ -528,8 +532,8 @@ def _adapt_variant_set_label_field__melted(variant_as_dict, project_uid):
             continue
 
         # This is the link to the variant set view.
-        variant_set_href = reverse('main.views.variant_set_view',
-                args=(project_uid, uid))
+        variant_set_href = _create_variant_set_analyze_view_link(
+                project_uid, uid, reference_genome, alignment_group)
 
         # If the variant set is for this sample, then it will be filled,
         # Otherwise, it will be outlined. Cast view always uses outline.
@@ -552,7 +556,8 @@ def _adapt_variant_set_label_field__melted(variant_as_dict, project_uid):
             [variant_set_anchor_map[i] for i in sorted_set_labels])
 
 
-def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
+def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid,
+        reference_genome, alignment_group):
     # If there is an empty row (no ExperimentSample associated),
     # then all the counts will be off by one, so we need to decrement
     # them.
@@ -585,8 +590,8 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
         uid = variant_set_label_to_uid_map[label]
 
         # This is the link to the variant set view.
-        variant_set_href = reverse('main.views.variant_set_view',
-                args=(project_uid, uid))
+        variant_set_href = _create_variant_set_analyze_view_link(
+                project_uid, uid, reference_genome, alignment_group)
 
         # If the variant set is for this sample, then it will be filled,
         # Otherwise, it will be outlined. Cast view always uses outline.
@@ -611,6 +616,17 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid):
     sorted_set_labels = sorted(variant_set_anchor_map.keys())
     return ' '.join(
             [variant_set_anchor_map[i] for i in sorted_set_labels])
+
+
+def _create_variant_set_analyze_view_link(project_uid, variant_set_uid,
+        reference_genome, alignment_group):
+    """Create link to Analyze view filtered by this variant set.
+    """
+    root_href = reverse('main.views.tab_root_analyze',
+            args=(reference_genome.project.uid,
+                    alignment_group.uid, 'variants'))
+    filter_part = '?filter=VARIANT_SET_UID=%s&melt=0' % (variant_set_uid,)
+    return root_href + filter_part
 
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
