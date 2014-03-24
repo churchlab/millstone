@@ -29,6 +29,10 @@ DEMO_SAFE_VIEWS = [
     'main.xhr_handlers.get_ref_genomes',
     'main.xhr_handlers.compile_jbrowse_and_redirect',
     'main.template_xhrs.variant_filter_controls',
+    'main.template_xhrs.variant_set_list_controls',
+    'main.template_xhrs.alignment_controls',
+    'main.template_xhrs.reference_genome_list_controls',
+    'main.template_xhrs.sample_list_controls',
     'main.demo_view_overrides.login_demo_account',
     'django.contrib.auth.views.logout'
 ]

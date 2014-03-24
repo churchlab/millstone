@@ -8,7 +8,7 @@ See: https://docs.djangoproject.com/en/dev/topics/http/middleware/
 """
 
 from django.conf import settings
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseForbidden
 
 from conf import demo_settings
 
@@ -45,4 +45,4 @@ class DisabledInDemoModeMiddleware(object):
 
         if view_func in self.safe_views:
             return None # continue handling request
-        return HttpResponseBadRequest() # interrupt
+        return HttpResponseForbidden()
