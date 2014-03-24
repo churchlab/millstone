@@ -28,7 +28,6 @@ gd.Spinner = function() {
  */
 gd.Spinner.prototype.spin = function(opt_target) {
   var target = opt_target || document.body;
-  console.log(this.spinnerDelegate);
   this.spinnerDelegate.spin(target);
 };
 

@@ -59,7 +59,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     // Register listeners.
     $('#gd-filter-box-apply-btn').click(
-        _.bind(this.updateVariantList, this));
+        _.bind(this.handleApplyFilterClick, this));
     $('.gd-snp-filter-melt-toggle').click(
         _.bind(this.handleMeltedToggleClick, this));
     $('#gd-filter-field-select-btn').click(
@@ -287,9 +287,6 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
   /** Kicks off the process for updating the list of displayed variants. */
   updateVariantList: function() {
-    // Update the model.
-    this.model.set('filterString', $('#gd-new-filter-input').val());
-
     // Update the url with the filter.
     var updatedPath = gd.Util.updateQueryStringParameter(
         gd.Util.getFullPath(), 'filter', this.model.get('filterString'));
@@ -320,8 +317,18 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
 
   /** Handles a click on one of the melted toggle buttons. */
+  handleApplyFilterClick: function(e) {
+    // Update the model.
+    this.model.set('filterString', $('#gd-new-filter-input').val());
+    this.updateVariantList();
+  },
+
+
+  /** Handles a click on one of the melted toggle buttons. */
   handleMeltedToggleClick: function(e) {
+    // Update the model.
     this.model.set('is_melted', Boolean($(e.target).data('melted')));
+    this.model.set('filterString', $('#gd-new-filter-input').val());
     this.updateVariantList();
   },
 

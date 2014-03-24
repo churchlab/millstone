@@ -20,12 +20,14 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     this.currentSubView = null;
 
     this.render();
-    $('.gd-sidebar > div.list-group > select').selectpicker()
   },
 
 
   /** Override. */
   render: function() {
+    // Decorate sidebar.
+    $('.gd-sidebar > div.list-group > select').selectpicker()
+
     this.registerManualListeners();
 
     if (this.model.has('alignmentGroup')) {
@@ -209,7 +211,6 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
 
     // Remove anything left there.
     $('#gd-datatable-hook').empty();
-
   },
 
 
