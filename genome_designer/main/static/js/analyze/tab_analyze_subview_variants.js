@@ -31,6 +31,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     if ('filter' in paramObject) {
       var filterString = paramObject['filter'];
       this.model.set('filterString', filterString);
+    } else {
+      this.model.set('filterString', '');
     }
 
     // Set the view to cast as default.
