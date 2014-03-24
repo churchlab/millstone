@@ -812,13 +812,19 @@ def _prepare_visible_key_name_for_adapting_to_fe(key_name, key_to_parent_map):
             'parent_col': 've_data'
         }
     """
-    result = {
-        'field': key_name,
-    }
+    result = {'field': key_name}
+
+    # Maybe add the parent col this field comes from, for properly handling
+    # parsing.
     parent_col = key_to_parent_map.get(key_name, None)
     if parent_col is not None:
         result['is_subkey'] = True
         result['parent_col'] = parent_col
+
+    # Hack: Prevent variant set uid from showing up in ui.
+    if key_name == MELTED_SCHEMA_KEY__VS_UID:
+        result['hide'] = True
+
     return result
 
 
