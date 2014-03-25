@@ -319,3 +319,11 @@ div.dataTables_paginate ul.pagination {
   background-color: #ffffff;
 
 }
+
+.gd-demo-splash-modal-footer {
+  margin-top: 5px;
+}
+
+.gd-demo-splash-ok-button {
+  margin-top: 20px;
+}
