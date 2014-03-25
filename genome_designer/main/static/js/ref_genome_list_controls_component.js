@@ -48,7 +48,7 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
     this.enterLoadingState();
 
     // Make the request.
-    $.post('/_/ref_genomes/create_from_server_location', requestData,
+    var jqxhr = $.post('/_/ref_genomes/create_from_server_location', requestData,
         _.bind(function(responseData) {
           this.exitLoadingState();
 
@@ -62,6 +62,10 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
           this.trigger('MODELS_UPDATED');
           $('.modal').modal('hide');
         }, this));
+
+    jqxhr.fail(_.bind(function() {
+      this.exitLoadingState()
+    }, this));
   },
 
   /** Parses the form files and prepares the data. */
@@ -116,7 +120,7 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
     this.enterLoadingState();
 
     // Make the request.
-    $.post('/_/ref_genomes/create_from_ncbi', requestData,
+    var jqxhr = $.post('/_/ref_genomes/create_from_ncbi', requestData,
         _.bind(function(responseData) {
           this.exitLoadingState();
 
@@ -130,6 +134,10 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
           this.trigger('MODELS_UPDATED');
           $('.modal').modal('hide');
         }, this));
+
+    jqxhr.fail(_.bind(function() {
+      this.exitLoadingState()
+    }, this));
   },
 
   /** Validation common to both forms. */
