@@ -10,7 +10,6 @@ import csv
 import json
 import os
 from StringIO import StringIO
-import time
 import re
 import urllib
 
@@ -26,7 +25,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 
-from debug.debug_util import FakeException
+# from debug.debug_util import FakeException
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.model_views import get_all_fields
@@ -43,7 +42,7 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
 from scripts.data_export_util import export_melted_variant_view
-from scripts.jbrowse_util import compile_tracklist_json, get_tracklist_json
+from scripts.jbrowse_util import compile_tracklist_json
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
@@ -652,7 +651,7 @@ def _create_variant_set_from_file(request, ref_genome, variant_set_name):
     try:
         import_variant_set_from_vcf(ref_genome, variant_set_name,
                 variant_set_file)
-    except FakeException as e:
+    except Exception as e:
         error_string = 'Import error: ' + str(e)
     finally:
         os.remove(variant_set_file)
