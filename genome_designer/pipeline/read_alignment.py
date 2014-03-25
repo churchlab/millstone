@@ -1,11 +1,13 @@
+"""
+Methods for aligning raw fastq reads to a reference genome.
+"""
+
 import copy
 from datetime import datetime
 import os
 import re
 import string
 import subprocess
-from subprocess import CalledProcessError
-import sys
 
 from celery import task
 
@@ -16,24 +18,14 @@ from main.models import ExperimentSampleToAlignment
 from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
 from read_alignment_util import ensure_bwa_index
-from scripts.import_util import add_dataset_to_entity
 from scripts.jbrowse_util import add_bam_file_track
-from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
 from scripts.jbrowse_util import add_bed_file_track
-from settings import PWD
 from settings import TOOLS_DIR
 from settings import BASH_PATH
 
+
 SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
 
-FILES_TO_DELETE_AFTER_ALIGNMENT = set([
-    'bwa_align.sam',
-    'bwa_align.bam',
-    'bwa_align.sorted.bam',
-    'bwa_align.sorted.bam.bai',
-    'bwa_align.sorted.grouped.bam',
-    'bwa_align.sorted.grouped.bam.bai',
-])
 
 @task
 @project_files_needed
@@ -219,6 +211,7 @@ DEFAULT_PROCESSING_MASK = {
     'compute_callable_loci': True,
     'withmd': True,
 }
+
 
 def process_sam_bam_file(sample_alignment, reference_genome, 
         sam_bam_file_location, error_output=None, 
@@ -436,6 +429,7 @@ def compute_insert_metrics(bam_file_location, stderr=None):
         'VALIDATION_STRINGENCY=LENIENT' # Prevent unmapped read problems
     ], stderr=stderr)
 
+
 def compute_callable_loci(reference_genome, sample_alignment, 
             bam_file_location, stderr=None):
 
@@ -499,13 +493,15 @@ def compute_callable_loci(reference_genome, sample_alignment,
     except Exception as e:
         print >> stderr, 'WARNING: Callable Loci failed.'
         print >> stderr, str(e)
-    
+
 
 def _get_metrics_output_filename(bam_file_location):
     return os.path.splitext(bam_file_location)[0] + '.insertmet.txt'
 
+
 def _get_callable_loci_output_filename(bam_file_location):
     return os.path.splitext(bam_file_location)[0] + '.callable_loci.bed'
+
 
 def get_insert_size(bam_file_location):
     """Returns the average insert size for a bam_file."""
@@ -526,6 +522,24 @@ def get_insert_size(bam_file_location):
             found_line = True
     fh.close()
     return insert_size
+
+
+##############################################################################
+# Clean-ups
+# TODO: This doesn't work cleanly with our mask strategy. Figure this out
+#      when we implement support for users manipulating alignment options.
+##############################################################################
+
+FILES_TO_DELETE_AFTER_ALIGNMENT = set([
+    'bwa_align.sam',
+    'bwa_align.bam',
+    'bwa_align.sorted.bam',
+    'bwa_align.sorted.bam.bai',
+    'bwa_align.sorted.grouped.bam',
+    'bwa_align.sorted.grouped.bam.bai',
+    'bwa_align.sorted.grouped.realigned.bam'
+])
+
 
 def delete_redundant_files(source_dir):
     """Delete redundant files upon alignment completion.
@@ -548,5 +562,3 @@ def clean_alignment_group_data(alignment_group):
             bwa_dataset = maybe_dataset_set[0]
             if bwa_dataset.status == Dataset.STATUS.READY:
                 delete_redundant_files(sample_alignment.get_model_data_dir())
-
-
