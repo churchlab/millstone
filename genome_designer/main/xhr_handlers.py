@@ -26,7 +26,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 
-# from debug.debug_util import FakeException
+from debug.debug_util import FakeException
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.model_views import get_all_fields
