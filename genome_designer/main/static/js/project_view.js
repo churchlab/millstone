@@ -8,6 +8,7 @@ gd.ProjectView = Backbone.View.extend({
 
   events: {
     'click #gd-projects-delete-btn': 'handleDeleteClick',
+    'click #gd-projects-export-btn': 'handleExportClick'
   },
 
   handleDeleteClick: function() {
@@ -23,5 +24,9 @@ gd.ProjectView = Backbone.View.extend({
 
       $.post(postUrl, onSuccess, 'json');
     }
+  },
+
+  handleExportClick: function() {
+    alert('Coming soon.');
   }
 });
