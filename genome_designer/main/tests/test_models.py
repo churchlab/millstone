@@ -20,6 +20,7 @@ from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
+from main.testing_util import create_common_entities
 import subprocess
 
 
@@ -37,18 +38,20 @@ class TestModels(TestCase):
     def setUp(self):
         """Override.
         """
-        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
-                email=TEST_EMAIL)
+        common_entities = create_common_entities()
+        self.user = common_entities['user']
 
-        self.test_project = Project.objects.create(
-            title=TEST_PROJECT_NAME,
-            owner=user.get_profile())
+    def test_delete(self):
+        """Test deleting models and their associated data.
 
-        self.test_ref_genome = import_reference_genome_from_local_file(
-            self.test_project,
-            TEST_REF_GENOME_NAME,
-            TEST_REF_GENOME_PATH,
-            'genbank')
+        This test was written in response to an error being thrown
+        when deleting data:
+        https://github.com/churchlab/genome-designer-v2/issues/219
+        """
+        # TODO: Add more models until we started reproducing issue #219
+        # when we try to delete.
+        self.user.delete()
+
 
 
 class TestAlignmentGroup(TestCase):
