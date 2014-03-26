@@ -162,6 +162,8 @@ class Dataset(UniqueUidModelMixin):
         VARIANT_CALLING = 'VARIANT_CALLING'
         READY = 'READY'
         FAILED = 'FAILED'
+        COPYING = 'COPYING'
+        QUEUED_TO_COPY = 'QUEUED_TO_COPY'
     STATUS_CHOICES = make_choices_tuple(STATUS)
     status = models.CharField(max_length=40, choices=STATUS_CHOICES,
             default=STATUS.READY)
@@ -577,6 +579,27 @@ class ExperimentSample(UniqueUidModelMixin):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
         verbose_name="Datasets")
 
+    @property
+    def status(self):
+        """The status of the data underlying this data.
+        """
+        status_string = 'NO_DATA'
+        fastq1_dataset_queryset = self.dataset_set.filter(
+                type=Dataset.TYPE.FASTQ1)
+        if len(fastq1_dataset_queryset) > 1:
+            return 'ERROR: More than one forward reads source'
+        if len(fastq1_dataset_queryset) == 1:
+            status_string = 'FASTQ1: %s' % fastq1_dataset_queryset[0].status
+            # Maybe add reverse reads.
+            fastq2_dataset_queryset = self.dataset_set.filter(
+                    type=Dataset.TYPE.FASTQ2)
+            if len(fastq2_dataset_queryset) > 1:
+                return 'ERROR: More than one reverse reads source'
+            if len(fastq2_dataset_queryset) == 1:
+                status_string += (
+                        ' | FASTQ2:  %s' % fastq2_dataset_queryset[0].status)
+        return status_string
+
     def __unicode__(self):
         return self.label
 
@@ -606,6 +629,7 @@ class ExperimentSample(UniqueUidModelMixin):
         """
         return [
             {'field': 'label'},
+            {'field': 'status'},
             {'field': 'group'},
             {'field': 'well'},
             {'field': 'num_reads'}

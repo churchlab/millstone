@@ -7,7 +7,6 @@ import os
 
 from django.contrib.auth.models import User
 from django.test import TestCase
-from django.test.utils import override_settings
 
 from main.models import AlignmentGroup
 from main.models import Dataset

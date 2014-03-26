@@ -9,7 +9,6 @@ Tests for alignment_pipeline.py
 import os
 
 from django.test import TestCase
-from django.test.utils import override_settings
 import vcf
 from collections import defaultdict
 import re
@@ -93,8 +92,6 @@ class TestSnpeff(TestCase):
         self.assertTrue(os.path.exists(snpeff_database_file),
                     msg= 'SnpEff annotation database was not found.')
 
-    @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS = True,
-        CELERY_ALWAYS_EAGER = True, BROKER_BACKEND = 'memory')
     def test_run_snpeff(self):
         """Test running the pipeline that annotates SNPS.
 

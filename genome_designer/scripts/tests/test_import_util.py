@@ -89,7 +89,7 @@ class TestImportSamplesFromTargetsFile(TestCase):
         # Test models.
         user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
                 email=TEST_EMAIL)
-        test_project = Project.objects.create(owner=user.get_profile(),
+        self.project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
 
     def test_import_samples(self):
@@ -100,25 +100,30 @@ class TestImportSamplesFromTargetsFile(TestCase):
 
         NUM_SAMPLES_IN_TEMPLATE = 10
 
-        # Grab any project from the database.
-        project = Project.objects.all()[0]
-
+        # This test is written assuming there are no other ExperimentSamples,
+        # perhaps introduced in setUp(). Check that assumption here.
         num_experiment_samples_before = len(ExperimentSample.objects.all())
+        self.assertEqual(0, num_experiment_samples_before)
         num_datasets_before = len(Dataset.objects.all())
+        self.assertEqual(0, num_datasets_before)
 
         # Perform the import.
         with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
-            import_samples_from_targets_file(project,
+            import_samples_from_targets_file(self.project,
                     UploadedFile(targets_file_fh))
 
         num_experiment_samples_after = len(ExperimentSample.objects.all())
         num_datasets_after = len(Dataset.objects.all())
 
         # Make sure the right amount of models were added.
-        self.assertEqual(NUM_SAMPLES_IN_TEMPLATE,
-                num_experiment_samples_after - num_experiment_samples_before)
-        self.assertEqual(2 * NUM_SAMPLES_IN_TEMPLATE,
-                num_datasets_after - num_datasets_before)
+        self.assertEqual(NUM_SAMPLES_IN_TEMPLATE, num_experiment_samples_after)
+        self.assertEqual(2 * NUM_SAMPLES_IN_TEMPLATE, num_datasets_after)
+
+        # Make sure all have READY status.
+        observed_status_type_set = set([
+                d.status for d in Dataset.objects.all()])
+        self.assertEqual(1, len(observed_status_type_set))
+        self.assertTrue(Dataset.STATUS.READY in observed_status_type_set)
 
         # TODO: Check the filepaths as well.
 

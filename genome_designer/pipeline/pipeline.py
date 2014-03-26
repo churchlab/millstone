@@ -13,8 +13,7 @@ from celery import group
 from celery import task
 from django.conf import settings
 
-from main.celery_util import CELERY_ERROR_KEY
-from main.celery_util import get_celery_worker_status
+from main.celery_util import assert_celery_running
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.model_utils import get_dataset_with_type
@@ -26,15 +25,6 @@ from snv_calling import flag_variants_from_bed
 
 # The default alignment function.
 ALIGNMENT_FN = align_with_bwa_mem
-
-
-def _assert_celery_running():
-    """Make sure celery is running, unless settings.CELERY_ALWAYS_EAGER = True.
-    """
-    if settings.CELERY_ALWAYS_EAGER:
-        return
-    celery_status = get_celery_worker_status()
-    assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
 
 
 def run_pipeline_multiple_ref_genomes(alignment_group_label, ref_genome_list,
@@ -58,7 +48,17 @@ def run_pipeline_multiple_ref_genomes(alignment_group_label, ref_genome_list,
             "Must provide at least one ReferenceGenome.")
     assert len(sample_list) > 0, (
             "Must provide at least one ExperimentSample.")
-    _assert_celery_running()
+
+    # Make sure all samples are ready.
+    relevant_datasets = Dataset.objects.filter(
+            experimentsample__in=sample_list)
+    for d in relevant_datasets:
+        assert d.status == Dataset.STATUS.READY, (
+                "Dataset %s for sample %s has status %s. Expected %s." % (
+                        d.label, d.experimentsample.label, d.status,
+                        Dataset.STATUS.READY))
+
+    assert_celery_running()
 
     # Save the alignment group objects for returning if required.
     alignment_groups = {}
@@ -88,7 +88,7 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     assert len(alignment_group_label) > 0, "Name must be non-trivial string."
     assert len(sample_list) > 0, (
             "Must provide at least one ExperimentSample.")
-    _assert_celery_running()
+    assert_celery_running()
 
     (alignment_group, created) = AlignmentGroup.objects.get_or_create(
             label=alignment_group_label,

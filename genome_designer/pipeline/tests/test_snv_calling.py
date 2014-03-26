@@ -5,7 +5,6 @@ Tests for snv_calling.py
 import os
 
 from django.test import TestCase
-from django.test.utils import override_settings
 import vcf
 
 from main.models import AlignmentGroup
@@ -57,9 +56,6 @@ class TestSNPCallers(TestCase):
         self.reference_genome = import_reference_genome_from_local_file(
                 self.project, 'ref_genome', TEST_FASTA, 'fasta')
 
-
-    @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS = True,
-        CELERY_ALWAYS_EAGER = True, BROKER_BACKEND = 'memory')
     def test_call_snvs(self):
         """Test running the pipeline that calls SNPS.
 
@@ -112,9 +108,6 @@ class TestSNPCallers(TestCase):
             except:
                 self.fail("Not valid vcf")
 
-
-    @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS = True,
-        CELERY_ALWAYS_EAGER = True, BROKER_BACKEND = 'memory')
     def test_default_freebayes(self):
         """Test that freebayes with the default settings works for control
         input data.

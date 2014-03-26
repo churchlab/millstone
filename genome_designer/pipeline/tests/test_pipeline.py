@@ -7,7 +7,6 @@ import os
 
 from django.contrib.auth.models import User
 from django.test import TestCase
-from django.test.utils import override_settings
 
 from main.models import AlignmentGroup
 from main.models import Dataset
@@ -56,9 +55,6 @@ class TestAlignmentPipeline(TestCase):
         copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ2,
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
 
-
-    @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS = True,
-            CELERY_ALWAYS_EAGER = True, BROKER_BACKEND = 'memory')
 
     def test_run_pipeline(self):
         """Tests creating an alignment group.

@@ -32,3 +32,12 @@ def get_celery_worker_status():
     except ImportError as e:
         d = { CELERY_ERROR_KEY: str(e)}
     return d
+
+
+def assert_celery_running():
+    """Make sure celery is running, unless settings.CELERY_ALWAYS_EAGER = True.
+    """
+    if settings.CELERY_ALWAYS_EAGER:
+        return
+    celery_status = get_celery_worker_status()
+    assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]

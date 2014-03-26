@@ -5,7 +5,6 @@ Tests for sv_calling.py
 import os
 
 from django.test import TestCase
-from django.test.utils import override_settings
 import vcf
 
 from main.models import AlignmentGroup
@@ -57,9 +56,6 @@ class TestSVCallers(TestCase):
         self.reference_genome = import_reference_genome_from_local_file(
                 self.project, 'ref_genome', TEST_FASTA, 'fasta')
 
-
-    @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS = True,
-        CELERY_ALWAYS_EAGER = True, BROKER_BACKEND = 'memory')
     def test_call_svs(self):
         """Test running the pipeline that finds structural variants.
 
