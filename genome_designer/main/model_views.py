@@ -2,7 +2,7 @@
 Classes that describe how a particular model should be viewed.
 """
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from itertools import groupby
 import json
 from math import floor
@@ -462,11 +462,82 @@ def _create_single_variant_page_link_for_variant_object(variant_as_dict,
     filter_part = '?filter=UID=%s&melt=1' % (variant_as_dict['UID'],)
     full_href = root_href + filter_part
 
-    # Generate label from variant data.
-    label = 'mut_' + str(variant_as_dict[MELTED_SCHEMA_KEY__POSITION])
+    label = _create_label_for_variant_object(variant_as_dict)
 
     # Create the full string.
     return '<a href="' + full_href + '">' + label + '</a>'
+
+def _create_label_for_variant_object(variant_as_dict):
+    # Generate label from variant data.
+    # Using ordered dicts with None as an ordered set
+    position = str(variant_as_dict[MELTED_SCHEMA_KEY__POSITION])
+
+    try:
+        va_data = variant_as_dict['VA_DATA']
+
+        genes = OrderedDict()
+        effs = OrderedDict()
+        aas = OrderedDict()
+        impacts = OrderedDict()
+        has_effect = False
+
+        # Cast view
+        if isinstance(va_data, list):
+            print 'cast view?'
+            for alt in va_data:
+
+                if alt is None: continue
+
+                if 'INFO_EFF_EFFECT' in alt: 
+                    has_effect = True
+
+                gene = alt.get('INFO_EFF_GENE', None)
+
+                if not gene: continue
+
+                eff = string.lower(alt['INFO_EFF_EFFECT'].replace('_',' '))
+                impact = string.lower(alt['INFO_EFF_IMPACT'].replace('_',' '))
+                aa = alt['INFO_EFF_AA']
+                if gene is not 'None': genes[gene] = None
+                if aa is not 'None': aas[aa] = None
+                if eff is not 'None': effs[eff] = None
+                if impact is not 'None': impacts[impact] = None
+
+        # Melted view
+        else:
+            if va_data is not None:
+
+                if 'INFO_EFF_EFFECT' in va_data: 
+                        has_effect = True
+
+                if va_data.get('INFO_EFF_GENE', None) is not None:
+
+                    genes[va_data['INFO_EFF_GENE']] = None
+                    aas[va_data['INFO_EFF_AA']] = None
+                    effs[(string.lower(
+                            va_data['INFO_EFF_EFFECT'].replace('_',' ')))] = None
+                    impacts[(string.lower(
+                            va_data['INFO_EFF_IMPACT'].replace('_',' ')))] = None
+
+        # Generate the label.
+        if len(genes) == 0:
+            if va_data and has_effect: 
+                label = label = position + ': intergenic'
+            else:
+                label = label = position + ': unannotated/ref'
+        else:
+            label =  '{:s}:{:s}, {:s} ({:s})'.format( 
+                    '/'.join(genes.keys()),
+                    '/'.join(aas.keys()),
+                    ','.join(effs.keys()), 
+                    ','.join(impacts.keys())) 
+
+    except Exception as e:
+        print str(e)
+        print va_data
+        label = position + ': error'
+
+    return label
 
 
 def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
@@ -663,7 +734,10 @@ CAST_VARIANT_FIELD_DICT_LIST = [
 # NOTE: The source table for these must be included in
 # MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS.
 OPTIONAL_DEFAULT_FIELDS = [
-    {'field': 'INFO_EFF_GENE'}, # va_data
+    {'field': 'INFO_EFF_GENE', 'hide': True}, # va_data
+    {'field': 'INFO_EFF_EFFECT', 'hide': True}, # va_data
+    {'field': 'INFO_EFF_IMPACT', 'hide': True}, # va_data
+    {'field': 'INFO_EFF_AA', 'hide': True}, # va_data
 ]
 
 
