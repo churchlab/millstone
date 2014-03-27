@@ -78,3 +78,37 @@ class TestAlignmentPipeline(TestCase):
         self.assertTrue(os.path.exists(jbrowse_dir))
         self.assertTrue(os.path.exists(os.path.join(jbrowse_dir,
                 'indiv_tracks')))
+
+
+    def test_run_pipeline__samples_not_ready__fastq1(self):
+        """Tests that the pipeline raises an AssertionError if samples aren't
+        ready, fastq1.
+        """
+        fastq_dataset = self.experiment_sample.dataset_set.filter(
+            type=Dataset.TYPE.FASTQ1)[0]
+        fastq_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
+        fastq_dataset.save()
+
+        ref_genome_list = [self.reference_genome]
+        sample_list = [self.experiment_sample]
+
+        with self.assertRaises(AssertionError):
+            run_pipeline_multiple_ref_genomes('name_placeholder',
+                    ref_genome_list, sample_list, test_models_only=False)
+
+
+    def test_run_pipeline__samples_not_ready__fastq2(self):
+        """Tests that the pipeline raises an AssertionError if samples aren't
+        ready, fastq2.
+        """
+        fastq_dataset = self.experiment_sample.dataset_set.filter(
+            type=Dataset.TYPE.FASTQ2)[0]
+        fastq_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
+        fastq_dataset.save()
+
+        ref_genome_list = [self.reference_genome]
+        sample_list = [self.experiment_sample]
+
+        with self.assertRaises(AssertionError):
+            run_pipeline_multiple_ref_genomes('name_placeholder',
+                    ref_genome_list, sample_list, test_models_only=False)

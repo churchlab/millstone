@@ -11,20 +11,13 @@ from datetime import datetime
 from celery import chain
 from celery import group
 from celery import task
-from django.conf import settings
 
 from main.celery_util import assert_celery_running
 from main.models import AlignmentGroup
 from main.models import Dataset
-from main.model_utils import get_dataset_with_type
 from read_alignment import align_with_bwa_mem
 from snv_calling import get_variant_tool_params
 from snv_calling import find_variants_with_tool
-from snv_calling import flag_variants_from_bed
-
-
-# The default alignment function.
-ALIGNMENT_FN = align_with_bwa_mem
 
 
 def run_pipeline_multiple_ref_genomes(alignment_group_label, ref_genome_list,
@@ -55,8 +48,8 @@ def run_pipeline_multiple_ref_genomes(alignment_group_label, ref_genome_list,
     for d in relevant_datasets:
         assert d.status == Dataset.STATUS.READY, (
                 "Dataset %s for sample %s has status %s. Expected %s." % (
-                        d.label, d.experimentsample.label, d.status,
-                        Dataset.STATUS.READY))
+                        d.label, d.experimentsample_set.all()[0].label,
+                        d.status, Dataset.STATUS.READY))
 
     assert_celery_running()
 
@@ -96,8 +89,6 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
             aligner=AlignmentGroup.ALIGNER.BWA)
 
     # Kick of the alignments concurrently.
-    # TODO(gleb): Use this list to block on when integrating with
-    # variant calling.
 
     # Since we don't want results to be passed as arguments in the
     # chain, use .si(...) and not .s(...)
@@ -107,7 +98,7 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     alignment_tasks = []
     for sample in sample_list:
         # create a task signature for this subtask
-        align_task_signature = ALIGNMENT_FN.si(
+        align_task_signature = align_with_bwa_mem.si(
                 alignment_group, sample, None, test_models_only,
                 project=ref_genome.project)
 
