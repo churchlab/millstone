@@ -269,3 +269,26 @@ class TestVariantCallerCommonData(TestCase):
         vccd_lookup = VariantCallerCommonData.objects.get(
             id=vccd.id)
         self.assertEquals(raw_data_dict, vccd_lookup.data)
+
+
+class TestExperimentSample(TestCase):
+
+    def setUp(self):
+        """Override.
+        """
+        common_entities = create_common_entities()
+        self.ref_genome = common_entities['reference_genome']
+
+    def test_data_dir_create_and_delete(self):
+        """Make sure data directory gets deleted.
+        """
+        es = ExperimentSample.objects.create(
+            project=self.ref_genome.project, label='test_es')
+
+        es_data_dir = es.get_model_data_dir()
+
+        self.assertTrue(os.path.exists(es_data_dir))
+
+        es.delete()
+
+        self.assertFalse(os.path.exists(es_data_dir))

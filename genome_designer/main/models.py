@@ -554,7 +554,7 @@ class ReferenceGenome(UniqueUidModelMixin):
 class ExperimentSample(UniqueUidModelMixin):
     """Model representing data for a particular experiment sample.
 
-    Usually this corresponds to a pair of fastq reads for a particular 
+    Usually this corresponds to a pair of fastq reads for a particular
     bacterial clone or colony, after barcode removal/de-multiplexing.
     """
 
@@ -621,6 +621,15 @@ class ExperimentSample(UniqueUidModelMixin):
 
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
+
+    def delete_model_data_dir(self):
+        """Removes all data associated with this model.
+
+        WARNING: Be careful with this method!
+        """
+        data_dir = self.get_model_data_dir()
+        if os.path.exists(data_dir):
+            shutil.rmtree(data_dir)
 
     @classmethod
     def get_field_order(clazz, **kwargs):
