@@ -2,6 +2,7 @@
 """
 
 from django.db import connection
+from django.db import transaction
 
 
 def run():
@@ -33,3 +34,4 @@ def _add_custom_mult_agg_function():
                 '   ,INITCOND  = \'{}\''
                 ');'
         )
+        transaction.commit_unless_managed()
