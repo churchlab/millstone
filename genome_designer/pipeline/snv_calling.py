@@ -106,9 +106,20 @@ def _find_valid_bam_files(alignment_group, alignment_type):
                     len(sample_alignment_list), len(bam_files)))
     return valid_bam_files
 
+
 @task
 @project_files_needed
 def find_variants_with_tool(alignment_group, variant_params):
+    """Applies a variant caller to the alignment data contained within
+    alignment_group.
+
+    Args:
+        alignment_group: AlignmentGroup with all alignments complete.
+        variant_params: Triple (tool_name, vcf_dataset_type, tool_function).
+
+    Returns:
+        Boolean indicating whether we made it through this entire function.
+    """
     common_params = get_common_tool_params(alignment_group)
     tool_name, vcf_dataset_type, tool_function = variant_params
 
@@ -117,15 +128,16 @@ def find_variants_with_tool(alignment_group, variant_params):
     alignment_group.status = AlignmentGroup.STATUS.VARIANT_CALLING
     alignment_group.save()
 
-
     # Create subdirectory for this tool
     tool_dir = os.path.join(common_params['output_dir'], tool_name)
     ensure_exists_0775_dir(tool_dir)
     vcf_output_filename = os.path.join(tool_dir, common_params['alignment_type'] + '.vcf')
 
     # Run the tool
-    tool_function(common_params['fasta_ref'],
+    tool_succeeded = tool_function(common_params['fasta_ref'],
             common_params['bam_files'], tool_dir, vcf_output_filename)
+    if not tool_succeeded:
+        return False
 
     # Add dataset
     # If a Dataset already exists, delete it, might have been a bad run.
@@ -165,12 +177,11 @@ def find_variants_with_tool(alignment_group, variant_params):
 
     return True
 
+
 def flag_variants_from_bed(alignment_group, bed_dataset_type):
 
     sample_alignments = alignment_group.experimentsampletoalignment_set.all()
     for sample_alignment in sample_alignments:
-
-        print sample_alignment
 
         # If there is no callable_loci bed, skip the sample alignment.
         # TODO: Make this extensible to other BED files we might have
@@ -185,12 +196,16 @@ def flag_variants_from_bed(alignment_group, bed_dataset_type):
                 sample_alignment= sample_alignment,
                 bed_dataset= callable_loci_bed)
 
+
 def run_freebayes(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
     """Run freebayes using the bam alignment files keyed by the alignment_type
     for all Genomes of the passed in ReferenceGenome.
 
     NOTE: If a Genome doesn't have a bam alignment file with this
     alignment_type, then it won't be used.
+
+    Returns:
+        Boolean, True if successfully made it to the end, else False.
     """
     vcf_dataset_type = VCF_DATASET_TYPE
 
@@ -216,6 +231,8 @@ def run_freebayes(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
     with open(vcf_output_filename, 'w') as fh:
         subprocess.check_call(full_command, stdout=fh)
 
+    return True # success
+
 
 def _filter_small_variants(vcf_file, cutoff):
     """Go through each line of vcf, and remove small structural variants"""
@@ -240,10 +257,18 @@ def run_pindel(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
 
     # Create pindel config file
     pindel_config = os.path.join(vcf_output_dir, 'pindel_config.txt')
+    at_least_one_config_line_written = False
     with open(pindel_config, 'w') as fh:
         for bam_file, sample in bam_files:
             insert_size = get_insert_size(bam_file)
+            # Skip bad alignments.
+            if insert_size == -1:
+                continue
             fh.write('%s %s %s\n' % (bam_file, insert_size, sample.uid))
+            at_least_one_config_line_written = True
+
+    if not at_least_one_config_line_written:
+        return False
 
     # Build the full pindel command.
     pindel_root = vcf_output_filename[:-4]  # get rid of .vcf extension
@@ -262,6 +287,8 @@ def run_pindel(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
         '-d', 'date'
     ])
     _filter_small_variants(vcf_output_filename, 10)
+
+    return True # success
 
 
 def run_delly(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
@@ -314,3 +341,4 @@ def run_delly(fasta_ref, bam_files, vcf_output_dir, vcf_output_filename):
         subprocess.check_call(['rm', bam_file])
         subprocess.check_call(['rm', bam_file + '.bai'])
 
+    return True # success

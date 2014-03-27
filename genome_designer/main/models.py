@@ -756,7 +756,9 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
         """
         alignment_datasets = self.dataset_set.filter(
                 type=Dataset.TYPE.BWA_ALIGN)
-        if len(alignment_datasets) > 0:
+        assert len(alignment_datasets) <= 1, (
+                "Expected only one alignment dataset.")
+        if len(alignment_datasets) == 1:
             return alignment_datasets[0].status
         return 'UNDEFINED'
 
@@ -776,9 +778,9 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
         Called by the adapter.
         """
         return [
-            {'field':'experiment_sample'},
-            {'field':'status', 'verbose':'Job Status'},
-            {'field':'error_link', 'verbose': 'Error output', 'is_href': True},
+            {'field': 'experiment_sample'},
+            {'field': 'status', 'verbose': 'Job Status'},
+            {'field': 'error_link', 'verbose': 'Error output', 'is_href': True},
         ]
 
     def get_model_data_root(self):

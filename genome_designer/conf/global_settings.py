@@ -270,9 +270,9 @@ djcelery.setup_loader()
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 
 CELERY_IMPORTS = (
+        'pipeline.pipeline_runner',
         'pipeline.read_alignment',
         'pipeline.snv_calling',
-        'pipeline.pipeline',
         'scripts.import_util',
 )
 

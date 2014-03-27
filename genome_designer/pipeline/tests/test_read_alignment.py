@@ -5,6 +5,7 @@ Tests for read_alignment.py
 import json
 import os
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
@@ -12,22 +13,19 @@ from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import get_dataset_with_type
 from main.models import ExperimentSample
+from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from pipeline.read_alignment import align_with_bwa_mem
-from pipeline.read_alignment import FILES_TO_DELETE_AFTER_ALIGNMENT
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
-from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
 from scripts.jbrowse_util import compile_tracklist_json
-
-import settings
 
 
 TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
-TEST_FASTA  = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
+TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
 
 TEST_FASTQ1 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
@@ -82,10 +80,20 @@ class TestAlignmentPipeline(TestCase):
         alignment_group = AlignmentGroup.objects.create(
                 label='test alignment', reference_genome=self.reference_genome)
 
+        # Create the expected models.
+        sample_alignment = ExperimentSampleToAlignment.objects.create(
+                alignment_group=alignment_group,
+                experiment_sample=self.experiment_sample)
+        bwa_dataset = Dataset.objects.create(
+                    label=Dataset.TYPE.BWA_ALIGN,
+                    type=Dataset.TYPE.BWA_ALIGN,
+                    status=Dataset.STATUS.NOT_STARTED)
+        sample_alignment.dataset_set.add(bwa_dataset)
+        sample_alignment.save()
+
         # Run the alignment.
         experiment_sample_alignment = align_with_bwa_mem(
-                alignment_group, self.experiment_sample, 
-                project=self.project)
+                alignment_group, sample_alignment, project=self.project)
 
         # Check that the run was successful as indicatedby the Dataset status.
 
@@ -138,12 +146,22 @@ class TestAlignmentPipeline(TestCase):
         """
         # Create a new alignment group.
         alignment_group = AlignmentGroup.objects.create(
-                label='test alignment', 
+                label='test alignment',
                 reference_genome=self.reference_genome)
 
+        # Create the expected models.
+        experiment_sample_alignment = ExperimentSampleToAlignment.objects.create(
+                alignment_group=alignment_group,
+                experiment_sample=self.experiment_sample)
+        bwa_dataset = Dataset.objects.create(
+                    label=Dataset.TYPE.BWA_ALIGN,
+                    type=Dataset.TYPE.BWA_ALIGN,
+                    status=Dataset.STATUS.NOT_STARTED)
+        experiment_sample_alignment.dataset_set.add(bwa_dataset)
+        experiment_sample_alignment.save()
+
         # Run the alignment.
-        experiment_sample_alignment = align_with_bwa_mem(
-                alignment_group, self.compressed_experiment_sample,
+        align_with_bwa_mem(alignment_group, experiment_sample_alignment,
                 project=self.project)
 
         # Check that the run was successful as indicatedby the Dataset status.

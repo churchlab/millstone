@@ -181,6 +181,7 @@ class TestSNPCallers(TestCase):
 
         # Run the pipeline.
         variant_params = get_variant_tool_params()[0]  # first one is freebayes
+        assert variant_params[0] == 'freebayes'
         find_variants_with_tool(alignment_group, variant_params, project=self.project)
 
         # Grab the resulting variants.

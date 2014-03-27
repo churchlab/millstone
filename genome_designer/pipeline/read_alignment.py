@@ -14,10 +14,9 @@ from celery import task
 from main.models import get_dataset_with_type
 from main.models import AlignmentGroup
 from main.models import Dataset
-from main.models import ExperimentSampleToAlignment
 from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
-from read_alignment_util import ensure_bwa_index
+from pipeline.read_alignment_util import ensure_bwa_index
 from scripts.jbrowse_util import add_bam_file_track
 from scripts.jbrowse_util import add_bed_file_track
 from settings import TOOLS_DIR
@@ -29,57 +28,30 @@ SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
 
 @task
 @project_files_needed
-def align_with_bwa_mem(alignment_group, experiment_sample=None,
-        sample_alignment=None, test_models_only=False):
+def align_with_bwa_mem(alignment_group, sample_alignment):
     """
     REPLACES OLD BWA PIPELINE USING ALN AND SAMPE/SAMSE
     Aligns a sample to a reference genome using the bwa tool.
 
     Args:
         alignment_group: AlignmentGroup that this alignment is part of.
-        experiment_sample: ExperimentSample with handle to source fastq, etc.
-            If not provided, then sample_alignment must be provided.
-        sample_alignment: If provided, delete any previously contained
-            alignment data and re-run alignment.
-        test_models_only: If True, don't actually perform alignment, just
-            create the basic models.
-
+        sample_alignment: ExperimentSampleToAlignment. The respective dataset
+            is assumed to have been created as well.
     """
-    ### Validation
-    if not experiment_sample:
-        assert sample_alignment
-
-    # Now continue with alignment.
-
-    # First we check whether we are re-running a previously failed alignment.
-    # In other words, if an alignment instance was passed as an argument.
-    if sample_alignment:
-        # TODO: Delete existing data?
-        experiment_sample = sample_alignment.experiment_sample
-
-        # Delete existing Datasets since they will be recreated below.
-        dataset_types_to_delete = [Dataset.TYPE.BWA_ALIGN,
-                Dataset.TYPE.BWA_ALIGN_ERROR]
-        datasets_to_delete = sample_alignment.dataset_set.filter(
-                type__in=dataset_types_to_delete)
-        datasets_to_delete.delete()
-    else:
-        # Create the initial record.
-        sample_alignment = ExperimentSampleToAlignment.objects.create(
-                alignment_group=alignment_group,
-                experiment_sample=experiment_sample)
-
-    # If we are only testing that the right models are created, then
-    # we return at this point. This should never be True in production.
-    if test_models_only:
-        return
+    experiment_sample = sample_alignment.experiment_sample
 
     # Grab the reference genome fasta for the alignment.
     ref_genome_fasta = get_dataset_with_type(
             alignment_group.reference_genome,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
-    # Write error to this file.
+    # Get the BWA Dataset and set it to computing.
+    bwa_dataset = sample_alignment.dataset_set.get(
+                type=Dataset.TYPE.BWA_ALIGN)
+    bwa_dataset.status = Dataset.STATUS.COMPUTING
+    bwa_dataset.save()
+
+    # Create a file that we'll write stderr to.
     error_path = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_align.error')
     error_output = open(error_path, 'w')
@@ -90,14 +62,6 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
         alignment_group.start_time = datetime.now()
         alignment_group.end_time = None
         alignment_group.save()
-
-    # Create a Dataset object and set the state to COMPUTING.
-    bwa_dataset = Dataset.objects.create(
-            label=Dataset.TYPE.BWA_ALIGN,
-            type=Dataset.TYPE.BWA_ALIGN,
-            status=Dataset.STATUS.COMPUTING)
-    sample_alignment.dataset_set.add(bwa_dataset)
-    sample_alignment.save()
 
     # We wrap the alignment logic in a try-except so that if an error occurs,
     # we record it and update the status of the Dataset to FAILED if anything
@@ -128,8 +92,8 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
         #        when paired end reads.
         #     2. Call 'bwa sampe' (paired-end) or 'bwa samse' (single-end) to
         #        generate SAM output.
-        # 1. Generate SA coordinates.
 
+        # 1. Generate SA coordinates.
         read_fq_1_path, read_fq_1_fn = os.path.split(input_reads_1_fq_path)
 
         align_input_args = ' '.join([
@@ -144,17 +108,17 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
             read_fq_2_path, read_fq_2_fn = os.path.split(input_reads_2_fq_path)
             align_input_args += ' ' + input_reads_2_fq
 
-        # To skip saving the SAM file to disk directly, pipe output directly to 
+        # To skip saving the SAM file to disk directly, pipe output directly to
         # make a BAM file.
         align_input_args += ' | ' + SAMTOOLS_BINARY + ' view -bS -'
 
-        # 2. Generate SAM output.
+        ### 2. Generate SAM output.
         output_bam = os.path.join(sample_alignment.get_model_data_dir(),
                 'bwa_align.bam')
 
         with open(output_bam, 'w') as fh:
-            subprocess.check_call(align_input_args, 
-                    stdout=fh, stderr=error_output, 
+            subprocess.check_call(align_input_args,
+                    stdout=fh, stderr=error_output,
                     shell=True, executable=BASH_PATH)
 
         # Do several layers of processing on top of the initial alignment.
@@ -175,11 +139,11 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
 
         delete_redundant_files(sample_alignment.get_model_data_dir())
 
-    except subprocess.CalledProcessError as e:
-        error_output.write(str(e))
-        bwa_dataset.status = Dataset.STATUS.FAILED
-        bwa_dataset.save()
-        return
+    # except subprocess.CalledProcessError as e:
+    #     error_output.write(str(e))
+    #     bwa_dataset.status = Dataset.STATUS.FAILED
+    #     bwa_dataset.save()
+    #     return
     except:
         import traceback
         error_output.write(traceback.format_exc())
@@ -200,6 +164,7 @@ def align_with_bwa_mem(alignment_group, experiment_sample=None,
         sample_alignment.save()
 
         return sample_alignment
+
 
 DEFAULT_PROCESSING_MASK = {
     'make_bam': True,
@@ -504,23 +469,30 @@ def _get_callable_loci_output_filename(bam_file_location):
 
 
 def get_insert_size(bam_file_location):
-    """Returns the average insert size for a bam_file."""
+    """Returns the average insert size for a bam_file.
+
+    If the insert size can't be calculated, perhaps because of a bad alignment,
+    return -1.
+    """
     output = _get_metrics_output_filename(bam_file_location)
     if not os.path.exists(output):
         compute_insert_metrics(bam_file_location)
 
+    # If it still doesn't exist, return -1 to indicate bad alignment.
+    if not os.path.exists(output):
+        return -1
+
     # Read through the output file until you get to the data labels line,
     # then take the first value in the following line.
-    fh = open(output)
-    found_line = False
-    insert_size = -1
-    for line in fh:
-        if found_line:
-            insert_size = line.split()[0]
-            break
-        if re.match('MEDIAN_INSERT_SIZE', line):
-            found_line = True
-    fh.close()
+    with open(output) as fh:
+        found_line = False
+        insert_size = -1
+        for line in fh:
+            if found_line:
+                insert_size = line.split()[0]
+                break
+            if re.match('MEDIAN_INSERT_SIZE', line):
+                found_line = True
     return insert_size
 
 

@@ -1,5 +1,5 @@
 """
-Tests for pipeline.py
+Tests for pipeline_runner.py
 """
 
 import json
@@ -13,7 +13,7 @@ from main.models import Dataset
 from main.models import get_dataset_with_type
 from main.models import ExperimentSample
 from main.models import Project
-from pipeline.pipeline import run_pipeline_multiple_ref_genomes
+from pipeline.pipeline_runner import run_pipeline_multiple_ref_genomes
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
@@ -57,13 +57,13 @@ class TestAlignmentPipeline(TestCase):
 
 
     def test_run_pipeline(self):
-        """Tests creating an alignment group.
+        """Tests running the full pipeline.
         """
         ref_genome_list = [self.reference_genome]
         sample_list = [self.experiment_sample]
 
         run_pipeline_multiple_ref_genomes('name_placeholder',
-                ref_genome_list, sample_list, test_models_only=False)
+                ref_genome_list, sample_list)
 
         alignment_group_obj_list = AlignmentGroup.objects.filter(
                 reference_genome=self.reference_genome)
@@ -94,7 +94,7 @@ class TestAlignmentPipeline(TestCase):
 
         with self.assertRaises(AssertionError):
             run_pipeline_multiple_ref_genomes('name_placeholder',
-                    ref_genome_list, sample_list, test_models_only=False)
+                    ref_genome_list, sample_list)
 
 
     def test_run_pipeline__samples_not_ready__fastq2(self):
@@ -111,4 +111,4 @@ class TestAlignmentPipeline(TestCase):
 
         with self.assertRaises(AssertionError):
             run_pipeline_multiple_ref_genomes('name_placeholder',
-                    ref_genome_list, sample_list, test_models_only=False)
+                    ref_genome_list, sample_list)
