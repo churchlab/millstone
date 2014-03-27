@@ -5,6 +5,7 @@ import os
 
 from django.conf import global_settings
 
+
 # EntrezGene wants an email to use it's API.
 EMAIL = "millstone_user@gmail.com"
 
@@ -380,9 +381,9 @@ S3_ENABLED = False
 S3_DRY_RUN = False
 
 # Get them from https://console.aws.amazon.com/iam/home?#security_credential
-AWS_CLIENT_SECRET_KEY = '69kDz9o8VzD1Avf981R40Yf+zioz2dwnY5g94UK4'
-AWS_SERVER_PUBLIC_KEY = 'AKIAJERCJ7K6W7F7VE7A'
-AWS_SERVER_SECRET_KEY = '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'
+AWS_CLIENT_SECRET_KEY = ''
+AWS_SERVER_PUBLIC_KEY = ''
+AWS_SERVER_SECRET_KEY = ''
 
 # Name of S3 bucket to which all files will be uploaded
 S3_BUCKET = 'genome-designer-upload'
