@@ -23,6 +23,7 @@ from main.models import Dataset
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from scripts.util import titlecase_spaces
 from variants.common import generate_key_to_materialized_view_parent_col
 from variants.common import validate_key_against_map
 from variants.melted_variant_schema import CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT
@@ -414,11 +415,13 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
                 if isinstance(parent_dict_or_list, dict):
                     # melted
                     parent_dict = parent_dict_or_list
-                    value = str(parent_dict.get(field, ''))
+                    value = adapt_melted_object_field(
+                            parent_dict.get(field, ''), fdict)
+
                 elif isinstance(parent_dict_or_list, list):
                     # cast
-                    value = cast_object_list_field_as_bucket_string(
-                            parent_dict_or_list, field)
+                    value = adapt_cast_object_list_field(
+                            parent_dict_or_list, fdict)
             else:
                 value = melted_variant_obj.get(field, '')
 
@@ -435,7 +438,10 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
 
     # Create the config dict that tells DataTables js how to display each col.
     obj_field_config = []
-    for fdict in field_dict_list:
+    # save idxes of fields we want to be last
+    last_idxes = [] 
+
+    for i, fdict in enumerate(field_dict_list):
         if fdict.get('hide', False):
             continue
         obj_field_config.append({
@@ -444,6 +450,13 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
                     string.capwords(fdict['field'], '_').replace('_', ' ')),
             'bSortable': fdict.get('sortable', False)
         })
+        if fdict.get('last'):
+            last_idxes.append(i)
+
+    # Finally, move these fields to the end. 
+    for i in last_idxes:
+        field_i = obj_field_config.pop(i)
+        obj_field_config.append(field_i)
 
     return json.dumps({
         'obj_list': fe_obj_list,
@@ -701,20 +714,20 @@ def _create_variant_set_analyze_view_link(project_uid, variant_set_uid,
 
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
-    {'field': 'label', 'verbose': 'Mutant'},
+    # {'field': 'label', 'verbose': 'Mutant'},
     {'field': MELTED_SCHEMA_KEY__ES_LABEL, 'verbose': 'Sample'},
     {'field': MELTED_SCHEMA_KEY__CHROMOSOME},
     {'field': MELTED_SCHEMA_KEY__POSITION},
     {'field': MELTED_SCHEMA_KEY__REF},
     {'field': MELTED_SCHEMA_KEY__ALT},
-    {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Variant Sets'},
+    {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Sets', 'last': True},
     {'field': MELTED_SCHEMA_KEY__ES_UID, 'hide': True},
     {'field': MELTED_SCHEMA_KEY__UID, 'hide': True}
 ]
 
 CAST_VARIANT_FIELD_DICT_LIST = [
-    {'field': 'label', 'verbose': 'label'},
-    {'field': MELTED_SCHEMA_KEY__CHROMOSOME},
+    # {'field': 'label', 'verbose': 'label'},
+    {'field': MELTED_SCHEfMA_KEY__CHROMOSOME},
     {
         'field': MELTED_SCHEMA_KEY__POSITION,
         'sortable': True
@@ -726,7 +739,7 @@ CAST_VARIANT_FIELD_DICT_LIST = [
         'verbose': '# Samples',
         'sortable': True
     },
-    {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Variant Sets'},
+    {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Sets', 'last': True},
     {'field': MELTED_SCHEMA_KEY__UID, 'hide': True}
 ]
 
@@ -734,10 +747,10 @@ CAST_VARIANT_FIELD_DICT_LIST = [
 # NOTE: The source table for these must be included in
 # MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS.
 OPTIONAL_DEFAULT_FIELDS = [
-    {'field': 'INFO_EFF_GENE', 'hide': True}, # va_data
-    {'field': 'INFO_EFF_EFFECT', 'hide': True}, # va_data
-    {'field': 'INFO_EFF_IMPACT', 'hide': True}, # va_data
-    {'field': 'INFO_EFF_AA', 'hide': True}, # va_data
+    {'field': 'INFO_EFF_GENE', 'verbose': 'Gene', 'format': 'gather'}, # va_data
+    # {'field': 'INFO_EFF_EFFECT', 'verbose': 'Effect', 'format': 'gather', 'recase':'title'}, # va_data
+    {'field': 'INFO_EFF_IMPACT', 'verbose': 'Impact', 'format': 'gather', 'recase':'title'}, # va_data
+    {'field': 'INFO_EFF_AA', 'verbose': 'AA', 'format': 'gather'}, # va_data    
 ]
 
 
@@ -902,26 +915,46 @@ def _prepare_visible_key_name_for_adapting_to_fe(key_name, key_to_parent_map):
     return result
 
 
-def cast_object_list_field_as_bucket_string(cast_object_dict_list, field):
+def adapt_melted_object_field(val, fdict):
+    """
+    Any extra processing we have to do to the melted string according to
+    fdict keys should happen here. 
+    """
+    if 'recase' in fdict:
+        val = titlecase_spaces(val)
+    return val
+
+def adapt_cast_object_list_field(cast_object_dict_list, fdict):
     """Converts a Cast object's field as a list into a string where values
     have been bucketed by unique type, with counts in parens.
 
     TODO: This doesn't really make sense for fields that take on continuous
     number values. Figure out what to do with these kinds of fields.
     """
-    # First, extract the relevant fields.
+    # First, extract the relevant fields and recase them.
     value_list = []
     for cast_object_dict in cast_object_dict_list:
         if cast_object_dict is None:
-            value_list.append('NONE')
+            continue
         else:
-            value_list.append(cast_object_dict.get(field, ''))
+            val = cast_object_dict.get(fdict['field'], None)
+            if val is None: continue
+            if 'recase' in fdict:
+                val = titlecase_spaces(val)
+            value_list.append(val)
 
-    # Count.
-    buckets = defaultdict(lambda: 0)
+    # Using ordered dicts with None as an ordered set
+    buckets = OrderedDict()
     for val in value_list:
-        buckets[str(val)] += 1
+        buckets[val] = buckets.get(val, 0) + 1
 
-    # Create string.
-    return (' | '.join(['%s (%d)' % (key, count)
-            for key, count in buckets.iteritems()]))
+    # If gathering, just list all values, maintaining order.     
+    if fdict.get('format','bucket') is 'gather':
+        # Create string.
+        return (' | '.join(buckets.keys()))
+
+    # If bucketing, count each. 
+    elif fdict.get('format','bucket') is 'bucket':
+        # Create string.
+        return (' | '.join(['%s (%d)' % (key, count)
+                for key, count in buckets.iteritems()]))

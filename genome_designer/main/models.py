@@ -50,6 +50,7 @@ from model_utils import make_choices_tuple
 from model_utils import UniqueUidModelMixin
 from model_utils import VisibleFieldMixin
 from settings import TOOLS_DIR
+from scripts.util import uppercase_underscore
 
 BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
 
@@ -100,6 +101,9 @@ class Dataset(UniqueUidModelMixin):
         """The type of this dataset.
 
         Limit to 40-chars as per Dataset.type field def.
+
+        For internal strings, we will convert to ALL_CAPS_W_UNDERSCORES.
+
         """
         REFERENCE_GENOME_FASTA = 'Reference Genome FASTA' # fasta
         REFERENCE_GENOME_GENBANK = 'Reference Genome Genbank' #genbank
@@ -214,6 +218,24 @@ class Dataset(UniqueUidModelMixin):
                     program, absolute_location)
         else:
             return absolute_location
+
+    def internal_string(self, parent_entity):
+        """
+        A string used internally to describe a dataset for an entity.
+        Our convention is 
+            parent_entity.uid + '_' + dataset.type 
+            (uppercased, whitespace as underscores)
+        """
+        return str(parent_entity.uid) + '_' + uppercase_underscore(self.type)
+
+    def external_string(self, parent_entity):
+        """
+        A string used externally to describe a dataset for an entity.
+        Our convention is 
+            parent_entity.label + ' ' + dataset.type
+        """
+        return str(parent_entity.label) + ' ' + self.type
+
 
     @contextmanager
     def stream(self):

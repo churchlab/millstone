@@ -100,6 +100,7 @@ class TestAlignmentPipeline(TestCase):
 
         bwa_align_dataset = get_dataset_with_type(
                 experiment_sample_alignment, Dataset.TYPE.BWA_ALIGN)
+        
         self.assertEqual(Dataset.STATUS.READY, bwa_align_dataset.status)
 
         # Check that the alignment data was saved to a valid destination.

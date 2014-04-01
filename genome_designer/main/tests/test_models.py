@@ -20,6 +20,7 @@ from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
+from scripts.util import uppercase_underscore
 import subprocess
 
 
@@ -174,6 +175,28 @@ class TestDataset(TestCase):
                 compressed= True)
         assert compressed_dataset == compressed_dataset_through_ref_genome
 
+    def test_dataset_strings(self):
+
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+
+        self.test_project = Project.objects.create(
+            title=TEST_PROJECT_NAME,
+            owner=user.get_profile())
+
+        self.test_ref_genome = import_reference_genome_from_local_file(
+            self.test_project,
+            TEST_REF_GENOME_NAME,
+            TEST_REF_GENOME_PATH,
+            'genbank')
+
+        dataset = get_dataset_with_type(self.test_ref_genome,
+                type= Dataset.TYPE.REFERENCE_GENOME_GENBANK)
+
+        self.assertEquals(
+                dataset.internal_string(self.test_ref_genome),
+                (str(self.test_ref_genome.uid) + 
+                        '_' + uppercase_underscore(Dataset.TYPE.REFERENCE_GENOME_GENBANK)))
 
 
 class TestModelsStatic(TestCase):

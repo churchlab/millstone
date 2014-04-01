@@ -293,7 +293,7 @@ def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
             vcf_dataset.filesystem_idx_location)
 
     # TODO: This jbrowse vcf label really need to be more human readable.
-    label = str(alignment_group.uid) + '_' + vcf_dataset.type
+    label = vcf_dataset.internal_string(alignment_group)
     key = "{:s} {:s} SNVs".format(vcf_dataset.type,alignment_group.label)
 
     # Build the JSON object.
@@ -310,6 +310,7 @@ def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
     }
 
     write_tracklist_json(reference_genome, raw_dict_obj, label)
+
 
 def _vcf_to_vcftabix(vcf_dataset):
     """
@@ -369,8 +370,10 @@ def add_bed_file_track(reference_genome, sample_alignment, dataset):
 
     jbrowse_path = reference_genome.get_jbrowse_directory_path()
 
-    label = str(sample_alignment.experiment_sample.uid) + '_' + dataset.type
-    key = str(sample_alignment.experiment_sample.label) + ' ' + dataset.type
+    label = dataset.internal_string(sample_alignment)
+    key = ':'.join([
+            sample_alignment.alignment_group.label,
+            dataset.external_string(sample_alignment.experiment_sample)])
 
     bed_json_command = [
         FLATFILE_TRACK_BIN,
@@ -384,6 +387,14 @@ def add_bed_file_track(reference_genome, sample_alignment, dataset):
     print bed_json_command
 
     subprocess.check_call(bed_json_command)
+
+    # Finally, manually update category for json
+    tracklist_json = get_tracklist_json(reference_genome, label)
+
+    for i, track in enumerate(tracklist_json['tracks']):
+        track['category'] = 'BED Features'
+
+    write_tracklist_json(reference_genome, tracklist_json, label)
 
 
 def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
@@ -408,10 +419,10 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
         urlTemplate = os.path.join(JBROWSE_DATA_URL_ROOT,
             bam_dataset.filesystem_location)
 
-    # Generic label for now.
-    # TODO: Is there a better way to come up with a label?
-    label = str(sample_alignment.experiment_sample.uid) + '_' + alignment_type
-    key = str(sample_alignment.experiment_sample.label) + ' ' + bam_dataset.type
+    label = bam_dataset.internal_string(sample_alignment)
+    key = ':'.join([
+            sample_alignment.alignment_group.label,
+            bam_dataset.external_string(sample_alignment.experiment_sample)])
 
     # Build the JSON object.
     raw_dict_obj = {
@@ -433,7 +444,7 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     write_tracklist_json(reference_genome, raw_dict_obj, label)
 
     # Also add a snp coverage track.
-    snp_coverage_label = label + '_coverage'
+    snp_coverage_label = label + '_COVERAGE'
     snp_coverage_key = key + ' Coverage'
     coverage_raw_dict_obj = {
         'tracks' : [
@@ -448,4 +459,41 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     ]}
     write_tracklist_json(reference_genome, coverage_raw_dict_obj, 
             snp_coverage_label)
+
+def get_tracks_for_entity(reference_genome, 
+        alignment_group=None, 
+        sample_alignment=None):
+    """
+    Get a list of jbrowse track labels (i.e. the internal track names)
+    that we want to show. Stored in a tuple, with the first string as the
+    category.
+    """
+    raise NotImplementedError
+    # This might be a good idea later. 
+    
+    # track_list = defaultdict(dict)
+
+    # # Reference Genome
+
+    # # always have DNA and gbk if available
+    # track_list['DNA']('DNA')
+    # if reference_genome.is_annotated:
+    #     track_list.append('gbk')
+
+    # # Do all alignment groups if None, else get just the one:
+    # if alignment_group is not None: 
+    #     alignment_groups = reference_genome.alignmentgroup_set.all():
+    # else:
+    #     alignment_groups = [alignment_group]
+
+    # for alignment_group in alignment_groups:
+        
+    #     #VCF
+    #     track_list.append('vcf',
+    #                 '_'.join([
+    #         str(alignment_group.uid),
+    #         Dataset.TYPE.VCF_FREEBAYES_SNPEFF]))
+
+
+
 

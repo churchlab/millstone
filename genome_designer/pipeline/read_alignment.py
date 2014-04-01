@@ -22,6 +22,7 @@ from scripts.jbrowse_util import add_bam_file_track
 from scripts.jbrowse_util import add_bed_file_track
 from settings import TOOLS_DIR
 from settings import BASH_PATH
+from scripts.util import titlecase_spaces
 
 
 SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
@@ -471,22 +472,24 @@ def compute_callable_loci(reference_genome, sample_alignment,
         with open(callable_loci_bed_fn, 'w') as callable_loci_bed_fh:
             for i, line in enumerate(output.split('\n')):
                 try:
-                    chrom, start, end, feature = line.split()
+                    fields = line.split()
+                    if len(fields) == 0: continue
+                    chrom, start, end, feature = fields
                     if feature == 'CALLABLE': 
                         continue
                     else:
 
-                        feature = feature.replace('_',' ')
-                        feature = string.capwords(feature)
+                        feature = titlecase_spaces(feature)
                         # Bed feature can't have spaces =(
                         feature = feature.replace(' ','_')
 
                     print >> callable_loci_bed_fh, '\t'.join(
                             [chrom, start, end, feature])
-                except:
+                except Exception as e:
                    print >> stderr, (
-                            'WARNING: Callable Loci line %d: (%s) couldnt be parsed.' % (
-                                    i, line)) 
+                            'WARNING: Callable Loci line' + 
+                            '%d: (%s) couldn\'t be parsed: %s') % (
+                                    i, line, str(e))
         # add it as a jbrowse track
         add_bed_file_track(reference_genome, sample_alignment, callable_loci_bed)
 

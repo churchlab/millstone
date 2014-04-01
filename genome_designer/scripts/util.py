@@ -7,7 +7,7 @@ import shutil
 import sys
 import tempfile
 import urllib2
-
+import string
 
 # Number of characters that snpeff requires per line of the genbank file
 SNPEFF_MIN_LINE_LEN = 20
@@ -127,3 +127,20 @@ def merge_nested_dictionaries(d1, d2, allow_update=True):
             ])
 
     return merge_values(d1, d2)
+
+def uppercase_underscore(a_string):
+    """
+    Internally some strings that are Title Cased With Spaces should be
+    UPPER_CASED_WITH_UNDERSCORES. 
+    """
+    a_string = a_string.replace(' ','_')
+    return a_string.upper()
+
+def titlecase_spaces(a_string):
+    """
+    Externally some strings that are UPPER_CASED_WITH_UNDERSCORES should be
+    Title Cased With Spaces.
+    """
+    a_string = a_string.replace('_',' ')
+    return string.capwords(a_string)
+

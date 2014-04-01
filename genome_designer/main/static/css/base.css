@@ -60,6 +60,10 @@ body {
   margin-left: 15px;
 }
 
+.gd-sidebar {
+  max-width: 200px;
+}
+
 .gd-sidebar-analyze-buttons {
   width: 100%;
 }

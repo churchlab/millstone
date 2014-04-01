@@ -131,8 +131,8 @@ def add_variants_to_set_from_bed(sample_alignment, bed_dataset):
                 curr_ivl = feature_disj_intervals[feature][chrom] 
                 feature_disj_intervals[feature][chrom] = curr_ivl | new_ivl
             except:
-                print 'WARNING: Callable Loci line %d: (%s) couldnt be parsed.' % (i, line)
-
+                print ('WARNING: Callable Loci line ' + 
+                        '%d: (%s) couldnt be parsed.') % (i, line)
 
     # 2. Associate variants with these intervals 
     variants = Variant.objects.filter(
