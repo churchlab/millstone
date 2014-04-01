@@ -182,6 +182,16 @@ else:
 # S3
 ###########################################################################
 
+if settings.DEBUG:
+    from django.conf.urls.static import static
+    urlpatterns += static('jbrowse', document_root=settings.JBROWSE_ROOT,
+            show_indexes=True)
+
+
+###########################################################################
+# S3
+###########################################################################
+
 if settings.S3_ENABLED:
     urlpatterns += patterns('',
         url(r'^_/projects/([\w-]+)/refgenomes/import_s3$',
@@ -201,16 +211,16 @@ if settings.S3_ENABLED:
                 name="s3_success")
     )
 
-if settings.RUNNING_ON_EC2:
-    urlpatterns += patterns('',
-        url(r'^ec2/info$', 'main.views.ec2_info_view',
-                name="ec2_info")
-    )
+# TODO: Uncomment once we're sure we want this.
+# if settings.RUNNING_ON_EC2:
+#     urlpatterns += patterns('',
+#         url(r'^ec2/info$', 'main.views.ec2_info_view',
+#                 name="ec2_info")
+#     )
 
-if settings.DEBUG:
-    from django.conf.urls.static import static
-    urlpatterns += static('jbrowse', document_root=settings.JBROWSE_ROOT,
-            show_indexes=True)
+###########################################################################
+# Functions to run at startup
+###########################################################################
 
 from main import startup
 startup.run()
