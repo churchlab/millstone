@@ -194,13 +194,23 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
           $('.gd-id-master-cb-select-more-than-one').addClass('alert-warning');
         }, this));
       } else {
-        // Reset, and hide the select all message.
-        this.allSelected = false;
-        $('.gd-id-master-cb-select-more-than-one').hide();
-        $('.gd-id-master-cb-select-more-than-one').removeClass('alert-warning');
-        $('.gd-id-master-cb-select-more-than-one').addClass('alert-info');
+        this.resetAllSelectedState();
       }
     }, this));
+  },
+
+  /** Resets the "all selected" master checkbox state. */
+  resetAllSelectedState: function() {
+    // Reset the model state.
+    this.allSelected = false;
+
+    // Reset the master checkbox.
+    $('#gd-datatable-hook-datatable-master-cb').prop('checked', false);
+
+    // Reset the 'select all' banner.
+    $('.gd-id-master-cb-select-more-than-one').hide();
+    $('.gd-id-master-cb-select-more-than-one').removeClass('alert-warning');
+    $('.gd-id-master-cb-select-more-than-one').addClass('alert-info');
   },
 
   /**
@@ -208,28 +218,14 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
    * make their parent td clickable.
    */
   listenToCheckboxes: function() {
-    $('td.gd-dt-cb-div').click(function(ev){
-      if (ev.target.nodeName === "INPUT"){
-        return;
-      }
-
-      var cb = $(this).find('input:checkbox.gd-dt-cb').get(0);
-
-      if ($(cb).is(':checked')){
-        $(cb).prop('checked', false);
+    $('input:checkbox.gd-dt-cb').change(_.bind(function(e) {
+      if ($(e.target).is(':checked')) {
+        $(e.target).parent('td').addClass('active');
       } else {
-        $(cb).prop('checked', true);
+        $(e.target).parent('td').removeClass('active');
+        this.resetAllSelectedState();
       }
-      $(cb).triggerHandler('change');
-    });
-
-    $('input:checkbox.gd-dt-cb').change(function() {
-      if ($(this).is(':checked')) {
-        $(this).parent('td').addClass('active');
-      } else {
-        $(this).parent('td').removeClass('active');
-      }
-    });
+    }, this));
   },
 
   /** Returns an array of uids for the rows that are selected. */
