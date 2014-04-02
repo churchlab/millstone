@@ -46,8 +46,8 @@ tools/
 *.tmproj
 
 # Local settings overrides
-conf/local_settings.py
 genome_designer/conf/local_settings.py
+genome_designer/conf/secret_key.py
 
 # SnpEff Temp Data
 # TODO(dbg): Tests should clean these up.

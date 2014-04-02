@@ -17,10 +17,11 @@ from tempfile import NamedTemporaryFile
 from BCBio import GFF
 from Bio import Entrez
 from Bio import SeqIO
-from main.s3 import project_files_needed
-
+from celery import task
 from django.db import transaction
 from django.conf import settings
+
+from main.celery_util import assert_celery_running
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -31,6 +32,7 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 from main.models import get_dataset_with_type
 from main.model_utils import clean_filesystem_location
+from main.s3 import project_files_needed
 from scripts.vcf_parser import extract_raw_data_dict
 from scripts.vcf_parser import get_or_create_variant
 from settings import PWD
@@ -345,21 +347,69 @@ def import_samples_from_targets_file(project, targets_file):
         targets_file: The UploadedFile django object that holds the targets
             in .tsv format.
     """
+    assert_celery_running()
+
     valid_rows = parse_targets_file(project, targets_file)
 
     # Now create ExperimentSample objects along with their respective Datasets.
     # The data is copied to the entity location.
+    # We do this asynchronously so catch all the results, so we can block on
+    # them.
     for row in valid_rows:
         # Create ExperimentSample object and then store the data relative to
         # it.
         sample_label = row['Sample_Name']
         experiment_sample = ExperimentSample.objects.create(
                 project=project, label=sample_label)
-        copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ1,
-                Dataset.TYPE.FASTQ1, row['Read_1_Path'])
-        if 'Read_2_Path' in row and row['Read_2_Path']:
-            copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ2,
-                    Dataset.TYPE.FASTQ2, row['Read_2_Path'])
+
+        # Create the Datasets before starting copying so we can show status in
+        # the ui. This is a new pattern where we are moving copying to happen
+        # asynchronously in Celery.
+        fastq1_source = row['Read_1_Path']
+        dest = _get_copy_target_path(experiment_sample, fastq1_source)
+        read1_dataset = add_dataset_to_entity(experiment_sample,
+                Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ1, dest)
+        read1_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
+        read1_dataset.save()
+        maybe_read2_path = row.get('Read_2_Path', '')
+        if maybe_read2_path:
+            read2_dataset = add_dataset_to_entity(experiment_sample,
+                    Dataset.TYPE.FASTQ2, Dataset.TYPE.FASTQ2, dest)
+            read2_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
+            read2_dataset.save()
+
+        # Start the async job of copying.
+        copy_experiment_sample_data.delay(project, experiment_sample, row)
+
+
+@task
+@project_files_needed
+def copy_experiment_sample_data(project, experiment_sample, data):
+    """Celery task that wraps the process of copying the data for an
+    ExperimentSample.
+    """
+    move = False
+
+    # Copy read1.
+    read1_dataset = experiment_sample.dataset_set.get(type=Dataset.TYPE.FASTQ1)
+    read1_dataset.status = Dataset.STATUS.COPYING
+    read1_dataset.save()
+    copy_dataset_to_entity_data_dir(experiment_sample, data['Read_1_Path'],
+            move=move)
+    read1_dataset.status = Dataset.STATUS.READY
+    read1_dataset.save()
+
+    # Copy read2.
+    maybe_read2_path = data.get('Read_2_Path', '')
+    if maybe_read2_path:
+        read2_dataset = experiment_sample.dataset_set.get(
+                type=Dataset.TYPE.FASTQ2)
+        read2_dataset.status = Dataset.STATUS.COPYING
+        read2_dataset.save()
+        copy_dataset_to_entity_data_dir(experiment_sample, maybe_read2_path,
+                move=move)
+        read2_dataset.status = Dataset.STATUS.READY
+        read2_dataset.save()
 
 
 @transaction.commit_on_success
@@ -460,41 +510,67 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
                     variant_set=variant_set)
 
 
+##############################################################################
+# Helper Functions
+##############################################################################
+
 def copy_and_add_dataset_source(entity, dataset_label, dataset_type,
         original_source_location, move=False):
     """Copies the dataset to the entity location and then adds as
     Dataset. If the original_source_location is a file object, then
-    it just read()s from the handle and writes to destination. 
+    it just read()s from the handle and writes to destination.
+
+    If move is true, move instead of copying it. Good for files downloaded
+    to a temp directory, since copying is slower.
 
     The model entity must satisfy the following interface:
         * property dataset_set
         * method get_model_data_dir()
 
-    Returns the Dataset object.
-
-    If move is true, move instead of copying it. Good for files downloaded
-    to a temp directory, since copying is slower.
+    Returns:
+        The Dataset object.
     """
     dest = copy_dataset_to_entity_data_dir(entity, original_source_location,
         move)
     dataset = add_dataset_to_entity(entity, dataset_label, dataset_type,
         dest)
 
+    # First create the dataset and set copying status on it, dont set
+    # the filesystem location.
+    # dest = _get_copy_target_path(entity, original_source_location)
+    # dataset = add_dataset_to_entity(entity, dataset_label, dataset_type, dest)
+    # actual_dest = copy_dataset_to_entity_data_dir(
+    #         entity, original_source_location, move=move)
+    # assert actual_dest == dest, "If this fails, there's a bug."
+
     return dataset
+
+
+def _get_copy_target_path(entity, original_source_location):
+    """Returns the full path to the copy target.
+
+    Args:
+        entity: Model entity from which we determine the target dir.
+        original_source_location: Original location from which we determine a
+            filename.
+
+    Returns:
+        String describing full target path.
+    """
+    assert hasattr(entity, 'get_model_data_dir')
+    source_name = os.path.split(original_source_location)[1]
+    return os.path.join(entity.get_model_data_dir(), source_name)
 
 
 def copy_dataset_to_entity_data_dir(entity, original_source_location,
         move=False):
     """If a file path, copy the data to the entity model data dir.
-       If a handle, then just write it to the data dir.
+    If a handle, then just write it to the data dir.
 
     Returns:
         The destination to which the file was copied.
     """
-    assert hasattr(entity, 'get_model_data_dir')
-    source_name = os.path.split(original_source_location)[1]
-    dest = os.path.join(entity.get_model_data_dir(), source_name)
-
+    dest = _get_copy_target_path(entity, original_source_location)
 
     if not original_source_location == dest:
         try: #first try path

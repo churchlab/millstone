@@ -331,3 +331,10 @@ div.dataTables_paginate ul.pagination {
 .gd-demo-splash-ok-button {
   margin-top: 20px;
 }
+
+.gd-master-cb-select-more-than-one {
+  display: none;
+  margin-bottom: 5px;
+  margin-top: 10px;
+  padding: 5px;
+}

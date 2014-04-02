@@ -55,6 +55,7 @@ from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_variant_filter import lookup_variants
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.variant_sets import update_variant_in_set_memberships
+from variants.variant_sets import update_variant_in_set_memberships__all_matching_filter
 
 if settings.S3_ENABLED:
     from scripts.import_util import parse_targets_file, import_reference_genome_from_s3, import_samples_from_s3
@@ -348,13 +349,21 @@ def modify_variant_in_set_membership(request):
     request_data = json.loads(request.body)
 
     # Make sure the required keys are present.
+    # Validation.
     REQUIRED_KEYS = [
             'refGenomeUid',
-            'variantUidList',
             'variantSetAction',
             'variantSetUid']
     if not all(key in request_data for key in REQUIRED_KEYS):
         return HttpResponseBadRequest("Invalid request. Missing keys.")
+
+    add_all_matching_filter = False
+    if ('isAllMatchingFilterSelected' in request_data and
+            request_data['isAllMatchingFilterSelected']):
+        add_all_matching_filter = True
+    else:
+        if not 'variantUidList' in request_data:
+            return HttpResponseBadRequest("Invalid request. Missing keys.")
 
     # Get the project and verify that the requesting user has the
     # right permissions.
@@ -362,12 +371,21 @@ def modify_variant_in_set_membership(request):
             project__owner=request.user.get_profile(),
             uid=request_data.get('refGenomeUid'))
 
-    # Add or remove the variants to the set, as per variantSetAction.
-    update_memberships_result = update_variant_in_set_memberships(
-            reference_genome,
-            request_data.get('variantUidList'),
-            request_data.get('variantSetAction'),
-            request_data.get('variantSetUid'))
+    # Perform the update.
+    if add_all_matching_filter:
+        update_memberships_result = (
+                update_variant_in_set_memberships__all_matching_filter(
+                        reference_genome,
+                        request_data.get('variantSetAction'),
+                        request_data.get('variantSetUid'),
+                        request_data.get('filterString'),
+                        request_data.get('isMelted')))
+    else:
+        update_memberships_result = update_variant_in_set_memberships(
+                reference_genome,
+                request_data.get('variantUidList'),
+                request_data.get('variantSetAction'),
+                request_data.get('variantSetUid'))
 
     return HttpResponse(json.dumps(update_memberships_result))
 

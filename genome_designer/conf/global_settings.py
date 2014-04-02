@@ -5,6 +5,7 @@ import os
 
 from django.conf import global_settings
 
+
 # EntrezGene wants an email to use it's API.
 EMAIL = "millstone_user@gmail.com"
 
@@ -58,7 +59,10 @@ DATABASES = {
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
 # See https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+]
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -122,8 +126,20 @@ STATICFILES_FINDERS = (
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
-# Make this unique, and don't share it with anybody.
-SECRET_KEY = '*2s+5aalcl*0relwgx(4h9tguj8xt@j$fpr_&utx1!m%j70e()'
+# Generate SECRET_KEY. This stores the key in secret_key.py, which should
+# not be committed to a public repository.
+try:
+    from secret_key import *
+except ImportError:
+    def _generate_secret_key(dest):
+        from django.utils.crypto import get_random_string
+        chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
+        new_secret_key = get_random_string(50, chars)
+        with open(dest, 'w') as secret_key_fh:
+            secret_key_fh.write('SECRET_KEY = \'%s\'' % new_secret_key)
+    SETTINGS_DIR = os.path.abspath(os.path.dirname(__file__))
+    _generate_secret_key(os.path.join(SETTINGS_DIR, 'secret_key.py'))
+    from secret_key import *
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -267,9 +283,10 @@ djcelery.setup_loader()
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 
 CELERY_IMPORTS = (
+        'pipeline.pipeline_runner',
         'pipeline.read_alignment',
         'pipeline.snv_calling',
-        'pipeline.pipeline'
+        'scripts.import_util',
 )
 
 # When True, forces synchronous behavior so that it's not necessary
@@ -385,9 +402,9 @@ S3_ENABLED = False
 S3_DRY_RUN = False
 
 # Get them from https://console.aws.amazon.com/iam/home?#security_credential
-AWS_CLIENT_SECRET_KEY = '69kDz9o8VzD1Avf981R40Yf+zioz2dwnY5g94UK4'
-AWS_SERVER_PUBLIC_KEY = 'AKIAJERCJ7K6W7F7VE7A'
-AWS_SERVER_SECRET_KEY = '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'
+AWS_CLIENT_SECRET_KEY = ''
+AWS_SERVER_PUBLIC_KEY = ''
+AWS_SERVER_SECRET_KEY = ''
 
 # Name of S3 bucket to which all files will be uploaded
 S3_BUCKET = 'genome-designer-upload'

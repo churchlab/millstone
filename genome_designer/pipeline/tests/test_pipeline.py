@@ -1,5 +1,5 @@
 """
-Tests for pipeline.py
+Tests for pipeline_runner.py
 """
 
 import json
@@ -7,14 +7,13 @@ import os
 
 from django.contrib.auth.models import User
 from django.test import TestCase
-from django.test.utils import override_settings
 
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import get_dataset_with_type
 from main.models import ExperimentSample
 from main.models import Project
-from pipeline.pipeline import run_pipeline_multiple_ref_genomes
+from pipeline.pipeline_runner import run_pipeline_multiple_ref_genomes
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
@@ -57,17 +56,14 @@ class TestAlignmentPipeline(TestCase):
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
 
 
-    @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS = True,
-            CELERY_ALWAYS_EAGER = True, BROKER_BACKEND = 'memory')
-
     def test_run_pipeline(self):
-        """Tests creating an alignment group.
+        """Tests running the full pipeline.
         """
         ref_genome_list = [self.reference_genome]
         sample_list = [self.experiment_sample]
 
         run_pipeline_multiple_ref_genomes('name_placeholder',
-                ref_genome_list, sample_list, test_models_only=False)
+                ref_genome_list, sample_list)
 
         alignment_group_obj_list = AlignmentGroup.objects.filter(
                 reference_genome=self.reference_genome)
@@ -82,3 +78,37 @@ class TestAlignmentPipeline(TestCase):
         self.assertTrue(os.path.exists(jbrowse_dir))
         self.assertTrue(os.path.exists(os.path.join(jbrowse_dir,
                 'indiv_tracks')))
+
+
+    def test_run_pipeline__samples_not_ready__fastq1(self):
+        """Tests that the pipeline raises an AssertionError if samples aren't
+        ready, fastq1.
+        """
+        fastq_dataset = self.experiment_sample.dataset_set.filter(
+            type=Dataset.TYPE.FASTQ1)[0]
+        fastq_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
+        fastq_dataset.save()
+
+        ref_genome_list = [self.reference_genome]
+        sample_list = [self.experiment_sample]
+
+        with self.assertRaises(AssertionError):
+            run_pipeline_multiple_ref_genomes('name_placeholder',
+                    ref_genome_list, sample_list)
+
+
+    def test_run_pipeline__samples_not_ready__fastq2(self):
+        """Tests that the pipeline raises an AssertionError if samples aren't
+        ready, fastq2.
+        """
+        fastq_dataset = self.experiment_sample.dataset_set.filter(
+            type=Dataset.TYPE.FASTQ2)[0]
+        fastq_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
+        fastq_dataset.save()
+
+        ref_genome_list = [self.reference_genome]
+        sample_list = [self.experiment_sample]
+
+        with self.assertRaises(AssertionError):
+            run_pipeline_multiple_ref_genomes('name_placeholder',
+                    ref_genome_list, sample_list)

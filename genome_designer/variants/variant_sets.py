@@ -13,6 +13,9 @@ from main.models import ExperimentSample
 from main.models import Variant
 from main.models import VariantSet
 from main.models import VariantToVariantSet
+from variants.materialized_variant_filter import lookup_variants
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__UID
 
 
 MODIFY_VARIANT_SET_MEMBERSHIP__ADD = 'add'
@@ -90,6 +93,33 @@ def update_variant_in_set_memberships(ref_genome, uid_data_str_list,
         'alert_type': 'info',
         'alert_msg': 'success'
     }
+
+
+def update_variant_in_set_memberships__all_matching_filter(ref_genome,
+        action, variant_set_uid, filter_string, is_melted):
+    """Updates VariantSet membership for all matching filter.
+    """
+    query_args = {
+        'filter_string': filter_string,
+        'is_melted': is_melted,
+    }
+    lookup_variant_result = lookup_variants(query_args, ref_genome)
+    variant_list = lookup_variant_result.result_list
+
+    # Convert the variant result into the form that the update function
+    # requires, list of '<variant_uid>' or '<variant_uid>,<sample_uid>'.
+    uid_data_str_list = []
+    for row in variant_list:
+        data_str = row[MELTED_SCHEMA_KEY__UID]
+        if (MELTED_SCHEMA_KEY__ES_UID in row and
+                not isinstance(row[MELTED_SCHEMA_KEY__ES_UID], list) and
+                not row[MELTED_SCHEMA_KEY__ES_UID] is None):
+            data_str += ',' + row[MELTED_SCHEMA_KEY__ES_UID]
+        uid_data_str_list.append(data_str)
+
+    return update_variant_in_set_memberships(
+            ref_genome, uid_data_str_list, action, variant_set_uid)
+
 
 def add_variants_to_set_from_bed(sample_alignment, bed_dataset):
     """

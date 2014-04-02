@@ -160,3 +160,20 @@ class TestGetVariantList(TestCase):
         variant_position_set = set([_get_position_from_frontend_object(obj)
                 for obj in variant_obj_list])
         self.assertEqual(set(range(TOTAL_NUM_VARIANTS)), variant_position_set)
+
+
+class TestModifyVariantInSetMembership(TestCase):
+    """Tests for the modify_variant_in_set_membership() xhr endpoint.
+    """
+
+    def test_add__variants_specified(self):
+        """Tests adding a specific list.
+        """
+        # TODO: Implement.
+        pass
+
+    def test_add__all_matching_filter(self):
+        """Test adding all matching filter.
+        """
+        # TODO: Implement.
+        pass

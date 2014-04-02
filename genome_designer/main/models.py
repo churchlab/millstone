@@ -166,6 +166,8 @@ class Dataset(UniqueUidModelMixin):
         VARIANT_CALLING = 'VARIANT_CALLING'
         READY = 'READY'
         FAILED = 'FAILED'
+        COPYING = 'COPYING'
+        QUEUED_TO_COPY = 'QUEUED_TO_COPY'
     STATUS_CHOICES = make_choices_tuple(STATUS)
     status = models.CharField(max_length=40, choices=STATUS_CHOICES,
             default=STATUS.READY)
@@ -574,7 +576,7 @@ class ReferenceGenome(UniqueUidModelMixin):
 class ExperimentSample(UniqueUidModelMixin):
     """Model representing data for a particular experiment sample.
 
-    Usually this corresponds to a pair of fastq reads for a particular 
+    Usually this corresponds to a pair of fastq reads for a particular
     bacterial clone or colony, after barcode removal/de-multiplexing.
     """
 
@@ -599,6 +601,27 @@ class ExperimentSample(UniqueUidModelMixin):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
         verbose_name="Datasets")
 
+    @property
+    def status(self):
+        """The status of the data underlying this data.
+        """
+        status_string = 'NO_DATA'
+        fastq1_dataset_queryset = self.dataset_set.filter(
+                type=Dataset.TYPE.FASTQ1)
+        if len(fastq1_dataset_queryset) > 1:
+            return 'ERROR: More than one forward reads source'
+        if len(fastq1_dataset_queryset) == 1:
+            status_string = 'FASTQ1: %s' % fastq1_dataset_queryset[0].status
+            # Maybe add reverse reads.
+            fastq2_dataset_queryset = self.dataset_set.filter(
+                    type=Dataset.TYPE.FASTQ2)
+            if len(fastq2_dataset_queryset) > 1:
+                return 'ERROR: More than one reverse reads source'
+            if len(fastq2_dataset_queryset) == 1:
+                status_string += (
+                        ' | FASTQ2:  %s' % fastq2_dataset_queryset[0].status)
+        return status_string
+
     def __unicode__(self):
         return self.label
 
@@ -621,6 +644,15 @@ class ExperimentSample(UniqueUidModelMixin):
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
+    def delete_model_data_dir(self):
+        """Removes all data associated with this model.
+
+        WARNING: Be careful with this method!
+        """
+        data_dir = self.get_model_data_dir()
+        if os.path.exists(data_dir):
+            shutil.rmtree(data_dir)
+
     @classmethod
     def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
@@ -628,6 +660,7 @@ class ExperimentSample(UniqueUidModelMixin):
         """
         return [
             {'field': 'label'},
+            {'field': 'status'},
             {'field': 'group'},
             {'field': 'well'},
             {'field': 'num_reads'}
@@ -754,7 +787,9 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
         """
         alignment_datasets = self.dataset_set.filter(
                 type=Dataset.TYPE.BWA_ALIGN)
-        if len(alignment_datasets) > 0:
+        assert len(alignment_datasets) <= 1, (
+                "Expected only one alignment dataset.")
+        if len(alignment_datasets) == 1:
             return alignment_datasets[0].status
         return 'UNDEFINED'
 
@@ -774,9 +809,9 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
         Called by the adapter.
         """
         return [
-            {'field':'experiment_sample'},
-            {'field':'status', 'verbose':'Job Status'},
-            {'field':'error_link', 'verbose': 'Error output', 'is_href': True},
+            {'field': 'experiment_sample'},
+            {'field': 'status', 'verbose': 'Job Status'},
+            {'field': 'error_link', 'verbose': 'Error output', 'is_href': True},
         ]
 
     def get_model_data_root(self):

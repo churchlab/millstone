@@ -22,6 +22,7 @@ from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_C
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.melted_variant_schema import CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__UID
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
@@ -154,7 +155,7 @@ class VariantFilterEvaluator(object):
 
         # If cast, need to group by position for array_agg to work.
         if not self.is_melted:
-            sql_statement += 'GROUP BY %s ' % MELTED_SCHEMA_KEY__POSITION
+            sql_statement += 'GROUP BY %s ' % MELTED_SCHEMA_KEY__UID
 
         # Add optional sort clause, defaulting to position.
         if self.sort_by_column:
@@ -207,7 +208,7 @@ class VariantFilterEvaluator(object):
                 We GROUP BY position, so all other fields need to be explicitly
                 aggregated.
                 """
-                if column == MELTED_SCHEMA_KEY__POSITION:
+                if column == MELTED_SCHEMA_KEY__UID:
                     return column
                 elif column == CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT:
                     return 'count(*) as ' + CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT

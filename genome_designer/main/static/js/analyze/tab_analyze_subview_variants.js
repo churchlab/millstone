@@ -391,13 +391,22 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
   handleVariantSetActionClick: function(ev) {
     var postUrl = '/_/variants/modify_set_membership';
 
-    // Grab the selected rows.
+    // The common data.
     var postData = {
         refGenomeUid: this.model.get('refGenomeUid'),
-        variantUidList: this.datatableComponent.getCheckedRowUids(),
         variantSetAction: $(ev.target).data('variant-set-action'),
         variantSetUid: $(ev.target).data('variant-set-uid')
     };
+
+    // The appropriate selected row data, or the filter.
+    if (this.datatableComponent.isAllMatchingFilterSelected()) {
+      postData.isAllMatchingFilterSelected = true;
+      postData.filterString = this.model.get('filterString');
+      postData.isMelted = this.model.get('is_melted');
+    } else {
+      postData.isAllMatchingFilterSelected = false;
+      postData.variantUidList = this.datatableComponent.getCheckedRowUids();
+    }
 
     var validationResult = this.validatePostData(postData);
     if (!validationResult.is_success) {
@@ -428,6 +437,14 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
    *     * error_msg {string} Human-readable description of the error.
    */
   validatePostData: function(postData) {
+    if (postData.isAllMatchingFilterSelected &&
+        'isAllMatchingFilterSelected' in postData) {
+      return {
+          is_success: true,
+          error_msg: ''
+      };
+    }
+
     if (!postData.variantUidList.length) {
       return {
           is_success: false,

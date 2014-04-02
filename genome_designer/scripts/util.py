@@ -43,26 +43,6 @@ def setup_django_env():
     os.umask(002)
 
 
-def fn_runner(fn, project, args_list, concurrent=False):
-    """Helper method that handles calling a method depending on whether
-    concurrent is True or not.
-
-    Returns:
-        If concurrent=True, immediately returns a celery.Result object without
-        blocking. Otherwise blocks while executing the function, returning an
-        implicit None.
-    """
-    from main.tasks import generic_task
-    from main.models import Project
-
-    assert isinstance(project, Project)
-
-    if concurrent:
-        return generic_task.delay(fn.__name__, project, args_list)
-    else:
-        return generic_task.__call__(fn.__name__, project, args_list)
-
-
 def internet_on():
     """Check whether we're connected to the Internet.
     """

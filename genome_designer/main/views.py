@@ -30,8 +30,8 @@ from main.models import ExperimentSampleToAlignment
 from main.models import Variant
 from main.models import VariantSet
 from main.models import VariantToVariantSet
-from pipeline.pipeline import run_pipeline_multiple_ref_genomes
-from pipeline.pipeline import run_pipeline
+from pipeline.pipeline_runner import run_pipeline_multiple_ref_genomes
+from pipeline.pipeline_runner import run_pipeline
 from scripts.import_util import import_variant_set_from_vcf
 import settings
 
@@ -272,7 +272,7 @@ def alignment_view(request, project_uid, alignment_group_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
-    alignment_group = AlignmentGroup.objects.get(
+    alignment_group = get_object_or_404(AlignmentGroup,
             reference_genome__project=project, uid=alignment_group_uid)
 
     if request.POST:

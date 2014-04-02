@@ -133,11 +133,11 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                             'INNER JOIN main_experimentsample ON (main_variantevidence.experiment_sample_id = main_experimentsample.id) '
 
                             # VariantSet
-                            'LEFT JOIN main_varianttovariantset_sample_variant_set_association ON ('
-                                    'main_experimentsample.id = main_varianttovariantset_sample_variant_set_association.experimentsample_id) '
                             'LEFT JOIN main_varianttovariantset ON ('
-                                    'main_varianttovariantset_sample_variant_set_association.varianttovariantset_id = main_varianttovariantset.id AND '
                                     'main_varianttovariantset.variant_id = main_variant.id) '
+                            'LEFT JOIN main_varianttovariantset_sample_variant_set_association ON ('
+                                    'main_varianttovariantset_sample_variant_set_association.varianttovariantset_id = main_varianttovariantset.id AND '
+                                    'main_experimentsample.id = main_varianttovariantset_sample_variant_set_association.experimentsample_id) '
                             'LEFT JOIN main_variantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
 
                             # VariantAlternate
