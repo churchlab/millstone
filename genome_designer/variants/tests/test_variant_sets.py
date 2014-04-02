@@ -14,16 +14,19 @@ from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Variant
+from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
+from main.models import VariantEvidence
 from main.models import VariantSet
+from main.models import VariantToVariantSet
 from main.testing_util import create_common_entities
-from scripts.bootstrap_data import create_fake_variants_and_variant_sets
 from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_dataset_to_entity_data_dir
 from variants.variant_sets import add_variants_to_set_from_bed
 from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__ADD
 from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__REMOVE
 from variants.variant_sets import update_variant_in_set_memberships
+from variants.variant_sets import update_variant_in_set_memberships__all_matching_filter
 
 
 TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
@@ -127,6 +130,7 @@ class TestAddVariantsToSetFromBed(TestCase):
                     raise AssertionError(
                             'bad variant set %s made.' % variant_set.label)
 
+
 class TestAddAndRemoveVariantsFromSet(TestCase):
 
     def setUp(self):
@@ -134,11 +138,50 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
         project = common_entities['project']
         self.ref_genome_1 = common_entities['reference_genome']
 
-        create_fake_variants_and_variant_sets(self.ref_genome_1)
-
-        (self.sample_1, created) = ExperimentSample.objects.get_or_create(
+        self.sample_1 = ExperimentSample.objects.create(
                 project=project,
                 label=SAMPLE_1_LABEL)
+
+        # Create 100 variants with alts, positions 1 to 100.
+        # We add them to a fake VariantSet so that they show up in the
+        # materialized variant view table.
+        self.first_variant_position = 1
+        self.num_variants = 100
+        fake_variant_set = VariantSet.objects.create(
+                reference_genome=self.ref_genome_1,
+                label='fake')
+
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=self.ref_genome_1,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
+        for position in xrange(self.first_variant_position,
+                self.first_variant_position + self.num_variants):
+            variant = Variant.objects.create(
+                    type=Variant.TYPE.TRANSITION,
+                    reference_genome=self.ref_genome_1,
+                    chromosome='chrom',
+                    position=position,
+                    ref_value='A')
+            variant.variantalternate_set.add(
+                    VariantAlternate.objects.create(
+                            variant=variant,
+                            alt_value='G'))
+            vccd = VariantCallerCommonData.objects.create(
+                variant=variant,
+                source_dataset_id=1,
+                alignment_group=alignment_group,
+                data={})
+
+            VariantEvidence.objects.create(
+                experiment_sample=self.sample_1,
+                variant_caller_common_data=vccd,
+                data={})
+
+            VariantToVariantSet.objects.create(
+                    variant=variant,
+                    variant_set=fake_variant_set)
 
         self.var_set1 = VariantSet.objects.create(
                 reference_genome=self.ref_genome_1,
@@ -198,3 +241,167 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
                 num_variants_in_set1_before_remove -
                         len(variant_uids_to_remove),
                 self.var_set1.variants.all().count())
+
+    def test_add__sample_association(self):
+        """Tests adding a Variant to a VariantSet, with an association to a
+        particular ExperimentSample.
+        """
+        # No variants before adding.
+        self.assertEqual(0, self.var_set1.variants.all().count())
+
+        # Add these variants without sample associations.
+        variants_to_add_with_no_sample_association = Variant.objects.filter(
+                reference_genome=self.ref_genome_1,
+                position__lt=25,
+                chromosome='chrom')
+        variants_no_association_data_str_list = [obj.uid
+                for obj in variants_to_add_with_no_sample_association]
+
+        # Add these variants associated with sample 1.
+        variants_to_add_with_sample_association = Variant.objects.filter(
+                reference_genome=self.ref_genome_1,
+                position__gte=25,
+                chromosome='chrom')
+        variants_with_association_data_str_list = [
+                obj.uid + ',' + self.sample_1.uid
+                for obj in variants_to_add_with_sample_association]
+
+        # Put these together and run it all the at the same time.
+        all_data_str_list = (variants_no_association_data_str_list +
+                variants_with_association_data_str_list)
+        response = update_variant_in_set_memberships(
+                self.ref_genome_1,
+                all_data_str_list,
+                MODIFY_VARIANT_SET_MEMBERSHIP__ADD,
+                self.var_set1.uid)
+        self.assertEqual(response['alert_type'], 'info', str(response))
+
+        # Make sure all the variants are there.
+        self.assertEqual(self.num_variants,
+                self.var_set1.variants.all().count())
+
+        all_vtvs = VariantToVariantSet.objects.filter(
+                variant_set=self.var_set1)
+
+        # Sanity check.
+        self.assertEqual(self.num_variants, all_vtvs.count())
+
+        # Check that the Variants we expected to have an association have it.
+        for vtvs in all_vtvs:
+            if vtvs.variant in variants_to_add_with_sample_association:
+                self.assertEqual(1, vtvs.sample_variant_set_association.count())
+                self.assertEqual(self.sample_1,
+                        vtvs.sample_variant_set_association.all()[0])
+            else:
+                self.assertEqual(0, vtvs.sample_variant_set_association.count())
+
+    def test_all_matching_filter__all__cast(self):
+        """Test adding all matching '' filter, cast.
+        """
+        # No variants before adding.
+        self.assertEqual(0, self.var_set1.variants.all().count())
+
+        # Add all variants.
+        update_variant_in_set_memberships__all_matching_filter(
+                self.ref_genome_1,
+                MODIFY_VARIANT_SET_MEMBERSHIP__ADD,
+                self.var_set1.uid,
+                '',
+                False)
+
+        self.assertEqual(self.num_variants,
+                self.var_set1.variants.all().count())
+
+        # Make sure no ExperimentSample association.
+        for vtvs in VariantToVariantSet.objects.filter(
+                variant_set=self.var_set1):
+            self.assertEqual(0, vtvs.sample_variant_set_association.count())
+
+    def test_all_matching_filter__partial__cast(self):
+        """Test adding all matching partial filter, cast.
+        """
+        # No variants before adding.
+        self.assertEqual(0, self.var_set1.variants.all().count())
+
+        # Add all variants.
+        update_variant_in_set_memberships__all_matching_filter(
+                self.ref_genome_1,
+                MODIFY_VARIANT_SET_MEMBERSHIP__ADD,
+                self.var_set1.uid,
+                'position <= 50',
+                False)
+
+        self.assertEqual(50, self.var_set1.variants.all().count())
+
+        # Make sure no ExperimentSample association.
+        for vtvs in VariantToVariantSet.objects.filter(
+                variant_set=self.var_set1):
+            self.assertEqual(0, vtvs.sample_variant_set_association.count())
+
+    def test_all_matching_filter__all__melted(self):
+        """Test adding all matching '' filter, melted.
+
+        In the melted case, we expect the variants to be associated with all
+        samples.
+        """
+        # No variants before adding.
+        self.assertEqual(0, self.var_set1.variants.all().count())
+
+        # Add all variants.
+        update_variant_in_set_memberships__all_matching_filter(
+                self.ref_genome_1,
+                MODIFY_VARIANT_SET_MEMBERSHIP__ADD,
+                self.var_set1.uid,
+                '',
+                True)
+
+        self.assertEqual(self.num_variants,
+                self.var_set1.variants.all().count())
+
+        # Make sure no ExperimentSample association.
+        all_vtvs = VariantToVariantSet.objects.filter(
+                variant_set=self.var_set1)
+
+        # Sanity check.
+        self.assertEqual(self.num_variants, all_vtvs.count())
+
+        # Check that the Variants we expected to have an association have it.
+        for vtvs in all_vtvs:
+            self.assertEqual(1, vtvs.sample_variant_set_association.count())
+            self.assertEqual(self.sample_1,
+                    vtvs.sample_variant_set_association.all()[0])
+
+    def test_all_matching_filter__partial__melted(self):
+        """Test adding all matching partial filter, melted.
+
+        In the melted case, we expect the variants to be associated with all
+        samples.
+        """
+        # No variants before adding.
+        self.assertEqual(0, self.var_set1.variants.all().count())
+
+        EXPECTED_NUM_VARIANTS = 50
+
+        # Add all variants.
+        update_variant_in_set_memberships__all_matching_filter(
+                self.ref_genome_1,
+                MODIFY_VARIANT_SET_MEMBERSHIP__ADD,
+                self.var_set1.uid,
+                'position <= %d' % EXPECTED_NUM_VARIANTS,
+                True)
+
+        self.assertEqual(EXPECTED_NUM_VARIANTS,
+                self.var_set1.variants.all().count())
+
+        # Make sure no ExperimentSample association.
+        all_vtvs = VariantToVariantSet.objects.filter(
+                variant_set=self.var_set1)
+
+        # Sanity check.
+        self.assertEqual(EXPECTED_NUM_VARIANTS, all_vtvs.count())
+
+        # Check that the Variants we expected to have an association have it.
+        for vtvs in all_vtvs:
+            self.assertEqual(1, vtvs.sample_variant_set_association.count())
+            self.assertEqual(self.sample_1,
+                    vtvs.sample_variant_set_association.all()[0])
