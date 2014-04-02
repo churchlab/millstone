@@ -773,7 +773,12 @@ def _modify_obj_list_for_variant_set_display(obj_list):
     for obj in obj_list:
         if (not obj[MELTED_SCHEMA_KEY__ES_UID] and
                 variant_uid_to_count_dict[obj[MELTED_SCHEMA_KEY__UID]] > 1):
-            assert obj[MELTED_SCHEMA_KEY__UID] not in variant_uid_to_deleted_row_dict
+            # TODO: Fix #233 https://github.com/churchlab/millstone/issues/233
+            # if obj[MELTED_SCHEMA_KEY__UID] in variant_uid_to_deleted_row_dict:
+            #     print obj
+            #     print variant_uid_to_deleted_row_dict[obj[MELTED_SCHEMA_KEY__UID]]
+            # assert obj[MELTED_SCHEMA_KEY__UID] not in variant_uid_to_deleted_row_dict, (
+            #         "We've already seen the catch-all row for this Variant.")
             variant_uid_to_deleted_row_dict[obj[MELTED_SCHEMA_KEY__UID]] = obj
         else:
             modified_obj_list.append(obj)

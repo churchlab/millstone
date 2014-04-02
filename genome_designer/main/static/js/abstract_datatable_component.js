@@ -160,15 +160,46 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
 
       // If none or some of the checkboxes (but not all), then check them all.
       // If all are checked, then uncheck them all.
-
       var all_checked = _.every(all_cbs, function(cb) {
           return $(cb).is(':checked');})
-
-     _.each(all_cbs, function(cb) {
+      _.each(all_cbs, function(cb) {
             $(cb).prop('checked', !all_checked);
             $(cb).triggerHandler('change');
       });
 
+      // Provide means of selecting all if more than one page of results.
+      if (!all_checked && this.hasMoreThanOnePage()) {
+        // Initialize state bit.
+        this.allSelected = false;
+
+        // Show the select all option.
+        var selectAllHtml =
+            'All ' + this.getNumVisibleRows() +
+            ' results on this page selected. ' +
+            '<a id="gd-id-master-cb-select-all" href="#">' +
+              'Select all results that match this filter.' +
+            '</a>';
+        $('.gd-id-master-cb-select-more-than-one').html(selectAllHtml);
+        $('.gd-id-master-cb-select-more-than-one').show();
+
+        // Listen for user to select all.
+        $('#gd-id-master-cb-select-all').click(_.bind(function() {
+          // Store the bit that all are selected.
+          this.allSelected = true;
+
+          // Update ui to show that all are selected.
+          $('.gd-id-master-cb-select-more-than-one').html(
+              'All results matching filter selected');
+          $('.gd-id-master-cb-select-more-than-one').removeClass('alert-info');
+          $('.gd-id-master-cb-select-more-than-one').addClass('alert-warning');
+        }, this));
+      } else {
+        // Reset, and hide the select all message.
+        this.allSelected = false;
+        $('.gd-id-master-cb-select-more-than-one').hide();
+        $('.gd-id-master-cb-select-more-than-one').removeClass('alert-warning');
+        $('.gd-id-master-cb-select-more-than-one').addClass('alert-info');
+      }
     }, this));
   },
 
@@ -299,5 +330,25 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
       'fnCreatedRow': this.listenToCheckboxes()
     };
     return dataTableParams;
+  },
+
+  /** Returns whether the table has more than one page. */
+  hasMoreThanOnePage: function() {
+    var tableSettings = this.datatable.fnSettings();
+    return tableSettings._iRecordsDisplay > tableSettings._iDisplayLength;
+  },
+
+  /** Returns whether the table has more than one page. */
+  getNumVisibleRows: function() {
+    var tableSettings = this.datatable.fnSettings();
+    return tableSettings._iDisplayLength;
+  },
+
+  /**
+   * Returns Boolean indicating whether the master checkbox is in the special
+   * "all matching filter" state.
+   */
+  isAllMatchingFilterSelected: function() {
+    return this.allSelected || false;
   }
 });

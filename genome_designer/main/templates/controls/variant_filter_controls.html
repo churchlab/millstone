@@ -39,11 +39,9 @@
     <span id="gd-snp-filter-error-msg"></span>
   </div>
 
-  <form id="gd-filter-export-csv-form" action="/_/variants/export_as_csv"
-      method="GET">
-    <input type='hidden' name='csrfmiddlewaretoken' value='{{csrf}}' />
-    <input type="hidden" name="ref_genome_uid" value={{ref_genome.uid}}>
-  </form>
+  <div class="alert alert-info gd-id-master-cb-select-more-than-one
+      gd-master-cb-select-more-than-one">
+  </div>
 </div>
 
 {% include "controls/filter_key_modal.html" %}
