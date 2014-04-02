@@ -20,6 +20,7 @@ from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import VariantToVariantSet
+from main.testing_util import create_common_entities
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
@@ -36,6 +37,17 @@ from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
 TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
 
 TEST_ANNOTATED_VCF = os.path.join(TEST_DIR, 'bwa_align_annotated.vcf')
+
+
+def run_query(filter_string, ref_genome):
+    """Helper method that uses the VariantFilterEvaluator.
+    """
+    query_args = {
+        'filter_string': filter_string,
+        'visible_key_names': determine_visible_field_names(
+            [], filter_string, ref_genome)
+    }
+    return get_variants_that_pass_filter(query_args, ref_genome)
 
 
 class BaseTestVariantFilterTestCase(TestCase):
@@ -86,14 +98,6 @@ class BaseTestVariantFilterTestCase(TestCase):
         self.materialized_view_manager = MeltedVariantMaterializedViewManager(
                 self.ref_genome)
 
-    def run_query(self, filter_string, ref_genome):
-        query_args = {
-            'filter_string': filter_string,
-            'visible_key_names': determine_visible_field_names(
-                [], filter_string, ref_genome)
-        }
-        return get_variants_that_pass_filter(query_args, ref_genome)
-
 
 class TestVariantFilter(BaseTestVariantFilterTestCase):
 
@@ -120,13 +124,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                     variant_set=self.catchall_variant_set)
 
         # Test querying Variants with position > 5.
-        variants_above_5 = self.run_query('position > 5', self.ref_genome)
+        variants_above_5 = run_query('position > 5', self.ref_genome)
         self.assertEqual(4, len(variants_above_5))
         for var in variants_above_5:
             self.assertTrue(var[MELTED_SCHEMA_KEY__POSITION] > 5)
 
         # Test querying Variants with position >= 5.
-        variants_above_5 = self.run_query('position >= 5', self.ref_genome)
+        variants_above_5 = run_query('position >= 5', self.ref_genome)
         self.assertEqual(5, len(variants_above_5))
         for var in variants_above_5:
             self.assertTrue(var[MELTED_SCHEMA_KEY__POSITION] >= 5)
@@ -170,7 +174,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                     variant_set=self.catchall_variant_set)
 
         def _assert_results(chromosome_value, num_results):
-            variants = self.run_query(
+            variants = run_query(
                     'chromosome = %s'% chromosome_value, self.ref_genome)
             self.assertEqual(num_results, len(variants))
             for var in variants:
@@ -219,7 +223,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         def _assert_results(query, num_results, chromosome_value,
                 position_value, position_delim):
-            variants = self.run_query(query, self.ref_genome)
+            variants = run_query(query, self.ref_genome)
             self.assertEqual(num_results, len(variants))
             for var in variants:
                 self.assertEqual(chromosome_value, var[MELTED_SCHEMA_KEY__CHROMOSOME])
@@ -254,7 +258,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         QUERY_STRING = 'dinosaur > 4 & chromosome = chrom'
         with self.assertRaises(ParseError):
-            self.run_query(QUERY_STRING, self.ref_genome)
+            run_query(QUERY_STRING, self.ref_genome)
 
 
     def test_filter__by_position_complex(self):
@@ -280,13 +284,13 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         # Test AND case.
         QUERY_STRING = 'position < 1 & position > 7'
-        result = self.run_query(QUERY_STRING,
+        result = run_query(QUERY_STRING,
                 self.ref_genome)
         self.assertEqual(0, len(result))
 
         # Test OR case.
         QUERY_STRING = 'position < 1 | position > 7'
-        variant_list = self.run_query(QUERY_STRING,
+        variant_list = run_query(QUERY_STRING,
                 self.ref_genome)
         self.assertEqual(3, len(variant_list))
         for pos in [0, 8, 9]:
@@ -319,18 +323,18 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
             VariantToVariantSet.objects.create(variant=var,
                     variant_set=self.catchall_variant_set)
 
-        variants = self.run_query('position == 5',
+        variants = run_query('position == 5',
                 self.ref_genome)
         self.assertEqual(1, len(variants))
         self.assertEqual(5, variants.pop()[MELTED_SCHEMA_KEY__POSITION])
 
-        variants = self.run_query('position = 5',
+        variants = run_query('position = 5',
                 self.ref_genome)
         self.assertEqual(1, len(variants))
         for var in variants:
             self.assertEqual(5, var[MELTED_SCHEMA_KEY__POSITION])
 
-        variants = self.run_query('position != 5',
+        variants = run_query('position != 5',
                 self.ref_genome)
         self.assertEqual(9, len(variants))
         for var in variants:
@@ -390,7 +394,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict)
 
-        variants = self.run_query('', self.ref_genome)
+        variants = run_query('', self.ref_genome)
 
         # We expect 2 rows of results.
         self.assertEqual(2, len(variants))
@@ -433,14 +437,14 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         # This query runs without errors.
         QUERY_STRING = 'position < 1'
-        variants = self.run_query(QUERY_STRING,
+        variants = run_query(QUERY_STRING,
                 ref_genome_2)
         self.assertEqual(0, len(variants))
 
         # This throws an error since INFO_XRM is not a recognized key.
         with self.assertRaises(ParseError):
             QUERY_STRING = 'position < 1 & INFO_XRM > 0'
-            variants = self.run_query(QUERY_STRING,
+            variants = run_query(QUERY_STRING,
                     ref_genome_2)
 
 
@@ -491,7 +495,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 variant_caller_common_data=common_data_obj,
                 data=raw_sample_data_dict)
 
-        passing_variants = self.run_query('INFO_EFF_GENE = tolC',
+        passing_variants = run_query('INFO_EFF_GENE = tolC',
                 self.ref_genome)
         self.assertEqual(1, len(passing_variants))
 
@@ -546,35 +550,35 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
                 data=raw_sample_data_dict)
 
         # Test empty query that should return everything.
-        passing_variants = self.run_query('',
+        passing_variants = run_query('',
                 self.ref_genome)
         self.assertEqual(1, len(passing_variants))
 
         # Test basic position query.
-        passing_variants = self.run_query('position = 2',
+        passing_variants = run_query('position = 2',
                 self.ref_genome)
         self.assertEqual(1, len(passing_variants))
 
         # Test both cases.
-        passing_variants = self.run_query('POSITION = 2',
+        passing_variants = run_query('POSITION = 2',
                 self.ref_genome)
         self.assertEqual(1, len(passing_variants))
 
         # Test JSON field, uppercase.
-        passing_variants = self.run_query('INFO_EFF_GENE = tolC',
+        passing_variants = run_query('INFO_EFF_GENE = tolC',
                 self.ref_genome)
         self.assertEqual(1, len(passing_variants))
 
         # Test JSON field, lowercase.
-        passing_variants = self.run_query('info_eff_gene = tolC',
+        passing_variants = run_query('info_eff_gene = tolC',
                 self.ref_genome)
         self.assertEqual(1, len(passing_variants))
 
         # VariantEvidence data.
-        passing_variants = self.run_query('gt_type = 2',
+        passing_variants = run_query('gt_type = 2',
                 self.ref_genome)
         self.assertEqual(1, len(passing_variants))
-        passing_variants = self.run_query('GT_TYPE = 2',
+        passing_variants = run_query('GT_TYPE = 2',
                 self.ref_genome)
         self.assertEqual(1, len(passing_variants))
 
@@ -647,3 +651,46 @@ class TestMinimal(BaseTestVariantFilterTestCase):
         cursor.execute(query_sql_statement)
 
         self.assertEqual(10, len(cursor.fetchall()))
+
+
+class TestDataConsistency(TestCase):
+    """Tests data changing and the materialized view being correctly up to
+    date.
+    """
+
+    def setUp(self):
+        self.common_entities = create_common_entities()
+        self.cursor = connection.cursor()
+
+    def test_variant_set_membership_change(self):
+        """Tests that the materialized view is refreshed when models change.
+        """
+        results = run_query('', self.common_entities['reference_genome'])
+        self.assertEqual(0, len(results))
+
+        # Add a Variant / VariantAlternate / VariantSet combo which we expect
+        # to show up in the materialized view.
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=self.common_entities['reference_genome'],
+                chromosome='chrom',
+                position=2,
+                ref_value='A')
+        VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='T')
+        variant_set = VariantSet.objects.create(
+                label='vs1',
+                reference_genome=self.common_entities['reference_genome'])
+        vtvs = VariantToVariantSet.objects.create(
+                variant=variant,
+                variant_set=variant_set)
+
+        results = run_query('', self.common_entities['reference_genome'])
+        self.assertEqual(1, len(results))
+
+        # Delete the VariantSet association.
+        vtvs.delete()
+
+        results = run_query('', self.common_entities['reference_genome'])
+        self.assertEqual(0, len(results))
