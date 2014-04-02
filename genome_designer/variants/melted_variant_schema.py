@@ -54,6 +54,7 @@ MELTED_SCHEMA_KEY__ES_UID = 'EXPERIMENT_SAMPLE_UID'
 MELTED_SCHEMA_KEY__ES_LABEL = 'EXPERIMENT_SAMPLE_LABEL'
 MELTED_SCHEMA_KEY__VS_UID = 'VARIANT_SET_UID'
 MELTED_SCHEMA_KEY__VS_LABEL = 'VARIANT_SET_LABEL'
+MELTED_SCHEMA_KEY__VA_ID = 'VA_ID'
 
 # Used for aggregate total sample count in Postgres query.
 CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT = 'SAMPLE_COUNT'
@@ -75,7 +76,7 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', MELTED_SCHEMA_
         {'type': 'String', 'num': 1})
 
 # VariantAlternate
-SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.id', 'va_id', False, False)
+SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.id', MELTED_SCHEMA_KEY__VA_ID, False, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', MELTED_SCHEMA_KEY__ALT, False, True,
         {'type': 'String', 'num': 1})
 
