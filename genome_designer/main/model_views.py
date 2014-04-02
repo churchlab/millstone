@@ -20,6 +20,8 @@ from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import Dataset
+from main.model_view_utils import create_variant_links_field
+from main.model_view_utils import get_jbrowse_track_names
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
@@ -355,11 +357,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     # We want a list of all VCF tracks for jbrowse. Makes sense to do it
     # once and then pass the strings to each variant object for the frontend.
     # This is a little hacky, but whatever.
-    alignment_group_vcf_strings = []
-    for alignment_group in reference_genome.alignmentgroup_set.all():
-        alignment_group_vcf_strings.append('_'.join([
-                str(alignment_group.uid),
-                Dataset.TYPE.VCF_FREEBAYES_SNPEFF]))
+    jbrowse_track_names = get_jbrowse_track_names(reference_genome)
 
     # HACK: Only one AlignmentGroup right now.
     hack_single_alignment_group = AlignmentGroup.objects.get(
@@ -385,18 +383,15 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             field = fdict['field']
 
             # HACK: Special handling for certain fields.
-            if field == 'label':
-                value = _create_single_variant_page_link_for_variant_object(
+            if field == 'links':
+                value = create_variant_links_field(
                         melted_variant_obj, reference_genome,
-                        hack_single_alignment_group)
-            elif field == MELTED_SCHEMA_KEY__POSITION:
-                value = _create_jbrowse_link_for_variant_object(
-                        melted_variant_obj, reference_genome,
-                        alignment_group_vcf_strings)
+                        hack_single_alignment_group,
+                        jbrowse_track_names)
             elif field == MELTED_SCHEMA_KEY__VS_LABEL:
                 value = _adapt_variant_set_label_field(
                         melted_variant_obj, reference_genome.project.uid,
-                        melted, reference_genome, alignment_group)
+                        melted, reference_genome, hack_single_alignment_group)
             elif field == MELTED_SCHEMA_KEY__REF and not melted:
                 value = (melted_variant_obj[MELTED_SCHEMA_KEY__REF] + ' (%d)' %
                         melted_variant_obj[MELTED_SCHEMA_KEY__ALT].count(None))
@@ -462,23 +457,6 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
         'obj_list': fe_obj_list,
         'field_config': obj_field_config
     })
-
-
-def _create_single_variant_page_link_for_variant_object(variant_as_dict,
-            reference_genome, alignment_group):
-    """Constructs the label as an anchor that links to the single variant view.
-    """
-    # Generate link to Analyze view for this single variant.
-    root_href = reverse('main.views.tab_root_analyze',
-            args=(reference_genome.project.uid,
-                    alignment_group.uid, 'variants'))
-    filter_part = '?filter=UID=%s&melt=1' % (variant_as_dict['UID'],)
-    full_href = root_href + filter_part
-
-    label = _create_label_for_variant_object(variant_as_dict)
-
-    # Create the full string.
-    return '<a href="' + full_href + '">' + label + '</a>'
 
 def _create_label_for_variant_object(variant_as_dict):
     # Generate label from variant data.
@@ -553,38 +531,38 @@ def _create_label_for_variant_object(variant_as_dict):
     return label
 
 
-def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
-        alignment_group_vcf_strings):
-    """Constructs a JBrowse link for the Variant.
-    """
-    assert MELTED_SCHEMA_KEY__POSITION in variant_as_dict
-    position = variant_as_dict[MELTED_SCHEMA_KEY__POSITION]
-    ref_genome_jbrowse_link = reference_genome.get_client_jbrowse_link()
+# def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
+#         alignment_group_vcf_strings):
+#     """Constructs a JBrowse link for the Variant.
+#     """
+#     assert MELTED_SCHEMA_KEY__POSITION in variant_as_dict
+#     position = variant_as_dict[MELTED_SCHEMA_KEY__POSITION]
+#     ref_genome_jbrowse_link = reference_genome.get_client_jbrowse_link()
     
-    location_str = '..'.join([str(i) for i in [
-            position - int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2)),
-            position + int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2))]])
+#     location_str = '..'.join([str(i) for i in [
+#             position - int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2)),
+#             position + int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2))]])
 
-    location_param = '&loc=' + variant_as_dict[MELTED_SCHEMA_KEY__CHROMOSOME] + ':' + str(location_str)
+#     location_param = '&loc=' + variant_as_dict[MELTED_SCHEMA_KEY__CHROMOSOME] + ':' + str(location_str)
 
-    tracks = ['DNA','gbk']
+#     tracks = ['DNA','gbk']
 
-    # add all alignment VCFs to this view
-    tracks.extend(alignment_group_vcf_strings)
+#     # add all alignment VCFs to this view
+#     tracks.extend(alignment_group_vcf_strings)
 
-    # if only one sample, then display its alignment
-    if MELTED_SCHEMA_KEY__ES_UID in variant_as_dict and (
-            isinstance(variant_as_dict[MELTED_SCHEMA_KEY__ES_UID], basestring)):
-        tracks.append(variant_as_dict[MELTED_SCHEMA_KEY__ES_UID] +
-                '_' + Dataset.TYPE.BWA_ALIGN)
+#     # if only one sample, then display its alignment
+#     if MELTED_SCHEMA_KEY__ES_UID in variant_as_dict and (
+#             isinstance(variant_as_dict[MELTED_SCHEMA_KEY__ES_UID], basestring)):
+#         tracks.append(variant_as_dict[MELTED_SCHEMA_KEY__ES_UID] +
+#                 '_' + Dataset.TYPE.BWA_ALIGN)
 
-    tracks_param = '&tracks=' + ','.join(tracks)
+#     tracks_param = '&tracks=' + ','.join(tracks)
 
-    full_href = ref_genome_jbrowse_link + location_param + tracks_param
+#     full_href = ref_genome_jbrowse_link + location_param + tracks_param
 
-    # TODO: Add alignment track param if this is a sample-specific view.
-    return ('<a href="' + full_href + '" target="_blank">' + str(position) +
-            '</a>')
+#     # TODO: Add alignment track param if this is a sample-specific view.
+#     return ('<a href="' + full_href + '" target="_blank">' + str(position) +
+#             '</a>')
 
 
 def _adapt_variant_set_label_field(variant_as_dict, project_uid, melted,
@@ -714,7 +692,7 @@ def _create_variant_set_analyze_view_link(project_uid, variant_set_uid,
 
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
-    # {'field': 'label', 'verbose': 'Mutant'},
+    {'field': 'links'},
     {'field': MELTED_SCHEMA_KEY__ES_LABEL, 'verbose': 'Sample'},
     {'field': MELTED_SCHEMA_KEY__CHROMOSOME},
     {'field': MELTED_SCHEMA_KEY__POSITION},
@@ -726,8 +704,8 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
 ]
 
 CAST_VARIANT_FIELD_DICT_LIST = [
-    # {'field': 'label', 'verbose': 'label'},
-    {'field': MELTED_SCHEfMA_KEY__CHROMOSOME},
+    {'field': 'links'},
+    {'field': MELTED_SCHEMA_KEY__CHROMOSOME},
     {
         'field': MELTED_SCHEMA_KEY__POSITION,
         'sortable': True

@@ -292,7 +292,6 @@ def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
         urlTemplate_idx = os.path.join(JBROWSE_DATA_URL_ROOT,
             vcf_dataset.filesystem_idx_location)
 
-    # TODO: This jbrowse vcf label really need to be more human readable.
     label = vcf_dataset.internal_string(alignment_group)
     key = "{:s} {:s} SNVs".format(vcf_dataset.type,alignment_group.label)
 
@@ -370,7 +369,9 @@ def add_bed_file_track(reference_genome, sample_alignment, dataset):
 
     jbrowse_path = reference_genome.get_jbrowse_directory_path()
 
-    label = dataset.internal_string(sample_alignment)
+    # doing label as ES_AG because SA isn't currently used in the variant view
+    label = dataset.internal_string(sample_alignment.experiment_sample) + '_' + (
+            str(sample_alignment.alignment_group.uid))
     key = ':'.join([
             sample_alignment.alignment_group.label,
             dataset.external_string(sample_alignment.experiment_sample)])
@@ -419,7 +420,9 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
         urlTemplate = os.path.join(JBROWSE_DATA_URL_ROOT,
             bam_dataset.filesystem_location)
 
-    label = bam_dataset.internal_string(sample_alignment)
+    # doing label as ES_AG because SA isn't currently used in the variant view
+    label = bam_dataset.internal_string(sample_alignment.experiment_sample) + '_' + (
+            str(sample_alignment.alignment_group.uid))    
     key = ':'.join([
             sample_alignment.alignment_group.label,
             bam_dataset.external_string(sample_alignment.experiment_sample)])
@@ -444,7 +447,10 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     write_tracklist_json(reference_genome, raw_dict_obj, label)
 
     # Also add a snp coverage track.
-    snp_coverage_label = label + '_COVERAGE'
+    snp_coverage_label = bam_dataset.internal_string(
+            sample_alignment.experiment_sample) + '_COVERAGE_' + (
+            str(sample_alignment.alignment_group.uid))    
+
     snp_coverage_key = key + ' Coverage'
     coverage_raw_dict_obj = {
         'tracks' : [

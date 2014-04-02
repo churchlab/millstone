@@ -155,8 +155,8 @@ class TestGetVariantList(TestCase):
 
         # Check positions are correct.
         def _get_position_from_frontend_object(fe_obj):
-            return int(re.match('<.*>([0-9]+)<.*', fe_obj[
-                    MELTED_SCHEMA_KEY__POSITION]).group(1))
+            return int(re.match('([0-9]+)', str(fe_obj[
+                    MELTED_SCHEMA_KEY__POSITION])).group(1))
         variant_position_set = set([_get_position_from_frontend_object(obj)
                 for obj in variant_obj_list])
         self.assertEqual(set(range(TOTAL_NUM_VARIANTS)), variant_position_set)
