@@ -156,8 +156,6 @@ def create_variant_links_field(variant_as_dict, reference_genome,
             'max': settings.JBROWSE_MAX_COVERAGE_TRACKS
         }]
 
-    print buttons
-
     all_buttons_html = []
     for button in buttons:
 

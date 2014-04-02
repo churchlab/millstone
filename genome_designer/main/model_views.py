@@ -461,6 +461,9 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
 def _create_label_for_variant_object(variant_as_dict):
     # Generate label from variant data.
     # Using ordered dicts with None as an ordered set
+    
+    # NOTE: Not using this currently, but we might want it in the future.
+
     position = str(variant_as_dict[MELTED_SCHEMA_KEY__POSITION])
 
     try:
@@ -474,7 +477,6 @@ def _create_label_for_variant_object(variant_as_dict):
 
         # Cast view
         if isinstance(va_data, list):
-            print 'cast view?'
             for alt in va_data:
 
                 if alt is None: continue
@@ -529,40 +531,6 @@ def _create_label_for_variant_object(variant_as_dict):
         label = position + ': error'
 
     return label
-
-
-# def _create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
-#         alignment_group_vcf_strings):
-#     """Constructs a JBrowse link for the Variant.
-#     """
-#     assert MELTED_SCHEMA_KEY__POSITION in variant_as_dict
-#     position = variant_as_dict[MELTED_SCHEMA_KEY__POSITION]
-#     ref_genome_jbrowse_link = reference_genome.get_client_jbrowse_link()
-    
-#     location_str = '..'.join([str(i) for i in [
-#             position - int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2)),
-#             position + int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2))]])
-
-#     location_param = '&loc=' + variant_as_dict[MELTED_SCHEMA_KEY__CHROMOSOME] + ':' + str(location_str)
-
-#     tracks = ['DNA','gbk']
-
-#     # add all alignment VCFs to this view
-#     tracks.extend(alignment_group_vcf_strings)
-
-#     # if only one sample, then display its alignment
-#     if MELTED_SCHEMA_KEY__ES_UID in variant_as_dict and (
-#             isinstance(variant_as_dict[MELTED_SCHEMA_KEY__ES_UID], basestring)):
-#         tracks.append(variant_as_dict[MELTED_SCHEMA_KEY__ES_UID] +
-#                 '_' + Dataset.TYPE.BWA_ALIGN)
-
-#     tracks_param = '&tracks=' + ','.join(tracks)
-
-#     full_href = ref_genome_jbrowse_link + location_param + tracks_param
-
-#     # TODO: Add alignment track param if this is a sample-specific view.
-#     return ('<a href="' + full_href + '" target="_blank">' + str(position) +
-#             '</a>')
 
 
 def _adapt_variant_set_label_field(variant_as_dict, project_uid, melted,
