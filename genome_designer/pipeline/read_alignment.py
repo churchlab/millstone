@@ -244,7 +244,13 @@ def process_sam_bam_file(sample_alignment, reference_genome,
             sorted_bam_file_location,
         ], stderr=error_output)
 
-    # 3. Add groups
+    # 3. Compute insert size metrics
+    # Subsequent steps screw up pairing info so this has to 
+    # be done here. 
+    if effective_mask['compute_insert_metrics']:
+        compute_insert_metrics(sorted_bam_file_location, sample_alignment, error_output)
+
+    # 4. Add groups
     grouped_output_name= (
             os.path.splitext(sorted_bam_file_location)[0] +
             '.grouped')
@@ -253,7 +259,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         add_groups(experiment_sample, sorted_bam_file_location, grouped_bam_file_location,
                 error_output)
 
-    # 3. Perform realignment accounting for indels.
+    # 5. Perform realignment accounting for indels.
     realigned_bam_file_location = (
             os.path.splitext(grouped_bam_file_location)[0] +
             '.realigned.bam'
@@ -274,7 +280,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
                 error_output
         )
 
-    # 4. Add back MD tags for visualization of mismatches by Jbrowse
+    # 6. Add back MD tags for visualization of mismatches by Jbrowse
     if effective_mask['withmd']:
         final_bam_location = (
                 os.path.splitext(realigned_bam_file_location)[0] +
@@ -302,16 +308,12 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     else:
         final_bam_location = realigned_bam_file_location
 
-    # 5. Compute insert size metrics
-    if effective_mask['compute_insert_metrics']:
-        compute_insert_metrics(final_bam_location, error_output)
-
-    # 6. Compute callable loci
+    # 7. Compute callable loci
     if effective_mask['compute_callable_loci']:
         compute_callable_loci(reference_genome, sample_alignment,
                 final_bam_location, error_output)
 
-    # 7. Create index.
+    # 8. Create index.
     if effective_mask['index']:
         subprocess.check_call([
             SAMTOOLS_BINARY,
@@ -383,7 +385,7 @@ def realign_given_indels(
     ], stderr=error_output)
 
 
-def compute_insert_metrics(bam_file_location, stderr=None):
+def compute_insert_metrics(bam_file_location, sample_alignment, stderr=None):
     output = _get_metrics_output_filename(bam_file_location)
     histogram_file = os.path.splitext(bam_file_location)[0] + '.histmet.txt'
     subprocess.check_call([
@@ -394,6 +396,15 @@ def compute_insert_metrics(bam_file_location, stderr=None):
         'HISTOGRAM_FILE=' + histogram_file,
         'VALIDATION_STRINGENCY=LENIENT' # Prevent unmapped read problems
     ], stderr=stderr)
+
+    # Add insert metrics file as a dataset
+    insert_metrics = Dataset.objects.create(
+            label=Dataset.TYPE.PICARD_INSERT_METRICS,
+            type=Dataset.TYPE.PICARD_INSERT_METRICS,
+            filesystem_location=clean_filesystem_location(output))
+
+    sample_alignment.dataset_set.add(insert_metrics)
+    sample_alignment.save()
 
 
 def compute_callable_loci(reference_genome, sample_alignment, 
@@ -471,23 +482,32 @@ def _get_callable_loci_output_filename(bam_file_location):
     return os.path.splitext(bam_file_location)[0] + '.callable_loci.bed'
 
 
-def get_insert_size(bam_file_location):
+def get_insert_size(sample_alignment):
     """Returns the average insert size for a bam_file.
 
     If the insert size can't be calculated, perhaps because of a bad alignment,
     return -1.
     """
-    output = _get_metrics_output_filename(bam_file_location)
-    if not os.path.exists(output):
-        compute_insert_metrics(bam_file_location)
+    picard_metrics = get_dataset_with_type(sample_alignment, 
+            Dataset.TYPE.PICARD_INSERT_METRICS)
 
-    # If it still doesn't exist, return -1 to indicate bad alignment.
-    if not os.path.exists(output):
+    if picard_metrics is None: 
+        bam_file = get_dataset_with_type(sample_alignment, 
+                Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+        compute_insert_metrics(bam_file, sample_alignment, stderr=None)
+        picard_metrics = get_dataset_with_type(sample_alignment, 
+            Dataset.TYPE.PICARD_INSERT_METRICS)
+
+    try:
+        metric_filename = picard_metrics.get_absolute_location()
+        assert os.path.exists(metric_filename)
+    except:
+        # if it doesn't work, return -1
         return -1
 
     # Read through the output file until you get to the data labels line,
     # then take the first value in the following line.
-    with open(output) as fh:
+    with open(metric_filename) as fh:
         found_line = False
         insert_size = -1
         for line in fh:

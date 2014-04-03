@@ -42,6 +42,7 @@ TEST_BAM_INDEX = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'small_data',
         'final.bam.bai')
 
 
+
 class TestSVCallers(TestCase):
 
     def setUp(self):
@@ -87,8 +88,12 @@ class TestSVCallers(TestCase):
                 alignment_group=alignment_group,
                 experiment_sample=sample_1)
         ### Add alignment data. NOTE: Stored in sample model dir.
-        copy_dest = copy_dataset_to_entity_data_dir(sample_1, TEST_BAM)
+
+        # index (no dataset)
         copy_dataset_to_entity_data_dir(sample_1, TEST_BAM_INDEX)
+
+        # bam file (with dataset)
+        copy_dest = copy_dataset_to_entity_data_dir(sample_1, TEST_BAM)
         add_dataset_to_entity(sample_alignment, Dataset.TYPE.BWA_ALIGN,
                 Dataset.TYPE.BWA_ALIGN, copy_dest)
 
