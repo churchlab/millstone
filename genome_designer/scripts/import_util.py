@@ -351,6 +351,17 @@ def import_samples_from_targets_file(project, targets_file):
 
     valid_rows = parse_targets_file(project, targets_file)
 
+    def _create_fastq_dataset(experiment_sample, fastq_source, dataset_type):
+        """Helper function for creating a Dataset to track the uploaded
+        sample data.
+        """
+        fastq_dest = _get_copy_target_path(experiment_sample, fastq_source)
+        reads_dataset = add_dataset_to_entity(experiment_sample,
+                dataset_type, dataset_type, fastq_dest)
+        reads_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
+        reads_dataset.save()
+        return reads_dataset
+
     # Now create ExperimentSample objects along with their respective Datasets.
     # The data is copied to the entity location.
     # We do this asynchronously so catch all the results, so we can block on
@@ -365,18 +376,12 @@ def import_samples_from_targets_file(project, targets_file):
         # Create the Datasets before starting copying so we can show status in
         # the ui. This is a new pattern where we are moving copying to happen
         # asynchronously in Celery.
-        fastq1_source = row['Read_1_Path']
-        dest = _get_copy_target_path(experiment_sample, fastq1_source)
-        read1_dataset = add_dataset_to_entity(experiment_sample,
-                Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ1, dest)
-        read1_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
-        read1_dataset.save()
+        _create_fastq_dataset(
+                experiment_sample, row['Read_1_Path'], Dataset.TYPE.FASTQ1)
         maybe_read2_path = row.get('Read_2_Path', '')
         if maybe_read2_path:
-            read2_dataset = add_dataset_to_entity(experiment_sample,
-                    Dataset.TYPE.FASTQ2, Dataset.TYPE.FASTQ2, dest)
-            read2_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
-            read2_dataset.save()
+            _create_fastq_dataset(
+                experiment_sample, maybe_read2_path, Dataset.TYPE.FASTQ2)
 
         # Start the async job of copying.
         copy_experiment_sample_data.delay(project, experiment_sample, row)
@@ -390,26 +395,51 @@ def copy_experiment_sample_data(project, experiment_sample, data):
     """
     move = False
 
-    # Copy read1.
-    read1_dataset = experiment_sample.dataset_set.get(type=Dataset.TYPE.FASTQ1)
-    read1_dataset.status = Dataset.STATUS.COPYING
-    read1_dataset.save()
-    copy_dataset_to_entity_data_dir(experiment_sample, data['Read_1_Path'],
-            move=move)
-    read1_dataset.status = Dataset.STATUS.READY
-    read1_dataset.save()
+    def _copy_dataset_data(fastq_source, dataset_type):
+        """Helper to copy data and set status to VERIFYING.
+        """
+        reads_dataset = experiment_sample.dataset_set.get(type=dataset_type)
+        reads_dataset.status = Dataset.STATUS.COPYING
+        reads_dataset.save()
+        copy_dataset_to_entity_data_dir(experiment_sample, fastq_source,
+                move=move)
+        reads_dataset.status = Dataset.STATUS.VERIFYING
+        reads_dataset.save()
+        return reads_dataset
 
+    # Copy read1.
+    read1_dataset = _copy_dataset_data(data['Read_1_Path'],
+            Dataset.TYPE.FASTQ1)
     # Copy read2.
     maybe_read2_path = data.get('Read_2_Path', '')
     if maybe_read2_path:
-        read2_dataset = experiment_sample.dataset_set.get(
-                type=Dataset.TYPE.FASTQ2)
-        read2_dataset.status = Dataset.STATUS.COPYING
-        read2_dataset.save()
-        copy_dataset_to_entity_data_dir(experiment_sample, maybe_read2_path,
-                move=move)
+        read2_dataset = _copy_dataset_data(maybe_read2_path,
+                Dataset.TYPE.FASTQ2)
+    else:
+        read2_dataset = None
+
+    # Verification.
+    if read2_dataset is not None:
+        # Paired reads.
+        if (read1_dataset.filesystem_location ==
+                read2_dataset.filesystem_location):
+            # Make sure the files are not the same.
+            read1_dataset.status = Dataset.STATUS.FAILED
+            read2_dataset.status = Dataset.STATUS.FAILED
+
+            # TODO: Provide way for user to get an error message, similar to
+            # how make an error link for alignments.
+        else:
+            read1_dataset.status = Dataset.STATUS.READY
+            read2_dataset.status = Dataset.STATUS.READY
+    else:
+        # Unpaired.
+        read1_dataset.status = Dataset.STATUS.READY
         read2_dataset.status = Dataset.STATUS.READY
-        read2_dataset.save()
+
+    # Save the status.
+    read1_dataset.save()
+    read2_dataset.save()
 
 
 @transaction.commit_on_success
