@@ -13,9 +13,9 @@ from models import Dataset
 from models import ExperimentSample
 from models import ExperimentSampleToAlignment
 from models import ReferenceGenome
-from models import VariantAlternate
 from models import VariantEvidence
 from models import VariantSet
+from models import VariantToVariantSet
 from pipeline.read_alignment_util import ensure_bwa_index
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.import_util import generate_fasta_from_genbank
@@ -126,3 +126,15 @@ def post_alignment_group_create(sender, instance, created, **kwargs):
         instance.ensure_model_data_dir_exists()
 post_save.connect(post_alignment_group_create, sender=AlignmentGroup,
         dispatch_uid='alignment_group_create')
+
+
+def post_vtvs_save(sender, instance, created, **kwargs):
+    instance.variant.reference_genome.invalidate_materialized_view()
+post_save.connect(post_vtvs_save, sender=VariantToVariantSet,
+        dispatch_uid='vtvs_save')
+
+
+def post_vtvs_delete(sender, instance, **kwargs):
+    instance.variant.reference_genome.invalidate_materialized_view()
+post_delete.connect(post_vtvs_delete, sender=VariantToVariantSet,
+        dispatch_uid='vtvs_delete')

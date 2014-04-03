@@ -36,6 +36,8 @@ from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__REF
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__UID
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__UID
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VA_ID
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
 
@@ -794,25 +796,30 @@ def _modify_obj_list_for_variant_set_display(obj_list):
     #     2. For each redundant row, get rid of it, but save a reference to
     #        its variant_set_labels.
 
+    def _make_catch_all_key(obj):
+        return (obj[MELTED_SCHEMA_KEY__UID], obj[MELTED_SCHEMA_KEY__VA_ID])
+
     # First count rows for each Variant.
     variant_uid_to_count_dict = defaultdict(lambda: 0)
     for obj in obj_list:
-        variant_uid_to_count_dict[obj[MELTED_SCHEMA_KEY__UID]] += 1
+        key = _make_catch_all_key(obj)
+        variant_uid_to_count_dict[key] += 1
 
     # Now, get rid of rows that have no Sample associated, when there is more
     # than one row for that Variant.
     variant_uid_to_deleted_row_dict = {}
     modified_obj_list = []
     for obj in obj_list:
-        if (not obj[MELTED_SCHEMA_KEY__ES_UID] and
-                variant_uid_to_count_dict[obj[MELTED_SCHEMA_KEY__UID]] > 1):
-            # TODO: Fix #233 https://github.com/churchlab/millstone/issues/233
-            # if obj[MELTED_SCHEMA_KEY__UID] in variant_uid_to_deleted_row_dict:
-            #     print obj
-            #     print variant_uid_to_deleted_row_dict[obj[MELTED_SCHEMA_KEY__UID]]
-            # assert obj[MELTED_SCHEMA_KEY__UID] not in variant_uid_to_deleted_row_dict, (
-            #         "We've already seen the catch-all row for this Variant.")
-            variant_uid_to_deleted_row_dict[obj[MELTED_SCHEMA_KEY__UID]] = obj
+        key = _make_catch_all_key(obj)
+        is_not_associated_with_sample = bool(
+                not obj[MELTED_SCHEMA_KEY__ES_UID])
+        exists_some_row_with_sample_association = bool(
+                variant_uid_to_count_dict[key] > 1)
+        if (is_not_associated_with_sample and
+                exists_some_row_with_sample_association):
+            assert key not in variant_uid_to_deleted_row_dict, (
+                    "We've already seen the catch-all row for this Variant.")
+            variant_uid_to_deleted_row_dict[key] = obj
         else:
             modified_obj_list.append(obj)
 
