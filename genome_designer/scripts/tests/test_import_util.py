@@ -81,6 +81,7 @@ class TestImportRefGenomeFromEntrez(TestCase):
                     self.test_project, TEST_RECORD_LABEL, TEST_RECORD_ID, 
                     'genbank')
 
+
 class TestImportSamplesFromTargetsFile(TestCase):
     """Tests for scripts.import_util.import_samples_from_targets_file().
     """
@@ -112,7 +113,8 @@ class TestImportSamplesFromTargetsFile(TestCase):
             import_samples_from_targets_file(self.project,
                     UploadedFile(targets_file_fh))
 
-        num_experiment_samples_after = len(ExperimentSample.objects.all())
+        new_samples = ExperimentSample.objects.all()
+        num_experiment_samples_after = len(new_samples)
         num_datasets_after = len(Dataset.objects.all())
 
         # Make sure the right amount of models were added.
@@ -125,8 +127,13 @@ class TestImportSamplesFromTargetsFile(TestCase):
         self.assertEqual(1, len(observed_status_type_set))
         self.assertTrue(Dataset.STATUS.READY in observed_status_type_set)
 
-        # TODO: Check the filepaths as well.
-
+        # Check the specifics of the Datasets, especially filepaths.
+        for sample in new_samples:
+            fwd_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ1)
+            rev_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ2)
+            self.assertNotEqual(fwd_reads_dataset.filesystem_location,
+                    rev_reads_dataset.filesystem_location,
+                    "Must have different filesystem locations.")
 
     def test_import_samples__no_extra_cols(self):
         """Tests importing samples from a template file that doesn't have
@@ -142,6 +149,23 @@ class TestImportSamplesFromTargetsFile(TestCase):
         with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
             import_samples_from_targets_file(project,
                     UploadedFile(targets_file_fh))
+
+    def test_import_samples__bad_input(self):
+        """Input data with duplicated filenames.
+        """
+        TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'sample_list_targets_with_duplicates.tsv')
+
+        with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
+            import_samples_from_targets_file(self.project,
+                    UploadedFile(targets_file_fh))
+
+        new_samples = ExperimentSample.objects.all()
+        for sample in new_samples:
+            fwd_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ1)
+            rev_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ2)
+            self.assertTrue(Dataset.STATUS.FAILED, fwd_reads_dataset)
+            self.assertTrue(Dataset.STATUS.FAILED, rev_reads_dataset)
 
 
 class TestImportVariantSetFromVCFFile(TestCase):
