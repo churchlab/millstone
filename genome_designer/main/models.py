@@ -118,6 +118,7 @@ class Dataset(UniqueUidModelMixin):
         VCF_USERINPUT = 'User VCF'
         VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
+        PICARD_INSERT_METRICS = 'Picard Insert'
 
 
     TYPE_CHOICES = make_choices_tuple(TYPE)
