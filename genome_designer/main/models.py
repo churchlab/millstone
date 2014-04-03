@@ -802,7 +802,7 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
                         args=(self.alignment_group.reference_genome.project.uid,
                                 self.alignment_group.uid,
                                 self.uid)) +
-                        '">error</a>')
+                        '">log output</a>')
 
     @classmethod
     def get_field_order(clazz, **kwargs):
@@ -812,7 +812,7 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
         return [
             {'field': 'experiment_sample'},
             {'field': 'status', 'verbose': 'Job Status'},
-            {'field': 'error_link', 'verbose': 'Error output', 'is_href': True},
+            {'field': 'error_link', 'verbose': 'Sample Alignment Log', 'is_href': True},
         ]
 
     def get_model_data_root(self):
