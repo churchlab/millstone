@@ -67,11 +67,14 @@ def export_melted_variant_view(ref_genome, variant_id_list, csvfile):
 
         # Add key-value data.
         def _add_key_value(data_dict):
+            if data_dict is None:
+                return
             for key, value in data_dict.iteritems():
-                # TODO: This logic seems wrong. Test.
+                # If this key is not in the header fields, then skip it.
                 if not key in csv_field_names_set:
                     continue
                 row_data[key] = value
+        _add_key_value(variant_data['va_data'])
         _add_key_value(variant_data['vccd_data'])
         _add_key_value(variant_data['ve_data'])
 
