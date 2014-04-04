@@ -18,7 +18,7 @@ from read_alignment import get_insert_size
 from main.s3 import project_files_needed
 from scripts.vcf_parser import parse_alignment_group_vcf
 from scripts.jbrowse_util import add_vcf_track
-from scripts.utils import uppercase_underscore
+from scripts.util import uppercase_underscore
 from settings import TOOLS_DIR
 from variants.variant_sets import add_variants_to_set_from_bed
 from variant_effects import run_snpeff
