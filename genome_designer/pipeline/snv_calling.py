@@ -18,6 +18,7 @@ from read_alignment import get_insert_size
 from main.s3 import project_files_needed
 from scripts.vcf_parser import parse_alignment_group_vcf
 from scripts.jbrowse_util import add_vcf_track
+from scripts.utils import uppercase_underscore
 from settings import TOOLS_DIR
 from variants.variant_sets import add_variants_to_set_from_bed
 from variant_effects import run_snpeff
@@ -127,7 +128,8 @@ def find_variants_with_tool(alignment_group, variant_params):
     # Create subdirectory for this tool
     tool_dir = os.path.join(common_params['output_dir'], tool_name)
     ensure_exists_0775_dir(tool_dir)
-    vcf_output_filename = os.path.join(tool_dir, common_params['alignment_type'] + '.vcf')
+    vcf_output_filename = os.path.join(tool_dir,
+            uppercase_underscore(common_params['alignment_type']) + '.vcf')
 
     # Run the tool
     tool_succeeded = tool_function(
