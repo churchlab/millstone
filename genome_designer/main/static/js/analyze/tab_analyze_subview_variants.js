@@ -66,8 +66,6 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         _.bind(this.handleMeltedToggleClick, this));
     $('#gd-filter-field-select-btn').click(
         _.bind(this.handleShowFieldSelect, this));
-    $('#gd-filter-export-csv').click(
-        _.bind(this.handleExportCsv, this));
     $('#gd-snp-filter-error-close-btn').click(
         _.bind(this.handleErrorAlertClose, this));
   },
@@ -262,17 +260,45 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         }, this));
   },
 
-
   /**
-   * Starts a download of Variants passing the current filter in .csv format.
-   *
-   * TODO(gleb): Currently this is a partial implementation and just downloads
-   * all variants. This needs to be completed.
+   * Starts a download of selected Variants .csv format.
    */
   handleExportCsv: function() {
-    $('#gd-filter-export-csv-form').submit();
+    // First make sure there is somsething to export. Either rows are checked,
+    // or select all is in place.
+    var checkedRowUidList = this.datatableComponent.getCheckedRowUids();
+    if (!checkedRowUidList.length &&
+        !this.datatableComponent.isAllMatchingFilterSelected()) {
+      alert('Please select rows to export, or select all.');
+      return;
+    }
+
+    var formJqueryObj = $('#gd-filter-export-csv-form');
+
+    // Reset the form html
+    formJqueryObj.empty();
+
+    // Append the form fields.
+    this._appendInputFieldToForm(formJqueryObj, 'ref_genome_uid',
+        this.model.get('refGenomeUid'));
+    if (this.datatableComponent.isAllMatchingFilterSelected()) {
+      this._appendInputFieldToForm(formJqueryObj, 'get_all_matching_filter', 1);
+    } else {
+      alert('Row-specific export coming soon. Please select all and try again.');
+      return;
+    }
+
+    // Submit the form. This cause a download to start.
+    formJqueryObj.submit();
   },
 
+  /** Helper method to append input value to form. */
+  _appendInputFieldToForm: function(formJqueryObj, name, value) {
+    formJqueryObj.append(_.template(
+        '<input type="hidden" name="<%= name %>" value="<%= value %>">',
+        {name: name, value: value}
+    ));
+  },
 
   /** Handles an update event from the field select component. */
   handleUpdateSelectedFields: function(selectedKeyNames) {
@@ -342,9 +368,15 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         this.variantSetList, 'add', 'Add to set');
     this.addVariantSetDropdownSubmenu(
         this.variantSetList, 'remove', 'Remove from set');
-
     $('.gd-id-variant-set-action').click(
         _.bind(this.handleVariantSetActionClick, this));
+
+    // Create option to export selected.
+    var exportOptionHtml =
+        '<a href="#" class="gd-id-export-selected">Export as csv</a>';
+    this.datatableComponent.addDropdownOption(exportOptionHtml, '');
+    $('.gd-id-export-selected').click(
+        _.bind(this.handleExportCsv, this));
   },
 
 

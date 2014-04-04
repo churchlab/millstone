@@ -168,33 +168,14 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
       });
 
       // Provide means of selecting all if more than one page of results.
-      if (!all_checked && this.hasMoreThanOnePage()) {
-        // Initialize state bit.
-        this.allSelected = false;
-
-        // Show the select all option.
-        var selectAllHtml =
-            'All ' + this.getNumVisibleRows() +
-            ' results on this page selected. ' +
-            '<a id="gd-id-master-cb-select-all" href="#">' +
-              'Select all results that match this filter.' +
-            '</a>';
-        $('.gd-id-master-cb-select-more-than-one').html(selectAllHtml);
-        $('.gd-id-master-cb-select-more-than-one').show();
-
-        // Listen for user to select all.
-        $('#gd-id-master-cb-select-all').click(_.bind(function() {
-          // Store the bit that all are selected.
-          this.allSelected = true;
-
-          // Update ui to show that all are selected.
-          $('.gd-id-master-cb-select-more-than-one').html(
-              'All results matching filter selected');
-          $('.gd-id-master-cb-select-more-than-one').removeClass('alert-info');
-          $('.gd-id-master-cb-select-more-than-one').addClass('alert-warning');
-        }, this));
-      } else {
+      if (all_checked) {
+        // No longer all checked, so make sure state is consistent.
         this.resetAllSelectedState();
+      } else if (!this.hasMoreThanOnePage()) {
+        this.setAllMatchFilterSelectedState();
+      } else {
+        // All checked and has more than one page.
+        this.showDoYouWantToSelectAllControl();
       }
     }, this));
   },
@@ -211,6 +192,38 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
     $('.gd-id-master-cb-select-more-than-one').hide();
     $('.gd-id-master-cb-select-more-than-one').removeClass('alert-warning');
     $('.gd-id-master-cb-select-more-than-one').addClass('alert-info');
+  },
+
+  /** Shows control bar to select all. */
+  showDoYouWantToSelectAllControl: function() {
+    this.allSelected = false;
+
+    // Show the select all option.
+    var selectAllHtml =
+        'All ' + this.getNumVisibleRows() +
+        ' results on this page selected. ' +
+        '<a id="gd-id-master-cb-select-all" href="#">' +
+          'Select all results that match this filter.' +
+        '</a>';
+    $('.gd-id-master-cb-select-more-than-one').html(selectAllHtml);
+    $('.gd-id-master-cb-select-more-than-one').show();
+
+    // Listen for user to select all.
+    $('#gd-id-master-cb-select-all').click(_.bind(
+        this.setAllMatchFilterSelectedState, this));
+  },
+
+  /** Shows control bar say that all matching filter are selected. */
+  setAllMatchFilterSelectedState: function() {
+    // Store the bit that all are selected.
+    this.allSelected = true;
+
+    // Update ui to show that all are selected.
+    $('.gd-id-master-cb-select-more-than-one').html(
+        'All results matching filter selected');
+    $('.gd-id-master-cb-select-more-than-one').removeClass('alert-info');
+    $('.gd-id-master-cb-select-more-than-one').addClass('alert-warning');
+    $('.gd-id-master-cb-select-more-than-one').show();
   },
 
   /**
