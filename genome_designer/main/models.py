@@ -169,6 +169,7 @@ class Dataset(UniqueUidModelMixin):
         FAILED = 'FAILED'
         COPYING = 'COPYING'
         QUEUED_TO_COPY = 'QUEUED_TO_COPY'
+        VERIFYING = 'VERIFYING'
     STATUS_CHOICES = make_choices_tuple(STATUS)
     status = models.CharField(max_length=40, choices=STATUS_CHOICES,
             default=STATUS.READY)
