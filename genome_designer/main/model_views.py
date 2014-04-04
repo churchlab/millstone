@@ -362,8 +362,8 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     jbrowse_track_names = get_jbrowse_track_names(reference_genome)
 
     # HACK: Only one AlignmentGroup right now.
-    hack_single_alignment_group = AlignmentGroup.objects.get(
-            reference_genome=reference_genome)
+    hack_single_alignment_group = AlignmentGroup.objects.filter(
+            reference_genome=reference_genome)[0]
 
     # Aggregate list of objects that are ready for display by the frontend.
     fe_obj_list = []
