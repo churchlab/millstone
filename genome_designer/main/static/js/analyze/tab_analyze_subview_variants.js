@@ -68,6 +68,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         _.bind(this.handleShowFieldSelect, this));
     $('#gd-snp-filter-error-close-btn').click(
         _.bind(this.handleErrorAlertClose, this));
+    $('#gd-new-filter-input').keypress(
+        _.bind(this.handleFilterInputKeypress, this));
   },
 
 
@@ -226,6 +228,14 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     $('#gd-snp-filter-error').hide();
   },
 
+  /** Handles keypress on filter input. */
+  handleFilterInputKeypress: function(e) {
+    // If enter key, submit.
+    var code = e.keyCode || e.which;
+    if(code == 13) {
+      this.handleApplyFilterClick();
+    }
+  },
 
   /**
    * Creates the modal for selecting which fields are being displayed and
