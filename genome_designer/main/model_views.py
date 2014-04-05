@@ -825,8 +825,9 @@ def _modify_obj_list_for_variant_set_display(obj_list):
 
     # Now add back data for all the sets associated with each Variant.
     for obj in modified_obj_list:
-        if obj[MELTED_SCHEMA_KEY__UID] in variant_uid_to_deleted_row_dict:
-            catch_all_obj = variant_uid_to_deleted_row_dict[obj[MELTED_SCHEMA_KEY__UID]]
+        key = _make_catch_all_key(obj)
+        if key in variant_uid_to_deleted_row_dict:
+            catch_all_obj = variant_uid_to_deleted_row_dict[key]
             obj['all_variant_set_label'] = catch_all_obj[MELTED_SCHEMA_KEY__VS_LABEL]
             obj['all_variant_set_uid'] = catch_all_obj[MELTED_SCHEMA_KEY__VS_UID]
         else:
