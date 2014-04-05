@@ -4,6 +4,8 @@ Utility methods for testing.
 
 from django.contrib.auth.models import User
 
+from main.models import AlignmentGroup
+from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 
@@ -33,8 +35,24 @@ def create_common_entities():
             num_chromosomes=1,
             num_bases=777)
 
+    sample_1 = ExperimentSample.objects.create(
+            project=project,
+            label='es1')
+
+    sample_2 = ExperimentSample.objects.create(
+            project=project,
+            label='es2')
+
+    alignment_group_1 = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=reference_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
     return {
         'user': user,
         'project': project,
-        'reference_genome': reference_genome
+        'reference_genome': reference_genome,
+        'sample_1': sample_1,
+        'sample_2': sample_2,
+        'alignment_group_1': alignment_group_1
     }

@@ -132,13 +132,23 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                             'INNER JOIN main_variantevidence ON (main_variantcallercommondata.id = main_variantevidence.variant_caller_common_data_id) '
                             'INNER JOIN main_experimentsample ON (main_variantevidence.experiment_sample_id = main_experimentsample.id) '
 
-                            # VariantSet
-                            'LEFT JOIN main_varianttovariantset ON ('
-                                    'main_varianttovariantset.variant_id = main_variant.id) '
-                            'LEFT JOIN main_varianttovariantset_sample_variant_set_association ON ('
-                                    'main_varianttovariantset_sample_variant_set_association.varianttovariantset_id = main_varianttovariantset.id AND '
-                                    'main_experimentsample.id = main_varianttovariantset_sample_variant_set_association.experimentsample_id) '
-                            'LEFT JOIN main_variantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
+                            # VariantSets
+                            # We do an inner select which only gets rows associated with an ExperimentSample.
+                            # Then LEFT JOIN on whatever weot.
+                            'LEFT JOIN '
+                                '(SELECT main_varianttovariantset.variant_id, '
+                                        'main_variantset.uid, '
+                                        'main_variantset.label, '
+                                        'main_varianttovariantset.variant_set_id, '
+                                        'main_varianttovariantset_sample_variant_set_association.experimentsample_id '
+                                    'FROM '
+                                        'main_variantset '
+                                        'INNER JOIN main_varianttovariantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
+                                        'INNER JOIN main_varianttovariantset_sample_variant_set_association ON ('
+                                                'main_varianttovariantset_sample_variant_set_association.varianttovariantset_id = main_varianttovariantset.id) '
+                                ') AS main_variantset ON (' # HACK: Re-use name main_variantset to match outer-most select.
+                                        'main_variantset.variant_id = main_variant.id AND '
+                                        'main_experimentsample.id = main_variantset.experimentsample_id) '
 
                             # VariantAlternate
                             'LEFT JOIN main_variantevidence_variantalternate_set ON ('
