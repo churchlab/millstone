@@ -7,6 +7,7 @@ See: https://docs.djangoproject.com/en/dev/topics/signals/.
 from django.db.models.signals import m2m_changed
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
+from django.db.models.signals import pre_delete
 
 from models import AlignmentGroup
 from models import Dataset
@@ -107,9 +108,9 @@ post_save.connect(post_sample_create, sender=ExperimentSample,
         dispatch_uid='post_sample_create')
 
 
-def post_sample_delete(sender, instance, **kwargs):
+def pre_sample_delete(sender, instance, **kwargs):
     instance.delete_model_data_dir()
-post_delete.connect(post_sample_delete, sender=ExperimentSample,
+pre_delete.connect(pre_sample_delete, sender=ExperimentSample,
         dispatch_uid='post_sample_delete')
 
 
