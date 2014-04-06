@@ -340,8 +340,12 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename,
     # combine the separate vcfs for each transformation
     vcf_outputs = filter(lambda file: os.path.exists(file), vcf_outputs)
     if vcf_outputs:
-        with open(vcf_output_filename, 'w') as fh:
+        temp_vcf = os.path.join(vcf_output_dir, 'temp_vcf')
+        with open(temp_vcf, 'w') as fh:
             subprocess.check_call(['vcf-concat'] + vcf_outputs, stdout=fh)
+        with open(vcf_output_filename, 'w') as fh:
+            subprocess.check_call(['vcf-sort', temp_vcf], stdout=fh)
+        subprocess.check_call(['rm', temp_vcf])
     else:
         # hack: create empty vcf
         subprocess.check_call(['touch', delly_root])

@@ -182,14 +182,14 @@ class TestSVPipeline(TestCase):
         self.assertTrue(os.path.exists(os.path.join(jbrowse_dir,
                 'indiv_tracks')))
 
-        variant_params = get_variant_tool_params()  # first one is freebayes
+        variant_params = get_variant_tool_params()
         for variant_param in variant_params:
-            find_variants_with_tool(alignment_group, variant_param, project=self.project)
+            find_variants_with_tool(alignment_group_obj, variant_param, project=self.project)
 
         for vcf_type in [Dataset.TYPE.VCF_FREEBAYES,
                 Dataset.TYPE.VCF_PINDEL, Dataset.TYPE.VCF_DELLY]:
             print 'checking type', vcf_type
-            vcf_dataset = get_dataset_with_type(alignment_group,
+            vcf_dataset = get_dataset_with_type(alignment_group_obj,
                     Dataset.TYPE.VCF_FREEBAYES)
             self.assertIsNotNone(vcf_dataset)
             self.assertTrue(os.path.exists(vcf_dataset.get_absolute_location()))

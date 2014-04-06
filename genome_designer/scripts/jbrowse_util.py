@@ -343,7 +343,7 @@ def _vcf_to_vcftabix(vcf_dataset):
 
         # Make tabix index
         subprocess.check_call([
-            TABIX_BINARY, 
+            TABIX_BINARY, '-f',
             '-p', 'vcf',
             compressed_dataset.get_absolute_location()
         ])
