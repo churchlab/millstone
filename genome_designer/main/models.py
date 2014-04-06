@@ -40,8 +40,6 @@ from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Model
-from django.db.models.signals import post_delete
-from django.db.models.signals import post_save
 
 from model_utils import assert_unique_types
 from model_utils import ensure_exists_0775_dir
@@ -70,16 +68,6 @@ class UserProfile(UniqueUidModelMixin):
 
     def __unicode__(self):
         return self.user.username
-
-
-# Since the registration flow creates a django User object, we want to make
-# sure that the corresponding UserProfile is also created
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        user_profile = UserProfile.objects.create(user=instance)
-
-post_save.connect(create_user_profile, sender=User,
-        dispatch_uid='user_profile_create')
 
 
 ###############################################################################
@@ -414,20 +402,6 @@ class Project(UniqueUidModelMixin):
         """
         return [{'field':'uid'},
                 {'field':'title'}]
-
-
-# When a new Project is created, create the data directory.
-def post_project_create(sender, instance, created, **kwargs):
-    if created:
-        instance.ensure_model_data_dir_exists()
-post_save.connect(post_project_create, sender=Project,
-        dispatch_uid='project_create')
-
-# Delete all Project data when it is deleted.
-def post_project_delete(sender, instance, **kwargs):
-    instance.delete_model_data_dir()
-post_delete.connect(post_project_delete, sender=Project,
-        dispatch_uid='project_delete')
 
 
 class ReferenceGenome(UniqueUidModelMixin):
@@ -848,14 +822,6 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
             shutil.rmtree(data_dir)
 
 
-# Delete all alignment data when the model is deleted.
-def post_sample_alignment_delete(sender, instance, **kwargs):
-    instance.delete_model_data_dir()
-post_delete.connect(post_sample_alignment_delete,
-        sender=ExperimentSampleToAlignment,
-        dispatch_uid='sample_alignment_delete')
-
-
 ###############################################################################
 # Variants (SNVs and SVs)
 ###############################################################################
@@ -1256,12 +1222,6 @@ class VariantSet(UniqueUidModelMixin):
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
-# When a new Project is created, create the data directory.
-def post_variant_set_create(sender, instance, created, **kwargs):
-    if created:
-        instance.ensure_model_data_dir_exists()
-post_save.connect(post_variant_set_create, sender=VariantSet,
-        dispatch_uid='variant_set_create')
 
 class Region(UniqueUidModelMixin):
     """Semantic annotation for a disjoint set of intervals in a

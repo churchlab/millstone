@@ -4,8 +4,8 @@ Signal registration.
 See: https://docs.djangoproject.com/en/dev/topics/signals/.
 """
 
+from django.contrib.auth.models import User
 from django.db.models.signals import m2m_changed
-from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
 from django.db.models.signals import pre_delete
 
@@ -13,7 +13,9 @@ from models import AlignmentGroup
 from models import Dataset
 from models import ExperimentSample
 from models import ExperimentSampleToAlignment
+from models import Project
 from models import ReferenceGenome
+from models import UserProfile
 from models import VariantEvidence
 from models import VariantSet
 from models import VariantToVariantSet
@@ -25,6 +27,30 @@ from scripts.import_util import get_dataset_with_type
 from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
 from scripts.jbrowse_util import add_genbank_file_track
 from pipeline.variant_effects import build_snpeff
+
+
+# Since the registration flow creates a django User object, we want to make
+# sure that the corresponding UserProfile is also created
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+post_save.connect(create_user_profile, sender=User,
+        dispatch_uid='user_profile_create')
+
+
+# When a new Project is created, create the data directory.
+def post_project_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_project_create, sender=Project,
+        dispatch_uid='project_create')
+
+
+# Delete all Project data when it is deleted.
+def pre_project_delete(sender, instance, **kwargs):
+    instance.delete_model_data_dir()
+pre_delete.connect(pre_project_delete, sender=Project,
+        dispatch_uid='project_delete')
 
 
 # When a new ReferenceGenome is created, create its data dir.
@@ -137,5 +163,19 @@ post_save.connect(post_vtvs_save, sender=VariantToVariantSet,
 
 def post_vtvs_delete(sender, instance, **kwargs):
     instance.variant.reference_genome.invalidate_materialized_view()
-post_delete.connect(post_vtvs_delete, sender=VariantToVariantSet,
+pre_delete.connect(post_vtvs_delete, sender=VariantToVariantSet,
         dispatch_uid='vtvs_delete')
+
+
+def post_sample_alignment_delete(sender, instance, **kwargs):
+    instance.delete_model_data_dir()
+pre_delete.connect(post_sample_alignment_delete,
+        sender=ExperimentSampleToAlignment,
+        dispatch_uid='sample_alignment_delete')
+
+
+def post_variant_set_create(sender, instance, created, **kwargs):
+    if created:
+        instance.ensure_model_data_dir_exists()
+post_save.connect(post_variant_set_create, sender=VariantSet,
+        dispatch_uid='variant_set_create')
