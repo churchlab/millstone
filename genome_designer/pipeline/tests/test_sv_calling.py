@@ -15,6 +15,7 @@ from main.models import get_dataset_with_type
 from main.models import Project
 from main.models import User
 from main.models import Variant
+from pipeline.pipeline_runner import run_pipeline_multiple_ref_genomes
 from pipeline.snv_calling import get_variant_tool_params
 from pipeline.snv_calling import find_variants_with_tool
 from scripts.import_util import add_dataset_to_entity
@@ -137,3 +138,59 @@ class TestSVCallers(TestCase):
                 foundDuplication = True
         self.assertTrue(foundDeletion)
         self.assertTrue(foundDuplication)
+
+
+class TestSVPipeline(TestCase):
+
+    def setUp(self):
+        user = User.objects.create_user('test_username_sv', password='password',
+                email='test@example.com')
+
+        # Grab a project.
+        self.project = Project.objects.create(title='test project',
+                owner=user.get_profile())
+
+        # Create a ref genome.
+        REF = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'all_svs', 'ref.fa')
+        FASTQ1 = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'all_svs', 'simLibrary.1.fq')
+        FASTQ2 = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'all_svs', 'simLibrary.2.fq')
+        self.reference_genome = import_reference_genome_from_local_file(
+                self.project, 'ref_genome', REF, 'fasta')
+
+        self.experiment_sample = ExperimentSample.objects.create(
+                project=self.project, label='sample1')
+        copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1, FASTQ1)
+        copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2, FASTQ2)
+
+    def test_pipeline_and_svs(self):
+        run_pipeline_multiple_ref_genomes('name', [self.reference_genome],
+                [self.experiment_sample])
+
+        alignment_group_obj_list = AlignmentGroup.objects.filter(
+                reference_genome=self.reference_genome)
+        self.assertEqual(1, len(alignment_group_obj_list))
+
+        alignment_group_obj = alignment_group_obj_list[0]
+        self.assertEqual(1,
+                len(alignment_group_obj.experimentsampletoalignment_set.all()))
+
+        # Make sure the initial JBrowse config has been created.
+        jbrowse_dir = self.reference_genome.get_jbrowse_directory_path()
+        self.assertTrue(os.path.exists(jbrowse_dir))
+        self.assertTrue(os.path.exists(os.path.join(jbrowse_dir,
+                'indiv_tracks')))
+
+        variant_params = get_variant_tool_params()  # first one is freebayes
+        for variant_param in variant_params:
+            find_variants_with_tool(alignment_group, variant_param, project=self.project)
+
+        for vcf_type in [Dataset.TYPE.VCF_FREEBAYES,
+                Dataset.TYPE.VCF_PINDEL, Dataset.TYPE.VCF_DELLY]:
+            print 'checking type', vcf_type
+            vcf_dataset = get_dataset_with_type(alignment_group,
+                    Dataset.TYPE.VCF_FREEBAYES)
+            self.assertIsNotNone(vcf_dataset)
+            self.assertTrue(os.path.exists(vcf_dataset.get_absolute_location()))
+
