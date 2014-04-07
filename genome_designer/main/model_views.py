@@ -42,6 +42,10 @@ from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
 
 
+ALL_VS_LABEL_KEY = 'all_variant_set_label'
+ALL_VS_UID_KEY = 'all_variant_set_uid'
+
+
 class BaseVariantView(object):
     """Common methods for model views.
     """
@@ -557,8 +561,8 @@ def _adapt_variant_set_label_field__melted(variant_as_dict, project_uid,
 
     # Also get a map of uid to field.
     uid_to_label_map = dict(zip(
-            variant_as_dict['all_variant_set_uid'],
-            variant_as_dict['all_variant_set_label']))
+            variant_as_dict[ALL_VS_UID_KEY],
+            variant_as_dict[ALL_VS_LABEL_KEY]))
     for uid, label in uid_to_label_map.items():
         if uid is None or label is None:
             continue
@@ -828,11 +832,11 @@ def _modify_obj_list_for_variant_set_display(obj_list):
         key = _make_catch_all_key(obj)
         if key in variant_uid_to_deleted_row_dict:
             catch_all_obj = variant_uid_to_deleted_row_dict[key]
-            obj['all_variant_set_label'] = catch_all_obj[MELTED_SCHEMA_KEY__VS_LABEL]
-            obj['all_variant_set_uid'] = catch_all_obj[MELTED_SCHEMA_KEY__VS_UID]
+            obj[ALL_VS_LABEL_KEY] = catch_all_obj[MELTED_SCHEMA_KEY__VS_LABEL]
+            obj[ALL_VS_UID_KEY] = catch_all_obj[MELTED_SCHEMA_KEY__VS_UID]
         else:
-            obj['all_variant_set_label'] = []
-            obj['all_variant_set_uid'] = []
+            obj[ALL_VS_LABEL_KEY] = []
+            obj[ALL_VS_UID_KEY] = []
 
     return modified_obj_list
 
