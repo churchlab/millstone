@@ -546,7 +546,7 @@ class ReferenceGenome(UniqueUidModelMixin):
 
     def invalidate_materialized_view(self):
         self.is_materialized_variant_view_valid = False
-        self.save()
+        self.save(update_fields=['is_materialized_variant_view_valid'])
 
 
 class ExperimentSample(UniqueUidModelMixin):
