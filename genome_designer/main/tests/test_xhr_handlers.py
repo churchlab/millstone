@@ -20,6 +20,7 @@ from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
+from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__ERROR
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__TOTAL
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__SET_LIST
@@ -160,6 +161,27 @@ class TestGetVariantList(TestCase):
         variant_position_set = set([_get_position_from_frontend_object(obj)
                 for obj in variant_obj_list])
         self.assertEqual(set(range(TOTAL_NUM_VARIANTS)), variant_position_set)
+
+
+    def test_does_not_throw_500_on_server_error(self):
+        """For user input errors, get_variant_list should not throw a 500 error.
+
+        This test might fail if the dev leaves the debugging clause
+        "except FakeException" in the code.
+        """
+        request_data = {
+            'refGenomeUid': self.ref_genome.uid,
+            'projectUid': self.project.uid
+        }
+        response = self.client.get(self.url, request_data)
+        self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
+        response_data = json.loads(response.content)
+        self.assertTrue(VARIANT_LIST_RESPONSE_KEY__ERROR in response_data)
+
+        # Make sure FakeException is not imported
+        with self.assertRaises(ImportError):
+            # Don't leave FakeException as import.
+            from main.xhr_handlers import FakeException
 
 
 class TestModifyVariantInSetMembership(TestCase):
