@@ -12,9 +12,8 @@ from main.celery_util import assert_celery_running
 from main.models import *
 from variants import materialized_view_manager
 
-
-def debug_materialized_view_manager():
-    ref = ReferenceGenome.objects.get(alignmentgroup__uid='c359d2cf')
+def debug_materialized_view_manager(ag):
+    ref = ReferenceGenome.objects.get(alignmentgroup__uid=ag)
     mvm = materialized_view_manager.MeltedVariantMaterializedViewManager(ref)
     mvm.create()
 
@@ -28,4 +27,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    debug_materialized_view_manager(sys.argv[1])

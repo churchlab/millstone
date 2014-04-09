@@ -23,10 +23,12 @@ class TestDynamicSnpFilterKeyMap(TestCase):
         self.reference_genome = self.test_entities['reference_genome']
 
     def test_initialize(self):
-        initialize_filter_key_map(self.reference_genome)
+        self.reference_genome.variant_key_map = initialize_filter_key_map()
+        self.reference_genome.save()
 
     def test_update(self):
-        initialize_filter_key_map(self.reference_genome)
+        self.reference_genome.variant_key_map = initialize_filter_key_map()
+        self.reference_genome.save()
         update_filter_key_map(self.reference_genome, TEST_VCF)
 
     def test_update__no_initialize(self):

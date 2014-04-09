@@ -14,6 +14,8 @@ from celery import task
 from main.models import get_dataset_with_type
 from main.models import AlignmentGroup
 from main.models import Dataset
+from main.models import ExperimentSampleToAlignment
+from main.models import ReferenceGenome
 from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
 from pipeline.read_alignment_util import ensure_bwa_index
@@ -39,7 +41,13 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
         sample_alignment: ExperimentSampleToAlignment. The respective dataset
             is assumed to have been created as well.
     """
+
+    # Start by gettng fresh objects from database.
+    sample_alignment = ExperimentSampleToAlignment.objects.get(
+            id=sample_alignment.id)
     experiment_sample = sample_alignment.experiment_sample
+    alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
+
 
     # Grab the reference genome fasta for the alignment.
     ref_genome_fasta = get_dataset_with_type(
@@ -50,7 +58,7 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
     bwa_dataset = sample_alignment.dataset_set.get(
                 type=Dataset.TYPE.BWA_ALIGN)
     bwa_dataset.status = Dataset.STATUS.COMPUTING
-    bwa_dataset.save()
+    bwa_dataset.save(update_fields=['status'])
 
     # Create a file that we'll write stderr to.
     error_path = os.path.join(sample_alignment.get_model_data_dir(),
@@ -62,12 +70,11 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
         alignment_group.status = AlignmentGroup.STATUS.ALIGNING
         alignment_group.start_time = datetime.now()
         alignment_group.end_time = None
-        alignment_group.save()
+        alignment_group.save(update_fields=['status','start_time','end_time'])
 
     error_output.write(
             "==START OF ALIGNMENT PIPELINE FOR %s, (%s) ==" % (
             sample_alignment.experiment_sample.label, sample_alignment.uid))
-
 
     # We wrap the alignment logic in a try-except so that if an error occurs,
     # we record it and update the status of the Dataset to FAILED if anything
@@ -186,8 +193,8 @@ DEFAULT_PROCESSING_MASK = {
 }
 
 
-def process_sam_bam_file(sample_alignment, reference_genome, 
-        sam_bam_file_location, error_output=None, 
+def process_sam_bam_file(sample_alignment, reference_genome,
+        sam_bam_file_location, error_output=None,
         opt_processing_mask=DEFAULT_PROCESSING_MASK):
     """Converts to bam, sorts, and creates index.
 
@@ -252,8 +259,8 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         ], stderr=error_output)
 
     # 3. Compute insert size metrics
-    # Subsequent steps screw up pairing info so this has to 
-    # be done here. 
+    # Subsequent steps screw up pairing info so this has to
+    # be done here.
     if effective_mask['compute_insert_metrics']:
         compute_insert_metrics(sorted_bam_file_location, sample_alignment, error_output)
 
@@ -307,9 +314,9 @@ def process_sam_bam_file(sample_alignment, reference_genome,
                 ref_genome_fasta_location
             ], stderr=error_output, stdout=fh)
 
-        # Re-index this new bam file. 
+        # Re-index this new bam file.
         subprocess.check_call([
-            SAMTOOLS_BINARY, 'index', final_bam_location], 
+            SAMTOOLS_BINARY, 'index', final_bam_location],
             stderr=error_output)
 
     else:
@@ -414,7 +421,7 @@ def compute_insert_metrics(bam_file_location, sample_alignment, stderr=None):
     sample_alignment.save()
 
 
-def compute_callable_loci(reference_genome, sample_alignment, 
+def compute_callable_loci(reference_genome, sample_alignment,
             bam_file_location, stderr=None):
 
     try:
@@ -458,7 +465,7 @@ def compute_callable_loci(reference_genome, sample_alignment,
                     fields = line.split()
                     if len(fields) == 0: continue
                     chrom, start, end, feature = fields
-                    if feature == 'CALLABLE': 
+                    if feature == 'CALLABLE':
                         continue
                     else:
 
@@ -470,7 +477,7 @@ def compute_callable_loci(reference_genome, sample_alignment,
                             [chrom, start, end, feature])
                 except Exception as e:
                    print >> stderr, (
-                            'WARNING: Callable Loci line' + 
+                            'WARNING: Callable Loci line' +
                             '%d: (%s) couldn\'t be parsed: %s') % (
                                     i, line, str(e))
         # add it as a jbrowse track
@@ -495,14 +502,14 @@ def get_insert_size(sample_alignment):
     If the insert size can't be calculated, perhaps because of a bad alignment,
     return -1.
     """
-    picard_metrics = get_dataset_with_type(sample_alignment, 
+    picard_metrics = get_dataset_with_type(sample_alignment,
             Dataset.TYPE.PICARD_INSERT_METRICS)
 
-    if picard_metrics is None: 
-        bam_file = get_dataset_with_type(sample_alignment, 
+    if picard_metrics is None:
+        bam_file = get_dataset_with_type(sample_alignment,
                 Dataset.TYPE.BWA_ALIGN).get_absolute_location()
         compute_insert_metrics(bam_file, sample_alignment, stderr=None)
-        picard_metrics = get_dataset_with_type(sample_alignment, 
+        picard_metrics = get_dataset_with_type(sample_alignment,
             Dataset.TYPE.PICARD_INSERT_METRICS)
 
     try:

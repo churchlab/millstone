@@ -171,15 +171,19 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                 ', va_data_table AS ('
                     'SELECT id, data AS va_data from main_variantalternate'
                 ') ' # va_data_table
+                ', es_data_table AS ('
+                    'SELECT id, data AS es_data from main_experimentsample'
+                ') ' # es_data_table
                 ', vccd_data_table AS ('
                     'SELECT id, data AS vccd_data from main_variantcallercommondata'
                 ') ' # vccd_data_table
                 ', ve_data_table AS ('
                     'SELECT id, data AS ve_data from main_variantevidence'
                 ') ' # ve_data_table
-                'SELECT melted_variant_data.*, va_data, vccd_data, ve_data '
+                'SELECT melted_variant_data.*, va_data, vccd_data, ve_data, es_data '
                     'FROM melted_variant_data '
                         'LEFT JOIN va_data_table ON va_data_table.id = melted_variant_data.va_id '
+                        'LEFT JOIN es_data_table ON es_data_table.id = melted_variant_data.es_id '
                         'LEFT JOIN ve_data_table ON ve_data_table.id = melted_variant_data.ve_id '
                         'LEFT JOIN vccd_data_table ON vccd_data_table.id = melted_variant_data.vccd_id'
             ')'

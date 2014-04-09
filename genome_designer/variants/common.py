@@ -10,6 +10,7 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__VARIANT
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from scripts.dynamic_snp_filter_key_map import MAP_KEY__EXPERIMENT_SAMPLE
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
 
@@ -44,6 +45,7 @@ VARIANT_KEY_TO_MATERIALIZED_VIEW_COL_MAP = {
     MAP_KEY__ALTERNATE: 'va_data',
     MAP_KEY__COMMON_DATA: 'vccd_data',
     MAP_KEY__EVIDENCE: 've_data',
+    MAP_KEY__EXPERIMENT_SAMPLE: 'es_data'
 }
 
 ################################################################################

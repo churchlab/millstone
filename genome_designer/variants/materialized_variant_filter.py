@@ -180,6 +180,7 @@ class VariantFilterEvaluator(object):
         cursor.execute(sql_statement, where_clause_args)
         result_list = [dict(zip([col[0].upper() for col in cursor.description], row))
                 for row in cursor.fetchall()]
+
         return result_list
 
     def _select_clause(self):
@@ -215,7 +216,7 @@ class VariantFilterEvaluator(object):
                 elif column in [MELTED_SCHEMA_KEY__VS_LABEL, MELTED_SCHEMA_KEY__VS_UID]:
                     # NOTE: Custom array_agg_mult created
                     return 'array_agg_mult(' + column + ') as ' + column
-                elif column in [MELTED_SCHEMA_KEY__ALT, 'va_data', 'vccd_data', 've_data', MELTED_SCHEMA_KEY__ES_UID]:
+                elif column in [MELTED_SCHEMA_KEY__ALT, 'va_data', 'vccd_data', 've_data', 'es_data', MELTED_SCHEMA_KEY__ES_UID]:
                     return 'array_agg(' + column + ') as ' + column
                 else:
                     return 'min(' + column + ') as ' + column
@@ -345,19 +346,31 @@ class VariantFilterEvaluator(object):
         # Check if arg is a special json field, and rewrite if so, using the appropriate type cast
         # For example, if arg = 'INFO_AO', which is an integer field under snp_alternate_data (ve_data)
         #   then this function will return "(ve_data->>INFO_AO)::Integer"
-        json_field = generate_key_to_materialized_view_parent_col(self.ref_genome).get(arg, None)
-        json_field_expanded = {'vccd_data': 'snp_caller_common_data',
+
+        json_field = generate_key_to_materialized_view_parent_col(
+                self.ref_genome).get(arg, None)
+        json_field_expanded = {
+                'vccd_data': 'snp_caller_common_data',
                 'va_data': 'snp_alternate_data',
+                'es_data': 'experiment_sample_data',
                 've_data': 'snp_evidence_data'}.get(json_field, None)
+
         if json_field_expanded:
             # Get the type of the field from the original variant_key_map
-            field_type = self.ref_genome.variant_key_map[json_field_expanded][arg]['type']
-            field_type_expanded = {'Integer': '::Integer',  # support these data types
+            field_type = self.ref_genome.variant_key_map[
+                    json_field_expanded][arg]['type']
+
+            # support these data types
+            # string doesn't need to be cast
+            field_type_expanded = {
+                    'Integer': '::Integer',
                     'Float': '::Float',
                     'Boolean': '::Boolean',
-                    'String': ''}.get(field_type, None)  # string doesn't need to be cast
+                    'String': ''}.get(field_type, None)
+
             if field_type_expanded is not None:
-                return "(%s->>'%s')%s" % (json_field, arg, field_type_expanded)
+                return "(%s->>'%s')%s" % (
+                    json_field, arg, field_type_expanded)
 
         # default to returning arg exactly as is
         return arg

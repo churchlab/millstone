@@ -203,28 +203,22 @@ def bootstrap_fake_data():
     ### Create some ExperimentSamples.
 
     # Create some samples without backing data just to explore the UI.
-    ExperimentSample.objects.get_or_create(
+    ExperimentSample.objects.create(
             project=test_project,
             label='C321D_MiSeq',
-            group='Plate 1',
-            well='A01',
-            num_reads=25029296,
+            data = {'SAMPLE_WELL': 'A01'}
     )
 
-    ExperimentSample.objects.get_or_create(
+    ExperimentSample.objects.create(
             project=test_project,
             label='C321D Fixed 01',
-            group='Plate 2',
-            well='A01',
-            num_reads=12345,
+            data = {'SAMPLE_WELL': 'A02'}
     )
 
-    ExperimentSample.objects.get_or_create(
+    ExperimentSample.objects.create(
             project=test_project,
             label='C321D Fixed 02',
-            group='Plate 2',
-            well='A02',
-            num_reads=897213,
+            data = {'SAMPLE_WELL': 'A03'}
     )
 
     # Create some samples with backing data.
@@ -274,6 +268,9 @@ def bootstrap_fake_data():
         sample_obj = ExperimentSample.objects.create(
                 project=test_project,
                 label='Sample %d' % i)
+
+        sample_obj.data['SAMPLE_WELL'] = 'A0%d' % (i+1)
+        sample_obj.save()
 
         # Add raw reads to each sample.
         copy_and_add_dataset_source(sample_obj, Dataset.TYPE.FASTQ1,

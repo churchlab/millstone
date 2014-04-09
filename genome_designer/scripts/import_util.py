@@ -35,6 +35,7 @@ from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
 from scripts.vcf_parser import extract_raw_data_dict
 from scripts.vcf_parser import get_or_create_variant
+from scripts.util import uppercase_underscore
 from settings import PWD
 from settings import EMAIL
 
@@ -45,6 +46,9 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
     'gff': Dataset.TYPE.REFERENCE_GENOME_GFF,
     'vcf_user': Dataset.TYPE.VCF_USERINPUT
 }
+
+REQUIRED_SAMPLE_HEADER_PART = ['Sample_Name', 'Read_1_Path', 'Read_2_Path']
+REQUIRED_VCF_HEADER_PART = ['CHROM','POS','ID','REF','ALT']
 
 if settings.S3_ENABLED:
     from main.s3 import s3_temp_get, s3_get
@@ -209,7 +213,7 @@ def generate_gff_from_genbank(ref_genome):
 
     # SnpEFF takes the name attr, but the BioPython uses the id attr to make its
     # GFF file, so overwrite the id with the name when converting to GFF.
-    
+
     for genome_record in genome_records:
         genome_record.id = genome_record.name
 
@@ -276,15 +280,16 @@ def parse_targets_file(project, targets_file, remove_directory_path=False):
 
     targets_file_header = reader.fieldnames
 
-    REQUIRED_HEADER_PART = ['Sample_Name', 'Plate_or_Group', 'Well',
-            'Read_1_Path', 'Read_2_Path']
-    assert len(targets_file_header) >= len(REQUIRED_HEADER_PART), (
-        "Bad header. Were columns removed?")
+    REQUIRED_SAMPLE_HEADER_STRING = ', '.join(REQUIRED_SAMPLE_HEADER_PART)
 
-    for col, check in zip(targets_file_header[0:len(REQUIRED_HEADER_PART)],
-            REQUIRED_HEADER_PART):
-        assert col == check, (
-            "Header column '%s' is missing or out of order." % check)
+    assert len(targets_file_header) >= len(REQUIRED_SAMPLE_HEADER_PART), (
+        "Header is too short. Need columns: %s" % REQUIRED_SAMPLE_HEADER_STRING)
+
+    header_idxes = {}
+
+    for col in REQUIRED_SAMPLE_HEADER_PART:
+        if not col in targets_file_header:
+            raise ValueError("Required header column '%s' is missing." % col)
 
     # Validate all the rows.
     valid_rows = []
@@ -366,6 +371,7 @@ def import_samples_from_targets_file(project, targets_file):
     # The data is copied to the entity location.
     # We do this asynchronously so catch all the results, so we can block on
     # them.
+    experiment_samples = []
     for row in valid_rows:
         # Create ExperimentSample object and then store the data relative to
         # it.
@@ -385,6 +391,17 @@ def import_samples_from_targets_file(project, targets_file):
 
         # Start the async job of copying.
         copy_experiment_sample_data.delay(project, experiment_sample, row)
+
+        # Add extra metadata columns.
+        for field, value in row.iteritems():
+            if field not in REQUIRED_SAMPLE_HEADER_PART:
+                clean_field = 'SAMPLE_'+uppercase_underscore(field)
+                experiment_sample.data[clean_field] = str(value)
+
+        experiment_sample.save()
+        experiment_samples.append(experiment_sample)
+
+    return experiment_samples
 
 
 @task
@@ -502,15 +519,13 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
         reader = csv.DictReader(vcf_noheader, delimiter='\t')
 
         # Check that the required columns are present.
-        REQUIRED_HEADER_PART = ['CHROM','POS','ID','REF','ALT']
-
-        assert (len(reader.fieldnames) >= len(REQUIRED_HEADER_PART)), (
+        assert (len(reader.fieldnames) >= len(REQUIRED_VCF_HEADER_PART)), (
             'Header for PseudoVCF %s is too short, should have [%s], has %s' % (
-                    variant_set_file, ' '.join(REQUIRED_HEADER_PART),
-                    ' '.join(reader.fieldnames)))
+                    variant_set_file, ', '.join(REQUIRED_VCF_HEADER_PART),
+                    ', '.join(reader.fieldnames)))
 
-        for col, check in zip(reader.fieldnames[0:len(REQUIRED_HEADER_PART)],
-                REQUIRED_HEADER_PART):
+        for col, check in zip(reader.fieldnames[0:len(REQUIRED_VCF_HEADER_PART)],
+                REQUIRED_VCF_HEADER_PART):
             assert col == check, (
                 "Header column '%s' is missing or out of order; %s" % (check,
                     ', '.join(reader.fieldnames)))

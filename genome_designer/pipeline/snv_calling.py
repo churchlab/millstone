@@ -133,8 +133,8 @@ def find_variants_with_tool(alignment_group, variant_params):
 
     # Run the tool
     tool_succeeded = tool_function(
-            vcf_output_dir= tool_dir, 
-            vcf_output_filename= vcf_output_filename, 
+            vcf_output_dir= tool_dir,
+            vcf_output_filename= vcf_output_filename,
             **common_params)
     if not tool_succeeded:
         return False
@@ -197,8 +197,8 @@ def flag_variants_from_bed(alignment_group, bed_dataset_type):
                 bed_dataset= callable_loci_bed)
 
 
-def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename, 
-        alignment_type, **kwargs):
+def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
+        vcf_output_filename, alignment_type, **kwargs):
     """Run freebayes using the bam alignment files keyed by the alignment_type
     for all Genomes of the passed in ReferenceGenome.
 

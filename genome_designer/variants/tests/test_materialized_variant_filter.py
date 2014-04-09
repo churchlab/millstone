@@ -22,7 +22,6 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 from main.testing_util import create_common_entities
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
-from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
 from variants.common import determine_visible_field_names
@@ -63,7 +62,6 @@ class BaseTestVariantFilterTestCase(TestCase):
                 label='refgenome', num_chromosomes=1, num_bases=1000)
 
         # Make sure the reference genome has the required vcf keys.
-        initialize_filter_key_map(self.ref_genome)
         update_filter_key_map(self.ref_genome, TEST_ANNOTATED_VCF)
 
         self.vcf_dataset = Dataset.objects.create(
@@ -73,19 +71,11 @@ class BaseTestVariantFilterTestCase(TestCase):
 
         self.sample_obj_1 = ExperimentSample.objects.create(
                 project=self.project,
-                label='fake sample',
-                group='Plate 1',
-                well='A01',
-                num_reads=100,
-        )
+                label='fake sample')
 
         self.sample_obj_2 = ExperimentSample.objects.create(
                 project=self.project,
-                label='fake sample 2',
-                group='Plate 1',
-                well='A02',
-                num_reads=100,
-        )
+                label='fake sample 2')
 
         # Only variants that are part of a set will be returned in the melted
         # view. If a Variant is not associatd with a VariantSet, nor is it
@@ -418,7 +408,6 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         # Initialize but don't update with source vcf, thus only global
         # keys are available.
-        initialize_filter_key_map(ref_genome_2)
 
         var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,

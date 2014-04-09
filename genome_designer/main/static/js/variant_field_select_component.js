@@ -29,17 +29,27 @@ gd.VariantFieldSelectComponent = Backbone.View.extend({
     this.renderKeyMapSection(
         this.model.get('variantKeyMap').snp_alternate_data,
         'gd-filter-key-modal-alternate-tbody');
+
+    // Add SNP evidence and Sample Metadata to last tab.
     this.renderKeyMapSection(
         this.model.get('variantKeyMap').snp_evidence_data,
         'gd-filter-key-modal-evidence-tbody');
+    this.renderKeyMapSection(
+        this.model.get('variantKeyMap').experiment_sample_data,
+        'gd-filter-key-modal-evidence-tbody', false);
 
-    $('#gd-filter-key-modal-dismiss-btn').focus();
+    $('#gd-filter-key-modal-dismiss-btn').focus()
   },
 
 
   /** Renders a table row for each filter key in the key map. */
-  renderKeyMapSection: function(key_map, targetElId) {
-    $('#' + targetElId).empty();
+  renderKeyMapSection: function(key_map, targetElId, empty_div) {
+
+    // empty_div defaults to true
+    empty_div = (typeof empty_div === "undefined") ? true : empty_div;
+    if (empty_div) {
+      $('#' + targetElId).empty();
+    }
 
     // First, put the keys in alphabetical order.
     sorted_keys = _.keys(key_map).sort();

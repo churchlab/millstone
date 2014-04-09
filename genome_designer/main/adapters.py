@@ -13,6 +13,7 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 
 from main.constants import UNDEFINED_STRING
+from main.models import ExperimentSample
 
 OBJ_LIST = 'obj_list'
 
@@ -107,6 +108,66 @@ def adapt_model_to_frontend(model, filters={}, obj_list=None, **kwargs):
         'field_config': obj_field_config
     })
 
+def adapt_experiment_samples_to_frontend(filters={}, obj_list=None, **kwargs):
+    """ The sample metadata fields require their own custom adapter. """
+    # Get all objects that pass the filter.
+    if obj_list is None:
+        obj_list = ExperimentSample.objects.filter(**filters)
+
+    json_fields = {}
+    for obj in obj_list:
+        json_field_dicts = dict(
+                [(key,{'field':key}) for key in obj.data.keys()])
+        json_fields.update(json_field_dicts)
+
+    print json_fields
+
+    # A list of dicts with object data, where each dict is one object
+    # and all the fields required for front-end display.
+    fe_obj_list = []
+    for obj in obj_list:
+        # default to empty string
+        obj_json_fields = dict((field, '') for field in json_fields)
+        obj_json_fields.update(obj.data)
+        fe_obj_list.append(adapt_model_instance_to_frontend(obj,
+                field_info= obj_json_fields,
+                **kwargs))
+
+
+    # Get a list of fields required for displaying the objects, in the order
+    # in which they should be displayed.
+    field_dict_list = ExperimentSample.get_field_order(**kwargs)
+    field_dict_list.extend(json_fields.values())
+
+    print field_dict_list
+
+    # Each field is a dict with two keys, 'field' for field name and 'verbose'
+    # for display name. Get each. If 'verbose' is missing, then make verbose
+    # be the field with _'s turned to spaces and Title Cased.
+    field_list = [fdict['field'] for fdict in field_dict_list]
+
+    # Get the verbose field names, which will be used as column headers.
+    def _get_verbose(fdict):
+        if 'verbose' in fdict:
+            return fdict['verbose']
+        else:
+            return string.capwords(fdict['field'],'_').replace('_',' ')
+    field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
+
+    # A list of dicts containing the order of each column and the field titles
+    # for each column, used for configuring jquery.datatables.js
+    obj_field_config = [{
+        'mData': name,
+        'sTitle': verbose_name
+    } for (name, verbose_name) in zip(field_list, field_verbose_names)]
+
+    # Package the result.
+    return json.dumps({
+        OBJ_LIST: fe_obj_list,
+        'field_config': obj_field_config
+    })
+
+
 
 def adapt_model_instance_to_frontend(model_instance, field_info={}, **kwargs):
     """Adapts a single model instance to the frontend representation.
@@ -150,7 +211,6 @@ def adapt_model_instance_to_frontend(model_instance, field_info={}, **kwargs):
         elif hasattr(model_instance, key):
             other_pairs.append((key, getattr(model_instance, key)))
 
-
     # Add in keys from field_info, which are inherited from parent model, if
     # this function is called recursively from
     # get_model_field_fe_representation().
@@ -168,6 +228,7 @@ def get_model_field_fe_representation(model_obj, field, field_info={},
 
     This method allows recursively diving into models.
     """
+
     if hasattr(model_obj, 'custom_getattr'):
         model_field = model_obj.custom_getattr(field)
     else:

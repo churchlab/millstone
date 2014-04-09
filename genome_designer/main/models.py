@@ -48,6 +48,10 @@ from model_utils import make_choices_tuple
 from model_utils import UniqueUidModelMixin
 from model_utils import VisibleFieldMixin
 from settings import TOOLS_DIR
+from scripts.filter_key_map_constants import MAP_KEY__ALTERNATE
+from scripts.filter_key_map_constants import MAP_KEY__COMMON_DATA
+from scripts.filter_key_map_constants import MAP_KEY__EVIDENCE
+from scripts.filter_key_map_constants import MAP_KEY__EXPERIMENT_SAMPLE
 from scripts.util import uppercase_underscore
 
 BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
@@ -425,8 +429,8 @@ class ReferenceGenome(UniqueUidModelMixin):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
         verbose_name="Datasets")
 
-    # a key/value list of all possible VCF fields, stored as a PostgresJsonField
-    # and dynamically updated by dynamic_snp_filter_key_map.py
+    # a key/value list of all possible VCF and sample metadata fields, stored
+    # as a JsonField and dynamically updated by dynamic_snp_filter_key_map.py
     variant_key_map = PostgresJsonField()
 
     # Bit that indicates whether the materialized view is up to date.
@@ -527,13 +531,17 @@ class ReferenceGenome(UniqueUidModelMixin):
                 type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists()
 
     def get_variant_caller_common_map(self):
-        return self.variant_key_map['snp_caller_common_data']
+        return self.variant_key_map[MAP_KEY__COMMON_DATA]
 
     def get_variant_alternate_map(self):
-        return self.variant_key_map['snp_alternate_data']
+        return self.variant_key_map[MAP_KEY__ALTERNATE]
 
     def get_variant_evidence_map(self):
-        return self.variant_key_map['snp_evidence_data']
+        return self.variant_key_map[MAP_KEY__EVIDENCE]
+
+    def get_experiment_sample_map(self):
+        return self.variant_key_map[MAP_KEY__EXPERIMENT_SAMPLE]
+
 
     @classmethod
     def get_field_order(clazz, **kwargs):
@@ -562,20 +570,32 @@ class ExperimentSample(UniqueUidModelMixin):
     # Human-readable identifier.
     label = models.CharField('Sample Name', max_length=256)
 
-    # Human-readable sample group that this value is in.
-    group = models.CharField('Plate/Group', max_length=256)
-
-    # Human-readable 'position' (well number, etc) that this sample is in
-    # within a group
-    well = models.CharField('Position/Well', max_length=256)
-
-    # Number of reads in the sample.
-    num_reads = models.BigIntegerField('# Reads', default=-1)
-
     # The datasets associated with this sample. The semantic sense of the
     # dataset can be determined from the Dataset.type field.
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
         verbose_name="Datasets")
+
+    # User speciified data fields corresponding to the sample.
+    # Examples: Growth rate, GFP amount, phenotype, # of mage cycles, etc.
+    data = PostgresJsonField()
+
+    def __getattr__(self, name):
+        """Automatically called if an attribute is not found in the typical
+        place.
+
+        Our implementation checks the data dict, return the string 'undefined'
+        if the value is not found.
+
+        NOTE: Typically __getattr__ should raise an AttributeError if the value
+        cannot be found, but the noisy nature or our data means returning
+        'undefined' is more correct.
+
+        See: http://docs.python.org/2/reference/datamodel.html#object.__getattr__
+        """
+        try:
+            return self.data[name]
+        except:
+            raise AttributeError
 
     @property
     def status(self):
@@ -634,13 +654,11 @@ class ExperimentSample(UniqueUidModelMixin):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
+
         return [
             {'field': 'label'},
             {'field': 'status'},
-            {'field': 'group'},
-            {'field': 'well'},
-            {'field': 'num_reads'}
-        ]
+            {'field': 'uid', 'verbose':'Internal ID'}]
 
 
 class AlignmentGroup(UniqueUidModelMixin):

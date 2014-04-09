@@ -9,6 +9,7 @@ import vcf
 
 from main.models import get_dataset_with_type
 from main.models import ExperimentSample
+from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
@@ -27,7 +28,9 @@ UNKNOWN_VARIANT_TYPE = 'unknown'
 
 IGNORE_VCF_RECORD_KEYS = [
     # Bug in pyvcf where some alleles are some sort of object rather than str.
-    'alleles'
+    'alleles',
+    # Fake/Pseudo VCFs parsed as CSVs have ID fields, which we are skipping
+    'ID'
 ]
 
 
@@ -74,9 +77,10 @@ def parse_vcf(vcf_dataset, alignment_group):
 
         # First, update the reference_genome's key list with any new
         # keys from this VCF.
+        reference_genome = ReferenceGenome.objects.get(id=reference_genome.id)
+        # Update the reference genome and grab it from the db again.
         update_filter_key_map(reference_genome, vcf_reader)
-
-
+        reference_genome = ReferenceGenome.objects.get(id=reference_genome.id)
 
         for record_idx, record in enumerate(vcf_reader):
             print 'vcf_parser: Parsing %d out of %d' % (

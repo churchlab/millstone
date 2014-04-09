@@ -10,7 +10,6 @@ from django.test import TestCase
 from main.models import Dataset
 from main.models import Project
 from main.models import ReferenceGenome
-from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
 from variants.common import determine_visible_field_names
@@ -33,7 +32,6 @@ class TestCommon(TestCase):
                 label='refgenome', num_chromosomes=1, num_bases=1000)
 
         # Make sure the reference genome has the required vcf keys.
-        initialize_filter_key_map(self.ref_genome)
         update_filter_key_map(self.ref_genome, TEST_ANNOTATED_VCF)
 
         self.vcf_dataset = Dataset.objects.create(

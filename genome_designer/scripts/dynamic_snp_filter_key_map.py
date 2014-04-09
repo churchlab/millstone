@@ -26,52 +26,72 @@ import copy
 import vcf
 
 from main.exceptions import InputError
+from main.models import ReferenceGenome
+from scripts.filter_key_map_constants import *
+from scripts.util import uppercase_underscore
 
 
-# Hard-coded keys to be used during parsing.
-# Differs from *_SQL_* maps in variants.common as those maps are used
-# for determining which keys are supported for SQL-lookups.
-
-SNP_CALLER_COMMON_DATA_HARD_CODED = {
-    'CHROM': {'type': 'String', 'num': 1},
-    'POS': {'type': 'Integer', 'num': 1},
-    'REF': {'type': 'String', 'num': 1},
-}
-
-SNP_VARIANT_HARD_CODED = {
-    'ALT': {'type': 'String', 'num': -1}
-}
-
-SNP_EVIDENCE_HARD_CODED = {
-    'GT_TYPE': {'type': 'Integer', 'num': 1},
-    'IS_HET': {'type': 'Boolean', 'num': 1}
-}
-
-MAP_KEY__VARIANT = 'variant_data'
-
-MAP_KEY__ALTERNATE = 'snp_alternate_data'
-
-MAP_KEY__COMMON_DATA = 'snp_caller_common_data'
-
-MAP_KEY__EVIDENCE = 'snp_evidence_data'
-
-
-def initialize_filter_key_map(ref_genome):
+def initialize_filter_key_map():
     """Initialize the filter key map with hard-coded fields. This should
     run on a signal of new ref genome creation.
     """
-    ref_genome.variant_key_map = {
-        MAP_KEY__ALTERNATE: copy.deepcopy(
-                SNP_VARIANT_HARD_CODED),
-        MAP_KEY__COMMON_DATA: copy.deepcopy(
-                SNP_CALLER_COMMON_DATA_HARD_CODED),
-        MAP_KEY__EVIDENCE: copy.deepcopy(
-                SNP_EVIDENCE_HARD_CODED)
-    }
+
+    variant_key_map = copy.deepcopy({
+        MAP_KEY__ALTERNATE:
+                SNP_VARIANT_HARD_CODED,
+        MAP_KEY__COMMON_DATA:
+                SNP_CALLER_COMMON_DATA_HARD_CODED,
+        MAP_KEY__EVIDENCE:
+                SNP_EVIDENCE_HARD_CODED,
+        MAP_KEY__EXPERIMENT_SAMPLE:
+                EXPERIMENT_SAMPLE_HARD_CODED
+    })
+
+    _assert_unique_keys(variant_key_map)
+
+    return variant_key_map
+
+
+def update_sample_filter_key_map(ref_genome, experiment_sample):
+    """
+    Updates a reference genome's variant key map dictionary with
+    (potentially) new fields from sample metadata.
+
+    Every time a new alignment happens, we need to update this
+    with potentially new sample metadata keys.
+
+    Every sample field gets uppercase_underscore()ed and
+    prefixed with SAMPLE_ for filtering purposes.
+
+    #TODO: deal with casting. for now, all are strings.
+    """
+
+    # Get an updated representation of the reference genome, in case
+    # other tasks have already updated the filter_key_map
+    # https://github.com/churchlab/millstone/issues/254
+    ref_genome = ReferenceGenome.objects.get(uid=ref_genome.uid)
+
+    if not any(ref_genome.variant_key_map):
+        print ref_genome.variant_key_map
+        raise ValueError(
+                'Variant Key Map was not properly initialized for %s' % (
+                        ref_genome.uid))
+
+    sample_map = copy.deepcopy(
+            ref_genome.variant_key_map.get(
+            MAP_KEY__EXPERIMENT_SAMPLE, {}))
+
+    for key, value in experiment_sample.data.iteritems():
+        inner_map = {}
+        inner_map['type'] = 'String'
+        inner_map['num'] = 1
+
+        sample_map[key]=inner_map
+
+    ref_genome.variant_key_map[MAP_KEY__EXPERIMENT_SAMPLE] = sample_map
 
     _assert_unique_keys(ref_genome.variant_key_map)
-
-    ref_genome.save()
+    ref_genome.save(update_fields=['variant_key_map'])
 
 
 def update_filter_key_map(ref_genome, source_vcf):
@@ -99,6 +119,11 @@ def update_filter_key_map(ref_genome, source_vcf):
     stores the per-alt data after doing the equivalent of 'zip()ing' it per
     object.
     """
+
+    # Get an updated representation of the reference genome, in case
+    # other tasks have already updated the filter_key_map
+    # https://github.com/churchlab/millstone/issues/254
+    ref_genome = ReferenceGenome.objects.get(uid=ref_genome.uid)
 
     #First try the source_vcf as a vcf file
     try:
@@ -148,7 +173,7 @@ def update_filter_key_map(ref_genome, source_vcf):
 
     _assert_unique_keys(ref_genome.variant_key_map)
 
-    ref_genome.save()
+    ref_genome.save(update_fields=['variant_key_map'])
 
 
 def _assert_unique_keys(variant_key_map):

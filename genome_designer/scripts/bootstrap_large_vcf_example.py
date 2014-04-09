@@ -70,14 +70,17 @@ def main():
     with open(EXPERIMENT_SAMPLE_MODEL_DATA_PICKLE) as sample_data_fh:
         es_data = pickle.load(sample_data_fh)
         for es in es_data:
-            ExperimentSample.objects.create(
+            es_obj = ExperimentSample.objects.create(
                 uid=es.uid,
                 project=test_project,
-                label=es.label,
-                group=es.group,
-                well=es.well,
-                num_reads=es.num_reads,
+                label=es.label
             )
+
+            es_obj.data.update(
+                {'group':es.group,
+                 'well':es.well,
+                 'num_reads':es.num_reads})
+            es_obj.save()
 
     parse_alignment_group_vcf(alignment_group,
             Dataset.TYPE.VCF_FREEBAYES_SNPEFF)

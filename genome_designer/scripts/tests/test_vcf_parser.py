@@ -64,10 +64,7 @@ class TestVCFParser(TestCase):
             ExperimentSample.objects.create(
                 uid=sample_uid,
                 project=self.project,
-                label='fakename:' + sample_uid,
-                group='Plate 1',
-                well='A01',
-                num_reads=100,
+                label='fakename:' + sample_uid
             )
 
         # Count the number of records in the vcf file for testing.

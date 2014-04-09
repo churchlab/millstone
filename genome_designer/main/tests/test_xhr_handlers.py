@@ -25,7 +25,6 @@ from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__TOTAL
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__SET_LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__KEY_MAP
-from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
@@ -56,11 +55,9 @@ class TestGetVariantList(TestCase):
         self.ref_genome = ReferenceGenome.objects.create(project=self.project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
         self.sample_obj_1 = ExperimentSample.objects.create(
-                project=self.project, label='fake sample', group='Plate 1',
-                well='A01', num_reads=100)
+                project=self.project, label='fake sample')
 
         # Make sure the reference genome has the required vcf keys.
-        initialize_filter_key_map(self.ref_genome)
         update_filter_key_map(self.ref_genome, TEST_ANNOTATED_VCF)
         self.vcf_dataset = Dataset.objects.create(
                 label='test_data_set',

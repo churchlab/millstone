@@ -24,6 +24,7 @@ from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
 from main.model_utils import clean_filesystem_location
 from scripts.util import ensure_line_lengths
+from scripts.util import uppercase_underscore
 from scripts.import_util import sanitize_record_id
 import settings
 
@@ -293,7 +294,7 @@ def get_snpeff_vcf_output_path(alignment_group, alignment_type):
     snpeff_vcf_dir = os.path.join(vcf_dir, 'snpeff')
     ensure_exists_0775_dir(snpeff_vcf_dir)
     vcf_output_filename = os.path.join(
-            snpeff_vcf_dir, alignment_type + '.vcf')
+            snpeff_vcf_dir, uppercase_underscore(alignment_type) + '.vcf')
     return vcf_output_filename
 
 

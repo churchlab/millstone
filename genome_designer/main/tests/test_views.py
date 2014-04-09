@@ -7,7 +7,6 @@ from django.core.urlresolvers import reverse
 from django.test import Client
 from django.test import TestCase
 
-from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
@@ -34,7 +33,6 @@ class TestViews(TestCase):
                 title='Test Project')
         ref_genome = ReferenceGenome.objects.create(project=test_project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
-        initialize_filter_key_map(ref_genome)
 
         alignment_group = AlignmentGroup.objects.create(
                 label='Alignment 1',

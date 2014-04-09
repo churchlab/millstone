@@ -55,6 +55,9 @@ MELTED_SCHEMA_KEY__ES_LABEL = 'EXPERIMENT_SAMPLE_LABEL'
 MELTED_SCHEMA_KEY__VS_UID = 'VARIANT_SET_UID'
 MELTED_SCHEMA_KEY__VS_LABEL = 'VARIANT_SET_LABEL'
 MELTED_SCHEMA_KEY__VA_ID = 'VA_ID'
+MELTED_SCHEMA_KEY__ES_ID = 'ES_ID'
+MELTED_SCHEMA_KEY__VE_ID = 'VE_ID'
+MELTED_SCHEMA_KEY__VCCD_ID = 'VCCD_ID'
 
 # Used for aggregate total sample count in Postgres query.
 CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT = 'SAMPLE_COUNT'
@@ -81,11 +84,11 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', MELTE
         {'type': 'String', 'num': 1})
 
 # Key-value data.
-SCHEMA_BUILDER.add_melted_variant_field('main_variantcallercommondata.id', 'vccd_id', True, False)
-SCHEMA_BUILDER.add_melted_variant_field('main_variantevidence.id', 've_id', True, False)
+SCHEMA_BUILDER.add_melted_variant_field('main_variantcallercommondata.id', MELTED_SCHEMA_KEY__VCCD_ID, True, False)
+SCHEMA_BUILDER.add_melted_variant_field('main_variantevidence.id', MELTED_SCHEMA_KEY__VE_ID, True, False)
 
 # ExperimentSample
-SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', 'experiment_sample_id', True, False)
+SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.id', MELTED_SCHEMA_KEY__ES_ID, True, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.uid', MELTED_SCHEMA_KEY__ES_UID, True, True,
         {'type': 'String', 'num': 1})
 SCHEMA_BUILDER.add_melted_variant_field('main_experimentsample.label', MELTED_SCHEMA_KEY__ES_LABEL, True, True,
@@ -168,7 +171,9 @@ MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS = [
         schema_obj['joined_table_col_name']
         for schema_obj in MELTED_VARIANT_SCHEMA
 ] + [
-    'va_data' # Needed to hard-code showing INFO_EFF_GENE
+    'va_data', # Needed to hard-code showing INFO_EFF_GENE,
+    'es_data',
+    've_data'
 ]
 
 # Map from queryable fields to schema info (e.g. type, num).

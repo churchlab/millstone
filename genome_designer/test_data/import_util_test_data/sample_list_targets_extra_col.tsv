@@ -1,0 +1,7 @@
+Sample_Name	Plate_or_Group	Well	Read_1_Path	Read_2_Path	Parent_Samples	Growth_Rate	Cycle
+P1-31	Pool 1	E7	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.1.fq	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.2.fq		0.5	31
+P3-23	Pool 3	A8	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.1.fq	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.2.fq		0.5	23
+P5-28	Pool 5	A9	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.1.fq	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.2.fq		0.5	28
+C321D	None	H10	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.1.fq	$GD_ROOT/test_data/fake_genome_and_reads/d67c5a52/test_genome_0.snps.simLibrary.2.fq		0.5	0
+
+

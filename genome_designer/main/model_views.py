@@ -77,7 +77,7 @@ class BaseVariantView(object):
         # Sort the visible keys into appropriate buckets based on the map.
         return (Variant.get_field_order() +
                 VariantAlternate.get_field_order(
-                        additional_field_list=additional_alternate_field_list) + 
+                        additional_field_list=additional_alternate_field_list) +
                 VariantCallerCommonData.get_field_order(
                         additional_field_list=additional_common_data_field_list) +
                 VariantEvidence.get_field_order(
@@ -440,7 +440,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     # Create the config dict that tells DataTables js how to display each col.
     obj_field_config = []
     # save idxes of fields we want to be last
-    last_idxes = [] 
+    last_idxes = []
 
     for i, fdict in enumerate(field_dict_list):
         if fdict.get('hide', False):
@@ -454,7 +454,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
         if fdict.get('last'):
             last_idxes.append(i)
 
-    # Finally, move these fields to the end. 
+    # Finally, move these fields to the end.
     for i in last_idxes:
         field_i = obj_field_config.pop(i)
         obj_field_config.append(field_i)
@@ -467,7 +467,6 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
 def _create_label_for_variant_object(variant_as_dict):
     # Generate label from variant data.
     # Using ordered dicts with None as an ordered set
-    
     # NOTE: Not using this currently, but we might want it in the future.
 
     position = str(variant_as_dict[MELTED_SCHEMA_KEY__POSITION])
@@ -487,7 +486,7 @@ def _create_label_for_variant_object(variant_as_dict):
 
                 if alt is None: continue
 
-                if 'INFO_EFF_EFFECT' in alt: 
+                if 'INFO_EFF_EFFECT' in alt:
                     has_effect = True
 
                 gene = alt.get('INFO_EFF_GENE', None)
@@ -520,16 +519,16 @@ def _create_label_for_variant_object(variant_as_dict):
 
         # Generate the label.
         if len(genes) == 0:
-            if va_data and has_effect: 
+            if va_data and has_effect:
                 label = label = position + ': intergenic'
             else:
                 label = label = position + ': unannotated/ref'
         else:
-            label =  '{:s}:{:s}, {:s} ({:s})'.format( 
+            label =  '{:s}:{:s}, {:s} ({:s})'.format(
                     '/'.join(genes.keys()),
                     '/'.join(aas.keys()),
-                    ','.join(effs.keys()), 
-                    ','.join(impacts.keys())) 
+                    ','.join(effs.keys()),
+                    ','.join(impacts.keys()))
 
     except Exception as e:
         print str(e)
@@ -700,9 +699,9 @@ CAST_VARIANT_FIELD_DICT_LIST = [
 # MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS.
 OPTIONAL_DEFAULT_FIELDS = [
     {'field': 'INFO_EFF_GENE', 'verbose': 'Gene', 'format': 'gather'}, # va_data
-    # {'field': 'INFO_EFF_EFFECT', 'verbose': 'Effect', 'format': 'gather', 'recase':'title'}, # va_data
-    {'field': 'INFO_EFF_IMPACT', 'verbose': 'Impact', 'format': 'gather', 'recase':'title'}, # va_data
-    {'field': 'INFO_EFF_AA', 'verbose': 'AA', 'format': 'gather'}, # va_data    
+    {'field': 'INFO_EFF_IMPACT', 'verbose': 'Impact', 'format': 'gather',
+            'recase':'title'}, # va_data
+    {'field': 'INFO_EFF_AA', 'verbose': 'AA', 'format': 'gather'}, # va_data
 ]
 
 
@@ -881,7 +880,7 @@ def _prepare_visible_key_name_for_adapting_to_fe(key_name, key_to_parent_map):
 def adapt_melted_object_field(val, fdict):
     """
     Any extra processing we have to do to the melted string according to
-    fdict keys should happen here. 
+    fdict keys should happen here.
     """
     if 'recase' in fdict:
         val = titlecase_spaces(val)
@@ -911,12 +910,12 @@ def adapt_cast_object_list_field(cast_object_dict_list, fdict):
     for val in value_list:
         buckets[val] = buckets.get(val, 0) + 1
 
-    # If gathering, just list all values, maintaining order.     
+    # If gathering, just list all values, maintaining order.
     if fdict.get('format','bucket') is 'gather':
         # Create string.
         return (' | '.join(buckets.keys()))
 
-    # If bucketing, count each. 
+    # If bucketing, count each.
     elif fdict.get('format','bucket') is 'bucket':
         # Create string.
         return (' | '.join(['%s (%d)' % (key, count)

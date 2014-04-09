@@ -21,6 +21,7 @@ from models import VariantSet
 from models import VariantToVariantSet
 from pipeline.read_alignment_util import ensure_bwa_index
 from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
+from scripts.dynamic_snp_filter_key_map import update_sample_filter_key_map
 from scripts.import_util import generate_fasta_from_genbank
 from scripts.import_util import generate_gff_from_genbank
 from scripts.import_util import get_dataset_with_type
@@ -60,6 +61,15 @@ def post_ref_genome_create(sender, instance, created, **kwargs):
         instance.ensure_model_data_dir_exists()
         instance.ensure_snpeff_dir()
         instance.ensure_jbrowse_dir()
+
+
+        # Key Map should start out empty...
+        assert not any(instance.variant_key_map)
+
+        instance.variant_key_map = initialize_filter_key_map()
+        instance.save()
+
+
 # Run post-save commands after making a new ref genome object
 post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
         dispatch_uid='ref_genome_create')
@@ -94,12 +104,10 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
             # Run jbrowse genbank genome processing for genes
             add_genbank_file_track(instance)
 
-    #Initialize variant key map field
-    initialize_filter_key_map(instance)
     # Run snpeff and jbrowse housekeeping after linking seq file dataset to a
     #   reference genome obj
 
-    # Create the bwa index before perfoming the alignments in parallel. 
+    # Create the bwa index before perfoming the alignments in parallel.
     ref_genome_fasta = get_dataset_with_type(
             instance,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
@@ -141,14 +149,32 @@ pre_delete.connect(pre_sample_delete, sender=ExperimentSample,
 
 
 def post_sample_align_create(sender, instance, created, **kwargs):
+    '''
+    Make a model data dir and update variant filter keys with
+    the sample metadata field names.
+    '''
     if created:
         instance.ensure_model_data_dir_exists()
-post_save.connect(post_sample_create, sender=ExperimentSampleToAlignment,
-        dispatch_uid='post_sample_create')
+        ref_genome = instance.alignment_group.reference_genome
+        # Update from the database
+        ref_genome = ReferenceGenome.objects.get(id=ref_genome.id)
+
+        # Sample metadata field names
+        if not any(ref_genome.variant_key_map):
+            raise ValueError('Variant Key Map was not properly initialized'
+                    ' for %s: %s' % (ref_genome.uid,
+                            ref_genome.variant_key_map))
+
+        experiment_sample = instance.experiment_sample
+        update_sample_filter_key_map(ref_genome, experiment_sample)
+post_save.connect(post_sample_align_create, sender=ExperimentSampleToAlignment,
+        dispatch_uid='post_sample_align_create')
 
 
-# We'll store freebayes and such under this location.
 def post_alignment_group_create(sender, instance, created, **kwargs):
+    '''
+    We'll store freebayes and such under this location.
+    '''
     if created:
         instance.ensure_model_data_dir_exists()
 post_save.connect(post_alignment_group_create, sender=AlignmentGroup,

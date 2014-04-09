@@ -14,6 +14,7 @@ from celery import task
 
 from main.celery_util import assert_celery_running
 from main.models import AlignmentGroup
+from main.models import ReferenceGenome
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from pipeline.read_alignment import align_with_bwa_mem
@@ -122,6 +123,9 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
     # Now we aggregate the alignments that need to be run, collecting their
     # signatures in a Celery group so that these alignments can be run in
     # parallel.
+    # Before we do so, let's update the ref genome object.
+    ref_genome = ReferenceGenome.objects.get(uid=ref_genome.uid)
+
     alignment_task_signatures = [align_with_bwa_mem.si(
                     alignment_group, sample_alignment,
                     project=ref_genome.project)
@@ -152,6 +156,7 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
                 pipeline_completion)
 
     # Run the pipeline.
+    ref_genome.save()
     whole_pipeline.apply_async()
 
     return alignment_group

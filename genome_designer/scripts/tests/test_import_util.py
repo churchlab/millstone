@@ -14,7 +14,6 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantSet
-from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
 from scripts.import_util import DataImportError
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
@@ -150,6 +149,27 @@ class TestImportSamplesFromTargetsFile(TestCase):
             import_samples_from_targets_file(project,
                     UploadedFile(targets_file_fh))
 
+    def test_import_samples__extra_cols(self):
+        """Tests importing samples from a template file that has
+        extra columns.
+        """
+        TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'sample_list_targets_extra_col.tsv')
+
+        # Grab any project from the database.
+        project = Project.objects.all()[0]
+
+        # Perform the import.
+        with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
+            samples = import_samples_from_targets_file(project,
+                    UploadedFile(targets_file_fh))
+
+        # Check that the metadata was inserted successfully.
+        for s in samples:
+            self.assertTrue('SAMPLE_PARENT_SAMPLES' in s.data)
+            self.assertTrue('SAMPLE_GROWTH_RATE' in s.data)
+            self.assertTrue('SAMPLE_CYCLE' in s.data)
+
     def test_import_samples__bad_input(self):
         """Input data with duplicated filenames.
         """
@@ -180,8 +200,6 @@ class TestImportVariantSetFromVCFFile(TestCase):
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(project=test_project,
                 label='refgenome', num_chromosomes=1, num_bases=1000)
-
-        initialize_filter_key_map(self.ref_genome)
 
 
 

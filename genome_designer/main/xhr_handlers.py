@@ -28,6 +28,7 @@ from django.views.decorators.http import require_POST
 # from debug.debug_util import FakeException
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
+from main.adapters import adapt_experiment_samples_to_frontend
 from main.model_views import get_all_fields
 from main.model_views import adapt_variant_to_frontend
 from main.model_views import GeneView
@@ -439,8 +440,7 @@ def get_samples(request):
             owner=request.user.get_profile(),
             uid=project_uid)
 
-    response_data = adapt_model_to_frontend(ExperimentSample,
-            {'project' :project})
+    response_data = adapt_experiment_samples_to_frontend({'project' :project})
 
     return HttpResponse(response_data,
             content_type='application/json')
