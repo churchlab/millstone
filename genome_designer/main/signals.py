@@ -68,11 +68,16 @@ def post_ref_genome_create(sender, instance, created, **kwargs):
 
         instance.variant_key_map = initialize_filter_key_map()
         instance.save()
-
-
-# Run post-save commands after making a new ref genome object
 post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
         dispatch_uid='ref_genome_create')
+
+
+# Delete all Project data when it is deleted.
+def pre_ref_genome_delete(sender, instance, **kwargs):
+    instance.delete_model_data_dir()
+pre_delete.connect(pre_ref_genome_delete, sender=ReferenceGenome,
+        dispatch_uid='ref_genome_delete')
+
 
 def post_add_seq_to_ref_genome(sender, instance, **kwargs):
     """ When a dataset gets added to a ref_genome, we need to do some things

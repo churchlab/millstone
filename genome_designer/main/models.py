@@ -542,6 +542,14 @@ class ReferenceGenome(UniqueUidModelMixin):
     def get_experiment_sample_map(self):
         return self.variant_key_map[MAP_KEY__EXPERIMENT_SAMPLE]
 
+    def delete_model_data_dir(self):
+        """Removes all data associated with this model.
+
+        WARNING: Be careful with this method!
+        """
+        data_dir = self.get_model_data_dir()
+        if os.path.exists(data_dir):
+            shutil.rmtree(data_dir)
 
     @classmethod
     def get_field_order(clazz, **kwargs):
