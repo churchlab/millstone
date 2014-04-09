@@ -113,6 +113,7 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
             '%s/bwa/bwa' % TOOLS_DIR,
             'mem',
             '-t', '1', # threads
+            '-M', # picard compatibility
             ref_genome_fasta,
             input_reads_1_fq,
         ])
