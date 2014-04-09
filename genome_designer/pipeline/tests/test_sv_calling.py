@@ -22,6 +22,7 @@ from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
 from scripts.import_util import import_reference_genome_from_local_file
+from scripts.vcf_parser import extract_raw_data_dict
 from settings import PWD as GD_ROOT
 
 
@@ -186,11 +187,52 @@ class TestSVPipeline(TestCase):
         for variant_param in variant_params:
             find_variants_with_tool(alignment_group_obj, variant_param, project=self.project)
 
+        vcf_files = {}
         for vcf_type in [Dataset.TYPE.VCF_FREEBAYES,
                 Dataset.TYPE.VCF_PINDEL, Dataset.TYPE.VCF_DELLY]:
-            print 'checking type', vcf_type
-            vcf_dataset = get_dataset_with_type(alignment_group_obj,
-                    Dataset.TYPE.VCF_FREEBAYES)
+            vcf_dataset = get_dataset_with_type(alignment_group_obj, vcf_type)
             self.assertIsNotNone(vcf_dataset)
-            self.assertTrue(os.path.exists(vcf_dataset.get_absolute_location()))
+            vcf_location = vcf_dataset.get_absolute_location()
+            self.assertTrue(os.path.exists(vcf_location))
+            vcf_files[vcf_type] = vcf_location
 
+        # Check actual variants, with this helper vcf-parser function
+        def get_variants(vcf_location):
+            variants = []
+            with open(vcf_files[vcf_location]) as fh:
+                vcf_reader = vcf.Reader(fh)
+                for record_idx, record in enumerate(vcf_reader):
+                    raw_data_dict = extract_raw_data_dict(record)
+                    variant_type = str(raw_data_dict.pop('TYPE'))
+                    pos = int(raw_data_dict.pop('POS'))
+                    length = int(raw_data_dict.pop('INFO_SVLEN'))
+                    variants.append({
+                        'type': variant_type,
+                        'pos': pos,
+                        'length': length
+                        })
+            return variants
+
+        pindel_variants = get_variants(Dataset.TYPE.VCF_PINDEL)
+        delly_variants = get_variants(Dataset.TYPE.VCF_DELLY)
+
+        # Helper function for checking a specific variant type
+        def verify_variant_type(variants, variant_type, pos, length):
+            for variant in variants:
+                if variant['type'] == variant_type and \
+                        abs(variant['pos'] - pos) < 50 and \
+                        (length == -1 or \
+                        abs(abs(variant['length']) - length) < 50):
+                            return
+            self.assertFalse('No %s position %s found' %
+                    (variant_type, pos))
+
+        # Verify that all expected SVs exist (all have length 400)
+        verify_variant_type(pindel_variants, 'DELETION', 25000, 400)
+        verify_variant_type(delly_variants, 'DELETION', 25000, 400)
+        verify_variant_type(pindel_variants, 'INVERSION', 50000, 400)
+        verify_variant_type(delly_variants, 'INVERSION', 50000, 400)
+        # pindel cannot find large insertions/duplications.
+        # delly's found length is not tested, because the
+        #   length depends on what bases are covered in the sample read.
+        verify_variant_type(delly_variants, 'DUPLICATION', 75000, -1)
