@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import m2m_changed
 from django.db.models.signals import post_save
 from django.db.models.signals import pre_delete
+from django.db.models.signals import post_delete
 
 from models import AlignmentGroup
 from models import Dataset
@@ -36,6 +37,13 @@ def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
 post_save.connect(create_user_profile, sender=User,
+        dispatch_uid='user_profile_create')
+
+
+# Delete the associated Django User on UserProfile delete.
+def post_user_profile_delete(sender, instance, **kwargs):
+    instance.user.delete()
+post_delete.connect(post_user_profile_delete, sender=UserProfile,
         dispatch_uid='user_profile_create')
 
 
