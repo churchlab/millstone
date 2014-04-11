@@ -397,6 +397,8 @@ def realign_given_indels(
         '-R', ref_genome_fasta_location,
         '-targetIntervals',  temp_intervals_file,
         '-o', output_bam_file,
+        # to avoid bwa mem multi-aligns (must be combined with -M flag to BWA MEM)
+        '-rf', 'NotPrimaryAlignment'
     ], stderr=error_output)
 
 
