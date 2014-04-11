@@ -50,13 +50,17 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
 
 REQUIRED_SAMPLE_HEADER_PART = ['Sample_Name', 'Read_1_Path', 'Read_2_Path']
 
+SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME = 'Sample_Name'
+SAMPLE_BROWSER_UPLOAD_KEY__READ_1 = 'Read_1_Filename'
+SAMPLE_BROWSER_UPLOAD_KEY__READ_2 = 'Read_2_Filename'
+
 REQUIRED_SAMPLE_UPLOAD_THROUGH_BROWSER_HEADER = [
-    'Sample_Name',
-    'Read_1_Filename',
-    'Read_2_Filename'
+    SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME,
+    SAMPLE_BROWSER_UPLOAD_KEY__READ_1,
 ]
 
 REQUIRED_VCF_HEADER_PART = ['CHROM','POS','ID','REF','ALT']
+
 
 if settings.S3_ENABLED:
     from main.s3 import s3_temp_get, s3_get
@@ -484,7 +488,8 @@ def create_sample_models_for_eventual_upload(project, targets_file):
         ValidationException if validation fails.
     """
     try:
-        valid_rows = parse_browser_upload_sample_targets_file(targets_file)
+        valid_rows = parse_browser_upload_sample_targets_file(project,
+                targets_file)
     except AssertionError as e:
         raise ValidationException(e)
 
@@ -504,7 +509,7 @@ def create_sample_models_for_eventual_upload(project, targets_file):
                     Dataset.TYPE.FASTQ2, Dataset.STATUS.AWAITING_UPLOAD)
 
 
-def parse_browser_upload_sample_targets_file(targets_file):
+def parse_browser_upload_sample_targets_file(project, targets_file):
     """Parses and validates the file.
 
     Returns:
@@ -523,10 +528,60 @@ def parse_browser_upload_sample_targets_file(targets_file):
     assert 0 == len(missing_header_cols), (
             "Missing cols: %s" % ' '.join(missing_header_cols))
 
+    # Query all relevant datasets to check for filename clashes.
+    existing_sample_dataset_filename_set = set([
+            os.path.split(ds.filesystem_location)[1]
+            for ds in Dataset.objects.filter(
+                    experimentsample__project=project)])
+
+    # Initial aggregation and validation.
     valid_rows = []
-    for row in reader:
-        assert row['Read_1_Filename'] != row['Read_2_Filename']
-        valid_rows.append(row)
+    for raw_row_obj in reader:
+        clean_row_obj = {}
+        for key, value in raw_row_obj.iteritems():
+            clean_row_obj[key] = value.strip()
+
+        # Null sample name, skip the row.
+        if not clean_row_obj[
+                SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME]:
+            continue
+
+        # Make sure at least Read 1
+        assert clean_row_obj[
+            SAMPLE_BROWSER_UPLOAD_KEY__READ_1], (
+                    "No read 1 in row.")
+
+        # Catch a common copy paste error wher read1 matches read2.
+        if (SAMPLE_BROWSER_UPLOAD_KEY__READ_2 in clean_row_obj
+                and clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_2]):
+            same = (clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_1] ==
+                    clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_2])
+            assert not same, "Read 1 filename is same as read 2 filename"
+
+        # Make sure Dataset with that name doesn't exist.
+        def _filename_exists(filename_col):
+            return (os.path.split(clean_row_obj[filename_col])[1] in
+                    existing_sample_dataset_filename_set)
+        assert not _filename_exists(SAMPLE_BROWSER_UPLOAD_KEY__READ_1), (
+                "%s exists" % clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_1])
+        if (SAMPLE_BROWSER_UPLOAD_KEY__READ_2 in clean_row_obj
+                and clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_2]):
+            assert not _filename_exists(SAMPLE_BROWSER_UPLOAD_KEY__READ_2), (
+                    "%s exists" % clean_row_obj[
+                            SAMPLE_BROWSER_UPLOAD_KEY__READ_2])
+
+        valid_rows.append(clean_row_obj)
+
+    # Make each of the standard fields all have unique values.
+    def _assert_no_repeated_value(col):
+        values = set([row[SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME]
+                for row in valid_rows])
+        assert len(values) == len(valid_rows), (
+                "Non-unique %s detected." % col)
+    _assert_no_repeated_value(SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME)
+    _assert_no_repeated_value(SAMPLE_BROWSER_UPLOAD_KEY__READ_1)
+    _assert_no_repeated_value(SAMPLE_BROWSER_UPLOAD_KEY__READ_2)
+
     return valid_rows
 
 

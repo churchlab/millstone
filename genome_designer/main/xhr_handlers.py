@@ -176,9 +176,9 @@ def samples_upload_through_browser_template(request):
 
     try:
         create_sample_models_for_eventual_upload(project, template_file)
-    except ValidationException:
+    except ValidationException as e:
         result = {
-            'error': 'Invalid template format. Please fix and try again.'
+            'error': str(e)
         }
         return HttpResponse(json.dumps(result),
                 content_type='application/json')

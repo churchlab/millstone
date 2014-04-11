@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
 
+from main.exceptions import ValidationException
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -199,7 +200,7 @@ class TestCreateSampleModelsForEventualUpload(TestCase):
         common_entities = create_common_entities()
         self.project = common_entities['project']
 
-    def test_basic(self):
+    def test_paired_reads_upload(self):
         """Basic test.
         """
         FILLED_OUT_FORM = os.path.join(IMPORT_UTIL_TEST_DATA,
@@ -229,6 +230,78 @@ class TestCreateSampleModelsForEventualUpload(TestCase):
             EXPECTED_FQ2_PATH = os.path.join(settings.MEDIA_ROOT,
                     es.get_model_data_dir(), sample_prefix + '_r2.fastq')
             self.assertEqual(EXPECTED_FQ2_PATH, fq2_ds.get_absolute_location())
+
+    def test_unpaired_reads_upload(self):
+        FILLED_OUT_FORM = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'sample_list_browser_upload_test_data__unpaired.tsv')
+
+        num_samples_before = ExperimentSample.objects.count()
+
+        with open(FILLED_OUT_FORM) as targets_file:
+            create_sample_models_for_eventual_upload(self.project, targets_file)
+
+        EXPECTED_NUM_SAMPLES_ADDED = 2
+        samples = ExperimentSample.objects.all()
+        self.assertEqual(EXPECTED_NUM_SAMPLES_ADDED,
+                len(samples) - num_samples_before)
+
+        # Make sure the Datasets have the right status and location.
+        for sample_prefix in ['sample1', 'sample2']:
+            sample_label = sample_prefix + '_to_upload'
+            es = ExperimentSample.objects.get(label=sample_label)
+
+            # Check fastq1.
+            fq1_ds = es.dataset_set.get(type=Dataset.TYPE.FASTQ1)
+            self.assertEqual(Dataset.STATUS.AWAITING_UPLOAD, fq1_ds.status)
+            EXPECTED_FQ1_PATH = os.path.join(settings.MEDIA_ROOT,
+                    es.get_model_data_dir(), sample_prefix + '_r1.fastq')
+            self.assertEqual(EXPECTED_FQ1_PATH,  fq1_ds.get_absolute_location())
+
+            # No Dataset for fastq2.
+            self.assertEqual(0,
+                    es.dataset_set.filter(type=Dataset.TYPE.FASTQ2).count())
+
+    def test_same_filename_for_read1_and_read2(self):
+        """Tests a common error I can imagine where the user forgets to fix
+        filenames.
+        """
+        FILLED_OUT_FORM = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'sample_list_browser_upload_test_data__repeated_filename.tsv')
+
+        with self.assertRaises(ValidationException):
+            with open(FILLED_OUT_FORM) as targets_file:
+                create_sample_models_for_eventual_upload(self.project,
+                        targets_file)
+
+    def test_attempt_add_existing_filename(self):
+        """Tests when upload form has a row that would add a sample with
+        the same filename.
+        """
+        FILLED_OUT_FORM = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'sample_list_browser_upload_test_data.tsv')
+
+        # First upload succeeds.
+        with open(FILLED_OUT_FORM) as targets_file:
+            create_sample_models_for_eventual_upload(self.project, targets_file)
+
+        # Second upload fails due to repeated filenames.
+        with self.assertRaises(ValidationException):
+            with open(FILLED_OUT_FORM) as targets_file:
+                create_sample_models_for_eventual_upload(self.project,
+                        targets_file)
+
+    def test_form_with_repeated_names(self):
+        """Tests when upload form has a row that would add a sample with
+        the same filename.
+        """
+        FILLED_OUT_FORM = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'sample_list_browser_upload_test_data__repeated_sample_names.tsv')
+
+        # Second upload fails due to repeated filenames.
+        with self.assertRaises(ValidationException):
+            with open(FILLED_OUT_FORM) as targets_file:
+                create_sample_models_for_eventual_upload(self.project,
+                        targets_file)
 
 
 class TestImportVariantSetFromVCFFile(TestCase):
