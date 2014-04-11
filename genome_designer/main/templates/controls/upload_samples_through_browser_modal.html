@@ -1,0 +1,61 @@
+<div id="gd-samples-upload-through-browser-modal" class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal">×</button>
+      <h3>Upload Samples</h3>
+    </div>
+    <div class="modal-body">
+      <ul id="modalFromFileTab" class="nav nav-pills">
+        <li class="active">
+          <a href="#gd-samples-upload-through-browser-modal-upload" data-toggle="tab">
+            Upload
+          </a>
+        </li>
+      </ul>
+      <div id="modalFromFileTabContent" class="tab-content">
+        <div class="tab-pane fade in active" id="gd-samples-upload-through-browser-modal-upload">
+          <p>
+            To upload samples through the browser, you need to specify sample names and corresponding filenames by <strong>downloading <a href="/templates/sample_list_browser_upload_template.tsv">this template</a></strong>, modifying it in Excel or a text editor, and uploading the filled-in template.
+          </p>
+
+          <!-- The fileinput-button span is used to style the file input field as button -->
+          <div class="btn btn-success fileinput-button
+              gd-samples-upload-through-browser-modal-targets">
+            <i class="glyphicon glyphicon-plus"></i>
+            <span>Upload template...</span>
+            <!-- The file input field used as target for the file upload widget -->
+            <input id="gd-samples-template-fileupload" type="file" name="file">
+          </div>
+
+          <p>Use the form below to upload the corresponding samples.</p>
+
+          <!-- The fileinput-button span is used to style the file input field as button -->
+          <div class="btn btn-success fileinput-button">
+            <i class="glyphicon glyphicon-plus"></i>
+            <span>Upload sample files...</span>
+            <!-- The file input field used as target for the file upload widget -->
+            <input id="gd-samples-fastq-fileupload" type="file" name="file" multiple>
+          </div>
+
+          <!-- Error bar. -->
+          <div id="gd-samples-upload-through-browser-modal-error"
+              class="gd-samples-upload-through-browser-modal-error">
+          </div>
+
+          <!-- The global progress bar -->
+          <div id="progress"
+              class="progress gd-samples-upload-through-browser-modal-targets-progress">
+              <div class="progress-bar progress-bar-success"></div>
+          </div>
+
+          <!-- The container for the uploaded files -->
+          <div id="files" class="files"></div>
+
+        </div>
+      </div><!-- modalFromFileTabContent -->
+    </div><!-- modal-body -->
+    <div class="modal-footer">
+      <button class="btn btn-default" data-dismiss="modal">Cancel</button>
+    </div>
+  </div></div>
+</div>

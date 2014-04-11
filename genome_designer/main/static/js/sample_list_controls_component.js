@@ -6,13 +6,29 @@
 
 gd.SamplesControlsComponent = Backbone.View.extend({
   initialize: function() {
-    this.listenToControls();
+    if (!this.model) {
+      throw "SampleControlsComponent requires model.";
+    }
+
+    this.render();
 
     this.uuid = qq.getUniqueId();
     this.maybeCreateFineS3Uploader();
   },
 
+  render: function() {
+    this.listenToControls();
+  },
+
   listenToControls: function() {
+    // New pattern where this component creates a new modal component on click.
+    $('#gd-samples-upload-through-browser-modal').on('shown.bs.modal',
+        _.bind(function (e) {
+          this.sampleUploadThroughBrowserModal =
+              new gd.SampleUploadThroughBrowserModal({model: this.model});
+        }, this));
+
+    // Old pattern where this component listens to modal controls.
     $('#gd-samples-create-from-server-location-submit').click(
         _.bind(this.handleCreateFromServerLocation, this));
   },

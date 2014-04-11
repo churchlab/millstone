@@ -4,6 +4,7 @@ Tests for import_util.py.
 
 import os
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
@@ -14,19 +15,20 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantSet
+from main.testing_util import create_common_entities
 from scripts.import_util import DataImportError
+from scripts.import_util import create_sample_models_for_eventual_upload
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_samples_from_targets_file
 from scripts.import_util import import_variant_set_from_vcf
 from scripts.import_util import import_reference_genome_from_ncbi
-from settings import PWD as GD_ROOT_PATH
 from scripts.util import internet_on
 
 TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
-TEST_DATA_ROOT = os.path.join(GD_ROOT_PATH, 'test_data')
+TEST_DATA_ROOT = os.path.join(settings.PWD, 'test_data')
 IMPORT_UTIL_TEST_DATA = os.path.join(TEST_DATA_ROOT, 'import_util_test_data')
 
 
@@ -43,7 +45,7 @@ class TestImportReferenceGenome(TestCase):
     def test_import_reference_genome_from_local_file(self):
         """Tests importing reference genome.
         """
-        TEST_GENBANK_FILE = os.path.join(GD_ROOT_PATH,
+        TEST_GENBANK_FILE = os.path.join(settings.PWD,
                 'test_data', 'import_util_test_data', 'mini_mg1655.genbank')
 
         import_reference_genome_from_local_file(self.project, 'a label',
@@ -53,7 +55,7 @@ class TestImportReferenceGenome(TestCase):
     def test_import_reference_genome_from_local_file__fail_if_no_seq(self):
         """Should fail if no sequence in file.
         """
-        TEST_GENBANK_FILE__NO_SEQ = os.path.join(GD_ROOT_PATH,
+        TEST_GENBANK_FILE__NO_SEQ = os.path.join(settings.PWD,
                 'test_data', 'import_util_test_data', 'mg1655_no_seq.genbank')
 
         with self.assertRaises(DataImportError):
@@ -95,7 +97,7 @@ class TestImportSamplesFromTargetsFile(TestCase):
     def test_import_samples(self):
         """Tests importing samples from a template file.
         """
-        TARGETS_TEMPLATE_FILEPATH = os.path.join(GD_ROOT_PATH, 'main',
+        TARGETS_TEMPLATE_FILEPATH = os.path.join(settings.PWD, 'main',
                 'templates', 'sample_list_targets_template.tsv')
 
         NUM_SAMPLES_IN_TEMPLATE = 10
@@ -188,6 +190,47 @@ class TestImportSamplesFromTargetsFile(TestCase):
             self.assertTrue(Dataset.STATUS.FAILED, rev_reads_dataset)
 
 
+class TestCreateSampleModelsForEventualUpload(TestCase):
+    """Tests the form for indicating which samples will be uploaded.
+    """
+    def setUp(self):
+        """Override.
+        """
+        common_entities = create_common_entities()
+        self.project = common_entities['project']
+
+    def test_basic(self):
+        """Basic test.
+        """
+        FILLED_OUT_FORM = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'sample_list_browser_upload_test_data.tsv')
+
+        num_samples_before = ExperimentSample.objects.count()
+
+        with open(FILLED_OUT_FORM) as targets_file:
+            create_sample_models_for_eventual_upload(self.project, targets_file)
+
+        EXPECTED_NUM_SAMPLES_ADDED = 2
+        samples = ExperimentSample.objects.all()
+        self.assertEqual(EXPECTED_NUM_SAMPLES_ADDED,
+                len(samples) - num_samples_before)
+
+        # Make sure the Datasets have the right status and location.
+        for sample_prefix in ['sample1', 'sample2']:
+            sample_label = sample_prefix + '_to_upload'
+            es = ExperimentSample.objects.get(label=sample_label)
+            fq1_ds = es.dataset_set.get(type=Dataset.TYPE.FASTQ1)
+            fq2_ds = es.dataset_set.get(type=Dataset.TYPE.FASTQ2)
+            self.assertEqual(Dataset.STATUS.AWAITING_UPLOAD, fq1_ds.status)
+            self.assertEqual(Dataset.STATUS.AWAITING_UPLOAD, fq2_ds.status)
+            EXPECTED_FQ1_PATH = os.path.join(settings.MEDIA_ROOT,
+                    es.get_model_data_dir(), sample_prefix + '_r1.fastq')
+            self.assertEqual(EXPECTED_FQ1_PATH,  fq1_ds.get_absolute_location())
+            EXPECTED_FQ2_PATH = os.path.join(settings.MEDIA_ROOT,
+                    es.get_model_data_dir(), sample_prefix + '_r2.fastq')
+            self.assertEqual(EXPECTED_FQ2_PATH, fq2_ds.get_absolute_location())
+
+
 class TestImportVariantSetFromVCFFile(TestCase):
     """Tests for scripts.import_util.import_samples_from_targets_file().
     """
@@ -208,7 +251,7 @@ class TestImportVariantSetFromVCFFile(TestCase):
         containing only chromosome, position info, etc.
         """
 
-        VARIANT_SET_VCF_FILEPATH = os.path.join(GD_ROOT_PATH,
+        VARIANT_SET_VCF_FILEPATH = os.path.join(settings.PWD,
                 'test_data', 'fake_genome_and_reads',
                 'test_genome_variant_set.vcf')
 

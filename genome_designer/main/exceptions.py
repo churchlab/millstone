@@ -2,6 +2,7 @@
 Common Exception and Error classes.
 """
 
+
 class InputError(Exception):
     """Exception raised for errors in the input.
 
@@ -12,3 +13,9 @@ class InputError(Exception):
     """
     def __init__(self, msg):
         self.msg = msg
+
+
+class ValidationException(Exception):
+    """Thrown when validation fails.
+    """
+    pass

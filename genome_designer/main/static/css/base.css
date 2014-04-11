@@ -318,7 +318,6 @@ div.dataTables_paginate ul.pagination {
   box-sizing: border-box;
   padding: 2px 6px;
   min-width: 8px;
-  
   border: solid 1px #43a110;
   background-color: #ffffff;
 
@@ -337,4 +336,18 @@ div.dataTables_paginate ul.pagination {
   margin-bottom: 5px;
   margin-top: 10px;
   padding: 5px;
+}
+
+.gd-samples-upload-through-browser-modal-targets-upload {
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+.gd-samples-upload-through-browser-modal-targets-progress {
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+.gd-samples-upload-through-browser-modal-error {
+  color: red;
 }

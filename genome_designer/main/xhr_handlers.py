@@ -29,10 +29,12 @@ from django.views.decorators.http import require_POST
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.adapters import adapt_experiment_samples_to_frontend
+from main.exceptions import ValidationException
 from main.model_views import get_all_fields
 from main.model_views import adapt_variant_to_frontend
 from main.model_views import GeneView
 from main.models import AlignmentGroup
+from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
@@ -50,6 +52,7 @@ from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.import_util import import_reference_genome_from_ncbi
 from scripts.import_util import import_samples_from_targets_file
+from scripts.import_util import create_sample_models_for_eventual_upload
 from scripts.import_util import import_variant_set_from_vcf
 from variants.common import determine_visible_field_names
 from variants.materialized_variant_filter import get_variants_that_pass_filter
@@ -151,6 +154,83 @@ def create_samples_from_server_location(request):
     }
 
     return HttpResponse(json.dumps(result), content_type='application/json')
+
+
+
+@login_required
+@require_POST
+def samples_upload_through_browser_template(request):
+    """Handle request to create ReferenceGenome from local file.
+    """
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.POST.get('projectUid', ''))
+
+    try:
+        template_file = request.FILES['file']
+    except:
+        result = {
+            'error': 'Problem receiving file in request.'
+        }
+        return HttpResponse(json.dumps(result),
+                content_type='application/json')
+
+    try:
+        create_sample_models_for_eventual_upload(project, template_file)
+    except ValidationException:
+        result = {
+            'error': 'Invalid template format. Please fix and try again.'
+        }
+        return HttpResponse(json.dumps(result),
+                content_type='application/json')
+
+    return HttpResponse(json.dumps({}), content_type='application/json')
+
+
+@login_required
+@require_POST
+def samples_upload_through_browser_sample_data(request):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.POST.get('projectUid', ''))
+
+    # Grab the file from the request.
+    uploaded_file = request.FILES['file']
+
+    # Find the Dataset that matches the filename, validating at the same time.
+    experiment_sample_datasets_in_project = Dataset.objects.filter(
+            experimentsample__project=project)
+    datasets_matching_project_and_filename = []
+    for ds in experiment_sample_datasets_in_project:
+        expected_filename = os.path.split(ds.filesystem_location)[1]
+        if expected_filename == uploaded_file.name:
+            datasets_matching_project_and_filename.append(ds)
+    if len(datasets_matching_project_and_filename) == 0:
+        result = {
+            'error': 'UPLOAD ERROR: '
+                     'Unexpected filename. Are you sure it\'s correct?'
+        }
+        return HttpResponse(json.dumps(result),
+                content_type='application/json')
+
+    # If this occurs, this is a bug. The upload should prevent Datasets with
+    # the same filename for a particular project.
+    assert len(datasets_matching_project_and_filename) == 1, (
+            "Each Dataset must have a unique name.")
+
+    # Identify the copy destination.
+    dataset = datasets_matching_project_and_filename[0]
+    copy_dest = dataset.get_absolute_location()
+
+    # Copy the file in chunks.
+    # TODO: Understand this better. Probably need error handling.
+    with open(copy_dest, 'w') as dest_fh:
+        for chunk in uploaded_file.chunks():
+            dest_fh.write(chunk)
+
+    # Update the status.
+    ds.status = Dataset.STATUS.READY
+    ds.save(update_fields=['status'])
+
+    return HttpResponse(json.dumps({}), content_type='application/json')
 
 
 @login_required

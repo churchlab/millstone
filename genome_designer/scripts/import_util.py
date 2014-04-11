@@ -22,6 +22,7 @@ from django.db import transaction
 from django.conf import settings
 
 from main.celery_util import assert_celery_running
+from main.exceptions import ValidationException
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -48,6 +49,13 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
 }
 
 REQUIRED_SAMPLE_HEADER_PART = ['Sample_Name', 'Read_1_Path', 'Read_2_Path']
+
+REQUIRED_SAMPLE_UPLOAD_THROUGH_BROWSER_HEADER = [
+    'Sample_Name',
+    'Read_1_Filename',
+    'Read_2_Filename'
+]
+
 REQUIRED_VCF_HEADER_PART = ['CHROM','POS','ID','REF','ALT']
 
 if settings.S3_ENABLED:
@@ -269,11 +277,14 @@ def sanitize_record_id(record_id_string):
     return re.match( r'^\w{1,20}', record_id_string).group()
 
 
-def parse_targets_file(project, targets_file, remove_directory_path=False):
-    # The targets file shouldn't be over 1 Mb ( that would be ~3,000 genomes)
+def _assert_sample_targets_file_size(targets_file):
     if hasattr(targets_file, "size"):
         assert targets_file.size < 1000000, (
                 "Targets file is too large: %d" % targets_file.size)
+
+
+def parse_targets_file(project, targets_file, remove_directory_path=False):
+    _assert_sample_targets_file_size(targets_file)
 
     # Detect the format.
     reader = csv.DictReader(targets_file, delimiter='\t')
@@ -281,11 +292,8 @@ def parse_targets_file(project, targets_file, remove_directory_path=False):
     targets_file_header = reader.fieldnames
 
     REQUIRED_SAMPLE_HEADER_STRING = ', '.join(REQUIRED_SAMPLE_HEADER_PART)
-
     assert len(targets_file_header) >= len(REQUIRED_SAMPLE_HEADER_PART), (
         "Header is too short. Need columns: %s" % REQUIRED_SAMPLE_HEADER_STRING)
-
-    header_idxes = {}
 
     for col in REQUIRED_SAMPLE_HEADER_PART:
         if not col in targets_file_header:
@@ -356,17 +364,6 @@ def import_samples_from_targets_file(project, targets_file):
 
     valid_rows = parse_targets_file(project, targets_file)
 
-    def _create_fastq_dataset(experiment_sample, fastq_source, dataset_type):
-        """Helper function for creating a Dataset to track the uploaded
-        sample data.
-        """
-        fastq_dest = _get_copy_target_path(experiment_sample, fastq_source)
-        reads_dataset = add_dataset_to_entity(experiment_sample,
-                dataset_type, dataset_type, fastq_dest)
-        reads_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
-        reads_dataset.save()
-        return reads_dataset
-
     # Now create ExperimentSample objects along with their respective Datasets.
     # The data is copied to the entity location.
     # We do this asynchronously so catch all the results, so we can block on
@@ -383,11 +380,13 @@ def import_samples_from_targets_file(project, targets_file):
         # the ui. This is a new pattern where we are moving copying to happen
         # asynchronously in Celery.
         _create_fastq_dataset(
-                experiment_sample, row['Read_1_Path'], Dataset.TYPE.FASTQ1)
+                experiment_sample, row['Read_1_Path'], Dataset.TYPE.FASTQ1,
+                Dataset.STATUS.QUEUED_TO_COPY)
         maybe_read2_path = row.get('Read_2_Path', '')
         if maybe_read2_path:
             _create_fastq_dataset(
-                experiment_sample, maybe_read2_path, Dataset.TYPE.FASTQ2)
+                    experiment_sample, maybe_read2_path, Dataset.TYPE.FASTQ2,
+                    Dataset.STATUS.QUEUED_TO_COPY)
 
         # Start the async job of copying.
         copy_experiment_sample_data.delay(project, experiment_sample, row)
@@ -402,6 +401,21 @@ def import_samples_from_targets_file(project, targets_file):
         experiment_samples.append(experiment_sample)
 
     return experiment_samples
+
+
+def _create_fastq_dataset(experiment_sample, fastq_source, dataset_type,
+        dataset_status):
+    """Helper function for creating a Dataset that will point to a file.
+
+    Since clients of this function are responsible for actuallying copying the
+    data, this function sets the is_present bit to False on the Dataset.
+    """
+    fastq_dest = _get_copy_target_path(experiment_sample, fastq_source)
+    reads_dataset = add_dataset_to_entity(experiment_sample,
+            dataset_type, dataset_type, fastq_dest)
+    reads_dataset.status = dataset_status
+    reads_dataset.save()
+    return reads_dataset
 
 
 @task
@@ -457,6 +471,63 @@ def copy_experiment_sample_data(project, experiment_sample, data):
     # Save the status.
     read1_dataset.save()
     read2_dataset.save()
+
+
+def create_sample_models_for_eventual_upload(project, targets_file):
+    """Parses the form to create sample placeholers that are awaiting
+    data upload.
+
+    Args:
+        targets_file: The filled out form.
+
+    Raises:
+        ValidationException if validation fails.
+    """
+    try:
+        valid_rows = parse_browser_upload_sample_targets_file(targets_file)
+    except AssertionError as e:
+        raise ValidationException(e)
+
+    for row in valid_rows:
+        experiment_sample = ExperimentSample.objects.create(
+                project=project, label=row['Sample_Name'])
+
+        fastq1_filename = row['Read_1_Filename']
+        _create_fastq_dataset(
+                experiment_sample, fastq1_filename, Dataset.TYPE.FASTQ1,
+                Dataset.STATUS.AWAITING_UPLOAD)
+
+        maybe_fastq2_filename = row.get('Read_2_Filename', '')
+        if maybe_fastq2_filename:
+            _create_fastq_dataset(
+                    experiment_sample, maybe_fastq2_filename,
+                    Dataset.TYPE.FASTQ2, Dataset.STATUS.AWAITING_UPLOAD)
+
+
+def parse_browser_upload_sample_targets_file(targets_file):
+    """Parses and validates the file.
+
+    Returns:
+        List of objects representing the rows.
+    """
+    _assert_sample_targets_file_size(targets_file)
+
+    reader = csv.DictReader(targets_file, delimiter='\t')
+
+    # Read the header / schema.
+    targets_file_header = reader.fieldnames
+
+    # Make sure all header cols are present.
+    missing_header_cols = (set(REQUIRED_SAMPLE_UPLOAD_THROUGH_BROWSER_HEADER) -
+            set(targets_file_header))
+    assert 0 == len(missing_header_cols), (
+            "Missing cols: %s" % ' '.join(missing_header_cols))
+
+    valid_rows = []
+    for row in reader:
+        assert row['Read_1_Filename'] != row['Read_2_Filename']
+        valid_rows.append(row)
+    return valid_rows
 
 
 @transaction.commit_on_success

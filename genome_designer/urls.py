@@ -65,11 +65,14 @@ urlpatterns = patterns('',
     # Templates
     ###########################################################################
 
+    url(r'^templates/sample_list_browser_upload_template.tsv$',
+            'main.upload_template_views.sample_list_browser_upload_template'),
+
     url(r'^templates/sample_list_targets_template.tsv$',
-            'main.views.sample_list_targets_template'),
+            'main.upload_template_views.sample_list_targets_template'),
 
     url(r'^templates/variant_set_upload_template.vcf$',
-            'main.views.variant_set_upload_template'),
+            'main.upload_template_views.variant_set_upload_template'),
 
     ###########################################################################
     # XHR Actions
@@ -100,6 +103,10 @@ urlpatterns = patterns('',
             'main.xhr_handlers.get_samples'),
     url(r'^_/samples/create_from_server_location$',
             'main.xhr_handlers.create_samples_from_server_location'),
+    url(r'^_/samples/samples_upload_through_browser_template$',
+            'main.xhr_handlers.samples_upload_through_browser_template'),
+    url(r'^_/samples/samples_upload_through_browser_sample_data$',
+            'main.xhr_handlers.samples_upload_through_browser_sample_data'),
 
     url(r'^_/genes$',
             'main.xhr_handlers.get_gene_list'),

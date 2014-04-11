@@ -12,9 +12,15 @@
           <a role="menuitem" tabindex="-1" href="#">From URL...</a>
         </li>
         -->
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" 
-          href="#gd-samples-create-from-server-location-modal" data-toggle="modal">
+        <li>
+          <a href="#gd-samples-upload-through-browser-modal"
+              data-toggle="modal">
+            Upload through browser...
+          </a>
+        </li>
+        <li>
+          <a href="#gd-samples-create-from-server-location-modal"
+              data-toggle="modal">
             From Server Location...
           </a>
         </li>
@@ -30,6 +36,8 @@
     </div>
   </form>
 </div>
+
+{% include "controls/upload_samples_through_browser_modal.html" %}
 
 {% include "controls/create_samples_from_server_location_modal.html" %}
 

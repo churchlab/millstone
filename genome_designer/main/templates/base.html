@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="{% static "vendor/fineuploader/fineuploader-4.0.1.min.css" %}" type="text/css" />
   <link rel="stylesheet" href="{% static "vendor/bootstrap-select/bootstrap-select.css" %}" type="text/css">
   <link rel="stylesheet" href="{% static "vendor/DataTables-1.9.4/media/datatables.bootstrap/datatables.bootstrap.css" %}" type="text/css">
+  <link rel="stylesheet" href="{% static "vendor/jquery_file_upload/css/jquery.fileupload.css" %}" type="text/css">
 
   <!-- css - Local -->
   <link rel="stylesheet" href="{% static "css/base.css" %}" type="text/css" />
@@ -30,6 +31,18 @@
   <script type="text/javascript" src="{% static "vendor/DataTables-1.9.4/media/datatables.bootstrap/datatables.bootstrap.js" %}"></script>
   <script type="text/javascript" src="{% static "vendor/js/spin.js" %}"></script>
 
+  <!-- JavaScript - jQuery Fileupload plugin and related -->
+  <!-- The Iframe Transport is required for browsers without support for XHR file uploads -->
+  <script type="text/javascript" src="{% static "vendor/jquery_file_upload/js/jquery.iframe-transport.js" %}"></script>
+  <!-- The jQuery UI widget factory, can be omitted if jQuery UI is already included -->
+  <script type="text/javascript" src="{% static "vendor/jquery_file_upload/js/vendor/jquery.ui.widget.js" %}"></script>
+  <!-- The basic File Upload plugin -->
+  <script type="text/javascript" src="{% static "vendor/jquery_file_upload/js/jquery.fileupload.js" %}"></script>
+  <!-- The File Upload processing plugin -->
+  <script type="text/javascript" src="{% static "vendor/jquery_file_upload/js/jquery.fileupload-process.js" %}"></script>
+  <!-- The File Upload validation plugin -->
+  <script type="text/javascript" src="{% static "vendor/jquery_file_upload/js/jquery.fileupload-validate.js" %}"></script>
+
   <!-- JavaScript - Local -->
   <script type="text/javascript" src="{% static "js/namespace.js" %}"></script>
   <script type="text/javascript" src="{% static "js/spinner.js" %}"></script>
@@ -41,6 +54,7 @@
   <script type="text/javascript" src="{% static "js/datatable_component.js" %}"></script>
   <script type="text/javascript" src="{% static "js/server_side_datatable_component.js" %}"></script>
   <script type="text/javascript" src="{% static "js/ref_genome_list_controls_component.js" %}"></script>
+  <script type="text/javascript" src="{% static "js/sample_upload_through_browser_modal.js" %}"></script>
   <script type="text/javascript" src="{% static "js/sample_list_controls_component.js" %}"></script>
   <script type="text/javascript" src="{% static "js/variant_field_select_component.js" %}"></script>
 

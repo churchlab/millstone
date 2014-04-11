@@ -35,7 +35,8 @@ gd.SampleListView = Backbone.View.extend({
 
   decorateControls: function() {
     this.samplesControlComponent = new gd.SamplesControlsComponent({
-      el: '#gd-sample-list-view-datatable-hook-control'
+      el: '#gd-sample-list-view-datatable-hook-control',
+      model: this.model
     });
 
     this.listenTo(this.samplesControlComponent, 'MODELS_UPDATED',

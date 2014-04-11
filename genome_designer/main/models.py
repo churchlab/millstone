@@ -85,7 +85,6 @@ class Dataset(UniqueUidModelMixin):
 
     This is similar to the Galaxy notion of a dataset.
     """
-
     # The type of data this represents (e.g. Dataset.Type.BWA_ALIGN).
     # This is a semantic identifier for the kinds of operations
     # that can be performed with this Dataset.
@@ -162,6 +161,7 @@ class Dataset(UniqueUidModelMixin):
         COPYING = 'COPYING'
         QUEUED_TO_COPY = 'QUEUED_TO_COPY'
         VERIFYING = 'VERIFYING'
+        AWAITING_UPLOAD = 'AWAITING_UPLOAD'
     STATUS_CHOICES = make_choices_tuple(STATUS)
     status = models.CharField(max_length=40, choices=STATUS_CHOICES,
             default=STATUS.READY)
