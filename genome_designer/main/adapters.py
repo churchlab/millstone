@@ -120,8 +120,6 @@ def adapt_experiment_samples_to_frontend(filters={}, obj_list=None, **kwargs):
                 [(key,{'field':key}) for key in obj.data.keys()])
         json_fields.update(json_field_dicts)
 
-    print json_fields
-
     # A list of dicts with object data, where each dict is one object
     # and all the fields required for front-end display.
     fe_obj_list = []
@@ -138,8 +136,6 @@ def adapt_experiment_samples_to_frontend(filters={}, obj_list=None, **kwargs):
     # in which they should be displayed.
     field_dict_list = ExperimentSample.get_field_order(**kwargs)
     field_dict_list.extend(json_fields.values())
-
-    print field_dict_list
 
     # Each field is a dict with two keys, 'field' for field name and 'verbose'
     # for display name. Get each. If 'verbose' is missing, then make verbose
