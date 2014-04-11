@@ -42,7 +42,16 @@ post_save.connect(create_user_profile, sender=User,
 
 # Delete the associated Django User on UserProfile delete.
 def post_user_profile_delete(sender, instance, **kwargs):
-    instance.user.delete()
+    # This is only necessary if the UserProfile was deleted directly.
+    # If the User model was deleted, then the User will no longer exist
+    # by the time we get here, so nothing to do.
+    user_profile = instance
+    maybe_user_matches = User.objects.filter(id=user_profile.user_id)
+    if len(maybe_user_matches):
+        assert len(maybe_user_matches) == 1
+        user = maybe_user_matches[0]
+        assert user.user_profile_id == user_profile.id
+        maybe_user_matches[0].delete()
 post_delete.connect(post_user_profile_delete, sender=UserProfile,
         dispatch_uid='user_profile_create')
 
