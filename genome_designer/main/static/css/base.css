@@ -351,3 +351,7 @@ div.dataTables_paginate ul.pagination {
 .gd-samples-upload-through-browser-modal-error {
   color: red;
 }
+
+.gd-samples-upload-through-browser-modal-template-error {
+  color: red;
+}

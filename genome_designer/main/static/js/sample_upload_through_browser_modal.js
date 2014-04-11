@@ -31,14 +31,14 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
     });
 
     // Handle the result.
-    this.templateUploader.on('fileuploaddone', function (e, data) {
+    this.templateUploader.on('fileuploaddone', _.bind(function(e, data) {
       var result = data.response().result;
       if ('error' in result) {
-        console.log(result.error);
+        this.showTemplateUploadError('ERROR: ' + result.error);
       } else {
         window.location.reload();
       }
-    });
+    }, this));
 
   },
 
@@ -105,6 +105,21 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
         this.clearSampleDataUploadEror();
       }
     }, this));
+  },
+
+  /**
+   * Shows an error when there is a problem with uploading a sample template.
+   */
+  showTemplateUploadError: function(errorMsg) {
+    this.clearTemplateUploadError();
+    var errorEl = $('#gd-samples-upload-through-browser-modal-template-error');
+    errorEl.append('<p>' + errorMsg + '</p');
+  },
+
+  /** Clears the error message. */
+  clearTemplateUploadError: function() {
+    var errorEl = $('#gd-samples-upload-through-browser-modal-template-error');
+    errorEl.empty();
   },
 
   /**
