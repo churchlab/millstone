@@ -494,7 +494,7 @@ def create_sample_models_for_eventual_upload(project, targets_file):
         raise ValidationException(e)
 
     for row in valid_rows:
-        _create_sample_and_placeholder_dataset(row)
+        _create_sample_and_placeholder_dataset(project, row)
 
 
 def _create_sample_and_placeholder_dataset(project, row):
