@@ -5,20 +5,33 @@
       <h3>Upload Samples</h3>
     </div>
     <div class="modal-body">
-      <ul id="modalFromFileTab" class="nav nav-pills">
-        <li class="active">
-          <a href="#gd-samples-upload-through-browser-modal-upload" data-toggle="tab">
-            Upload
-          </a>
-        </li>
-      </ul>
-
-      <hr>
-
       <div id="modalFromFileTabContent" class="tab-content">
-        <div class="tab-pane fade in active" id="gd-samples-upload-through-browser-modal-upload">
+
           <p>
-            To upload samples through the browser, you need to specify sample names and corresponding filenames by <strong>downloading <a href="/templates/sample_list_browser_upload_template.tsv">this template</a></strong>, modifying it in Excel or a text editor, and uploading the filled-in template.
+            In order to upload samples through the browser, you must first
+            register samples to be uploaded by filling out a spreadsheet
+            template provided below with sample labels and
+            corresponding data filenames. You can then upload files matching
+            the registered filenames.
+          </p>
+
+          <hr>
+
+          <h4>Samples awaiting upload</h4>
+
+          <div id="gd-samples-upload-through-browser-awaiting-upload">
+          </div>
+
+          <hr>
+
+          <h4>Register more samples</h4>
+
+          <p>
+            <strong>Download
+            <a href="/templates/sample_list_browser_upload_template.tsv">
+            this template</a></strong> and fill it in to provide unique
+            sample names and filenames. All filenames associated with samples
+            in this project must be unique.
           </p>
 
           <!-- The fileinput-button span is used to style the file input field as button -->

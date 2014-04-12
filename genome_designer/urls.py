@@ -107,6 +107,8 @@ urlpatterns = patterns('',
             'main.xhr_handlers.samples_upload_through_browser_template'),
     url(r'^_/samples/samples_upload_through_browser_sample_data$',
             'main.xhr_handlers.samples_upload_through_browser_sample_data'),
+    url(r'^_/samples/get_samples_awaiting_upload$',
+            'main.xhr_handlers.get_samples_awaiting_upload'),
 
     url(r'^_/genes$',
             'main.xhr_handlers.get_gene_list'),

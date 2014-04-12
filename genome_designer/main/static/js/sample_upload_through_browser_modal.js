@@ -14,8 +14,25 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
   },
 
   render: function() {
+    this.renderSamplesAwaitingUpload();
     this.renderTemplateUploader();
     this.renderSamplesUploader();
+  },
+
+  renderSamplesAwaitingUpload: function() {
+    $('#gd-samples-upload-through-browser-awaiting-upload').empty();
+
+    var requestData = {
+        projectUid: this.model.get('uid')
+    };
+
+    $.get('/_/samples/get_samples_awaiting_upload', requestData,
+        function(response) {
+          _.each(response.sampleFilenameList, function(sampleLabel) {
+            $('#gd-samples-upload-through-browser-awaiting-upload').append(
+                sampleLabel + ', ');
+          });
+        });
   },
 
   renderTemplateUploader: function() {
@@ -36,7 +53,7 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
       if ('error' in result) {
         this.showTemplateUploadError('ERROR: ' + result.error);
       } else {
-        window.location.reload();
+        this.renderSamplesAwaitingUpload();
       }
     }, this));
 

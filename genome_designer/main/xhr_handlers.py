@@ -156,6 +156,21 @@ def create_samples_from_server_location(request):
     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
+@login_required
+@require_GET
+def get_samples_awaiting_upload(request):
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.GET.get('projectUid', ''))
+    existing_sample_dataset_filename_list = [
+            os.path.split(ds.filesystem_location)[1]
+            for ds in Dataset.objects.filter(
+                    experimentsample__project=project,
+                    status=Dataset.STATUS.AWAITING_UPLOAD)]
+    result = {
+        'sampleFilenameList': existing_sample_dataset_filename_list
+    }
+    return HttpResponse(json.dumps(result), content_type='application/json')
+
 
 @login_required
 @require_POST
