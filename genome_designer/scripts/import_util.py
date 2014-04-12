@@ -494,19 +494,23 @@ def create_sample_models_for_eventual_upload(project, targets_file):
         raise ValidationException(e)
 
     for row in valid_rows:
-        experiment_sample = ExperimentSample.objects.create(
-                project=project, label=row['Sample_Name'])
+        _create_sample_and_placeholder_dataset(row)
 
-        fastq1_filename = row['Read_1_Filename']
+
+def _create_sample_and_placeholder_dataset(project, row):
+    experiment_sample = ExperimentSample.objects.create(
+            project=project, label=row['Sample_Name'])
+
+    fastq1_filename = row['Read_1_Filename']
+    _create_fastq_dataset(
+            experiment_sample, fastq1_filename, Dataset.TYPE.FASTQ1,
+            Dataset.STATUS.AWAITING_UPLOAD)
+
+    maybe_fastq2_filename = row.get('Read_2_Filename', '')
+    if maybe_fastq2_filename:
         _create_fastq_dataset(
-                experiment_sample, fastq1_filename, Dataset.TYPE.FASTQ1,
-                Dataset.STATUS.AWAITING_UPLOAD)
-
-        maybe_fastq2_filename = row.get('Read_2_Filename', '')
-        if maybe_fastq2_filename:
-            _create_fastq_dataset(
-                    experiment_sample, maybe_fastq2_filename,
-                    Dataset.TYPE.FASTQ2, Dataset.STATUS.AWAITING_UPLOAD)
+                experiment_sample, maybe_fastq2_filename,
+                Dataset.TYPE.FASTQ2, Dataset.STATUS.AWAITING_UPLOAD)
 
 
 def parse_browser_upload_sample_targets_file(project, targets_file):

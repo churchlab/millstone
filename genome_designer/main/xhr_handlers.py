@@ -242,8 +242,8 @@ def samples_upload_through_browser_sample_data(request):
             dest_fh.write(chunk)
 
     # Update the status.
-    ds.status = Dataset.STATUS.READY
-    ds.save(update_fields=['status'])
+    dataset.status = Dataset.STATUS.READY
+    dataset.save(update_fields=['status'])
 
     return HttpResponse(json.dumps({}), content_type='application/json')
 
