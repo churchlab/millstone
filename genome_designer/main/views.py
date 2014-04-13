@@ -548,12 +548,10 @@ class RegistrationViewWrapper(RegistrationView):
 
     def registration_allowed(self, request):
 
-        print >> sys.stderr, 'Current # of users: %d' % User.objects.count()
-        if User.objects.count():
-            return False
-        else:
-            return super(RegistrationViewWrapper, self).registration_allowed(
-                    request)
+        if not User.objects.count():
+            return True
+        return super(RegistrationViewWrapper, self).registration_allowed(
+                request)
 
     def get_success_url(self, request, user):
         '''

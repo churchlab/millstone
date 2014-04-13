@@ -268,8 +268,13 @@ ACCOUNT_ACTIVATION_DAYS = 7
 
 LOGIN_REDIRECT_URL = '/'
 
-# Override to False to disable registration, even if only one user.
-REGISTRATION_OPEN = True
+# Override to True to enable multiple users to register.
+# With this as False, the initial user (i.e. admin) can
+# 1) Clone our amazon ami
+# 2) Go to the url and register
+# 3) No one else can register
+# all w/o requiring the user to touch settings.py
+REGISTRATION_OPEN = False
 
 ###############################################################################
 # Django Celery - async task queue management
