@@ -3,7 +3,9 @@ from django.conf.urls import include
 from django.conf.urls import patterns
 from django.conf.urls import url
 from django.views.generic import RedirectView
+from django.views.generic.base import TemplateView
 
+from main.views import RegistrationViewWrapper
 
 urlpatterns = patterns('',
     url(r'^$', 'main.views.home_view'),
@@ -144,7 +146,7 @@ urlpatterns = patterns('',
 
     ###########################################################################
     # Jbrowse Redirect
-    # For re-compiling the trackList.json before redirecting to 
+    # For re-compiling the trackList.json before redirecting to
     # the static jbrowse/ pages.
     ###########################################################################
     url(r'^redirect_jbrowse$',
@@ -179,12 +181,20 @@ else:
     urlpatterns += patterns('',
         # django-registration defaults
         # (further delgates to django.contrib.auth.url)
-        (r'^accounts/', include('registration.backends.simple.urls')),
+        url(r'^accounts/register/$',
+               RegistrationViewWrapper.as_view(),
+               name='registration_register'),
+        url(r'^accounts/register/closed/$',
+               TemplateView.as_view(template_name=
+                        'registration/registration_closed.html'),
+               name='registration_disallowed'),
+        url(r'^accounts/', include('registration.auth_urls')),
 
         # The default behavior of registration is redirect to 'users/<username>'.
         # For now let's catch this request here and just redirect to '/'.
-        (r'^users/', RedirectView.as_view(url='/')),
+        url(r'^users/', RedirectView.as_view(url='/')),
     )
+
 
 
 ###########################################################################

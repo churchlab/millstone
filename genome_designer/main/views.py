@@ -6,8 +6,11 @@ NOTE: Put new Ajax-only actions into main/xhr_handlers.py.
 
 import json
 import os
+import sys
 
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.urlresolvers import reverse
@@ -17,6 +20,7 @@ from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
+from registration.backends.simple.views import RegistrationView
 
 from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_or_modelview_list_to_frontend
@@ -45,7 +49,6 @@ def home_view(request):
     """
     context = {}
     return render(request, 'home.html', context)
-
 
 def demo_splash_view(request):
     """The main landing page.
@@ -78,14 +81,14 @@ def project_create_view(request):
             project_name = request.POST.get('title')
 
             existing_proj_count = Project.objects.filter(
-                    owner=request.user.get_profile(), 
+                    owner=request.user.get_profile(),
                     title=project_name).count()
 
             assert existing_proj_count == 0, (
                 'Project with that name already exists.')
 
             project = Project.objects.create(
-                    owner=request.user.get_profile(), 
+                    owner=request.user.get_profile(),
                     title=project_name)
 
             return HttpResponseRedirect(
@@ -254,7 +257,7 @@ def alignment_list_view(request, project_uid):
 
     init_js_data = json.dumps({
         'entity': adapt_model_instance_to_frontend(project)
-    })    
+    })
 
     context = {
         'project': project,
@@ -536,6 +539,28 @@ def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
     }
 
     return render(request, 'single_variant_view.html', context)
+
+class RegistrationViewWrapper(RegistrationView):
+    """
+    For now, if there are no users present, allow registration.
+    Once the first user is created, disallow registration.
+    """
+
+    def registration_allowed(self, request):
+
+        print >> sys.stderr, 'Current # of users: %d' % User.objects.count()
+        if User.objects.count():
+            return False
+        else:
+            return super(RegistrationViewWrapper, self).registration_allowed(
+                    request)
+
+    def get_success_url(self, request, user):
+        '''
+        Log in the new user and take them to the project list.
+        '''
+        login(request, user)
+        return '/'
 
 
 if settings.RUNNING_ON_EC2:

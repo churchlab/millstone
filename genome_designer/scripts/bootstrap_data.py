@@ -401,7 +401,14 @@ def confirm_bootstrap():
 
 if __name__ == '__main__':
     if confirm_bootstrap():
-        reset_database()
-        bootstrap_fake_data()
+        if len(sys.argv) == 1:
+            reset_database()
+            bootstrap_fake_data()
+        else:
+            opt = sys.argv[1]
+            if opt == 'blank':
+                reset_database()
+            else:
+                print 'Invalid argument to bootstrap: %s. Aborting.' % opt
     else:
-        print 'Aborting'
+        print 'Aborting.'
