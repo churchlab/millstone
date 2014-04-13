@@ -20,6 +20,7 @@ from main.models import ExperimentSampleToAlignment
 from pipeline.read_alignment import align_with_bwa_mem
 from pipeline.snv_calling import get_variant_tool_params
 from pipeline.snv_calling import find_variants_with_tool
+import settings
 
 
 def run_pipeline_multiple_ref_genomes(alignment_group_label, ref_genome_list,
@@ -137,7 +138,8 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
     variant_caller_group = group([find_variants_with_tool.si(
                     alignment_group, variant_params,
                     project=ref_genome.project)
-            for variant_params in get_variant_tool_params()])
+            for variant_params in get_variant_tool_params() if
+                    variant_params[0] in settings.ENABLED_VARIANT_CALLERS])
 
     pipeline_completion = pipeline_completion_tasks.s(
             alignment_group=alignment_group)

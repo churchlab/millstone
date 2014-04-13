@@ -23,6 +23,7 @@ from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import copy_dataset_to_entity_data_dir
 from scripts.import_util import import_reference_genome_from_local_file
 from scripts.vcf_parser import extract_raw_data_dict
+from settings import ENABLE_SV_CALLING
 from settings import PWD as GD_ROOT
 
 
@@ -44,10 +45,10 @@ TEST_BAM_INDEX = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'small_data',
         'final.bam.bai')
 
 
-
 class TestSVCallers(TestCase):
 
     def setUp(self):
+
         user = User.objects.create_user('test_username', password='password',
                 email='test@example.com')
 
@@ -70,6 +71,9 @@ class TestSVCallers(TestCase):
         delly can usually find inversions; unfortunately, delly only
         works well on large data, so we will not test it here.
         """
+
+        if not ENABLE_SV_CALLING: return
+
         # Create a new alignment group.
         alignment_group = AlignmentGroup.objects.create(
                 label='test alignment', reference_genome=self.reference_genome)
@@ -166,6 +170,9 @@ class TestSVPipeline(TestCase):
                 Dataset.TYPE.FASTQ2, FASTQ2)
 
     def test_pipeline_and_svs(self):
+
+        if not ENABLE_SV_CALLING: return
+
         run_pipeline_multiple_ref_genomes('name', [self.reference_genome],
                 [self.experiment_sample])
 

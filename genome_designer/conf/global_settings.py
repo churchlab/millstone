@@ -344,16 +344,22 @@ JBROWSE_GBK_TYPES_TO_DISPLAY = ','.join([
 
 JBROWSE_DEFAULT_TRACKS = ['DNA','gbk']
 
-# Number of BAM alignment tracks to display - if more than this, then 
+# Number of BAM alignment tracks to display - if more than this, then
 # display none and warn on mouseover.
 JBROWSE_MAX_ALIGN_TRACKS = 5
-# Number of BAM coverage tracks to display - if more than this, then 
+# Number of BAM coverage tracks to display - if more than this, then
 # display none and warn on mouseover.
 JBROWSE_MAX_COVERAGE_TRACKS = 10
 
 ###############################################################################
-# Snp Calling
+# Variant Calling
 ###############################################################################
+
+ENABLED_VARIANT_CALLERS = ['freebayes']
+ENABLE_SV_CALLING = False
+SV_CALLERS = ['pindel','delly']
+if ENABLE_SV_CALLING:
+    ENABLED_VARIANT_CALLERS += SV_CALLERS
 
 # Path to snpeff java jar.
 SNPEFF_JAR_PATH = os.path.abspath(os.path.join(PWD, 'tools','snpEff',
