@@ -1,32 +1,31 @@
 {% extends "base.html" %}
 
 {% block tabs_or_splash %}
-<div class="page-header">
-<h1>Welcome to Millstone.</h1>
-</div>
 <div class="container">
   <div class="row">
     <div class="col-sm-4 col-sm-offset-4">
       <div class="panel panel-default">
-        <div class="panel-body text-center">
-          <form action="/accounts/login/" method="post">{% csrf_token %}
-            {% for error in form.non_field_errors %}
-              <p class="gd-error-text">
-                {{error}}
+        <form action="/accounts/login/" method="post">
+          {% csrf_token %}
+          <div class="panel-body text-center">
+              {% for error in form.non_field_errors %}
+                <p class="gd-error-text">
+                  {{error}}
+                </p>
+              {% endfor %}
+              <p>
+                <input id="id_username" maxlength="254" name="username" type="text" class="form-control" placeholder="Username"/>
               </p>
-            {% endfor %}
-            <p>
-              <input id="id_username" maxlength="254" name="username" type="text" class="form-control" placeholder="Username"/>
-            </p>
-            <p>
-              <input id="id_password" name="password" type="password" class="form-control" placeholder="Password"/></p>
-            <button class="btn btn-primary">Login</button>
-            <input type="hidden" name="next" value="{{next}}" />
-          </form>
-        <br>
-        Or <a href="/accounts/register/">Register</a>.
-      </div>
+              <p>
+                <input id="id_password" name="password" type="password" class="form-control" placeholder="Password"/></p>
+        </div>
+        <div class="panel-footer text-center gd-demo-splash-modal-footer">
+          <button class="btn btn-lg btn-success">Login</button>
+          <input type="hidden" name="next" value="{{next}}" />
+        </div>
+      </form>
     </div>
+    <center>Or <a href="/accounts/register/">Register</a>.</center>
     </div>
   </div>
 </div>

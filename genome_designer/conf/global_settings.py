@@ -21,7 +21,7 @@ TOOLS_DIR = os.path.join(PWD, 'tools')
 DEBUG = True
 
 # Whether to run the app in "Demo" mode (no entity modify).
-# Setting DEBUG_MODE = True does the following:
+# Setting DEMO_MODE = True does the following:
 #     * Automatic login to with demo account (redirects regular login page)
 #     * Views restricted to conf/demo_settings.DEMO_SAFE_VIEWS
 DEMO_MODE = False

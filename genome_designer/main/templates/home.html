@@ -2,10 +2,12 @@
 
 {% block tabs_or_splash %}
 
-{% if user.is_authenticated or not is_demo %}
+{% if user.is_authenticated%}
   {% include "project_list.html" %}
 {% elif is_demo %}
   {% include "demo_splash.html" %}
+{% else %}
+  {% include "splash.html" %}
 {% endif %}
 
 {% endblock %}

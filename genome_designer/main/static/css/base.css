@@ -1,21 +1,30 @@
 /* Sticky footer styles
 http://getbootstrap.com/examples/sticky-footer/sticky-footer.css
 -------------------------------------------------- */
+/* old broken absolute bottom footer
+
 #gd-footer {
   position: absolute;
   bottom: 0;
-  width: 100%;
-  /* Set the fixed height of the footer here */
   height: 120px;
-  background-color: #f5f5f5;
   border-top: 1px solid #e5e5e5;
   padding-top: 20px;
-  padding-bottom: 20px; 
+  padding-bottom: 20px;
+}*/
+
+/* new splash-only footer */
+.gd-footer {
+  text-align: center;
+  padding-top: 19px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.gd-splash-panel {
+  min-width: 420px;
 }
 
 body {
   padding-top: 50px;
-  margin-bottom: 120px;
 }
 
 .gd-logo {
@@ -25,7 +34,7 @@ body {
 }
 
 .gd-navbar {
-  margin-bottom: 10px; 
+  margin-bottom: 10px;
 }
 
 .gd-navbar-new-project-text:hover {
@@ -38,16 +47,16 @@ body {
 
 .gd-navbar .navbar .nav.pull-left {margin-right: 5px; margin-right: 0;}
 
-.gd-navbar .navbar { min-height:40px;} 
+.gd-navbar .navbar { min-height:40px;}
 
-.gd-navbar .navbar .navbar-brand { 
+.gd-navbar .navbar .navbar-brand {
   font-size: 18px;
   margin-top: 3px;
 }
 
-.gd-navbar .navbar .navbar-nav > li > a {  
-  padding-top: 12px; 
-  padding-bottom: 12px; 
+.gd-navbar .navbar .navbar-nav > li > a {
+  padding-top: 12px;
+  padding-bottom: 12px;
   line-height: 20px;
 }
 
@@ -55,13 +64,29 @@ body {
   padding-top: 0px;
 }
 
-.gd-page-container {
-  margin-right: 15px;
-  margin-left: 15px;
+/* splash page styles */
+.gd-splash-jumbotron {
+  text-align: center;
+  border-bottom: 1px solid #e5e5e5;
+  max-width: 730px;
+}
+.gd-splash-jumbotron .btn {
+  padding: 14px 24px;
+  font-size: 21px;
 }
 
+.gd-page-container {
+  /* 30px, to make up for the -15 on .row */
+  margin-right: 15px;
+  margin-left: 30px;
+}
+
+.gd-page-container > .row > h1 {
+  margin-top: 5px;
+}
 .gd-sidebar {
   max-width: 200px;
+  padding-left: 0px;
 }
 
 .gd-sidebar-analyze-buttons {
@@ -72,7 +97,7 @@ body {
   margin-bottom: 0px;
   border-bottom: 0px;
 }
-.gd-sidebar-analyze-buttons > .bootstrap-select.btn-group > .btn {  
+.gd-sidebar-analyze-buttons > .bootstrap-select.btn-group > .btn {
   position: relative;
   display: block;
   padding: 10px 15px;
@@ -127,7 +152,7 @@ input.gd-form-tall {
   margin-bottom: 20px;
 }
 
-.gd-main-content, 
+.gd-main-content,
 .gd-main-content > .container-fluid {
   padding-left: 0px;
 }
@@ -146,9 +171,9 @@ input.gd-form-tall {
   height: 40px;
 }
 
-/* is this a bootstrap 3 bug? 
+/* is this a bootstrap 3 bug?
  * adjacent btn-groups don't get the margin in-between
- * inside a btn-toolbar as expected, because of 
+ * inside a btn-toolbar as expected, because of
  * a css priority in bootstrap.css.
  * this should fix.
  */
@@ -210,18 +235,18 @@ table.dataTable > tbody > tr > td {
 
 .dataTables_wrapper > div.panel > div.panel-body {
   padding-bottom: 0px;
-} 
+}
 
 .dataTables_wrapper > div.panel > div.panel-body {
   padding-bottom: 5px;
   padding-left: 10px;
   padding-right: 10px;
-} 
+}
 
 .gd-datatable-top-container > div {
   vertical-align: middle;
   display: inline-block;
-  float:none;  
+  float:none;
   padding-left: 5px;
   padding-right: 5px;
 }
@@ -306,7 +331,7 @@ div.dataTables_paginate ul.pagination {
 }
 
 .gd-variant-set-badge.outline:hover {
-  color: #43a110; 
+  color: #43a110;
 }
 
 .gd-variant-set-badge.outline {
