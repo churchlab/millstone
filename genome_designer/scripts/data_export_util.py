@@ -27,7 +27,10 @@ def export_melted_variant_view(ref_genome, variant_id_list, csvfile):
     )
     cursor = connection.cursor()
     cursor.execute(sql_statement)
-    result_list = dictfetchall(cursor)
+    raw_result_list = dictfetchall(cursor)
+
+    result_list = [row for row in raw_result_list
+            if row['experiment_sample_uid']]
 
     # We write the following manually specified fields, as well as all the
     # key-value fields.
