@@ -48,7 +48,11 @@ gd.SamplesControlsComponent = Backbone.View.extend({
       return;
     }
 
+    this.enterLoadingState();
+
     var onSuccess = _.bind(function(responseData) {
+      this.exitLoadingState();
+
       if (responseData.error.length) {
         alert('Error creating samples: ' + responseData.error);
         return;
@@ -61,7 +65,7 @@ gd.SamplesControlsComponent = Backbone.View.extend({
 
     var formData = new FormData(
         $('#gd-samples-create-from-server-location')[0]);
-    $.ajax({
+    var jqxhr = $.ajax({
       url: '/_/samples/create_from_server_location',
       type: 'POST',
       data: formData,
@@ -73,6 +77,10 @@ gd.SamplesControlsComponent = Backbone.View.extend({
       contentType: false,
       processData: false
     });
+
+    jqxhr.fail(_.bind(function() {
+      this.exitLoadingState()
+    }, this));
   },
 
   /** Parses the form files and prepares the data. */
@@ -92,6 +100,20 @@ gd.SamplesControlsComponent = Backbone.View.extend({
     }
 
     return true;
+  },
+
+  /** Puts UI in the loading state. */
+  enterLoadingState: function() {
+    $("#gd-samples-create-from-server-location-submit").prop('disabled', true);
+
+    this.loadingSpinner = new gd.Spinner();
+    this.loadingSpinner.spin();
+  },
+
+  /** Puts UI in the loading state. */
+  exitLoadingState: function() {
+    $("#gd-samples-create-from-server-location-submit").prop('disabled', false);
+    this.loadingSpinner.stop();
   },
 
   /**
