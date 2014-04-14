@@ -21,7 +21,7 @@ json tracklist. It also needs to symlink various track subdirectories into the
 main directory. It assumes that there won't be anything to overwrite (like two
 {trackname}/seq dirs).
 
-We perform this compile_tracklist_json() every time a link is asked for. 
+We perform this compile_tracklist_json() every time a link is asked for.
 
 """
 
@@ -61,9 +61,9 @@ def get_tracklist_json(reference_genome, concurrent_id=None):
 
     jbrowse_path = reference_genome.get_jbrowse_directory_path()
 
-    # If this is a concurrent read, read from individual tracks 
+    # If this is a concurrent read, read from individual tracks
     # subdir, named by a concurrent_id. Update is OK if dir/id is
-    # there. 
+    # there.
     if concurrent_id:
         jbrowse_path = os.path.join(
                 jbrowse_path, 'indiv_tracks', concurrent_id)
@@ -82,10 +82,10 @@ def write_tracklist_json(reference_genome, dictionary, concurrent_id=None):
     """
     jbrowse_path = reference_genome.get_jbrowse_directory_path()
 
-    # If this is a concurrent write, write to an individual tracks 
+    # If this is a concurrent write, write to an individual tracks
     # subdir, named by a concurrent_id. Update is OK if dir/id is
-    # there. 
-    if concurrent_id: 
+    # there.
+    if concurrent_id:
         jbrowse_path = os.path.join(
                 jbrowse_path, 'indiv_tracks', concurrent_id)
 
@@ -93,7 +93,7 @@ def write_tracklist_json(reference_genome, dictionary, concurrent_id=None):
         # os.makedirs isn't as forgiving
         mkpath(jbrowse_path)
 
-    json_track_fn = os.path.join(jbrowse_path, 'trackList.json')    
+    json_track_fn = os.path.join(jbrowse_path, 'trackList.json')
 
     # Create a new or overwrite an old tracklist
     with open(json_track_fn, 'w') as json_track_fh:
@@ -103,14 +103,14 @@ def compile_tracklist_json(reference_genome):
     """
     Gathers all the individual tracks in the ./indiv_tracks
     directory and creates a new 'tracks' listing, keeping
-    each track label unique. 
+    each track label unique.
     """
     jbrowse_path = reference_genome.get_jbrowse_directory_path()
     indiv_tracks_path = os.path.join(jbrowse_path,'indiv_tracks')
     track_files = glob.glob(os.path.join(indiv_tracks_path,'*','trackList.json'))
 
-    # a dictionary of tracks by label. We assume here that all 
-    # tracks are unique by 'label' (which should really be called 
+    # a dictionary of tracks by label. We assume here that all
+    # tracks are unique by 'label' (which should really be called
     # 'key', since its a machine-readable field)
     track_dict = {}
     consolidated_track_list = {}
@@ -119,7 +119,7 @@ def compile_tracklist_json(reference_genome):
 
         this_track_list = json.loads(open(track_fn).read())
 
-        # First, pop out off 'tracks' list from the json, and 
+        # First, pop out off 'tracks' list from the json, and
         # add them to the track_dict by label
         for track in this_track_list.pop('tracks', []):
             track_key = track['label']
@@ -133,7 +133,7 @@ def compile_tracklist_json(reference_genome):
                 track['urlTemplate'] = os.path.join(
                     'indiv_tracks',track_key, track['urlTemplate'])
 
-        
+
         # Finally, symlink any subdirs (seq, etc) into the root.
         track_dir = os.path.dirname(track_fn)
 
@@ -143,7 +143,7 @@ def compile_tracklist_json(reference_genome):
 
             try:
                 shutil.copytree(
-                    src= abs_subdir, 
+                    src= abs_subdir,
                     dst= os.path.join(jbrowse_path,subdir),
                     symlinks=True
                 )
@@ -158,7 +158,7 @@ def compile_tracklist_json(reference_genome):
         consolidated_track_list = merge_nested_dictionaries(
                 consolidated_track_list, this_track_list)
 
-    # Add back all the tracks 
+    # Add back all the tracks
     consolidated_track_list['tracks'] = track_dict.values()
 
     # touch the other tracklist format, make it empty
@@ -217,7 +217,7 @@ def prepare_jbrowse_ref_sequence(reference_genome, **kwargs):
 def add_genbank_file_track(reference_genome, **kwargs):
     """
     Jbrowse has the ability to make tracks out of genbank files. This
-    takes the genbank file from a reference_genome object and attempts to 
+    takes the genbank file from a reference_genome object and attempts to
     make such a track and then add it to the track list.
     """
     FLATFILE_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'flatfile-to-json.pl')
@@ -276,7 +276,7 @@ def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
     """
     # Get the vcf file location from the the Dataset of the genome
     # keyed by the alignment_type.
-    vcf_dataset = get_dataset_with_type(alignment_group, 
+    vcf_dataset = get_dataset_with_type(alignment_group,
             vcf_dataset_type)
 
     vcf_dataset = _vcf_to_vcftabix(vcf_dataset)
@@ -296,7 +296,7 @@ def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
     key = "{:s} {:s} SNVs".format(vcf_dataset.type,alignment_group.label)
 
     # Build the JSON object.
-    raw_dict_obj = { 
+    raw_dict_obj = {
         'tracks' : [{
             "label"         : label,
             "key"           : key,
@@ -313,21 +313,21 @@ def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
 
 def _vcf_to_vcftabix(vcf_dataset):
     """
-    Generate a compressed version of a vcf file and index it with 
+    Generate a compressed version of a vcf file and index it with
     samtools tabix. Add a new dataset model instance for this compressed
     version, with the same related objects. Flag is as compressed,
-    indexed, etc. 
+    indexed, etc.
     """
 
     # 1. Check if dataset is compressed. If not, then grab the compressed
     # version or make a compressed version.
     if not vcf_dataset.is_compressed():
         # Check for existing compressed version using related model.
-        # Assume that the first model will do. 
+        # Assume that the first model will do.
         related_model = vcf_dataset.get_related_model_set().all()[0]
         compressed_dataset = get_dataset_with_type(
-                entity= related_model, 
-                type= vcf_dataset.type, 
+                entity= related_model,
+                type= vcf_dataset.type,
                 compressed=True)
         # If there is no compressed dataset, then make it
         if compressed_dataset is None:
@@ -359,10 +359,10 @@ def _vcf_to_vcftabix(vcf_dataset):
     return compressed_dataset
 
 def add_bed_file_track(reference_genome, sample_alignment, dataset):
-    """ Add a bed file to Jbrowse, like that created for CallableLoci. 
-        Pass in the dataset model object directly. 
+    """ Add a bed file to Jbrowse, like that created for CallableLoci.
+        Pass in the dataset model object directly.
     """
-    
+
     FLATFILE_TRACK_BIN = os.path.join(JBROWSE_BIN_PATH, 'flatfile-to-json.pl')
 
     bed_dataset_location = dataset.get_absolute_location()
@@ -412,7 +412,7 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     #         bam_dataset.filesystem_location)
 
     # NOTE: We should construct bam file urls using project.get_client_jbrowse_link()
-    #       rather than checking S3 flag here. 
+    #       rather than checking S3 flag here.
     if reference_genome.project.is_s3_backed():
         urlTemplate = os.path.join('http://%s.s3.amazonaws.com/' % S3_BUCKET,
             bam_dataset.filesystem_location.strip("/jbrowse"))
@@ -422,7 +422,7 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
 
     # doing label as ES_AG because SA isn't currently used in the variant view
     label = bam_dataset.internal_string(sample_alignment.experiment_sample) + '_' + (
-            str(sample_alignment.alignment_group.uid))    
+            str(sample_alignment.alignment_group.uid))
     key = ':'.join([
             sample_alignment.alignment_group.label,
             bam_dataset.external_string(sample_alignment.experiment_sample)])
@@ -435,6 +435,7 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
             'urlTemplate': urlTemplate,
             'label': label,
             'type': 'JBrowse/View/Track/Alignments2',
+            'chuckSizeLimit': 10000000, #double the default chunk size
             'key': key,
             'category': 'BAM Tracks',
             'style' : {
@@ -449,7 +450,7 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
     # Also add a snp coverage track.
     snp_coverage_label = bam_dataset.internal_string(
             sample_alignment.experiment_sample) + '_COVERAGE_' + (
-            str(sample_alignment.alignment_group.uid))    
+            str(sample_alignment.alignment_group.uid))
 
     snp_coverage_key = key + ' Coverage'
     coverage_raw_dict_obj = {
@@ -463,11 +464,11 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
             'key': snp_coverage_key
         }
     ]}
-    write_tracklist_json(reference_genome, coverage_raw_dict_obj, 
+    write_tracklist_json(reference_genome, coverage_raw_dict_obj,
             snp_coverage_label)
 
-def get_tracks_for_entity(reference_genome, 
-        alignment_group=None, 
+def get_tracks_for_entity(reference_genome,
+        alignment_group=None,
         sample_alignment=None):
     """
     Get a list of jbrowse track labels (i.e. the internal track names)
@@ -475,8 +476,8 @@ def get_tracks_for_entity(reference_genome,
     category.
     """
     raise NotImplementedError
-    # This might be a good idea later. 
-    
+    # This might be a good idea later.
+
     # track_list = defaultdict(dict)
 
     # # Reference Genome
@@ -487,13 +488,13 @@ def get_tracks_for_entity(reference_genome,
     #     track_list.append('gbk')
 
     # # Do all alignment groups if None, else get just the one:
-    # if alignment_group is not None: 
+    # if alignment_group is not None:
     #     alignment_groups = reference_genome.alignmentgroup_set.all():
     # else:
     #     alignment_groups = [alignment_group]
 
     # for alignment_group in alignment_groups:
-        
+
     #     #VCF
     #     track_list.append('vcf',
     #                 '_'.join([
