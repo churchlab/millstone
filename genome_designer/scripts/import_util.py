@@ -7,38 +7,28 @@ import csv
 import os
 import shutil
 import re
-import vcf
-import tempfile
-import traceback
-import shutil
-from collections import namedtuple
+from tempfile import mkdtemp
 from tempfile import NamedTemporaryFile
 
 from BCBio import GFF
 from Bio import Entrez
 from Bio import SeqIO
 from celery import task
-from django.db import transaction
 from django.conf import settings
+from django.db import transaction
 
 from main.celery_util import assert_celery_running
 from main.exceptions import ValidationException
 from main.models import Dataset
+from main.models import get_dataset_with_type
 from main.models import ExperimentSample
-from main.models import Project
 from main.models import ReferenceGenome
-from main.models import Variant
-from main.models import VariantCallerCommonData
 from main.models import VariantSet
 from main.models import VariantToVariantSet
-from main.models import get_dataset_with_type
 from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
-from scripts.vcf_parser import extract_raw_data_dict
-from scripts.vcf_parser import get_or_create_variant
 from scripts.util import uppercase_underscore
-from settings import PWD
-from settings import EMAIL
+from scripts.vcf_parser import get_or_create_variant
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
@@ -59,7 +49,7 @@ REQUIRED_SAMPLE_UPLOAD_THROUGH_BROWSER_HEADER = [
     SAMPLE_BROWSER_UPLOAD_KEY__READ_1,
 ]
 
-REQUIRED_VCF_HEADER_PART = ['CHROM','POS','ID','REF','ALT']
+REQUIRED_VCF_HEADER_PART = ['CHROM', 'POS', 'ID', 'REF', 'ALT']
 
 
 if settings.S3_ENABLED:
@@ -72,7 +62,7 @@ if settings.S3_ENABLED:
 
     @project_files_needed
     def import_samples_from_s3(project, targets_file_rows, s3files):
-        tmp_dir = tempfile.mkdtemp()
+        tmp_dir = mkdtemp()
         local_s3files_map = {}
         for s3file in s3files:
             filepath = os.path.join(tmp_dir, s3file.name)
@@ -253,7 +243,7 @@ def import_reference_genome_from_ncbi(project, label, record_id, import_format):
     # TODO: Should this be a property of the Dataset TYPE?
     FORMAT_SUFFIX = {'fasta':'.fa', 'genbank':'.gb'}
 
-    Entrez.email = EMAIL
+    Entrez.email = settings.EMAIL
     handle = Entrez.efetch(
             db="nuccore", 
             id=record_id, 
@@ -335,7 +325,7 @@ def parse_targets_file(project, targets_file, remove_directory_path=False):
                     # If it is a path, then try to open the file and read one byte.
                     # Replace the string '$GD_ROOT with the project path, so we
                     # can use the test data
-                    clean_field_value = field_value.replace('$GD_ROOT', PWD)
+                    clean_field_value = field_value.replace('$GD_ROOT', settings.PWD)
                     with open(clean_field_value, 'rb') as test_file:
                         try:
                             test_file.read(8)
