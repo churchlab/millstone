@@ -171,29 +171,21 @@ def create_ref_genome_from_ncbi(request):
 def create_samples_from_server_location(request):
     """Handle request to create ReferenceGenome from local file.
     """
-    # Get the params.
-    project_uid = request.POST.get('projectUid', '')
-
-    # Basic validation.
-    try:
-        assert project_uid != '', "Must provide Project."
-    except AssertionError as e:
-        return HttpResponseBadRequest(str(e))
-
     project = get_object_or_404(Project, owner=request.user.get_profile(),
-                uid=project_uid)
+            uid=request.POST.get('projectUid', ''))
 
-    import_samples_from_targets_file(
-            project,
-            request.FILES['targetsFile'])
+    try:
+        import_samples_from_targets_file(
+                project,
+                request.FILES['targetsFile'])
+    except Exception as e:
+        result = {
+            'error': str(e)
+        }
+        return HttpResponse(json.dumps(result),
+                content_type='application/json')
 
-    error_string = ''
-
-    result = {
-        'error': error_string,
-    }
-
-    return HttpResponse(json.dumps(result), content_type='application/json')
+    return HttpResponse(json.dumps({}), content_type='application/json')
 
 
 @login_required
