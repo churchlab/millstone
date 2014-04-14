@@ -400,15 +400,29 @@ def confirm_bootstrap():
 
 
 if __name__ == '__main__':
+
+    # First entry is the default.
+    # We can add more here later.
+    BOOTSTRAP_FLAVORS = [
+        ('blank', lambda: 'no function'),
+        ('full', bootstrap_fake_data)]
+
     if confirm_bootstrap():
         if len(sys.argv) == 1:
+
             reset_database()
-            bootstrap_fake_data()
-        else:
-            opt = sys.argv[1]
-            if opt == 'blank':
-                reset_database()
-            else:
-                print 'Invalid argument to bootstrap: %s. Aborting.' % opt
+            BOOTSTRAP_FLAVORS[0][1]()
+
+        elif len(sys.argv) == 2:
+
+            # Make sure first arg is an available flavor.
+            assert sys.argv[1] in dict(BOOTSTRAP_FLAVORS), (
+                    'Available flavors:\n\t%s') % ('\n\t'.join(
+                    dict(BOOTSTRAP_FLAVORS.keys())))
+
+            # Reset the database and bootstrap with the flavor.
+            reset_database()
+            dict(BOOTSTRAP_FLAVORS)[sys.argv[1]]()
+
     else:
         print 'Aborting.'
