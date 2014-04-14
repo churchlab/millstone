@@ -427,3 +427,8 @@ div.dataTables_paginate ul.pagination {
 .gd-samples-upload-through-browser-modal-template-error {
   color: red;
 }
+
+/*Bootstrap disabled buttons gray text looks bad.*/
+.btn.disabled {
+  color: white;
+}

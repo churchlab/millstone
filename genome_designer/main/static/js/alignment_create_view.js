@@ -86,6 +86,12 @@ gd.AlignmentCreateView = Backbone.View.extend({
    * an alignment run.
    */
   handleSubmitClick: function() {
+    // Disable the button to let the user know things are happening.
+    $('#gd-align-create-submit-btn').removeClass("btn-success");
+    $('#gd-align-create-submit-btn').addClass("disabled");
+
+    // TODO: Show a spinner.
+
     // Post to this same view for now.
     var postUrl = window.location.pathname;
 
@@ -101,6 +107,8 @@ gd.AlignmentCreateView = Backbone.View.extend({
     if (!validationResult.is_success) {
       $('#gd-align-create-submit-error-msg').text(validationResult.error_msg);
       $('#gd-align-create-submit-error').show();
+      $('#gd-align-create-submit-btn').addClass("btn-success");
+      $('#gd-align-create-submit-btn').removeClass("disabled");
       return;
     }
 
@@ -108,6 +116,8 @@ gd.AlignmentCreateView = Backbone.View.extend({
       if ('error' in data) {
         $('#gd-align-create-submit-error-msg').text(data.error);
         $('#gd-align-create-submit-error').show();
+        $('#gd-align-create-submit-btn').addClass("btn-success");
+        $('#gd-align-create-submit-btn').removeClass("disabled");
         return;
       }
 

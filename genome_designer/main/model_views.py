@@ -441,8 +441,12 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     obj_field_config = []
     # save idxes of fields we want to be last
     last_idxes = []
+    # Keep track of field indexes for moving the 'last' fields
+    # need this counter instead of enumerate() to prevent
+    # counting hidden fields
+    displayed_idx = 0
 
-    for i, fdict in enumerate(field_dict_list):
+    for fdict in field_dict_list:
         if fdict.get('hide', False):
             continue
         obj_field_config.append({
@@ -452,12 +456,15 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             'bSortable': fdict.get('sortable', False)
         })
         if fdict.get('last'):
-            last_idxes.append(i)
+            last_idxes.append(displayed_idx)
+        displayed_idx += 1
 
     # Finally, move these fields to the end.
     for i in last_idxes:
         field_i = obj_field_config.pop(i)
+        print i, field_i
         obj_field_config.append(field_i)
+        print obj_field_config
 
     return json.dumps({
         'obj_list': fe_obj_list,

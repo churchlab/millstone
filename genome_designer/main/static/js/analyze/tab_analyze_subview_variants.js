@@ -509,7 +509,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
   showAlertMessage: function(msg, alertType) {
     $('#gd-variant-set-action-submit-alert-msg').text(msg);
     $('#gd-variant-set-action-submit-alert').removeClass(
-        'alert-warn alert-info alert-error');
+        'alert-warn alert-info alert-warn');
     $('#gd-variant-set-action-submit-alert').addClass('alert-' + alertType);
     $('#gd-variant-set-action-submit-alert').show();
   },
