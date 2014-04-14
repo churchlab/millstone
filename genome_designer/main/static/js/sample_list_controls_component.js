@@ -10,6 +10,9 @@ gd.SamplesControlsComponent = Backbone.View.extend({
       throw "SampleControlsComponent requires model.";
     }
 
+    // Modal for uploading samples through the browser.
+    this.sampleUploadThroughBrowserModal = null;
+
     this.render();
 
     this.uuid = qq.getUniqueId();
@@ -24,8 +27,10 @@ gd.SamplesControlsComponent = Backbone.View.extend({
     // New pattern where this component creates a new modal component on click.
     $('#gd-samples-upload-through-browser-modal').on('shown.bs.modal',
         _.bind(function (e) {
-          this.sampleUploadThroughBrowserModal =
-              new gd.SampleUploadThroughBrowserModal({model: this.model});
+          if (!this.sampleUploadThroughBrowserModal) {
+            this.sampleUploadThroughBrowserModal =
+                new gd.SampleUploadThroughBrowserModal({model: this.model});
+          }
         }, this));
 
     // Old pattern where this component listens to modal controls.

@@ -1,5 +1,8 @@
 /**
  * Component for modal that facilitates uploading samples through the browser.
+ *
+ * Usage of jQuery File Upload based on:
+ * https://github.com/sigurdga/django-jquery-file-upload
  */
 
 
@@ -36,10 +39,6 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
   },
 
   renderTemplateUploader: function() {
-    if (this.templateUploader) {
-      return;
-    }
-
     // Create the uploader component.
     this.templateUploader = $('#gd-samples-template-fileupload').fileupload({
       url: '/_/samples/samples_upload_through_browser_template',
@@ -60,68 +59,72 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
   },
 
   renderSamplesUploader: function() {
-    if (this.samplesUploader) {
-      return;
-    }
+    // Upload button added when a file is added for upload.
+    var uploadButton = $('<button/>')
+        .addClass('btn btn-primary')
+        .prop('disabled', true)
+        .text('Processing...')
+        .on('click', function () {
+          var $this = $(this),
+          data = $this.data();
+          $this
+              .off('click')
+              .text('Abort')
+              .on('click', function () {
+                $this.remove();
+                data.abort();
+              });
+          data.submit().always(function () {
+            $this.remove();
+          });
+        });
 
     // Create the uploader component.
     this.samplesUploader = $('#gd-samples-fastq-fileupload').fileupload({
       url: '/_/samples/samples_upload_through_browser_sample_data',
       autoUpload: true,
       formData: {projectUid: this.model.get('uid')}
-    });
-
-    // Upload button.
-    var uploadButton = $('<button/>')
-        .addClass('btn btn-primary')
-        .prop('disabled', true)
-        .text('Processing...')
-        .on('click', function () {
-            var $this = $(this),
-                data = $this.data();
-            $this
-                .off('click')
-                .text('Abort')
-                .on('click', function () {
-                    $this.remove();
-                    data.abort();
-                });
-            data.submit().always(function () {
-                $this.remove();
-            });
-        });
-
-    // Provide ui affordance for file added to upload queue.
-    this.samplesUploader.on('fileuploadadd', function (e, data) {
+    }).on('fileuploadadd', function (e, data) {
       data.context = $('<div/>').appendTo('#files');
       $.each(data.files, function (index, file) {
-          var node = $('<p/>').append($('<span/>').text(file.name));
-          if (!index) {
-              node.append('<br>')
-                  .append(uploadButton.clone(true).data(data));
-          }
-          node.appendTo(data.context);
+        var node = $('<p/>')
+            .append($('<span/>').text(file.name));
+        if (!index) {
+          node
+              .append('<br>')
+              .append(uploadButton.clone(true).data(data));
+        }
+        node.appendTo(data.context);
       });
-    })
-
-    // Update progress bar.
-    this.samplesUploader.on('fileuploadprogressall', function (e, data) {
-        var progress = parseInt(data.loaded / data.total * 100, 10);
-        $('#progress .progress-bar').css(
-            'width',
-            progress + '%'
+    }).on('fileuploadprogressall', function (e, data) {
+      var progress = parseInt(data.loaded / data.total * 100, 10);
+      $('#progress .progress-bar').css(
+        'width',
+        progress + '%'
         );
-    });
-
-    // Handle the response.
-    this.samplesUploader.on('fileuploaddone', _.bind(function (e, data) {
+    }).on('fileuploaddone', _.bind(function (e, data) {
+      // Maybe show an error.
       var result = data.response().result;
       if ('error' in result) {
         this.showSampleDataUploadError(result.error);
       } else {
         this.clearSampleDataUploadEror();
       }
-    }, this));
+
+      // Update the child node buttons.
+      $.each(data.files, function (index, file) {
+        var statusEl = $(data.context.children()[index]);
+        var loadingButton = statusEl.children('button');
+        loadingButton.text('Done');
+      });
+    }, this)).on('fileuploadfail', function (e, data) {
+      $.each(data.files, function (index, file) {
+        var error = $('<span/>').text(file.error);
+        $(data.context.children()[index])
+            .append('<br>')
+            .append(error);
+      });
+    });
   },
 
   /**
