@@ -179,16 +179,10 @@ class TestImportSamplesFromTargetsFile(TestCase):
         TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,
                 'sample_list_targets_with_duplicates.tsv')
 
-        with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
-            import_samples_from_targets_file(self.project,
-                    UploadedFile(targets_file_fh))
-
-        new_samples = ExperimentSample.objects.all()
-        for sample in new_samples:
-            fwd_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ1)
-            rev_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ2)
-            self.assertTrue(Dataset.STATUS.FAILED, fwd_reads_dataset)
-            self.assertTrue(Dataset.STATUS.FAILED, rev_reads_dataset)
+        with self.assertRaises(AssertionError):
+            with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
+                import_samples_from_targets_file(self.project,
+                        UploadedFile(targets_file_fh))
 
 
 class TestCreateSampleModelsForEventualUpload(TestCase):

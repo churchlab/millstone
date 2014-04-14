@@ -38,7 +38,19 @@ IMPORT_FORMAT_TO_DATASET_TYPE = {
     'vcf_user': Dataset.TYPE.VCF_USERINPUT
 }
 
-REQUIRED_SAMPLE_HEADER_PART = ['Sample_Name', 'Read_1_Path', 'Read_2_Path']
+SAMPLE_SERVER_COPY_KEY__SAMPLE_NAME = 'Sample_Name'
+SAMPLE_SERVER_COPY_KEY__READ_1 = 'Read_1_Path'
+SAMPLE_SERVER_COPY_KEY__READ_2 = 'Read_2_Path'
+
+REQUIRED_SAMPLE_SERVER_COPY_HEADER = [
+    SAMPLE_SERVER_COPY_KEY__SAMPLE_NAME,
+    SAMPLE_SERVER_COPY_KEY__READ_1,
+]
+
+# Cols that we know about, to distinguish them from user-defined cols.
+PRE_DEFINED_SAMPLE_SERVER_COPY_HEADER_PARTS = (
+        REQUIRED_SAMPLE_SERVER_COPY_HEADER +
+        [SAMPLE_SERVER_COPY_KEY__READ_2])
 
 SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME = 'Sample_Name'
 SAMPLE_BROWSER_UPLOAD_KEY__READ_1 = 'Read_1_Filename'
@@ -48,6 +60,11 @@ REQUIRED_SAMPLE_UPLOAD_THROUGH_BROWSER_HEADER = [
     SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME,
     SAMPLE_BROWSER_UPLOAD_KEY__READ_1,
 ]
+
+# Cols that we know about, to distinguish them from user-defined cols.
+PRE_DEFINED_SAMPLE_UPLOAD_THROUGH_BROWSER_PARTS = (
+        REQUIRED_SAMPLE_UPLOAD_THROUGH_BROWSER_HEADER +
+        [SAMPLE_BROWSER_UPLOAD_KEY__READ_2])
 
 REQUIRED_VCF_HEADER_PART = ['CHROM', 'POS', 'ID', 'REF', 'ALT']
 
@@ -79,6 +96,7 @@ if settings.S3_ENABLED:
                 copy_and_add_dataset_source(experiment_sample, Dataset.TYPE.FASTQ2,
                         Dataset.TYPE.FASTQ2, local_s3files_map[row['Read_2_Path']])
         shutil.rmtree(tmp_dir)
+
 
 class DataImportError(Exception):
     """Exception thrown when there are errors in imported data.
@@ -186,6 +204,7 @@ def generate_fasta_from_genbank(ref_genome):
 
     return
 
+
 def generate_gff_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a GFF, generate
     a GFF from the genbank. """
@@ -227,6 +246,7 @@ def generate_gff_from_genbank(ref_genome):
 
     return
 
+
 def import_reference_genome_from_ncbi(project, label, record_id, import_format):
     """
     Pull a reference genome by accession from NCBI using efetch.
@@ -263,6 +283,7 @@ def import_reference_genome_from_ncbi(project, label, record_id, import_format):
 
     return reference_genome
 
+
 def sanitize_record_id(record_id_string):
     """We want to grab only the first word-only part of each seqrecord in a
     FASTA/Genbank file, and use that as a consistent and readable id between
@@ -275,68 +296,6 @@ def _assert_sample_targets_file_size(targets_file):
     if hasattr(targets_file, "size"):
         assert targets_file.size < 1000000, (
                 "Targets file is too large: %d" % targets_file.size)
-
-
-def parse_targets_file(project, targets_file, remove_directory_path=False):
-    _assert_sample_targets_file_size(targets_file)
-
-    # Detect the format.
-    reader = csv.DictReader(targets_file, delimiter='\t')
-
-    targets_file_header = reader.fieldnames
-
-    REQUIRED_SAMPLE_HEADER_STRING = ', '.join(REQUIRED_SAMPLE_HEADER_PART)
-    assert len(targets_file_header) >= len(REQUIRED_SAMPLE_HEADER_PART), (
-        "Header is too short. Need columns: %s" % REQUIRED_SAMPLE_HEADER_STRING)
-
-    for col in REQUIRED_SAMPLE_HEADER_PART:
-        if not col in targets_file_header:
-            raise ValueError("Required header column '%s' is missing." % col)
-
-    # Validate all the rows.
-    valid_rows = []
-    for row_num, row in enumerate(reader):
-
-        # Make a copy of the row so we can clean up the data for further
-        # processing.
-        clean_row = copy.copy(row)
-
-        #TODO: Every row seems to have an empty K/V pair {None:''}, not sure
-        #why. Here I remove it by hand:
-        row = dict([(k, v) for k, v in row.iteritems() if k is not None])
-
-        # Make sure the row has all the fields
-        assert len(targets_file_header) == len(row.keys()), (
-                "Row %d has the wrong number of fields." % row_num)
-
-        for field_name, field_value in row.iteritems():
-            if 'Path' not in field_name:
-                #make sure each field is alphanumeric only
-                assert re.match('^[\. \w-]*$', field_value) is not None, (
-                        'Only alphanumeric characters and spaces are allowed, '
-                        'except for the paths.\n(Row %d, "%s")' % (
-                                row_num, field_name))
-            else:
-                if remove_directory_path:
-                    # If it is a path, take the filename from path and return
-                    # them as a list.
-                    clean_field_value = os.path.basename(field_value)
-                else:
-                    # If it is a path, then try to open the file and read one byte.
-                    # Replace the string '$GD_ROOT with the project path, so we
-                    # can use the test data
-                    clean_field_value = field_value.replace('$GD_ROOT', settings.PWD)
-                    with open(clean_field_value, 'rb') as test_file:
-                        try:
-                            test_file.read(8)
-                        except:
-                            raise Exception("Cannot read file at %s" %
-                                    clean_field_value)
-                clean_row[field_name] = clean_field_value
-
-        # Save this row.
-        valid_rows.append(clean_row)
-    return valid_rows
 
 
 @project_files_needed
@@ -356,12 +315,36 @@ def import_samples_from_targets_file(project, targets_file):
     """
     assert_celery_running()
 
-    valid_rows = parse_targets_file(project, targets_file)
+    parsed_rows = parse_experiment_sample_targets_file(
+            project,
+            targets_file,
+            REQUIRED_SAMPLE_SERVER_COPY_HEADER,
+            SAMPLE_SERVER_COPY_KEY__SAMPLE_NAME,
+            SAMPLE_SERVER_COPY_KEY__READ_1,
+            SAMPLE_SERVER_COPY_KEY__READ_2)
+
+    # We perform the additional step of testing file locations, and for the
+    # test data, switching out $GD_ROOT template variable.
+    valid_rows = []
+    for row in parsed_rows:
+        updated_row = copy.copy(row)
+        for field, value in row.iteritems():
+            if field in (SAMPLE_SERVER_COPY_KEY__READ_1,
+                    SAMPLE_SERVER_COPY_KEY__READ_2):
+                updated_value = value.replace('$GD_ROOT', settings.PWD)
+                with open(updated_value, 'rb') as test_file:
+                    try:
+                        test_file.read(8)
+                    except:
+                        raise AssertionError(
+                                "Cannot read file at %s" % updated_value)
+                updated_row[field] = updated_value
+        valid_rows.append(updated_row)
 
     # Now create ExperimentSample objects along with their respective Datasets.
     # The data is copied to the entity location.
-    # We do this asynchronously so catch all the results, so we can block on
-    # them.
+    # We block until we've created the models, and then go async for actual
+    # copying.
     experiment_samples = []
     for row in valid_rows:
         # Create ExperimentSample object and then store the data relative to
@@ -382,16 +365,13 @@ def import_samples_from_targets_file(project, targets_file):
                     experiment_sample, maybe_read2_path, Dataset.TYPE.FASTQ2,
                     Dataset.STATUS.QUEUED_TO_COPY)
 
+        # Add extra metadata columns.
+        _update_experiment_sample_data_for_row(experiment_sample, row,
+                PRE_DEFINED_SAMPLE_SERVER_COPY_HEADER_PARTS)
+
         # Start the async job of copying.
         copy_experiment_sample_data.delay(project, experiment_sample, row)
 
-        # Add extra metadata columns.
-        for field, value in row.iteritems():
-            if field not in REQUIRED_SAMPLE_HEADER_PART:
-                clean_field = 'SAMPLE_'+uppercase_underscore(field)
-                experiment_sample.data[clean_field] = str(value)
-
-        experiment_sample.save()
         experiment_samples.append(experiment_sample)
 
     return experiment_samples
@@ -478,8 +458,13 @@ def create_sample_models_for_eventual_upload(project, targets_file):
         ValidationException if validation fails.
     """
     try:
-        valid_rows = parse_browser_upload_sample_targets_file(project,
-                targets_file)
+        valid_rows = parse_experiment_sample_targets_file(
+                project,
+                targets_file,
+                REQUIRED_SAMPLE_UPLOAD_THROUGH_BROWSER_HEADER,
+                SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME,
+                SAMPLE_BROWSER_UPLOAD_KEY__READ_1,
+                SAMPLE_BROWSER_UPLOAD_KEY__READ_2)
     except AssertionError as e:
         raise ValidationException(e)
 
@@ -488,6 +473,14 @@ def create_sample_models_for_eventual_upload(project, targets_file):
 
 
 def _create_sample_and_placeholder_dataset(project, row):
+    """Create Datasets but don't copy data.
+    """
+    # Parsing and validation.
+    fastq1_filename = row['Read_1_Filename']
+    maybe_fastq2_filename = row.get('Read_2_Filename', '')
+    assert fastq1_filename != maybe_fastq2_filename
+
+    # Now create the models.
     experiment_sample = ExperimentSample.objects.create(
             project=project, label=row['Sample_Name'])
 
@@ -496,14 +489,29 @@ def _create_sample_and_placeholder_dataset(project, row):
             experiment_sample, fastq1_filename, Dataset.TYPE.FASTQ1,
             Dataset.STATUS.AWAITING_UPLOAD)
 
-    maybe_fastq2_filename = row.get('Read_2_Filename', '')
     if maybe_fastq2_filename:
         _create_fastq_dataset(
                 experiment_sample, maybe_fastq2_filename,
                 Dataset.TYPE.FASTQ2, Dataset.STATUS.AWAITING_UPLOAD)
 
+    # Add extra metadata columns.
+    _update_experiment_sample_data_for_row(experiment_sample, row,
+            PRE_DEFINED_SAMPLE_UPLOAD_THROUGH_BROWSER_PARTS)
 
-def parse_browser_upload_sample_targets_file(project, targets_file):
+
+def _update_experiment_sample_data_for_row(experiment_sample, row, known_cols):
+    """Updates the catch-all ExperimentSample.data field with user-defined
+    fields.
+    """
+    for field, value in row.iteritems():
+        if field not in known_cols:
+            clean_field = 'SAMPLE_' + uppercase_underscore(field)
+            experiment_sample.data[clean_field] = str(value)
+    experiment_sample.save(update_fields=['data'])
+
+
+def parse_experiment_sample_targets_file(project, targets_file,
+        required_header, sample_name_key, read_1_key, read_2_key):
     """Parses and validates the file.
 
     Returns:
@@ -517,8 +525,7 @@ def parse_browser_upload_sample_targets_file(project, targets_file):
     targets_file_header = reader.fieldnames
 
     # Make sure all header cols are present.
-    missing_header_cols = (set(REQUIRED_SAMPLE_UPLOAD_THROUGH_BROWSER_HEADER) -
-            set(targets_file_header))
+    missing_header_cols = (set(required_header) - set(targets_file_header))
     assert 0 == len(missing_header_cols), (
             "Missing cols: %s" % ' '.join(missing_header_cols))
 
@@ -528,53 +535,66 @@ def parse_browser_upload_sample_targets_file(project, targets_file):
             for ds in Dataset.objects.filter(
                     experimentsample__project=project)])
 
+    # Set this to a boolean on the first iteration, and make sure all rows
+    # are either paired or unpaired.
+    is_paired_end = None
+
     # Initial aggregation and validation.
     valid_rows = []
     for raw_row_obj in reader:
         clean_row_obj = {}
         for key, value in raw_row_obj.iteritems():
+            # Ignore rows of the form K/V pair {None: ''}
+            if key is None:
+                continue
             clean_row_obj[key] = value.strip()
 
-        # Null sample name, skip the row.
-        if not clean_row_obj[
-                SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME]:
+        sample_name = clean_row_obj[sample_name_key]
+        if not sample_name:
+            # Null sample name, skip the row.
             continue
 
-        # Make sure at least Read 1
-        assert clean_row_obj[
-            SAMPLE_BROWSER_UPLOAD_KEY__READ_1], (
-                    "No read 1 in row.")
+        assert len(targets_file_header) == len(clean_row_obj.keys()), (
+                "Row %s has the wrong number of fields." % sample_name)
 
-        # Catch a common copy paste error wher read1 matches read2.
-        if (SAMPLE_BROWSER_UPLOAD_KEY__READ_2 in clean_row_obj
-                and clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_2]):
-            same = (clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_1] ==
-                    clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_2])
+        # Determine whether paired-end data (first iteration only).
+        if is_paired_end is None:
+            is_paired_end = (read_2_key in clean_row_obj and
+                    clean_row_obj[read_2_key])
+
+        # Check filenames are present.
+        assert clean_row_obj[read_1_key], (
+                "No read 1 in row %s" % sample_name)
+        if is_paired_end:
+            assert clean_row_obj[read_2_key], (
+                    "No read 2 in row %s" % sample_name)
+
+        # Catch a common copy paste error where read1 matches read2.
+        if is_paired_end:
+            same = (clean_row_obj[read_1_key] == clean_row_obj[read_2_key])
             assert not same, "Read 1 filename is same as read 2 filename"
 
         # Make sure Dataset with that name doesn't exist.
-        def _filename_exists(filename_col):
-            return (os.path.split(clean_row_obj[filename_col])[1] in
-                    existing_sample_dataset_filename_set)
-        assert not _filename_exists(SAMPLE_BROWSER_UPLOAD_KEY__READ_1), (
-                "%s exists" % clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_1])
-        if (SAMPLE_BROWSER_UPLOAD_KEY__READ_2 in clean_row_obj
-                and clean_row_obj[SAMPLE_BROWSER_UPLOAD_KEY__READ_2]):
-            assert not _filename_exists(SAMPLE_BROWSER_UPLOAD_KEY__READ_2), (
-                    "%s exists" % clean_row_obj[
-                            SAMPLE_BROWSER_UPLOAD_KEY__READ_2])
+        def _assert_not_filename_exists(filename_col):
+            filename = os.path.basename(clean_row_obj[filename_col])
+            assert not filename in existing_sample_dataset_filename_set, (
+                "%s exists" % clean_row_obj[filename_col])
+        _assert_not_filename_exists(read_1_key)
+        if is_paired_end:
+            _assert_not_filename_exists(read_2_key)
 
         valid_rows.append(clean_row_obj)
 
-    # Make each of the standard fields all have unique values.
+    # Make sure all the standard fields have unique values relative to each
+    # other.
     def _assert_no_repeated_value(col):
-        values = set([row[SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME]
-                for row in valid_rows])
+        values = set([row[col] for row in valid_rows])
         assert len(values) == len(valid_rows), (
                 "Non-unique %s detected." % col)
-    _assert_no_repeated_value(SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME)
-    _assert_no_repeated_value(SAMPLE_BROWSER_UPLOAD_KEY__READ_1)
-    _assert_no_repeated_value(SAMPLE_BROWSER_UPLOAD_KEY__READ_2)
+    _assert_no_repeated_value(sample_name_key)
+    _assert_no_repeated_value(read_1_key)
+    if is_paired_end:
+        _assert_no_repeated_value(read_2_key)
 
     return valid_rows
 
