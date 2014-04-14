@@ -5,6 +5,7 @@
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu">
+    <li role="presentation"><a role="menuitem" tabindex="-1" href="#gd-ref-genome-upload-through-browser-modal" data-toggle="modal">Upload through browser...</a></li>
     <li role="presentation"><a role="menuitem" tabindex="-1" href="#gd-ref-genome-upload-from-server-location-modal" data-toggle="modal">From Server Location...</a></li>
     {% if project.is_s3_backed %}
     <li role="presentation">
@@ -16,6 +17,8 @@
         From NCBI Accession...</a></li>
   </ul>
 </div>
+
+{% include "controls/create_reference_genome_from_browser_upload_modal.html" %}
 
 {% include "controls/create_reference_genome_from_server_location_modal.html" %}
 

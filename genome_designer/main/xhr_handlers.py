@@ -11,6 +11,7 @@ import json
 import os
 from StringIO import StringIO
 import re
+import tempfile
 import urllib
 
 from django.conf import settings
@@ -74,6 +75,45 @@ def project_delete(request, project_uid):
     response_data = {'redirect': '/'}
     return HttpResponse(json.dumps(response_data),
             content_type='application/json')
+
+
+@login_required
+@require_POST
+def create_ref_genome_from_browser_upload(request):
+    """Handle request to create ReferenceGenome from local file.
+    """
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.POST['projectUid'])
+
+    uploaded_file = request.FILES['refGenomeFile']
+
+    # Save uploaded ReferenceGenome to temp file, passing the original filename
+    # as the suffix for easier debug.
+    if not os.path.exists(settings.TEMP_FILE_ROOT):
+        os.mkdir(settings.TEMP_FILE_ROOT)
+    _, temp_file_location = tempfile.mkstemp(
+        suffix='_' + uploaded_file.name,
+        dir=settings.TEMP_FILE_ROOT)
+
+    with open(temp_file_location, 'w') as temp_file_fh:
+        temp_file_fh.write(request.FILES['refGenomeFile'].read())
+
+    error_string = ''
+    try:
+        import_reference_genome_from_local_file(
+                project,
+                request.POST['refGenomeLabel'],
+                temp_file_location,
+                request.POST['importFileFormat'],
+                move=True)
+    except Exception as e:
+        error_string = str(e)
+
+    result = {
+        'error': error_string,
+    }
+
+    return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 @login_required

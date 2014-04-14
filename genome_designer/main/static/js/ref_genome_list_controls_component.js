@@ -12,6 +12,8 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
   },
 
   listenToControls: function() {
+    $('#gd-ref-genome-upload-through-browser-submit').click(
+        _.bind(this.handleUploadThroughBrowser, this));
     $('#gd-ref-genome-upload-from-server-location-submit').click(
         _.bind(this.handleCreateFromServerLocation, this));
     $('#gd-ref-genome-create-from-ncbi-submit').click(
@@ -32,6 +34,50 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
     $(".gd-id-form-submit-button")
         .prop('disabled', false);
     this.loadingSpinner.stop();
+  },
+
+  /** Uploads genome through browser. */
+  handleUploadThroughBrowser: function() {
+    // Parse the inputs.
+    var requestData = this.prepareRequestData(
+        'gd-ref-genome-upload-through-browser');
+
+    // Validate the request client-side, even though we just grab
+    // the data again into FormData form below.
+    if (!this.validateUploadThroughBrowserForm(requestData)) {
+      return;
+    }
+
+    // Put UI in loading state.
+    this.enterLoadingState();
+
+    var onSuccess = _.bind(function(responseData) {
+      this.exitLoadingState();
+
+      // Check for error and show in ui. Don't reload the page.
+      if (responseData.error.length) {
+        alert('Error creating reference genome: ' + responseData.error);
+        return;
+      }
+
+      // TODO: Should be able to update view without reload.
+      window.location.reload();
+    }, this);
+
+    var formData = new FormData(
+        $('#gd-ref-genome-upload-through-browser')[0]);
+    $.ajax({
+      url: '/_/ref_genomes/upload_through_browser',
+      type: 'POST',
+      data: formData,
+      success: onSuccess,
+
+      // The following 3 param settings are necessary for properly passing
+      // formData. See: http://stackoverflow.com/questions/166221/how-can-i-upload-files-asynchronously-with-jquery
+      cache: false,
+      contentType: false,
+      processData: false
+    });
   },
 
   handleCreateFromServerLocation: function() {
@@ -84,6 +130,25 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
         $('input[name="importFileFormat"]:checked').val();
 
     return requestData;
+  },
+
+  validateUploadThroughBrowserForm: function(requestData) {
+    if (!requestData['refGenomeLabel'].length) {
+      alert('Please enter a name for this reference genome.');
+      return false;
+    }
+
+    if (!requestData['refGenomeFile'].length) {
+      alert('Please specify a file location.');
+      return false;
+    }
+
+  if (!requestData['importFileFormat'] in ['genbank', 'fasta']) {
+      alert('Please select format for file.');
+      return false;
+    }
+
+    return true;
   },
 
   /** Validation common to both forms. */
