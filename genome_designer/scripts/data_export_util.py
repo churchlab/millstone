@@ -23,6 +23,7 @@ def export_melted_variant_view(ref_genome, variant_id_list, csvfile):
     sql_statement = (
         'SELECT * '
         'FROM %s '
+        ' ORDER BY chromosome, position, experiment_sample_label'
         % (mvm.get_table_name(),)
     )
     cursor = connection.cursor()
