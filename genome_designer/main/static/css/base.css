@@ -345,7 +345,54 @@ div.dataTables_paginate ul.pagination {
   min-width: 8px;
   border: solid 1px #43a110;
   background-color: #ffffff;
+}
 
+.gd-variant-set-badge {
+  display: inline-block;
+  min-width: 10px;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #ffffff;
+  line-height: 1;
+  vertical-align: baseline;
+  white-space: nowrap;
+  text-align: center;
+  background-color: #43a110;
+  border-radius: 11px;
+}
+
+.gd-variant-set-badge:hover {
+  text-decoration: none;
+  color: #ffffff;
+}
+
+.gd-warn-set-badge {
+  display: inline-block;
+  min-width: 10px;
+  padding: 2px 2px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #ffffff;
+  line-height: 1;
+  vertical-align: baseline;
+  white-space: nowrap;
+  text-align: center;
+  background-color: #43a110;
+  border-radius: 8px;
+}
+
+.gd-warn-set-badge.outline {
+  color: #d9831f;
+  line-height: 1;
+  vertical-align: baseline;
+  white-space: nowrap;
+  text-align: center;
+  box-sizing: border-box;
+  padding: 2px 4px;
+  min-width: 8px;
+  border: solid 1px #d9831f;
+  background-color: #ffffff;
 }
 
 .gd-demo-splash-modal-footer {

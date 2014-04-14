@@ -22,6 +22,7 @@ from main.models import VariantSet
 from main.models import Dataset
 from main.model_view_utils import create_variant_links_field
 from main.model_view_utils import get_jbrowse_track_names
+from main.model_view_utils import create_alt_flag_field
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
@@ -30,6 +31,7 @@ from variants.common import generate_key_to_materialized_view_parent_col
 from variants.common import validate_key_against_map
 from variants.melted_variant_schema import CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__HET
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_LABEL
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
@@ -383,6 +385,8 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             else:
                 maybe_dec = 0
             assert maybe_dec >= 0, "maybe_dec should be positive"
+        else:
+            maybe_dec = 0
 
         for fdict in field_dict_list:
             value = None
@@ -401,12 +405,8 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             elif field == MELTED_SCHEMA_KEY__REF and not melted:
                 value = (melted_variant_obj[MELTED_SCHEMA_KEY__REF] + ' (%d)' %
                         melted_variant_obj[MELTED_SCHEMA_KEY__ALT].count(None))
-            elif field == MELTED_SCHEMA_KEY__ALT and not melted:
-                processed_alts = sorted(filter(
-                        lambda alt: alt, melted_variant_obj[MELTED_SCHEMA_KEY__ALT]))
-                value = ' | '.join(['%s (%d)' %
-                    (val, len(list(group)) - maybe_dec)
-                    for val, group in groupby(processed_alts)])
+            elif field == MELTED_SCHEMA_KEY__ALT:
+                value = create_alt_flag_field(melted_variant_obj, melted, maybe_dec)
             elif field == CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT:
                 value = (melted_variant_obj[
                         CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT] - maybe_dec)
@@ -505,7 +505,7 @@ def _create_label_for_variant_object(variant_as_dict):
         else:
             if va_data is not None:
 
-                if 'INFO_EFF_EFFECT' in va_data: 
+                if 'INFO_EFF_EFFECT' in va_data:
                         has_effect = True
 
                 if va_data.get('INFO_EFF_GENE', None) is not None:
@@ -671,6 +671,7 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
     {'field': MELTED_SCHEMA_KEY__POSITION},
     {'field': MELTED_SCHEMA_KEY__REF},
     {'field': MELTED_SCHEMA_KEY__ALT},
+    {'field': MELTED_SCHEMA_KEY__HET, 'hide': True},
     {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Sets', 'last': True},
     {'field': MELTED_SCHEMA_KEY__ES_UID, 'hide': True},
     {'field': MELTED_SCHEMA_KEY__UID, 'hide': True}
@@ -685,6 +686,7 @@ CAST_VARIANT_FIELD_DICT_LIST = [
     },
     {'field': MELTED_SCHEMA_KEY__REF},
     {'field': MELTED_SCHEMA_KEY__ALT},
+    {'field': MELTED_SCHEMA_KEY__HET, 'hide': True},
     {
         'field': CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT,
         'verbose': '# Samples',
