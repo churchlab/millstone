@@ -548,6 +548,8 @@ def parse_experiment_sample_targets_file(project,
         temp_file_location = targets_filehandle_or_filename
     else:
         # It's an open File object.
+	if not os.path.exists(settings.TEMP_FILE_ROOT):
+            os.mkdir(settings.TEMP_FILE_ROOT)
         _, temp_file_location = mkstemp(dir=settings.TEMP_FILE_ROOT)
         with open(temp_file_location, 'w') as temp_fh:
             temp_fh.write(targets_filehandle_or_filename.read())
