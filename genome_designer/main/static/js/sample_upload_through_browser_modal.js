@@ -44,10 +44,9 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
       url: '/_/samples/samples_upload_through_browser_template',
       autoUpload: true,
       formData: {projectUid: this.model.get('uid')}
-    });
-
-    // Handle the result.
-    this.templateUploader.on('fileuploaddone', _.bind(function(e, data) {
+    }).on('fileuploadadd', _.bind(function (e, data) {
+      this.clearTemplateUploadError();
+    }, this)).on('fileuploaddone', _.bind(function(e, data) {
       var result = data.response().result;
       if ('error' in result) {
         this.showTemplateUploadError('ERROR: ' + result.error);
@@ -85,6 +84,7 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
       autoUpload: true,
       formData: {projectUid: this.model.get('uid')}
     }).on('fileuploadadd', function (e, data) {
+      this.clearSampleDataUploadEror();
       data.context = $('<div/>').appendTo('#files');
       $.each(data.files, function (index, file) {
         var node = $('<p/>')
