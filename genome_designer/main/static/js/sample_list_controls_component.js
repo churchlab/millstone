@@ -33,6 +33,12 @@ gd.SamplesControlsComponent = Backbone.View.extend({
           }
         }, this));
 
+    $('#gd-samples-upload-through-browser-modal').on('hidden.bs.modal',
+        _.bind(function () {
+          this.trigger('MODELS_UPDATED');
+        }, this)
+    );
+
     // Old pattern where this component listens to modal controls.
     $('#gd-samples-create-from-server-location-submit').click(
         _.bind(this.handleCreateFromServerLocation, this));
