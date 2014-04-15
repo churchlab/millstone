@@ -83,7 +83,7 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
       url: '/_/samples/samples_upload_through_browser_sample_data',
       autoUpload: true,
       formData: {projectUid: this.model.get('uid')}
-    }).on('fileuploadadd', function (e, data) {
+    }).on('fileuploadadd', _.bind(function (e, data) {
       this.clearSampleDataUploadEror();
       data.context = $('<div/>').appendTo('#files');
       $.each(data.files, function (index, file) {
@@ -96,7 +96,7 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
         }
         node.appendTo(data.context);
       });
-    }).on('fileuploadprogressall', function (e, data) {
+    }, this)).on('fileuploadprogressall', function (e, data) {
       var progress = parseInt(data.loaded / data.total * 100, 10);
       $('#progress .progress-bar').css(
         'width',
