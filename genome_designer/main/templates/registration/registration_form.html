@@ -8,14 +8,14 @@
         <div class="panel-body text-center">
           <form action="/accounts/register/" method="post">
             {% csrf_token %}
-              {% for error in form.non_field_errors %}
-                <p class="gd-error-text">
-                  {{error}}
-                </p>
-              {% endfor %}
+            {% for error in form.non_field_errors %}
+            <p class="gd-error-text">
+              {{error}}
+            </p>
+            {% endfor %}
             <!-- <label for="username">Username</label> -->
             <p class="gd-error-text">{{ form.username.errors }}</p>
-    		    <p class="required"><input id="id_username" maxlength="30" name="username" type="text" class="form-control" placeholder="Username"/>
+            <p class="required"><input id="id_username" maxlength="30" name="username" type="text" class="form-control" placeholder="Username"/>
             </p>
             <!-- <label for="email">Email Address</label> -->
             <p class="gd-error-text">{{ form.email.errors }}</p>
@@ -23,13 +23,13 @@
             </p>
             <p class="gd-error-text">{{ form.password1.errors }}</p>
             <!-- <label for="password1">Password</label> -->
-			      <p class="required"><input id="id_password1" name="password1" type="password" class="form-control" placeholder="Password"/>
+            <p class="required"><input id="id_password1" name="password1" type="password" class="form-control" placeholder="Password"/>
             </p>
             <p class="gd-error-text">{{ form.password2.errors }}</p>
             <!-- <label for="password2">Password (again)</label> -->
-			      <p class="required"><input id="id_password2" name="password2" type="password" class="form-control" placeholder="Confirm Password"/>
+            <p class="required"><input id="id_password2" name="password2" type="password" class="form-control" placeholder="Confirm Password"/>
             </p>
-    		    <input type="submit" value="Submit" class="btn"/>
+            <input type="submit" value="Submit" class="btn"/>
           </form>
         </div>
       </div>
