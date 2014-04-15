@@ -511,24 +511,37 @@ def _update_experiment_sample_data_for_row(experiment_sample, row, known_cols):
     experiment_sample.save(update_fields=['data'])
 
 
-def parse_experiment_sample_targets_file(project, targets_file,
-        required_header, sample_name_key, read_1_key, read_2_key):
+def parse_experiment_sample_targets_file(project,
+        targets_filehandle_or_filename, required_header, sample_name_key,
+        read_1_key, read_2_key):
     """Parses and validates the file.
 
     Returns:
         List of objects representing the rows.
     """
-    _assert_sample_targets_file_size(targets_file)
+    _assert_sample_targets_file_size(targets_filehandle_or_filename)
 
-    if isinstance(targets_file, str):
-        temp_file_location = targets_file
+    # The purpose of the next few lines of somewhat convoluted code is to
+    # make sure we support weird template formats such as Excel on OsX might
+    # output. In the end, we want to end up with the variable targets_file
+    # being a File object that has been read in in universal mode,
+    # open(..., 'rU'). This requirement is made slightly trickier by the fact
+    # that the aptly named param targets_filehandle_or_filename is of ambiguous
+    # type (because Python) and so the remaining code needs to work whether
+    # it's # a string filename, or a File object. One way we can solve all
+    # these constraints is to write the contents of the file to a temporary
+    # location, and then read it back in universal mode. I would welcome a more
+    # elegant fix.
+    if isinstance(targets_filehandle_or_filename, str):
+        temp_file_location = targets_filehandle_or_filename
     else:
         # It's an open File object.
         _, temp_file_location = mkstemp(dir=settings.TEMP_FILE_ROOT)
         with open(temp_file_location, 'w') as temp_fh:
-            temp_fh.write(targets_file.read())
+            temp_fh.write(targets_filehandle_or_filename.read())
     targets_file = open(temp_file_location, 'rU')
 
+    # Now this works even if there are silly carriage return characters ^M.
     reader = csv.DictReader(targets_file, delimiter='\t')
 
     # Read the header / schema.
