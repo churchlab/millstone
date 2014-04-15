@@ -184,8 +184,9 @@ class TestImportSamplesFromTargetsFile(TestCase):
                 import_samples_from_targets_file(self.project,
                         UploadedFile(targets_file_fh))
 
-    def test_import_samples__linebreak_bug(self):
-        TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,'sample_list_mac_linebreaks.tsv')
+    def test_import_samples__nonstandard_linebreaks(self):
+        TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'sample_list_mac_linebreaks.tsv')
         NUM_SAMPLES_IN_TEMPLATE = 10
 
         # This test is written assuming there are no other ExperimentSamples,
@@ -196,7 +197,7 @@ class TestImportSamplesFromTargetsFile(TestCase):
         self.assertEqual(0, num_datasets_before)
 
         # Perform the import.
-        with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
+        with open(TARGETS_TEMPLATE_FILEPATH, 'rU') as targets_file_fh:
             import_samples_from_targets_file(self.project,
                     UploadedFile(targets_file_fh))
 

@@ -8,6 +8,7 @@ import os
 import shutil
 import re
 from tempfile import mkdtemp
+from tempfile import mkstemp
 from tempfile import NamedTemporaryFile
 
 from BCBio import GFF
@@ -519,6 +520,15 @@ def parse_experiment_sample_targets_file(project, targets_file,
     """
     _assert_sample_targets_file_size(targets_file)
 
+    if isinstance(targets_file, str):
+        temp_file_location = targets_file
+    else:
+        # It's an open File object.
+        _, temp_file_location = mkstemp(dir=settings.TEMP_FILE_ROOT)
+        with open(temp_file_location, 'w') as temp_fh:
+            temp_fh.write(targets_file.read())
+    targets_file = open(temp_file_location, 'rU')
+
     reader = csv.DictReader(targets_file, delimiter='\t')
 
     # Read the header / schema.
@@ -595,6 +605,8 @@ def parse_experiment_sample_targets_file(project, targets_file,
     _assert_no_repeated_value(read_1_key)
     if is_paired_end:
         _assert_no_repeated_value(read_2_key)
+
+    targets_file.close()
 
     return valid_rows
 

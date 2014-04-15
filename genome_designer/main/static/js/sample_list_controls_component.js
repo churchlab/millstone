@@ -53,7 +53,7 @@ gd.SamplesControlsComponent = Backbone.View.extend({
     var onSuccess = _.bind(function(responseData) {
       this.exitLoadingState();
 
-      if (responseData.error.length) {
+      if ('error' in responseData && responseData.error.length) {
         alert('Error creating samples: ' + responseData.error);
         return;
       }
