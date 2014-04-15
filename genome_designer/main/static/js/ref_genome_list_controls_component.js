@@ -60,8 +60,8 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
         return;
       }
 
-      // TODO: Should be able to update view without reload.
-      window.location.reload();
+      this.trigger('MODELS_UPDATED');
+      $('.modal').modal('hide');
     }, this);
 
     var formData = new FormData(
