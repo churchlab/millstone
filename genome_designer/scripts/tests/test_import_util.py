@@ -184,6 +184,44 @@ class TestImportSamplesFromTargetsFile(TestCase):
                 import_samples_from_targets_file(self.project,
                         UploadedFile(targets_file_fh))
 
+    def test_import_samples__linebreak_bug(self):
+        TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,'sample_list_mac_linebreaks.tsv')
+        NUM_SAMPLES_IN_TEMPLATE = 10
+
+        # This test is written assuming there are no other ExperimentSamples,
+        # perhaps introduced in setUp(). Check that assumption here.
+        num_experiment_samples_before = len(ExperimentSample.objects.all())
+        self.assertEqual(0, num_experiment_samples_before)
+        num_datasets_before = len(Dataset.objects.all())
+        self.assertEqual(0, num_datasets_before)
+
+        # Perform the import.
+        with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
+            import_samples_from_targets_file(self.project,
+                    UploadedFile(targets_file_fh))
+
+        new_samples = ExperimentSample.objects.all()
+        num_experiment_samples_after = len(new_samples)
+        num_datasets_after = len(Dataset.objects.all())
+
+        # Make sure the right amount of models were added.
+        self.assertEqual(NUM_SAMPLES_IN_TEMPLATE, num_experiment_samples_after)
+        self.assertEqual(2 * NUM_SAMPLES_IN_TEMPLATE, num_datasets_after)
+
+        # Make sure all have READY status.
+        observed_status_type_set = set([
+                d.status for d in Dataset.objects.all()])
+        self.assertEqual(1, len(observed_status_type_set))
+        self.assertTrue(Dataset.STATUS.READY in observed_status_type_set)
+
+        # Check the specifics of the Datasets, especially filepaths.
+        for sample in new_samples:
+            fwd_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ1)
+            rev_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ2)
+            self.assertNotEqual(fwd_reads_dataset.filesystem_location,
+                    rev_reads_dataset.filesystem_location,
+                    "Must have different filesystem locations.")
+
 
 class TestCreateSampleModelsForEventualUpload(TestCase):
     """Tests the form for indicating which samples will be uploaded.
