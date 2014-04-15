@@ -528,7 +528,7 @@ def parse_experiment_sample_targets_file(project,
     # open(..., 'rU'). This requirement is made slightly trickier by the fact
     # that the aptly named param targets_filehandle_or_filename is of ambiguous
     # type (because Python) and so the remaining code needs to work whether
-    # it's # a string filename, or a File object. One way we can solve all
+    # it's a string filename, or a File object. One way we can solve all
     # these constraints is to write the contents of the file to a temporary
     # location, and then read it back in universal mode. I would welcome a more
     # elegant fix.
@@ -540,6 +540,7 @@ def parse_experiment_sample_targets_file(project,
         with open(temp_file_location, 'w') as temp_fh:
             temp_fh.write(targets_filehandle_or_filename.read())
     targets_file = open(temp_file_location, 'rU')
+    os.remove(temp_file_location)
 
     # Now this works even if there are silly carriage return characters ^M.
     reader = csv.DictReader(targets_file, delimiter='\t')
