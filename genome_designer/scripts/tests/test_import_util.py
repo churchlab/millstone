@@ -197,7 +197,9 @@ class TestImportSamplesFromTargetsFile(TestCase):
         self.assertEqual(0, num_datasets_before)
 
         # Perform the import.
-        with open(TARGETS_TEMPLATE_FILEPATH, 'rU') as targets_file_fh:
+        # NOTE: Intentionally open as non-universal to simulate what would
+        # be passed in through a browser upload.
+        with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
             import_samples_from_targets_file(self.project,
                     UploadedFile(targets_file_fh))
 
