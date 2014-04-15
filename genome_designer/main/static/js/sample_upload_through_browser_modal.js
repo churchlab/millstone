@@ -17,25 +17,32 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
   },
 
   render: function() {
+    // Register model change listener
+    this.model.on('change:samplesAwaitingUpload', _.bind(function() {
+      $('#gd-samples-upload-through-browser-awaiting-upload').empty();
+      _.each(this.model.get('samplesAwaitingUpload'),
+          _.bind(function(sampleLabel) {
+            $('#gd-samples-upload-through-browser-awaiting-upload').append(
+                sampleLabel + ', ');
+          }, this));
+      }, this));
+
     this.renderSamplesAwaitingUpload();
     this.renderTemplateUploader();
     this.renderSamplesUploader();
   },
 
   renderSamplesAwaitingUpload: function() {
-    $('#gd-samples-upload-through-browser-awaiting-upload').empty();
-
     var requestData = {
         projectUid: this.model.get('uid')
     };
 
     $.get('/_/samples/get_samples_awaiting_upload', requestData,
-        function(response) {
-          _.each(response.sampleFilenameList, function(sampleLabel) {
-            $('#gd-samples-upload-through-browser-awaiting-upload').append(
-                sampleLabel + ', ');
+        _.bind(function(response) {
+          this.model.set({
+              'samplesAwaitingUpload': response.sampleFilenameList
           });
-        });
+        }, this));
   },
 
   renderTemplateUploader: function() {
@@ -81,12 +88,23 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
     // Create the uploader component.
     this.samplesUploader = $('#gd-samples-fastq-fileupload').fileupload({
       url: '/_/samples/samples_upload_through_browser_sample_data',
-      autoUpload: true,
+      autoUpload: false,
       formData: {projectUid: this.model.get('uid')}
     }).on('fileuploadadd', _.bind(function (e, data) {
       this.clearSampleDataUploadEror();
       data.context = $('<div/>').appendTo('#files');
-      $.each(data.files, function (index, file) {
+      for (var index = 0; index < data.files.length; index++) {
+        var file = data.files[index];
+
+        // Check that this file is expected.
+        if (!_.contains(this.model.get('samplesAwaitingUpload'), file.name)) {
+          this.showSampleDataUploadError('Unexpected file ' + file.name +
+              '. Please make sure you registered it correctly using the ' +
+              'template above.');
+          continue;
+        }
+
+        // Append to ui.
         var node = $('<p/>')
             .append($('<span/>').text(file.name));
         if (!index) {
@@ -95,7 +113,12 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
               .append(uploadButton.clone(true).data(data));
         }
         node.appendTo(data.context);
-      });
+
+        // Kick off upload.
+        data.process().done(function () {
+          data.submit();
+        });
+      }
     }, this)).on('fileuploadprogressall', function (e, data) {
       var progress = parseInt(data.loaded / data.total * 100, 10);
       $('#progress .progress-bar').css(
@@ -117,6 +140,9 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
         var loadingButton = statusEl.children('button');
         loadingButton.text('Done');
       });
+
+      // Update the files awaiting upload.
+      this.renderSamplesAwaitingUpload();
     }, this)).on('fileuploadfail', function (e, data) {
       $.each(data.files, function (index, file) {
         var error = $('<span/>').text(file.error);
