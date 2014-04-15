@@ -28,6 +28,7 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
+from scripts.util import generate_safe_filename_prefix_from_label
 from scripts.util import uppercase_underscore
 from scripts.vcf_parser import get_or_create_variant
 
@@ -249,8 +250,7 @@ def generate_gff_from_genbank(ref_genome):
 
 
 def import_reference_genome_from_ncbi(project, label, record_id, import_format):
-    """
-    Pull a reference genome by accession from NCBI using efetch.
+    """Imports a reference genome by accession from NCBI using efetch.
     """
     # Validate the input.
     assert import_format in ['fasta', 'genbank'], (
@@ -259,26 +259,38 @@ def import_reference_genome_from_ncbi(project, label, record_id, import_format):
     # Format keys for Efetch.
     # More info at:  http://www.ncbi.nlm.nih.gov/
     #       books/NBK25499/table/chapter4.chapter4_table1/?report=objectonly
-    CONVERT_FORMAT = {'fasta':'fa', 'genbank':'gbwithparts'}
+    CONVERT_FORMAT = {
+        'fasta': 'fa',
+        'genbank': 'gbwithparts'
+    }
+
     # What suffix to use for each input format
     # TODO: Should this be a property of the Dataset TYPE?
-    FORMAT_SUFFIX = {'fasta':'.fa', 'genbank':'.gb'}
+    FORMAT_SUFFIX = {
+        'fasta': '.fa',
+        'genbank': '.gb'
+    }
 
     Entrez.email = settings.EMAIL
     handle = Entrez.efetch(
-            db="nuccore", 
-            id=record_id, 
-            rettype=CONVERT_FORMAT[import_format], 
+            db="nuccore",
+            id=record_id,
+            rettype=CONVERT_FORMAT[import_format],
             retmode="text")
 
-    temp = NamedTemporaryFile(delete=False, prefix=label+'_', 
+    # Store results in temporary file.
+    filename_prefix = generate_safe_filename_prefix_from_label(label) + '_'
+    temp = NamedTemporaryFile(delete=False, prefix=filename_prefix,
             suffix=FORMAT_SUFFIX[import_format])
     temp.write(handle.read())
     handle.close()
     temp.close()
+
+    # Create ref genome from this temporary file.
     reference_genome = import_reference_genome_from_local_file(
         project, label, temp.name, import_format, move=True)
 
+    # Clean up.
     if os.path.isfile(temp.name):
         os.remove(temp.name)
 

@@ -10,6 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from main.models import Dataset
 from main.models import ReferenceGenome
 from scripts.import_util import add_dataset_to_entity
+from scripts.util import generate_safe_filename_prefix_from_label
 
 
 def combine_list(reference_genome_list, new_ref_genome_label, project):
@@ -58,7 +59,9 @@ def combine_list(reference_genome_list, new_ref_genome_label, project):
 
     # Generate a filename from the label with non-alphanumeric characters replaced
     # by underscores.
-    filename = re.sub('\W', '_', new_ref_genome_label.lower()) + '.gb'
+    filename_prefix = generate_safe_filename_prefix_from_label(
+            new_ref_genome_label)
+    filename = filename_prefix + '.gb'
     new_genbank_dest = os.path.join(new_ref_genome.get_model_data_dir(), filename)
 
     # Write the result.

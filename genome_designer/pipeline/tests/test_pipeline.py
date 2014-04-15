@@ -15,6 +15,8 @@ from main.models import Project
 from pipeline.pipeline_runner import run_pipeline
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
+from scripts.import_util import import_reference_genome_from_ncbi
+from scripts.util import internet_on
 
 
 TEST_USERNAME = 'gmcdev'
@@ -106,3 +108,28 @@ class TestAlignmentPipeline(TestCase):
 
         with self.assertRaises(AssertionError):
             run_pipeline('name_placeholder', self.reference_genome, sample_list)
+
+
+    def test_run_pipeline__genbank_from_ncbi_with_spaces_in_label(self):
+        """Tests the pipeline where the genome is imported from NCBI with
+        spaces in the name.
+
+        NOTE: This should really be an integration test.
+        """
+        if not internet_on():
+            return
+        MG1655_ACCESSION = 'NC_000913.3'
+        MG1655_LABEL = 'mg1655 look a space'
+        ref_genome = import_reference_genome_from_ncbi(self.project,
+                MG1655_LABEL, MG1655_ACCESSION, 'genbank')
+        sample_list = [self.experiment_sample]
+
+        run_pipeline('name_placeholder', ref_genome, sample_list)
+
+        alignment_group_obj_list = AlignmentGroup.objects.filter(
+                reference_genome=ref_genome)
+        self.assertEqual(1, len(alignment_group_obj_list))
+
+        alignment_group_obj = alignment_group_obj_list[0]
+        self.assertEqual(1,
+                len(alignment_group_obj.experimentsampletoalignment_set.all()))

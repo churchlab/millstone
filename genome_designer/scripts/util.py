@@ -3,6 +3,7 @@ Miscellaneous utility functions.
 """
 
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -124,3 +125,8 @@ def titlecase_spaces(a_string):
     a_string = a_string.replace('_',' ')
     return string.capwords(a_string)
 
+
+def generate_safe_filename_prefix_from_label(label):
+    """Generates safe filename prefix by avoiding non-alphanumeric chars.
+    """
+    return re.sub('\W', '_', label.lower())
