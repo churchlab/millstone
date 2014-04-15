@@ -34,7 +34,6 @@ from main.models import ExperimentSampleToAlignment
 from main.models import Variant
 from main.models import VariantSet
 from main.models import VariantToVariantSet
-from pipeline.pipeline_runner import run_pipeline_multiple_ref_genomes
 from pipeline.pipeline_runner import run_pipeline
 from scripts.import_util import import_variant_set_from_vcf
 import settings
@@ -314,30 +313,31 @@ def alignment_create_view(request, project_uid):
         if not all(key in request_data for key in REQUIRED_KEYS):
             return HttpResponseBadRequest("Invalid request. Missing keys.")
 
-        # Parse the data and look up the relevant model instances.
-        alignment_group_name = request_data['name']
-        if not len(alignment_group_name):
-            return HttpResponseBadRequest("Name required.")
-
-        ref_genome_list = ReferenceGenome.objects.filter(
-                project=project,
-                uid__in=request_data['refGenomeUidList'])
-        assert len(ref_genome_list) == len(request_data['refGenomeUidList'])
-        if not len(ref_genome_list) > 0:
-            return HttpResponseBadRequest(
-                    "At least one reference genome required.")
-
-        sample_list = ExperimentSample.objects.filter(
-                project=project,
-                uid__in=request_data['sampleUidList'])
-        assert len(sample_list) == len(request_data['sampleUidList'])
-        if not len(sample_list) > 0:
-            return HttpResponseBadRequest("At least one sample required.")
-
-        # Kick off alignments.
         try:
-            run_pipeline_multiple_ref_genomes(alignment_group_name,
-                    ref_genome_list, sample_list)
+            # Parse the data and look up the relevant model instances.
+            alignment_group_name = request_data['name']
+            assert len(alignment_group_name), "Name required."
+
+            ref_genome_list = ReferenceGenome.objects.filter(
+                    project=project,
+                    uid__in=request_data['refGenomeUidList'])
+            assert (len(ref_genome_list) ==
+                    len(request_data['refGenomeUidList'])), (
+                            "Invalid reference genome uid(s).")
+            assert len(ref_genome_list) == 1, (
+                "Exactly one reference genome must be provided.")
+            ref_genome = ref_genome_list[0]
+
+            sample_list = ExperimentSample.objects.filter(
+                    project=project,
+                    uid__in=request_data['sampleUidList'])
+            assert len(sample_list) == len(request_data['sampleUidList']), (
+                    "Invalid expeirment sample uid(s).")
+            assert len(sample_list) > 0, "At least one sample required."
+
+            # Kick off alignments.
+            run_pipeline(alignment_group_name,
+                    ref_genome, sample_list)
 
             # Success. Return a redirect response.
             response_data = {

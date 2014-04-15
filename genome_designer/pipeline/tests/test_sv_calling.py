@@ -15,8 +15,7 @@ from main.models import get_dataset_with_type
 from main.models import Project
 from main.models import User
 from main.models import Variant
-from pipeline.pipeline_runner import run_pipeline_multiple_ref_genomes
-from pipeline.snv_calling import get_variant_tool_params
+from pipeline.pipeline_runner import run_pipeline
 from pipeline.snv_calling import find_variants_with_tool
 from scripts.import_util import add_dataset_to_entity
 from scripts.import_util import copy_and_add_dataset_source
@@ -173,7 +172,7 @@ class TestSVPipeline(TestCase):
 
         if not ENABLE_SV_CALLING: return
 
-        run_pipeline_multiple_ref_genomes('name', [self.reference_genome],
+        run_pipeline('name', self.reference_genome,
                 [self.experiment_sample])
 
         alignment_group_obj_list = AlignmentGroup.objects.filter(

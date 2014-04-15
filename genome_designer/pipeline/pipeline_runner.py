@@ -11,6 +11,7 @@ from datetime import datetime
 from celery import chain
 from celery import group
 from celery import task
+from django.conf import settings
 
 from main.celery_util import assert_celery_running
 from main.models import AlignmentGroup
@@ -20,50 +21,6 @@ from main.models import ExperimentSampleToAlignment
 from pipeline.read_alignment import align_with_bwa_mem
 from pipeline.snv_calling import get_variant_tool_params
 from pipeline.snv_calling import find_variants_with_tool
-import settings
-
-
-def run_pipeline_multiple_ref_genomes(alignment_group_label, ref_genome_list,
-        sample_list):
-    """
-    Runs the pipeline for each ref genome in the ref_genome_list.
-
-    We create an AlignmentGroup for each ReferenceGenome and align all
-    ExpermentSamples to each ReferenceGenome separately.
-
-    Args:
-        ref_genome_list: List of ReferenceGenome instances.
-        sample_list: List of sample instances. Must belong to same project as
-            ReferenceGenomes.
-    """
-
-    assert len(alignment_group_label) > 0, "Name must be non-trivial string."
-    assert len(ref_genome_list) > 0, (
-            "Must provide at least one ReferenceGenome.")
-    assert len(sample_list) > 0, (
-            "Must provide at least one ExperimentSample.")
-
-    # Make sure all samples are ready.
-    relevant_datasets = Dataset.objects.filter(
-            experimentsample__in=sample_list)
-    for d in relevant_datasets:
-        assert d.status == Dataset.STATUS.READY, (
-                "Dataset %s for sample %s has status %s. Expected %s." % (
-                        d.label, d.experimentsample_set.all()[0].label,
-                        d.status, Dataset.STATUS.READY))
-
-    assert_celery_running()
-
-    # Save the alignment group objects for returning if required.
-    alignment_groups = {}
-
-    for ref_genome in ref_genome_list:
-        alignment_groups[ref_genome.uid] = run_pipeline(
-                alignment_group_label + '_' + ref_genome.label,
-                ref_genome, sample_list)
-
-    # Return a dictionary of all alignment groups indexed by ref_genome uid.
-    return alignment_groups
 
 
 def run_pipeline(alignment_group_label, ref_genome, sample_list):
@@ -80,6 +37,15 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
     assert len(sample_list) > 0, (
             "Must provide at least one ExperimentSample.")
     assert_celery_running()
+
+    # Make sure all samples are ready.
+    relevant_datasets = Dataset.objects.filter(
+            experimentsample__in=sample_list)
+    for d in relevant_datasets:
+        assert d.status == Dataset.STATUS.READY, (
+                "Dataset %s for sample %s has status %s. Expected %s." % (
+                        d.label, d.experimentsample_set.all()[0].label,
+                        d.status, Dataset.STATUS.READY))
 
     alignment_group, _ = AlignmentGroup.objects.get_or_create(
             label=alignment_group_label,

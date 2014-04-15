@@ -2,29 +2,26 @@
 Tests for pipeline_runner.py
 """
 
-import json
 import os
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
 from main.models import AlignmentGroup
 from main.models import Dataset
-from main.models import get_dataset_with_type
 from main.models import ExperimentSample
 from main.models import Project
-from pipeline.pipeline_runner import run_pipeline_multiple_ref_genomes
+from pipeline.pipeline_runner import run_pipeline
 from scripts.import_util import copy_and_add_dataset_source
 from scripts.import_util import import_reference_genome_from_local_file
-from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
-import settings
 
 
 TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
-TEST_FASTA  = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
+TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
 
 TEST_FASTQ1 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
@@ -32,6 +29,7 @@ TEST_FASTQ1 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
 
 TEST_FASTQ2 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
+
 
 class TestAlignmentPipeline(TestCase):
 
@@ -59,11 +57,10 @@ class TestAlignmentPipeline(TestCase):
     def test_run_pipeline(self):
         """Tests running the full pipeline.
         """
-        ref_genome_list = [self.reference_genome]
         sample_list = [self.experiment_sample]
 
-        run_pipeline_multiple_ref_genomes('name_placeholder',
-                ref_genome_list, sample_list)
+        run_pipeline('name_placeholder',
+                self.reference_genome, sample_list)
 
         alignment_group_obj_list = AlignmentGroup.objects.filter(
                 reference_genome=self.reference_genome)
@@ -89,12 +86,11 @@ class TestAlignmentPipeline(TestCase):
         fastq_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
         fastq_dataset.save()
 
-        ref_genome_list = [self.reference_genome]
         sample_list = [self.experiment_sample]
 
         with self.assertRaises(AssertionError):
-            run_pipeline_multiple_ref_genomes('name_placeholder',
-                    ref_genome_list, sample_list)
+            run_pipeline('name_placeholder',
+                    self.reference_genome, sample_list)
 
 
     def test_run_pipeline__samples_not_ready__fastq2(self):
@@ -106,9 +102,7 @@ class TestAlignmentPipeline(TestCase):
         fastq_dataset.status = Dataset.STATUS.QUEUED_TO_COPY
         fastq_dataset.save()
 
-        ref_genome_list = [self.reference_genome]
         sample_list = [self.experiment_sample]
 
         with self.assertRaises(AssertionError):
-            run_pipeline_multiple_ref_genomes('name_placeholder',
-                    ref_genome_list, sample_list)
+            run_pipeline('name_placeholder', self.reference_genome, sample_list)
