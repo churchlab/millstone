@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/PR-SVG-20010719/DTD/svg10.dtd">
+<svg width="81cm" height="56cm" viewBox="-845 -347 1610 1109" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g>
+    <rect style="fill: #ffffff" x="-614.267" y="181.943" width="158" height="85.6"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-614.267" y="181.943" width="158" height="85.6"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-535.267" y="228.643">
+      <tspan x="-535.267" y="228.643">AlignmentGroup</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-402.002" y="180.343" width="223.1" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-402.002" y="180.343" width="223.1" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-290.452" y="227.243">
+      <tspan x="-290.452" y="227.243">ExperimentSampleToAlignment</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-629.367" y="318.543" width="192.6" height="66"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-629.367" y="318.543" width="192.6" height="66"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-533.067" y="355.443">
+      <tspan x="-533.067" y="355.443">VariantCallerCommonData</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-614.367" y="39.943" width="158" height="85.6"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-614.367" y="39.943" width="158" height="85.6"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-535.367" y="86.643">
+      <tspan x="-535.367" y="86.643">ReferenceGenome</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-535.267" y1="267.543" x2="-533.067" y2="318.543"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-533.929" y1="298.562" x2="-543.058" y2="318.974"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-533.929" y1="298.562" x2="-523.077" y2="318.112"/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-456.267" y1="224.743" x2="-402.002" y2="223.343"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-421.995" y1="223.859" x2="-401.744" y2="233.34"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-421.995" y1="223.859" x2="-402.259" y2="213.346"/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-535.367" y1="125.543" x2="-535.267" y2="181.943"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-535.303" y1="161.943" x2="-545.267" y2="181.961"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-535.303" y1="161.943" x2="-525.267" y2="181.925"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="123.134" y="-325.462" width="141" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="123.134" y="-325.462" width="141" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="193.634" y="-278.562">
+      <tspan x="193.634" y="-278.562">Variant</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="370.134" y="-324.062" width="158" height="85.6"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="370.134" y="-324.062" width="158" height="85.6"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="449.134" y="-277.362">
+      <tspan x="449.134" y="-277.362">VariantToVariantSet</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="622.934" y="-324.662" width="141" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="622.934" y="-324.662" width="141" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="693.434" y="-277.762">
+      <tspan x="693.434" y="-277.762">VariantSet</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="378.31" y="-135.262" width="144.05" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="378.31" y="-135.262" width="144.05" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="450.335" y="-88.3615">
+      <tspan x="450.335" y="-88.3615">ExperimentSample</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="449.134" y1="-238.462" x2="450.335" y2="-135.262"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="449.367" y1="-218.463" x2="459.133" y2="-238.579"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="449.367" y1="-218.463" x2="439.135" y2="-238.346"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="450.102" y1="-155.26" x2="440.336" y2="-135.145"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="450.102" y1="-155.26" x2="460.334" y2="-135.378"/>
+  </g>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="622.934" y1="-281.662" x2="528.134" y2="-281.262"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="264.134" y1="-282.462" x2="370.134" y2="-281.262"/>
+  <g>
+    <rect style="fill: #ffffff" x="-619.789" y="-345.586" width="141" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-619.789" y="-345.586" width="141" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-549.289" y="-298.686">
+      <tspan x="-549.289" y="-298.686">Project</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-618.189" y="-230.986" width="141" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-618.189" y="-230.986" width="141" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-547.689" y="-184.086">
+      <tspan x="-547.689" y="-184.086">ReferenceGenome</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-617.649" y="-114.986" width="141" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-617.649" y="-114.986" width="141" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-547.149" y="-68.0864">
+      <tspan x="-547.149" y="-68.0864">Variant</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-547.689" y1="-144.986" x2="-547.149" y2="-114.986"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-547.509" y1="-134.983" x2="-557.147" y2="-114.806"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-547.509" y1="-134.983" x2="-537.15" y2="-115.166"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-433.849" y="-345.986" width="144.05" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-433.849" y="-345.986" width="144.05" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-361.824" y="-299.086">
+      <tspan x="-361.824" y="-299.086">ExperimentSample</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-478.789" y1="-302.586" x2="-433.849" y2="-302.986"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-453.848" y1="-302.808" x2="-433.76" y2="-292.987"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-453.848" y1="-302.808" x2="-433.938" y2="-312.986"/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-549.289" y1="-259.586" x2="-547.689" y2="-230.986"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-548.806" y1="-250.955" x2="-557.673" y2="-230.428"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-548.806" y1="-250.955" x2="-537.704" y2="-231.545"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-843.806" y="309.4" width="141" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-843.806" y="309.4" width="141" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-773.306" y="356.3">
+      <tspan x="-773.306" y="356.3">Variant</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-702.806" y1="352.4" x2="-629.367" y2="351.543"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-649.366" y1="351.776" x2="-629.251" y2="361.542"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-649.366" y1="351.776" x2="-629.484" y2="341.544"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-595.479" y="527.789" width="141" height="51.3184"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-595.479" y="527.789" width="141" height="51.3184"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-524.979" y="557.348">
+      <tspan x="-524.979" y="557.348">Variant</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-623.369" y="621.107" width="192.6" height="51.9272"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-623.369" y="621.107" width="192.6" height="51.9272"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-527.069" y="650.971">
+      <tspan x="-527.069" y="650.971">VariantCallerCommonData</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-600.032" y="715.83" width="146.514" height="44.9657"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-600.032" y="715.83" width="146.514" height="44.9657"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-526.775" y="742.213">
+      <tspan x="-526.775" y="742.213">VariantEvidence</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-334.608" y="512.449" width="141" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-334.608" y="512.449" width="141" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-264.108" y="559.349">
+      <tspan x="-264.108" y="559.349">VariantAlternate</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="-142.677" y="180.459" width="223.1" height="86"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-142.677" y="180.459" width="223.1" height="86"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-31.1265" y="227.359">
+      <tspan x="-31.1265" y="227.359">ExperimentSample</tspan>
+    </text>
+  </g>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-178.902" y1="223.343" x2="-142.677" y2="223.459"/>
+  <g>
+    <rect style="fill: #ffffff" x="-789.797" y="715.83" width="150.859" height="44.0924"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-789.797" y="715.83" width="150.859" height="44.0924"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-714.367" y="741.776">
+      <tspan x="-714.367" y="741.776">ExperimentSample</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-524.979" y1="579.107" x2="-527.069" y2="621.107"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-526.075" y1="601.132" x2="-537.057" y2="620.61"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-526.075" y1="601.132" x2="-517.081" y2="621.604"/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-527.069" y1="673.034" x2="-526.775" y2="715.83"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-526.913" y1="695.83" x2="-536.775" y2="715.899"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-526.913" y1="695.83" x2="-516.776" y2="715.761"/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-454.479" y1="553.448" x2="-334.608" y2="555.449"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-354.605" y1="555.115" x2="-334.775" y2="565.447"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-354.605" y1="555.115" x2="-334.441" y2="545.45"/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-264.108" y1="598.449" x2="-453.518" y2="738.313"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-437.429" y1="726.432" x2="-459.459" y2="730.268"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-437.429" y1="726.432" x2="-447.578" y2="746.357"/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-638.937" y1="737.876" x2="-600.032" y2="738.313"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-620.031" y1="738.088" x2="-600.145" y2="748.312"/>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="-620.031" y1="738.088" x2="-599.92" y2="728.313"/>
+  </g>
+</svg>
