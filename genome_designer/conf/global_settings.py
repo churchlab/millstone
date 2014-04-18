@@ -188,7 +188,7 @@ INSTALLED_APPS = (
 
     # Testing
     'django_nose',
-
+    'djcelery_testworker'
 )
 
 

@@ -7,7 +7,9 @@ import os
 import shutil
 
 from django.conf import settings
+from django.core.management import execute_from_command_line
 from django_nose import NoseTestSuiteRunner
+from djcelery_testworker import run_celery_test_worker
 
 
 class TempFilesystemTestSuiteRunner(NoseTestSuiteRunner):
@@ -57,6 +59,37 @@ class CustomTestSuiteRunner(TempFilesystemTestSuiteRunner):
         settings.BROKER_BACKEND = 'memory'
 
         return super(CustomTestSuiteRunner, self).setup_test_environment()
+
+
+class IntegrationTestSuiteRunner(TempFilesystemTestSuiteRunner):
+    """TestSuiteRunner for integration tests.
+
+    Main feature: Starts a celery worker connected to the test database.
+    """
+
+    def setup_test_environment(self, **kwargs):
+        setup_test_environment_common()
+
+        self.celeryd = run_celery_test_worker()
+
+        return super(IntegrationTestSuiteRunner, self).setup_test_environment()
+
+    def teardown_test_environment(self):
+        return super(IntegrationTestSuiteRunner, self).teardown_test_environment()
+
+
+def setup_test_environment_common():
+    """Common setup procedures.
+    """
+    # Catch leftover .pyc from, say, changing git branches.
+    assert_no_orphaned_pyc_files('.')
+
+    # Make sure the startup function works.
+    # As of implementation, this function adds a custom function to
+    # our Postgres database.
+    from django.db.models.signals import post_syncdb
+    import main
+    post_syncdb.connect(handle_post_syncdb_startup, sender=main.models)
 
 
 def handle_post_syncdb_startup(sender, **kwargs):

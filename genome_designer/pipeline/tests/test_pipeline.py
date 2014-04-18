@@ -71,6 +71,8 @@ class TestAlignmentPipeline(TestCase):
         alignment_group_obj = alignment_group_obj_list[0]
         self.assertEqual(1,
                 len(alignment_group_obj.experimentsampletoalignment_set.all()))
+        self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
+                alignment_group_obj.status)
 
         # Make sure the initial JBrowse config has been created.
         jbrowse_dir = self.reference_genome.get_jbrowse_directory_path()
