@@ -212,8 +212,30 @@ To reuse the Postgresql database, wiping it rather than destroying and creating 
 
     (venv)$ REUSE_DB=1 ./manage.py test
 
+### Integration Tests
+
+We recently introduced the concept of integration tests to our code. Previously,
+many of our unit tests outgrew their unit-ness, but we were still treating them
+like so.
+
+We created an IntegrationTestSuiteRunner where the main difference is that
+we start up a celery server that handles processing tasks. We are migrating
+tests that should really be integration tests to be covered under this label.
+
+When adding a test (see below), if your test touches multiple code units, it's
+likely that's more appropriate to put it under integration test coverage. We'll
+add notes shortly about how to add new integration tests.
+
+To run integration tests, use this command. This uses nose so you can use
+the same options and features as before.
+
+    (venv)$ tests/run_integration_tests.py
+
 
 ### Adding Tests
+
+(Right now, this documentation is only for unit tests. Information for
+integration tests is coming soon.)
 
 Nose automatically discovers files with names of the form `test_*.py` as test
 files.
