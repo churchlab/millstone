@@ -42,15 +42,7 @@ class CustomTestSuiteRunner(TempFilesystemTestSuiteRunner):
     """
 
     def setup_test_environment(self, **kwargs):
-        # Catch leftover .pyc from, say, changing git branches.
-        assert_no_orphaned_pyc_files('.')
-
-        # Make sure the startup function works.
-        # As of implementation, this function adds a custom function to
-        # our Postgres database.
-        from django.db.models.signals import post_syncdb
-        import main
-        post_syncdb.connect(handle_post_syncdb_startup, sender=main.models)
+        setup_test_environment_common()
 
         # Don't use Celery for tests. If we ever want to test with Celery,
         # we'll need to create a different TestSuiteRunner.
