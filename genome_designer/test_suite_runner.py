@@ -7,7 +7,6 @@ import os
 import shutil
 
 from django.conf import settings
-from django.core.management import execute_from_command_line
 from django_nose import NoseTestSuiteRunner
 from djcelery_testworker import run_celery_test_worker
 
@@ -67,6 +66,7 @@ class IntegrationTestSuiteRunner(TempFilesystemTestSuiteRunner):
         return super(IntegrationTestSuiteRunner, self).setup_test_environment()
 
     def teardown_test_environment(self):
+        self.celeryd.kill()
         return super(IntegrationTestSuiteRunner, self).teardown_test_environment()
 
 
