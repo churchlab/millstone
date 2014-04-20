@@ -14,7 +14,6 @@ from djcelery_testworker import run_celery_test_worker
 class TempFilesystemTestSuiteRunner(NoseTestSuiteRunner):
     """Subclasses the nose test runner in order to use a temp filesystem.
     """
-
     def setup_databases(self):
         self.setup_temp_filesystem()
         return super(TempFilesystemTestSuiteRunner, self).setup_databases()
@@ -61,7 +60,7 @@ class IntegrationTestSuiteRunner(TempFilesystemTestSuiteRunner):
     def setup_test_environment(self, **kwargs):
         setup_test_environment_common()
 
-        self.celeryd = run_celery_test_worker()
+        self.celeryd = run_celery_test_worker(options=['--verbose'])
 
         return super(IntegrationTestSuiteRunner, self).setup_test_environment()
 
