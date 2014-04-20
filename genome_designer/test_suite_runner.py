@@ -8,7 +8,7 @@ import shutil
 
 from django.conf import settings
 from django_nose import NoseTestSuiteRunner
-from djcelery_testworker import run_celery_test_worker
+from djcelery_testworker.testcase import CeleryWorkerThread
 
 
 class TempFilesystemTestSuiteRunner(NoseTestSuiteRunner):
@@ -60,13 +60,31 @@ class IntegrationTestSuiteRunner(TempFilesystemTestSuiteRunner):
     def setup_test_environment(self, **kwargs):
         setup_test_environment_common()
 
-        self.celeryd = run_celery_test_worker(options=['--verbose'])
-
         return super(IntegrationTestSuiteRunner, self).setup_test_environment()
 
+    def setup_databases(self):
+        super_result = super(IntegrationTestSuiteRunner, self).setup_databases()
+
+        # Setup celery worker AFTER database is setup.
+        self.setup_celery_worker()
+
+        return super_result
+
+    def setup_celery_worker(self):
+        # Start celery worker thread.
+        self.celery_worker_thread = CeleryWorkerThread(options=['--verbose'])
+        self.celery_worker_thread.daemon = True
+        self.celery_worker_thread.start()
+
+        # Wait for the worker to be ready.
+        self.celery_worker_thread.is_ready.wait()
+        if self.celery_worker_thread.error:
+            raise self.celery_worker_thread
+
     def teardown_test_environment(self):
-        self.celeryd.kill()
+        self.celery_worker_thread.join(5)
         return super(IntegrationTestSuiteRunner, self).teardown_test_environment()
+
 
 
 def setup_test_environment_common():

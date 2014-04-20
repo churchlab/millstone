@@ -185,10 +185,15 @@ You can grant these by logging into the Posgres shell and running:
 ## Tests
 
 We currently use [django-nose](https://pypi.python.org/pypi/django-nose) for
-testing. This package should be seamlessly hooked up to Django's normal testing
-so you can do the standard `manage.py` command:
+testing.
 
-    (venv)$ python manage.py test
+To run unit tests:
+
+    (venv)$ ./tests/run_unit_tests.sh
+
+To run integration tests:
+
+    (venv)$ ./tests/run_integration_tests.py
 
 Nose also allows us to run tests only in specific modules.
 
@@ -230,6 +235,11 @@ To run integration tests, use this command. This uses nose so you can use
 the same options and features as before.
 
     (venv)$ tests/run_integration_tests.py
+
+HINT: When debugging integration tests, it may be necessary to manually clean
+up previously stared `celerytestworker`s. There is a script to do this for you:
+
+    $ ./scripts/kill_celerytestworkers.sh
 
 
 ### Adding Tests

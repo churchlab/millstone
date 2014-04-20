@@ -27,6 +27,10 @@ if __name__ == "__main__":
 
     # Add 'test' to argv so from here on the command looks like
     #     manage.py test ...
-    sys.argv = sys.argv[:1] + ['test', '--settings=tests.test_settings'] + sys.argv[1:]
+    # TODO: Figure out how to allow running just one test.
+    sys.argv = (sys.argv[:1] +
+            ['test', '--settings=tests.test_settings', 'tests/integration'] +
+            sys.argv[1:])
+
 
     execute_from_command_line(sys.argv)

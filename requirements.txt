@@ -12,7 +12,7 @@ boto==2.15.0
 celery==3.0.21
 distribute==0.7.3
 django-celery==3.0.17
--e git+ssh://git@github.com/churchlab/django-celery-testworker.git@8eb7fb7ebf7a6ad7bea8b85b3537a8223866da92#egg=django_celery_testworker-dev
+-e git+ssh://git@github.com/churchlab/django-celery-testworker.git@06875fe4b861550764005b8abdfdf32698e660e1#egg=django_celery_testworker-dev
 django-nose==1.2
 django-registration==1.0
 ipython==0.13.2

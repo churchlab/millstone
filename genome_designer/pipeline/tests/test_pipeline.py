@@ -62,34 +62,6 @@ class TestAlignmentPipeline(TransactionTestCase):
         copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ2,
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
 
-    def test_run_pipeline(self):
-        """Tests running the full pipeline.
-        """
-        sample_list = [self.experiment_sample]
-
-        new_ag, async_result = run_pipeline('name_placeholder',
-                self.reference_genome, sample_list)
-
-        # Block until pipeline finishes.
-        async_result.get()
-
-        # Verify the AlignmentGroup object is created.
-        alignment_group_obj_list = AlignmentGroup.objects.filter(
-                reference_genome=self.reference_genome)
-        self.assertEqual(1, len(alignment_group_obj_list))
-        alignment_group_obj = alignment_group_obj_list[0]
-        self.assertEqual(new_ag.id, alignment_group_obj.id)
-        self.assertEqual(1,
-                len(alignment_group_obj.experimentsampletoalignment_set.all()))
-        self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
-                alignment_group_obj.status)
-
-        # Make sure the initial JBrowse config has been created.
-        jbrowse_dir = self.reference_genome.get_jbrowse_directory_path()
-        self.assertTrue(os.path.exists(jbrowse_dir))
-        self.assertTrue(os.path.exists(os.path.join(jbrowse_dir,
-                'indiv_tracks')))
-
 
     def test_run_pipeline__samples_not_ready__fastq1(self):
         """Tests that the pipeline raises an AssertionError if samples aren't
