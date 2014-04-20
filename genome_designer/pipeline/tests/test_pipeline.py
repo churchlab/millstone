@@ -6,7 +6,7 @@ import os
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TransactionTestCase
 
 from main.models import AlignmentGroup
 from main.models import Dataset
@@ -33,7 +33,14 @@ TEST_FASTQ2 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
 
 
-class TestAlignmentPipeline(TestCase):
+class TestAlignmentPipeline(TransactionTestCase):
+    """Tests for the pipeline.
+
+    NOTE: We use TransactoinTestCase since we are transitioning to treating
+    this as an integration test where we use celery, where it's necessary
+    that the database changes are actually committed for the celery thread
+    to actually see them.
+    """
 
     def setUp(self):
         user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
@@ -55,20 +62,23 @@ class TestAlignmentPipeline(TestCase):
         copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ2,
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
 
-
     def test_run_pipeline(self):
         """Tests running the full pipeline.
         """
         sample_list = [self.experiment_sample]
 
-        run_pipeline('name_placeholder',
+        new_ag, async_result = run_pipeline('name_placeholder',
                 self.reference_genome, sample_list)
 
+        # Block until pipeline finishes.
+        async_result.get()
+
+        # Verify the AlignmentGroup object is created.
         alignment_group_obj_list = AlignmentGroup.objects.filter(
                 reference_genome=self.reference_genome)
         self.assertEqual(1, len(alignment_group_obj_list))
-
         alignment_group_obj = alignment_group_obj_list[0]
+        self.assertEqual(new_ag.id, alignment_group_obj.id)
         self.assertEqual(1,
                 len(alignment_group_obj.experimentsampletoalignment_set.all()))
         self.assertEqual(AlignmentGroup.STATUS.COMPLETED,

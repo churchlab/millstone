@@ -282,7 +282,7 @@ def bootstrap_fake_data():
 
     # Run the alignment. Return the alignment group created, indexed by the
     # reference genome's uid.
-    full_vcf_alignment_group = run_pipeline(
+    (full_vcf_alignment_group, pipeline_async_result) = run_pipeline(
             'test_align', full_vcf_reference_genome, full_vcf_samples)
 
     import_variant_set_from_vcf(full_vcf_reference_genome, 'Designed',

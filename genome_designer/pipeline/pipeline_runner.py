@@ -31,8 +31,10 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
         ref_genome: ReferenceGenome instance
         sample_list: List of sample instances. Must belong to same project as
             ReferenceGenomes.
-    """
 
+    Returns:
+        Tuple pair (alignment_group, async_result).
+    """
     assert len(alignment_group_label) > 0, "Name must be non-trivial string."
     assert len(sample_list) > 0, (
             "Must provide at least one ExperimentSample.")
@@ -125,9 +127,9 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
 
     # Run the pipeline.
     ref_genome.save()
-    whole_pipeline.apply_async()
+    async_result = whole_pipeline.apply_async()
 
-    return alignment_group
+    return (alignment_group, async_result)
 
 
 @task
