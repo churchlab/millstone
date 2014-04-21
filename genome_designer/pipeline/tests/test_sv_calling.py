@@ -17,13 +17,13 @@ from main.models import User
 from main.models import Variant
 from pipeline.pipeline_runner import run_pipeline
 from pipeline.snv_calling import find_variants_with_tool
-from scripts.import_util import add_dataset_to_entity
-from scripts.import_util import copy_and_add_dataset_source
-from scripts.import_util import copy_dataset_to_entity_data_dir
-from scripts.import_util import import_reference_genome_from_local_file
-from scripts.vcf_parser import extract_raw_data_dict
+from utils.import_util import add_dataset_to_entity
+from utils.import_util import copy_and_add_dataset_source
+from utils.import_util import copy_dataset_to_entity_data_dir
+from utils.import_util import import_reference_genome_from_local_file
 from settings import ENABLE_SV_CALLING
 from settings import PWD as GD_ROOT
+from variants.vcf_parser import extract_raw_data_dict
 
 
 TEST_FASTA  = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'small_data',

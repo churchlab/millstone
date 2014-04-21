@@ -45,16 +45,16 @@ from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
-from scripts.data_export_util import export_melted_variant_view
-from scripts.jbrowse_util import compile_tracklist_json
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-from scripts.import_util import import_reference_genome_from_local_file
-from scripts.import_util import import_reference_genome_from_ncbi
-from scripts.import_util import import_samples_from_targets_file
-from scripts.import_util import create_sample_models_for_eventual_upload
-from scripts.import_util import import_variant_set_from_vcf
+from utils.data_export_util import export_melted_variant_view
+from utils.jbrowse_util import compile_tracklist_json
+from variants.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
+from variants.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
+from variants.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from utils.import_util import import_reference_genome_from_local_file
+from utils.import_util import import_reference_genome_from_ncbi
+from utils.import_util import import_samples_from_targets_file
+from utils.import_util import create_sample_models_for_eventual_upload
+from utils.import_util import import_variant_set_from_vcf
 from variants.common import determine_visible_field_names
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_variant_filter import lookup_variants
@@ -63,7 +63,7 @@ from variants.variant_sets import update_variant_in_set_memberships
 from variants.variant_sets import update_variant_in_set_memberships__all_matching_filter
 
 if settings.S3_ENABLED:
-    from scripts.import_util import parse_targets_file, import_reference_genome_from_s3, import_samples_from_s3
+    from utils.import_util import parse_targets_file, import_reference_genome_from_s3, import_samples_from_s3
     from s3 import s3_get_string
 
 

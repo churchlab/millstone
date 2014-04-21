@@ -10,7 +10,7 @@ from django.test import TestCase
 from main.models import Dataset
 from main.models import Project
 from main.models import ReferenceGenome
-from scripts.dynamic_snp_filter_key_map import update_filter_key_map
+from variants.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
 from variants.common import determine_visible_field_names
 from variants.common import extract_filter_keys

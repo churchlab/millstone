@@ -37,7 +37,7 @@ from Bio import SeqIO
 from main.models import Dataset
 from main.models import get_dataset_with_type
 from main.models import ReferenceGenome
-from scripts.util import merge_nested_dictionaries
+from utils import merge_nested_dictionaries
 from settings import JBROWSE_BIN_PATH
 from settings import JBROWSE_DATA_URL_ROOT
 from settings import JBROWSE_GBK_TYPES_TO_DISPLAY

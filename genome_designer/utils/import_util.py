@@ -28,9 +28,9 @@ from main.models import VariantSet
 from main.models import VariantToVariantSet
 from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
-from scripts.util import generate_safe_filename_prefix_from_label
-from scripts.util import uppercase_underscore
-from scripts.vcf_parser import get_or_create_variant
+from utils import generate_safe_filename_prefix_from_label
+from utils import uppercase_underscore
+from variants.vcf_parser import get_or_create_variant
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {

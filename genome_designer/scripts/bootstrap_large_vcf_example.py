@@ -8,7 +8,7 @@ import shutil
 
 # Since this script is intended to be used from the terminal, setup the
 # environment first so that django and model imports work.
-from util import setup_django_env
+from utils import setup_django_env
 setup_django_env()
 
 from main.models import AlignmentGroup
@@ -18,7 +18,7 @@ from main.models import Project
 from main.model_utils import clean_filesystem_location
 from pipeline.variant_effects import get_snpeff_vcf_output_path
 from scripts.bootstrap_data import get_or_create_user
-from scripts.import_util import import_reference_genome_from_local_file
+from utils.import_util import import_reference_genome_from_local_file
 from settings import PWD as GD_ROOT
 from vcf_parser import parse_alignment_group_vcf
 

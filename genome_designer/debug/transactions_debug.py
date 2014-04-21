@@ -6,7 +6,7 @@ import random
 
 # Since this script is intended to be used from the terminal, setup the
 # environment first so that django and model imports work.
-from util import setup_django_env
+from utils import setup_django_env
 setup_django_env()
 
 from django.contrib.auth.models import User

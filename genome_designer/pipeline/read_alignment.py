@@ -19,11 +19,11 @@ from main.models import ReferenceGenome
 from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
 from pipeline.read_alignment_util import ensure_bwa_index
-from scripts.jbrowse_util import add_bam_file_track
-from scripts.jbrowse_util import add_bed_file_track
+from utils.jbrowse_util import add_bam_file_track
+from utils.jbrowse_util import add_bed_file_track
 from settings import TOOLS_DIR
 from settings import BASH_PATH
-from scripts.util import titlecase_spaces
+from utils import titlecase_spaces
 
 
 SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR

@@ -34,11 +34,11 @@ from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__TOTAL
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__SET_LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__KEY_MAP
-from scripts.dynamic_snp_filter_key_map import update_filter_key_map
-from scripts.import_util import _create_sample_and_placeholder_dataset
-from scripts.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_1
-from scripts.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_2
-from scripts.import_util import SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME
+from variants.dynamic_snp_filter_key_map import update_filter_key_map
+from utils.import_util import _create_sample_and_placeholder_dataset
+from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_1
+from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_2
+from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME
 from settings import PWD as GD_ROOT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
 

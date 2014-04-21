@@ -17,10 +17,10 @@ from main.models import User
 from main.models import Variant
 from pipeline.snv_calling import get_variant_tool_params
 from pipeline.snv_calling import find_variants_with_tool
-from scripts.import_util import add_dataset_to_entity
-from scripts.import_util import copy_and_add_dataset_source
-from scripts.import_util import copy_dataset_to_entity_data_dir
-from scripts.import_util import import_reference_genome_from_local_file
+from utils.import_util import add_dataset_to_entity
+from utils.import_util import copy_and_add_dataset_source
+from utils.import_util import copy_dataset_to_entity_data_dir
+from utils.import_util import import_reference_genome_from_local_file
 from settings import PWD as GD_ROOT
 
 

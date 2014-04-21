@@ -17,13 +17,13 @@ from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantSet
 from main.testing_util import create_common_entities
-from scripts.import_util import DataImportError
-from scripts.import_util import create_sample_models_for_eventual_upload
-from scripts.import_util import import_reference_genome_from_local_file
-from scripts.import_util import import_samples_from_targets_file
-from scripts.import_util import import_variant_set_from_vcf
-from scripts.import_util import import_reference_genome_from_ncbi
-from scripts.util import internet_on
+from utils.import_util import DataImportError
+from utils.import_util import create_sample_models_for_eventual_upload
+from utils.import_util import import_reference_genome_from_local_file
+from utils.import_util import import_samples_from_targets_file
+from utils.import_util import import_variant_set_from_vcf
+from utils.import_util import import_reference_genome_from_ncbi
+from utils import internet_on
 
 TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
@@ -85,7 +85,7 @@ class TestImportRefGenomeFromEntrez(TestCase):
 
 
 class TestImportSamplesFromTargetsFile(TestCase):
-    """Tests for scripts.import_util.import_samples_from_targets_file().
+    """Tests for util.import_util.import_samples_from_targets_file().
     """
 
     def setUp(self):
@@ -340,7 +340,7 @@ class TestCreateSampleModelsForEventualUpload(TestCase):
 
 
 class TestImportVariantSetFromVCFFile(TestCase):
-    """Tests for scripts.import_util.import_samples_from_targets_file().
+    """Tests for util.import_util.import_samples_from_targets_file().
     """
 
     def setUp(self):

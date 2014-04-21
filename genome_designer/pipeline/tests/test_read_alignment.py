@@ -16,9 +16,9 @@ from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from pipeline.read_alignment import align_with_bwa_mem
-from scripts.import_util import copy_and_add_dataset_source
-from scripts.import_util import import_reference_genome_from_local_file
-from scripts.jbrowse_util import compile_tracklist_json
+from utils.import_util import copy_and_add_dataset_source
+from utils.import_util import import_reference_genome_from_local_file
+from utils.jbrowse_util import compile_tracklist_json
 
 
 TEST_USERNAME = 'gmcdev'

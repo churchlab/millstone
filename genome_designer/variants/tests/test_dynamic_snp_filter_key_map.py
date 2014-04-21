@@ -8,8 +8,8 @@ from django.conf import settings
 from django.test import TestCase
 
 from main.testing_util import create_common_entities
-from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
-from scripts.dynamic_snp_filter_key_map import update_filter_key_map
+from variants.dynamic_snp_filter_key_map import initialize_filter_key_map
+from variants.dynamic_snp_filter_key_map import update_filter_key_map
 
 
 TEST_VCF = os.path.join(settings.PWD, 'test_data',

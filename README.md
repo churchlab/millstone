@@ -159,7 +159,7 @@ the application.
 
 2. From one terminal, start the celery server.
 
-        (venv)$ ./run_celery.sh
+        (venv)$ ./scripts/run_celery.sh
 
 3. Open another terminal and start the django server.
 
@@ -189,21 +189,21 @@ testing.
 
 To run unit tests:
 
-    (venv)$ ./tests/run_unit_tests.sh
+    (venv)$ ./scripts/run_unit_tests.sh
 
 To run integration tests:
 
-    (venv)$ ./tests/run_integration_tests.sh
+    (venv)$ ./scripts/run_integration_tests.sh
 
 Nose also allows us to run tests only in specific modules.
 
 In order to run only the tests in, say, the `main` app directory, run:
 
-    (venv)$ ./tests/run_unit_tests.sh main
+    (venv)$ ./scripts/run_unit_tests.sh main
 
 And for only the tests in `scripts` call:
 
-    (venv)$ ./tests/run_unit_tests.sh main
+    (venv)$ ./scripts/run_unit_tests.sh main
 
 For integration tests, unfortunately you'll have to do it a slightly different way (TODO: Fix this):
 
@@ -243,7 +243,7 @@ add notes shortly about how to add new integration tests.
 To run integration tests, use this command. This uses nose so you can use
 the same options and features as before.
 
-    (venv)$ tests/run_integration_tests.py
+    (venv)$ ./scripts/run_integration_tests.py
 
 HINT: When debugging integration tests, it may be necessary to manually clean
 up previously stared `celerytestworker`s. There is a script to do this for you:

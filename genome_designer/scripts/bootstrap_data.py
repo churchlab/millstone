@@ -12,7 +12,7 @@ this.
 
 # Since this script is intended to be used from the terminal, setup the
 # environment first so that django and model imports work.
-from util import setup_django_env
+from utils import setup_django_env
 setup_django_env()
 
 import os
@@ -38,11 +38,11 @@ from main.models import VariantAlternate
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from pipeline.pipeline_runner import run_pipeline
-from scripts.import_util import add_dataset_to_entity
-from scripts.import_util import copy_and_add_dataset_source
-from scripts.import_util import copy_dataset_to_entity_data_dir
-from scripts.import_util import import_reference_genome_from_local_file
-from scripts.import_util import import_variant_set_from_vcf
+from utils.import_util import add_dataset_to_entity
+from utils.import_util import copy_and_add_dataset_source
+from utils.import_util import copy_dataset_to_entity_data_dir
+from utils.import_util import import_reference_genome_from_local_file
+from utils.import_util import import_variant_set_from_vcf
 
 from settings import PWD as GD_ROOT
 

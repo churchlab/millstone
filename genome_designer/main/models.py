@@ -47,12 +47,12 @@ from model_utils import get_dataset_with_type
 from model_utils import make_choices_tuple
 from model_utils import UniqueUidModelMixin
 from model_utils import VisibleFieldMixin
+from utils import uppercase_underscore
 from settings import TOOLS_DIR
-from scripts.filter_key_map_constants import MAP_KEY__ALTERNATE
-from scripts.filter_key_map_constants import MAP_KEY__COMMON_DATA
-from scripts.filter_key_map_constants import MAP_KEY__EVIDENCE
-from scripts.filter_key_map_constants import MAP_KEY__EXPERIMENT_SAMPLE
-from scripts.util import uppercase_underscore
+from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
+from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
+from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
+from variants.filter_key_map_constants import MAP_KEY__EXPERIMENT_SAMPLE
 
 BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
 

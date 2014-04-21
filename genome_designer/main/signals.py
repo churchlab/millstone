@@ -21,13 +21,13 @@ from models import VariantEvidence
 from models import VariantSet
 from models import VariantToVariantSet
 from pipeline.read_alignment_util import ensure_bwa_index
-from scripts.dynamic_snp_filter_key_map import initialize_filter_key_map
-from scripts.dynamic_snp_filter_key_map import update_sample_filter_key_map
-from scripts.import_util import generate_fasta_from_genbank
-from scripts.import_util import generate_gff_from_genbank
-from scripts.import_util import get_dataset_with_type
-from scripts.jbrowse_util import prepare_jbrowse_ref_sequence
-from scripts.jbrowse_util import add_genbank_file_track
+from variants.dynamic_snp_filter_key_map import initialize_filter_key_map
+from variants.dynamic_snp_filter_key_map import update_sample_filter_key_map
+from utils.import_util import generate_fasta_from_genbank
+from utils.import_util import generate_gff_from_genbank
+from utils.import_util import get_dataset_with_type
+from utils.jbrowse_util import prepare_jbrowse_ref_sequence
+from utils.jbrowse_util import add_genbank_file_track
 from pipeline.variant_effects import build_snpeff
 
 

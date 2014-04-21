@@ -6,9 +6,9 @@ from django.test import Client
 from django.test import TestCase
 
 from main.upload_template_views import SAMPLE_LIST_BROWSER_UPLOAD_TEMPLATE
-from scripts.import_util import SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME
-from scripts.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_1
-from scripts.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_2
+from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME
+from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_1
+from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_2
 
 
 class TestSampleListBrowserUploadTemplate(TestCase):

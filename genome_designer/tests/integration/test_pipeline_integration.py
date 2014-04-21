@@ -13,10 +13,10 @@ from main.models import ExperimentSample
 from main.models import Project
 from main.testing_util import create_common_entities
 from pipeline.pipeline_runner import run_pipeline
-from scripts.import_util import copy_and_add_dataset_source
-from scripts.import_util import import_reference_genome_from_local_file
-from scripts.import_util import import_reference_genome_from_ncbi
-from scripts.util import internet_on
+from utils.import_util import copy_and_add_dataset_source
+from utils.import_util import import_reference_genome_from_local_file
+from utils.import_util import import_reference_genome_from_ncbi
+from utils import internet_on
 
 
 TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',

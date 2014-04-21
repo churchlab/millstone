@@ -6,11 +6,11 @@ from collections import OrderedDict
 import re
 
 from materialized_view_manager import MATERIALIZED_TABLE_QUERYABLE_FIELDS_MAP
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__VARIANT
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__EXPERIMENT_SAMPLE
+from variants.dynamic_snp_filter_key_map import MAP_KEY__VARIANT
+from variants.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
+from variants.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
+from variants.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from variants.dynamic_snp_filter_key_map import MAP_KEY__EXPERIMENT_SAMPLE
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
 

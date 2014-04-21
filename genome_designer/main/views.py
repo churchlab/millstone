@@ -35,7 +35,7 @@ from main.models import Variant
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from pipeline.pipeline_runner import run_pipeline
-from scripts.import_util import import_variant_set_from_vcf
+from utils.import_util import import_variant_set_from_vcf
 import settings
 
 # Tags used to indicate which tab we are on.

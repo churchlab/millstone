@@ -292,7 +292,7 @@ CELERY_IMPORTS = (
         'pipeline.pipeline_runner',
         'pipeline.read_alignment',
         'pipeline.snv_calling',
-        'scripts.import_util',
+        'utils.import_util',
 )
 
 # When True, forces synchronous behavior so that it's not necessary
