@@ -47,13 +47,17 @@ def get_common_tool_params(alignment_group):
             'sample_alignments': _find_valid_sample_alignments(alignment_group, alignment_type),
             }
 
-# Returns a tuple of variant tools params to pass into find_variants_with_tool
+
 def get_variant_tool_params():
+    """Returns a tuple of variant tools params to pass into
+    find_variants_with_tool.
+    """
     return (
             ('freebayes', Dataset.TYPE.VCF_FREEBAYES, run_freebayes),
             ('pindel', Dataset.TYPE.VCF_PINDEL, run_pindel),
             ('delly', Dataset.TYPE.VCF_DELLY, run_delly),
-            )
+    )
+
 
 def _get_fasta_ref(alignment_group):
     # Grab the reference genome fasta for the alignment.

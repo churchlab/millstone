@@ -357,15 +357,16 @@ JBROWSE_MAX_ALIGN_TRACKS = 5
 # display none and warn on mouseover.
 JBROWSE_MAX_COVERAGE_TRACKS = 10
 
+
 ###############################################################################
 # Variant Calling
 ###############################################################################
 
-ENABLED_VARIANT_CALLERS = ['freebayes']
-ENABLE_SV_CALLING = False
-SV_CALLERS = ['pindel','delly']
-if ENABLE_SV_CALLING:
-    ENABLED_VARIANT_CALLERS += SV_CALLERS
+ENABLED_VARIANT_CALLERS = [
+    'freebayes',
+    # 'pindel',
+    # 'delly'
+]
 
 # Path to snpeff java jar.
 SNPEFF_JAR_PATH = os.path.abspath(os.path.join(PWD, 'tools','snpEff',

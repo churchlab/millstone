@@ -4,6 +4,7 @@ Tests for sv_calling.py
 
 import os
 
+from django.conf import settings
 from django.test import TestCase
 import vcf
 
@@ -16,29 +17,28 @@ from main.models import Project
 from main.models import User
 from main.models import Variant
 from pipeline.snv_calling import find_variants_with_tool
+from pipeline.snv_calling import get_variant_tool_params
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import copy_dataset_to_entity_data_dir
 from utils.import_util import import_reference_genome_from_local_file
-from settings import ENABLE_SV_CALLING
-from settings import PWD as GD_ROOT
 
 
-TEST_FASTA  = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'small_data',
+TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'sv_testing', 'small_data',
         'ref.fa')
 
-TEST_FASTQ1 = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'small_data',
+TEST_FASTQ1 = os.path.join(settings.PWD, 'test_data', 'sv_testing', 'small_data',
         'simLibrary.1.fq')
 
-TEST_FASTQ2 = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'small_data',
+TEST_FASTQ2 = os.path.join(settings.PWD, 'test_data', 'sv_testing', 'small_data',
         'simLibrary.2.fq')
 
 TEST_SAMPLE_UID = '38d786f2'
 
-TEST_BAM = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'small_data',
+TEST_BAM = os.path.join(settings.PWD, 'test_data', 'sv_testing', 'small_data',
         'final.bam')
 
-TEST_BAM_INDEX = os.path.join(GD_ROOT, 'test_data', 'sv_testing', 'small_data',
+TEST_BAM_INDEX = os.path.join(settings.PWD, 'test_data', 'sv_testing', 'small_data',
         'final.bam.bai')
 
 
@@ -68,9 +68,6 @@ class TestSVCallers(TestCase):
         delly can usually find inversions; unfortunately, delly only
         works well on large data, so we will not test it here.
         """
-
-        if not ENABLE_SV_CALLING: return
-
         # Create a new alignment group.
         alignment_group = AlignmentGroup.objects.create(
                 label='test alignment', reference_genome=self.reference_genome)
