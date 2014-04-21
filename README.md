@@ -193,17 +193,26 @@ To run unit tests:
 
 To run integration tests:
 
-    (venv)$ ./tests/run_integration_tests.py
+    (venv)$ ./tests/run_integration_tests.sh
 
 Nose also allows us to run tests only in specific modules.
 
 In order to run only the tests in, say, the `main` app directory, run:
 
-    (venv)$ python manage.py test main
+    (venv)$ ./tests/run_unit_tests.sh main
 
 And for only the tests in `scripts` call:
 
-    (venv)$ python manage.py test scripts
+    (venv)$ ./tests/run_unit_tests.sh main
+
+For integration tests, unfortunately you'll have to do it a slightly different way (TODO: Fix this):
+
+    (venv)$ ./manage.py test --settings=tests.integration_test_settings tests/integration/test_pipeline_integration.py:TestAlignmentPipeline.test_run_pipeline
+
+The same form works for unit tests, just use `--settings=tests.test_settings`
+
+Note, in the following examples we use a standard `manage.py test` root, but you should adhere to the
+examples above.
 
 To run a single test module, run:
 
