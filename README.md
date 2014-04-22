@@ -250,6 +250,29 @@ up previously stared `celerytestworker`s. There is a script to do this for you:
 
     $ ./scripts/kill_celerytestworkers.sh
 
+### Debugging Tests / Dealing with Craziness
+
+Our test framework isn't perfect. Here are some potential problems and other
+hints that might help.
+
+#### `ps aux` and `grep` are your friends
+
+To see running celery processes:
+
+    `ps aux | grep celery`
+
+To see running integration test:
+
+    `ps aux | grep python.*integration`
+
+To kill the process associated with the integration test (e.g. 777)
+
+    `kill 777`
+
+To kill orphaned celerytestworker processes, we actually have a script:
+
+    `./scripts/kill_celerytestworkers.sh`
+
 
 ### Adding Tests
 
