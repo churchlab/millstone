@@ -259,19 +259,19 @@ hints that might help.
 
 To see running celery processes:
 
-    `ps aux | grep celery`
+    ps aux | grep celery
 
 To see running integration test:
 
-    `ps aux | grep python.*integration`
+    ps aux | grep python.*integration
 
 To kill the process associated with the integration test (e.g. 777)
 
-    `kill 777`
+    kill 777
 
 To kill orphaned celerytestworker processes, we actually have a script:
 
-    `./scripts/kill_celerytestworkers.sh`
+    ./scripts/kill_celerytestworkers.sh
 
 
 ### Adding Tests
