@@ -922,7 +922,7 @@ def adapt_cast_object_list_field(cast_object_dict_list, fdict):
     # If gathering, just list all values, maintaining order.
     if fdict.get('format','bucket') is 'gather':
         # Create string.
-        return (' | '.join(buckets.keys()))
+        return (' | '.join(map(str, buckets.keys())))
 
     # If bucketing, count each.
     elif fdict.get('format','bucket') is 'bucket':

@@ -413,12 +413,12 @@ if __name__ == '__main__':
             reset_database()
             BOOTSTRAP_FLAVORS[0][1]()
 
-        elif len(sys.argv) == 2:
+        elif len(sys.argv) >= 2:
 
             # Make sure first arg is an available flavor.
             assert sys.argv[1] in dict(BOOTSTRAP_FLAVORS), (
                     'Available flavors:\n\t%s') % ('\n\t'.join(
-                    dict(BOOTSTRAP_FLAVORS.keys())))
+                    dict(BOOTSTRAP_FLAVORS).keys()))
 
             # Reset the database and bootstrap with the flavor.
             reset_database()

@@ -5,6 +5,7 @@ Functions for calling SNPs.
 import os
 import re
 import subprocess
+import vcf
 
 from celery import task
 
@@ -237,20 +238,6 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
     return True # success
 
 
-def _filter_small_variants(vcf_file, cutoff):
-    """Go through each line of vcf, and remove small structural variants"""
-    vcf_file_tmp = vcf_file + '.tmp'
-    with open(vcf_file_tmp, 'w') as fh:
-        for line in open(vcf_file):
-            match = re.search('SVLEN=(-?[0-9]+);', line)
-            # Check if SVLEN > cutoff
-            if not match or abs(int(match.group(1))) > cutoff:
-                fh.write(line)
-
-    # move temporary file back to vcf_file path
-    subprocess.check_call(['mv', vcf_file_tmp, vcf_file])
-
-
 def run_pindel(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename,
         alignment_type, **kwargs):
     """Run pindel to find SVs."""
@@ -297,7 +284,8 @@ def run_pindel(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename
         '-R', 'name',
         '-d', 'date'
     ])
-    _filter_small_variants(vcf_output_filename, 10)
+
+    postprocess_pindel_vcf(vcf_output_filename)
 
     return True # success
 
@@ -361,6 +349,8 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename,
         subprocess.check_call(['rm', bam_file])
         subprocess.check_call(['rm', bam_file + '.bai'])
 
+    postprocess_delly_vcf(vcf_output_filename)
+
     return True # success
 
 # Get paths for each of the dataset files.
@@ -376,3 +366,52 @@ def _get_dataset_paths(sample_alignment_list, dataset_type):
 
     return dataset_locations
 
+
+# Postprocess vcfs output by different tools, so their format is the same.
+def postprocess_pindel_vcf(vcf_file):
+    vcf_reader = vcf.Reader(open(vcf_file))
+
+    # add some additional VCF fields
+    with open(vcf_file + '.tmp', 'w') as fh:
+        fh.write('##INFO=<ID=SVMETHOD,Number=1,Type=String,Description="Type of approach used to detect SV">\n')
+        fh.write('##INFO=<ID=EFF_IMPACT,Number=A,Type=String,Description="Effect impact {High, Moderate, Low, Modifier}.">\n')
+
+    vcf_writer = vcf.Writer(open(vcf_file + '.tmp', 'a'), vcf_reader)
+    for record in vcf_reader:
+        # pindel uses negative SVLEN for deletions; make them positive
+        svlen = abs(record.__dict__['INFO'].get('SVLEN', 0))
+        record.__dict__['INFO']['SVLEN'] = svlen
+
+        # ignore small variants
+        if svlen < 10:
+            continue
+
+        # update some fields
+        record.__dict__['INFO']['SVMETHOD'] = 'PINDEL'
+        record.__dict__['INFO']['EFF_IMPACT'] = '%s_%d' % \
+                (record.__dict__['INFO'].get('SVTYPE', ''), svlen)
+
+        vcf_writer.write_record(record)
+
+    # move temporary file back
+    subprocess.check_call(['mv', vcf_file + '.tmp', vcf_file])
+
+def postprocess_delly_vcf(vcf_file):
+    vcf_reader = vcf.Reader(open(vcf_file))
+
+    # add some additional VCF fields
+    with open(vcf_file + '.tmp', 'w') as fh:
+        fh.write('##INFO=<ID=EFF_IMPACT,Number=A,Type=String,Description="Effect impact {High, Moderate, Low, Modifier}.">\n')
+
+    vcf_writer = vcf.Writer(open(vcf_file + '.tmp', 'w'), vcf_reader)
+    for record in vcf_reader:
+        # update some fields
+        record.__dict__['INFO']['SVMETHOD'] = 'DELLY'
+        record.__dict__['INFO']['EFF_IMPACT'] = '%s_%d' % \
+                (record.__dict__['INFO'].get('SVTYPE', ''),
+                record.__dict__['INFO'].get('SVLEN', 0))
+
+        vcf_writer.write_record(record)
+
+    # move temporary file back
+    subprocess.check_call(['mv', vcf_file + '.tmp', vcf_file])
