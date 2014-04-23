@@ -225,7 +225,7 @@ def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
 
         else:
             value = variant_as_dict[MELTED_SCHEMA_KEY__ALT]
-            if ve_data.get(MELTED_SCHEMA_KEY__HET, False):
+            if ve_data and ve_data.get(MELTED_SCHEMA_KEY__HET, False):
                 value += (' <span class="%s" ' +
                         'title="Marginal call (IS_HET=TRUE)">' +
                         '&frac12;</span>') % marginal_set_classes
