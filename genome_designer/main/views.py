@@ -6,7 +6,6 @@ NOTE: Put new Ajax-only actions into main/xhr_handlers.py.
 
 import json
 import os
-import sys
 
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -48,6 +47,7 @@ def home_view(request):
     """
     context = {}
     return render(request, 'home.html', context)
+
 
 def demo_splash_view(request):
     """The main landing page.
@@ -226,27 +226,6 @@ def sample_list_view(request, project_uid):
         'error_string': error_string
     }
     return render(request, 'sample_list.html', context)
-
-
-@login_required
-def sample_list_targets_template(request):
-    """Let the user download a blank sample targets template as a tab
-    separated values file (.tsv) so they can fill it in and upload
-    it back to the server.
-    """
-    context = {}
-    return render(request, 'sample_list_targets_template.tsv', context,
-            content_type='text/tab-separated-values')
-
-
-@login_required
-def variant_set_upload_template(request):
-    """Let the user download a blank variant set template as a blank
-    VCF file to be filled in.
-    """
-    context = {}
-    return render(request, 'variant_set_upload_template.vcf', context,
-            content_type='text/tab-separated-values')
 
 
 @login_required
@@ -539,6 +518,7 @@ def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
     }
 
     return render(request, 'single_variant_view.html', context)
+
 
 class RegistrationViewWrapper(RegistrationView):
     """
