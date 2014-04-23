@@ -354,12 +354,28 @@ def import_samples_from_targets_file(project, targets_file):
                 updated_row[field] = updated_value
         valid_rows.append(updated_row)
 
-    # Now create ExperimentSample objects along with their respective Datasets.
-    # The data is copied to the entity location.
-    # We block until we've created the models, and then go async for actual
-    # copying.
+    return create_samples_from_row_data(project, valid_rows, move=False)
+
+
+def create_samples_from_row_data(project, data_source_list, move=False):
+    """Creates ExperimentSample objects along with their respective Datasets.
+
+    The data is copied to the entity location. We block until we've created the
+    models, and then go async for actual copying.
+
+    Args:
+        data_source_list: List of objects with keys:
+            * Sample_Name
+            * Read_1_Path
+            * Read_2_Path (optional)
+            * other metadata keys (optional)
+            * ...
+
+    Returns:
+        List of ExperimentSamples.
+    """
     experiment_samples = []
-    for row in valid_rows:
+    for row in data_source_list:
         # Create ExperimentSample object and then store the data relative to
         # it.
         sample_label = row['Sample_Name']
@@ -383,7 +399,8 @@ def import_samples_from_targets_file(project, targets_file):
                 PRE_DEFINED_SAMPLE_SERVER_COPY_HEADER_PARTS)
 
         # Start the async job of copying.
-        copy_experiment_sample_data.delay(project, experiment_sample, row)
+        copy_experiment_sample_data.delay(project, experiment_sample, row,
+                move=move)
 
         experiment_samples.append(experiment_sample)
 
@@ -407,12 +424,10 @@ def _create_fastq_dataset(experiment_sample, fastq_source, dataset_type,
 
 @task
 @project_files_needed
-def copy_experiment_sample_data(project, experiment_sample, data):
+def copy_experiment_sample_data(project, experiment_sample, data, move=False):
     """Celery task that wraps the process of copying the data for an
     ExperimentSample.
     """
-    move = False
-
     def _copy_dataset_data(fastq_source, dataset_type):
         """Helper to copy data and set status to VERIFYING.
         """

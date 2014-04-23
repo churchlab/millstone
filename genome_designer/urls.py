@@ -103,6 +103,8 @@ urlpatterns = patterns('',
 
     url(r'^_/samples$',
             'main.xhr_handlers.get_samples'),
+    url(r'^_/samples/upload_single_sample$',
+            'main.xhr_handlers.upload_single_sample'),
     url(r'^_/samples/create_from_server_location$',
             'main.xhr_handlers.create_samples_from_server_location'),
     url(r'^_/samples/samples_upload_through_browser_template$',

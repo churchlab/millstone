@@ -50,10 +50,11 @@ from utils.jbrowse_util import compile_tracklist_json
 from variants.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
 from variants.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
 from variants.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from utils.import_util import create_samples_from_row_data
+from utils.import_util import create_sample_models_for_eventual_upload
 from utils.import_util import import_reference_genome_from_local_file
 from utils.import_util import import_reference_genome_from_ncbi
 from utils.import_util import import_samples_from_targets_file
-from utils.import_util import create_sample_models_for_eventual_upload
 from utils.import_util import import_variant_set_from_vcf
 from variants.common import determine_visible_field_names
 from variants.materialized_variant_filter import get_variants_that_pass_filter
@@ -162,6 +163,56 @@ def create_ref_genome_from_ncbi(request):
     result = {
         'error': error_string,
     }
+
+    return HttpResponse(json.dumps(result), content_type='application/json')
+
+
+@login_required
+@require_POST
+def upload_single_sample(request):
+    # Read params / validate.
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.POST['projectUid'])
+    if not 'fastq1' in request.FILES:
+        raise Http404
+    sample_label = request.POST.get('sampleLabel', None)
+    if not sample_label:
+        raise Http404
+
+    # Save uploaded Samples to temp location.
+    if not os.path.exists(settings.TEMP_FILE_ROOT):
+        os.mkdir(settings.TEMP_FILE_ROOT)
+    fastq1_uploaded_file = request.FILES['fastq1']
+    if not os.path.exists(settings.TEMP_FILE_ROOT):
+        os.mkdir(settings.TEMP_FILE_ROOT)
+    _, fastq1_temp_file_location = tempfile.mkstemp(
+        suffix='_' + fastq1_uploaded_file.name,
+        dir=settings.TEMP_FILE_ROOT)
+    with open(fastq1_temp_file_location, 'w') as temp_file_fh:
+        temp_file_fh.write(fastq1_uploaded_file.read())
+
+    # Maybe handle fastq2.
+    fastq2_uploaded_file = None
+    if 'fastq2' in request.FILES:
+        fastq2_uploaded_file = request.FILES['fastq2']
+        _, fastq2_temp_file_location = tempfile.mkstemp(
+            suffix='_' + fastq2_uploaded_file.name,
+            dir=settings.TEMP_FILE_ROOT)
+        with open(fastq2_temp_file_location, 'w') as temp_file_fh:
+            temp_file_fh.write(fastq2_uploaded_file.read())
+
+    result = {}
+
+    # Create the data structure that the util expects and create samples.
+    try:
+        data_source_list = [{
+            'Sample_Name': sample_label,
+            'Read_1_Path': fastq1_temp_file_location,
+            'Read_2_Path': fastq2_temp_file_location
+        }]
+        create_samples_from_row_data(project, data_source_list, move=False)
+    except Exception as e:
+        result['error'] = str(e)
 
     return HttpResponse(json.dumps(result), content_type='application/json')
 

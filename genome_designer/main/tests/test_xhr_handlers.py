@@ -29,6 +29,7 @@ from main.testing_util import TEST_EMAIL
 from main.testing_util import TEST_PASSWORD
 from main.testing_util import TEST_USERNAME
 from main.xhr_handlers import samples_upload_through_browser_sample_data
+from main.xhr_handlers import upload_single_sample
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__ERROR
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__TOTAL
@@ -205,6 +206,47 @@ class TestModifyVariantInSetMembership(TestCase):
         """
         # TODO: Implement.
         pass
+
+
+class TestUploadSingleSample(TestCase):
+
+    def setUp(self):
+        """Override.
+        """
+        self.common_entities = create_common_entities()
+
+    def test_upload_single_sample(self):
+        project = self.common_entities['project']
+        request = HttpRequest()
+        request.POST = {
+            'projectUid': project.uid
+        }
+        request.method = 'POST'
+        request.user = self.common_entities['user']
+        authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
+        self.assertTrue(request.user.is_authenticated())
+
+        EXPERIMENT_SAMPLE_LABEL = 'my sample'
+        request.POST['sampleLabel'] = EXPERIMENT_SAMPLE_LABEL
+
+        request.FILES['fastq1'] = UploadedFile(
+                file=StringIO.StringIO(),
+                name='read1.fq')
+        request.FILES['fastq2'] = UploadedFile(
+                file=StringIO.StringIO(),
+                name='read2.fq')
+
+        response = upload_single_sample(request)
+        self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
+        self.assertFalse('error' in json.loads(response.content))
+
+        sample = ExperimentSample.objects.get(label=EXPERIMENT_SAMPLE_LABEL)
+        self.assertTrue(sample)
+
+        datasets = sample.dataset_set.all()
+        self.assertEqual(2, len(datasets))
+        for dataset in datasets:
+            self.assertEqual(Dataset.STATUS.READY, dataset.status)
 
 
 class TestSamplesUploadThroughBrowserSampleData(TestCase):
