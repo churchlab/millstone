@@ -36,7 +36,6 @@ from main.model_views import adapt_variant_to_frontend
 from main.model_views import GeneView
 from main.models import AlignmentGroup
 from main.models import Dataset
-from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Region
@@ -47,9 +46,9 @@ from main.models import VariantSet
 from main.models import S3File
 from utils.data_export_util import export_melted_variant_view
 from utils.jbrowse_util import compile_tracklist_json
-from variants.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
-from variants.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
-from variants.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
+from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
+from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
 from utils.import_util import create_samples_from_row_data
 from utils.import_util import create_sample_models_for_eventual_upload
 from utils.import_util import import_reference_genome_from_local_file

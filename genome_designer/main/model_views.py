@@ -3,12 +3,9 @@ Classes that describe how a particular model should be viewed.
 """
 
 from collections import defaultdict, OrderedDict
-from itertools import groupby
 import json
-from math import floor
 import string
 
-from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
@@ -19,13 +16,12 @@ from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
-from main.models import Dataset
 from main.model_view_utils import create_variant_links_field
 from main.model_view_utils import get_jbrowse_track_names
 from main.model_view_utils import create_alt_flag_field
-from variants.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
-from variants.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
-from variants.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
+from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
+from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
+from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
 from utils import titlecase_spaces
 from variants.common import generate_key_to_materialized_view_parent_col
 from variants.common import validate_key_against_map
@@ -37,7 +33,6 @@ from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_LABEL
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__REF
-from variants.melted_variant_schema import MELTED_SCHEMA_KEY__UID
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__UID
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VA_ID
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL

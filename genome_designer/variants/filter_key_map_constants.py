@@ -3,8 +3,6 @@
 # for determining which keys are supported for SQL-lookups.
 
 SNP_CALLER_COMMON_DATA_HARD_CODED = {
-    'CHROM': {'type': 'String', 'num': 1},
-    'POS': {'type': 'Integer', 'num': 1},
     'REF': {'type': 'String', 'num': 1},
 }
 

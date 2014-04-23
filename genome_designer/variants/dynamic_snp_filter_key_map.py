@@ -27,35 +27,14 @@ import vcf
 
 from main.exceptions import InputError
 from main.models import ReferenceGenome
-
-# Hard-coded keys to be used during parsing.
-
-SNP_CALLER_COMMON_DATA_HARD_CODED = {
-    'CHROM': {'type': 'String', 'num': 1},
-    'POS': {'type': 'Integer', 'num': 1},
-    'REF': {'type': 'String', 'num': 1},
-}
-
-SNP_VARIANT_HARD_CODED = {
-    'ALT': {'type': 'String', 'num': -1}
-}
-
-SNP_EVIDENCE_HARD_CODED = {
-    'GT_TYPE': {'type': 'Integer', 'num': 1},
-    'IS_HET': {'type': 'Boolean', 'num': 1}
-}
-
-EXPERIMENT_SAMPLE_HARD_CODED = {}
-
-MAP_KEY__VARIANT = 'variant_data'
-
-MAP_KEY__ALTERNATE = 'snp_alternate_data'
-
-MAP_KEY__COMMON_DATA = 'snp_caller_common_data'
-
-MAP_KEY__EVIDENCE = 'snp_evidence_data'
-
-MAP_KEY__EXPERIMENT_SAMPLE = 'experiment_sample_data'
+from variants.filter_key_map_constants import EXPERIMENT_SAMPLE_HARD_CODED
+from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
+from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
+from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
+from variants.filter_key_map_constants import MAP_KEY__EXPERIMENT_SAMPLE
+from variants.filter_key_map_constants import SNP_CALLER_COMMON_DATA_HARD_CODED
+from variants.filter_key_map_constants import SNP_EVIDENCE_HARD_CODED
+from variants.filter_key_map_constants import SNP_VARIANT_HARD_CODED
 
 
 def initialize_filter_key_map():
