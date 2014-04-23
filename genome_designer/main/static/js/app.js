@@ -64,10 +64,6 @@ gd.App.prototype.run = function() {
       var view = new gd.VariantSetListView({'model': model});
       break;
 
-    case 'SINGLE_VARIANT_VIEW':
-      var view = new gd.SingleVariantView();
-      break;
-
     case 'GENE':
       var view = new gd.GeneView();
       break;

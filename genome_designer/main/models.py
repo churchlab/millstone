@@ -942,15 +942,6 @@ class Variant(UniqueUidModelMixin):
         full_href = ref_genome_jbrowse + location_param
         return '<a href="' + full_href + '">jbrowse</a>'
 
-    @property
-    def href(self):
-        """Link to url view for this model.
-        """
-        return reverse(
-                'main.views.single_variant_view',
-                args=(self.reference_genome.project.uid,
-                        self.reference_genome.uid, self.uid))
-
     @classmethod
     def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
@@ -966,7 +957,6 @@ class Variant(UniqueUidModelMixin):
                 {'field':'variantset_set',
                     'verbose':'Set Membership',
                     'classes':['label']}]
-
 
 
 class VariantCallerCommonData(Model, VisibleFieldMixin):

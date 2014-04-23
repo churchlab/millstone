@@ -54,10 +54,6 @@ urlpatterns = patterns('',
     url(r'^projects/([\w-]+)/samples$',
             'main.views.sample_list_view'),
 
-    # Variants
-    url(r'^projects/([\w-]+)/refgenomes/([\w-]+)/variants/([\w-]+)$',
-            'main.views.single_variant_view'),
-
     # Demo Splash
     url(r'^demo_splash$',
             'main.views.demo_splash_view'),

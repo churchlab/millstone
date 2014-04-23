@@ -22,15 +22,12 @@ from django.shortcuts import render
 from registration.backends.simple.views import RegistrationView
 
 from main.adapters import adapt_model_instance_to_frontend
-from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
-from main.model_views import MeltedVariantView
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
-from main.models import Variant
 from main.models import VariantSet
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import import_variant_set_from_vcf
@@ -491,33 +488,6 @@ def variant_set_view(request, project_uid, variant_set_uid):
     }
 
     return render(request, 'variant_set.html', context)
-
-
-@login_required
-def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-    reference_genome = ReferenceGenome.objects.get(project=project,
-        uid=ref_genome_uid)
-
-    variant = get_object_or_404(Variant,
-            uid=variant_uid,
-            reference_genome=reference_genome)
-
-    melted_variant_list = MeltedVariantView.variant_as_melted_list(variant)
-
-    fe_melted_variant_list = adapt_model_or_modelview_list_to_frontend(
-            melted_variant_list,
-            variant_key_map=reference_genome.variant_key_map)
-
-    context = {
-        'project': project,
-        'tab_root': TAB_ROOT__DATA,
-        'variant': variant,
-        'melted_variant_list': fe_melted_variant_list
-    }
-
-    return render(request, 'single_variant_view.html', context)
 
 
 class RegistrationViewWrapper(RegistrationView):

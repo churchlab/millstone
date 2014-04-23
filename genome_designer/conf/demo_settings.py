@@ -18,7 +18,6 @@ DEMO_SAFE_VIEWS = [
     'main.views.sample_alignment_error_view',
     'main.views.variant_set_list_view',
     'main.views.variant_set_view',
-    'main.views.single_variant_view',
     'main.xhr_handlers.get_variant_list',
     'main.xhr_handlers.get_variant_set_list',
     'main.xhr_handlers.get_gene_list',
