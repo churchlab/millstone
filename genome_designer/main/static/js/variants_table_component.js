@@ -1,5 +1,8 @@
 /**
  * @fileoverview Component that shows Variants.
+ *
+ * NOTE: This component is copied from code in tab_analyze_subview_variants.js.
+ * TODO: Refactor tab_analyze_subview_variants.js to use this component.
  */
 
 
