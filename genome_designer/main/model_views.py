@@ -462,9 +462,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     # Finally, move these fields to the end.
     for i in last_idxes:
         field_i = obj_field_config.pop(i)
-        print i, field_i
         obj_field_config.append(field_i)
-        print obj_field_config
 
     return json.dumps({
         'obj_list': fe_obj_list,
