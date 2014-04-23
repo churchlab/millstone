@@ -7,24 +7,18 @@ gd.VariantSetView = Backbone.View.extend({
   el: '#gd-page-container',
 
   initialize: function() {
-    // Field config for the datatable.
-    this.fieldConfig = VARIANT_TO_VARIANT_SET_DATA.field_config;
-
-    // List of objects to display in the datatable.
-    this.variantToVariantSetData = VARIANT_TO_VARIANT_SET_DATA.obj_list;
-
     this.render();
   },
 
   render: function() {
     this.decorateSidebar();
 
-    this.datatable = new gd.DataTableComponent({
-        el: $('#gd-datatable-hook'),
-        objList: this.variantToVariantSetData,
-        fieldConfig: this.fieldConfig
+    var filterString = 'variant_set_uid = ' + this.model.get('uid');
+    this.variantsTableComponent = new gd.VariantsTableComponent({
+      model: this.model,
+      filterString: filterString,
+      filterDisabled: true,
     });
-
   },
 
   /** Decorate the side nav bar. */

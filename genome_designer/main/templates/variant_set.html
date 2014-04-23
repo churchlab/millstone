@@ -1,8 +1,8 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-<div class="page-header">
-  <h1>Variant Set {{variant_set.label}}</h1>
+<div class="gd-header h1">
+  Variant Set {{variant_set.label}}
 </div>
 
 <div class="gd-variant-set-view-dropdown dropdown btn-group">
@@ -15,7 +15,7 @@
   </ul>
 </div>
 
-<div id="gd-datatable-hook" class="container-fluid">
+<div id="gd-datatable-hook">
 </div>
 
 <form id="gd-variant-sets-export-csv-form" action="/_/sets/exportcsv"
@@ -28,8 +28,6 @@
   VIEW_TAG = 'VARIANT_SET';
 
   {% autoescape off %}
-    VARIANT_TO_VARIANT_SET_DATA = {{variant_to_variant_set_json}};
-
     INIT_JS_DATA = {{init_js_data}};
   {% endautoescape %}
 </script>

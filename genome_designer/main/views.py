@@ -32,7 +32,6 @@ from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Variant
 from main.models import VariantSet
-from main.models import VariantToVariantSet
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import import_variant_set_from_vcf
 import settings
@@ -471,22 +470,23 @@ def _create_variant_set_empty(project, ref_genome_uid, variant_set_name):
 def variant_set_view(request, project_uid, variant_set_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
-    variant_set = VariantSet.objects.get(
+    variant_set = get_object_or_404(VariantSet,
             reference_genome__project=project,
             uid=variant_set_uid)
 
     # Initial javascript data.
     init_js_data = json.dumps({
-        'entity': adapt_model_instance_to_frontend(variant_set)
+        'entity': {
+            'uid': variant_set.uid,
+            'project': adapt_model_instance_to_frontend(project),
+            'refGenomeUid': variant_set.reference_genome.uid
+        }
     })
 
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
         'variant_set': variant_set,
-        'variant_to_variant_set_json': adapt_model_to_frontend(
-                VariantToVariantSet,
-                {'variant_set': variant_set}),
         'init_js_data': init_js_data
     }
 
