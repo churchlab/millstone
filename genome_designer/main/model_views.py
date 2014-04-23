@@ -444,12 +444,15 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     for fdict in field_dict_list:
         if fdict.get('hide', False):
             continue
-        obj_field_config.append({
+        config_obj = {
             'mData': fdict['field'],
             'sTitle': fdict.get('verbose',
                     string.capwords(fdict['field'], '_').replace('_', ' ')),
             'bSortable': fdict.get('sortable', False)
-        })
+        }
+        if fdict.get('sWidth'):
+            config_obj['sWidth'] = fdict.get('sWidth')
+        obj_field_config.append(config_obj)
         if fdict.get('last'):
             last_idxes.append(displayed_idx)
         displayed_idx += 1
@@ -663,9 +666,14 @@ def _create_variant_set_analyze_view_link(project_uid, variant_set_uid,
     filter_part = '?filter=VARIANT_SET_UID=%s&melt=0' % (variant_set_uid,)
     return root_href + filter_part
 
+# Field that provides links to melted view, JBrowse, etc.
+LINKS_FIELD = {
+    'field': 'links',
+    'sWidth': '48px'
+}
 
 MELTED_VARIANT_FIELD_DICT_LIST = [
-    {'field': 'links'},
+    LINKS_FIELD,
     {'field': MELTED_SCHEMA_KEY__ES_LABEL, 'verbose': 'Sample'},
     {'field': MELTED_SCHEMA_KEY__CHROMOSOME},
     {'field': MELTED_SCHEMA_KEY__POSITION},
@@ -678,7 +686,7 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
 ]
 
 CAST_VARIANT_FIELD_DICT_LIST = [
-    {'field': 'links'},
+    LINKS_FIELD,
     {'field': MELTED_SCHEMA_KEY__CHROMOSOME},
     {
         'field': MELTED_SCHEMA_KEY__POSITION,
