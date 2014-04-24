@@ -10,15 +10,15 @@ NOTE: Several tests use this module, so avoid breaking tests when changing
 this.
 """
 
-# Since this script is intended to be used from the terminal, setup the
-# environment first so that django and model imports work.
-from utils import setup_django_env
-setup_django_env()
-
 import os
 import random
 import shutil
 import sys
+
+# Setup the Django environment. Our setup_django_env() method is outdated.
+sys.path.append(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), '../'))
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from django.db import transaction
 from django.contrib.auth.models import User
