@@ -4,70 +4,62 @@ Methods for exporting data.
 
 import csv
 
-from django.db import connection
-
-from variants.common import dictfetchall
+from variants.materialized_variant_filter import lookup_variants
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 
 
-def export_melted_variant_view(ref_genome, variant_id_list, csvfile):
+CORE_VARIANT_KEYS = [
+    'UID',
+    'POSITION',
+    'CHROMOSOME',
+    'REF',
+    'ALT',
+    'EXPERIMENT_SAMPLE_LABEL',
+    'VARIANT_SET_LABEL'
+]
+
+
+def export_melted_variant_view(ref_genome, filter_string, csvfile):
     """Exports Variants as a flat .csv file.
 
     Args:
-        variant_id_list: List of variant ids to query. NOTE: Unused.
-        csfile: File object to which we write the result.
+        ref_genome: ReferenceGenome these Variants belong to.
+        filter_string: Limit the returned Variants to those that match this
+            filter.
+        csvfile: File object to which we write the result.
     """
     mvm = MeltedVariantMaterializedViewManager(ref_genome)
+    mvm.create_if_not_exists_or_invalid()
 
-    # Perform the query to get the results.
-    sql_statement = (
-        'SELECT * '
-        'FROM %s '
-        ' ORDER BY chromosome, position, experiment_sample_label'
-        % (mvm.get_table_name(),)
-    )
-    cursor = connection.cursor()
-    cursor.execute(sql_statement)
-    raw_result_list = dictfetchall(cursor)
+    # We'll perform a query, using any filter_string provided.
+    query_args = {}
+    query_args['filter_string'] = filter_string
+    query_args['select_all'] = True
+    lookup_variant_result = lookup_variants(query_args, ref_genome)
+    result_list = lookup_variant_result.result_list
 
-    result_list = [row for row in raw_result_list
-            if row['experiment_sample_uid']]
+    # We write the core keys and key-values specific to this ref_genome.
 
-    # We write the following manually specified fields, as well as all the
-    # key-value fields.
-    csv_field_names = [
-        'experiment_sample_uid',
-        'experiment_sample_label',
-        'uid',
-        'position',
-        'chromosome',
-        'ref',
-        'alt',
-    ]
-
-    # Add key-value fields
-    extra_keys = (
+    ref_genome_specific_data_keys = (
         ref_genome.get_variant_caller_common_map().keys() +
         ref_genome.get_variant_evidence_map().keys()
     )
-    csv_field_names.extend(extra_keys)
 
-    # Set structure for checking acceptable fields.
+    all_keys = CORE_VARIANT_KEYS + ref_genome_specific_data_keys
+
+    # Our convention is to capitalize all keys.
+    csv_field_names = [key.upper() for key in all_keys]
+
+    # Create a set that is used to quickly check which fields to return.
     csv_field_names_set = set(csv_field_names)
 
     # Write the data.
     writer = csv.DictWriter(csvfile, csv_field_names)
     writer.writeheader()
     for v_idx, variant_data in enumerate(result_list):
-        row_data = {
-            'experiment_sample_uid': variant_data['experiment_sample_uid'],
-            'experiment_sample_label': variant_data['experiment_sample_label'],
-            'uid': variant_data['uid'],
-            'position': variant_data['position'],
-            'chromosome': variant_data['chromosome'],
-            'ref': variant_data['ref'],
-            'alt': variant_data['alt'],
-        }
+        row_data = {}
+        for key in CORE_VARIANT_KEYS:
+            row_data[key] = variant_data[key]
 
         # Add key-value data.
         def _add_key_value(data_dict):
@@ -78,8 +70,8 @@ def export_melted_variant_view(ref_genome, variant_id_list, csvfile):
                 if not key in csv_field_names_set:
                     continue
                 row_data[key] = value
-        _add_key_value(variant_data['va_data'])
-        _add_key_value(variant_data['vccd_data'])
-        _add_key_value(variant_data['ve_data'])
+        _add_key_value(variant_data['VA_DATA'])
+        _add_key_value(variant_data['VCCD_DATA'])
+        _add_key_value(variant_data['VE_DATA'])
 
         writer.writerow(row_data)

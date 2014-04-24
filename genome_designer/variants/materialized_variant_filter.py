@@ -69,6 +69,10 @@ class VariantFilterEvaluator(object):
         self.pagination_start = query_args.get('pagination_start', 0)
         self.pagination_len = query_args.get('pagination_len', -1)
         self.visible_key_names = query_args.get('visible_key_names', [])
+
+        # If True, SELECT *. It's up to the caller to prevent returning
+        # unintended data (e.g. native ids) to the frontend.
+        self.select_all = query_args.get('select_all', False)
         self.ref_genome = ref_genome
         self.all_key_map = get_all_key_map(self.ref_genome)
         self.scope = scope
@@ -138,9 +142,10 @@ class VariantFilterEvaluator(object):
         Returns:
             A FilterEvalResult object.
         """
-        select_clause = self._select_clause()
-
-        cursor = connection.cursor()
+        if self.select_all:
+            select_clause = '*'
+        else:
+            select_clause = self._select_clause()
 
         # Minimal sql_statement has select clause.
         sql_statement = 'SELECT %s FROM %s ' % (select_clause,
@@ -177,6 +182,7 @@ class VariantFilterEvaluator(object):
         # Execute the query and store the results in hashable representation
         # so that they can be combined through boolean operators with other
         # evaluations.
+        cursor = connection.cursor()
         cursor.execute(sql_statement, where_clause_args)
         result_list = [dict(zip([col[0].upper() for col in cursor.description], row))
                 for row in cursor.fetchall()]

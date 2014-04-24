@@ -78,8 +78,6 @@ urlpatterns = patterns('',
 
     url(r'^_/sets$',
             'main.xhr_handlers.get_variant_set_list'),
-    url(r'^_/sets/exportcsv$',
-            'main.xhr_handlers.export_variant_set_as_csv'),
     url(r'^_/sets/create$',
             'main.xhr_handlers.create_variant_set'),
 

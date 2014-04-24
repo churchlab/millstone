@@ -6,7 +6,6 @@ reasonable separation point is to separate page actions from Ajax actions.
 """
 
 import copy
-import csv
 import json
 import os
 from StringIO import StringIO
@@ -56,7 +55,6 @@ from utils.import_util import import_reference_genome_from_ncbi
 from utils.import_util import import_samples_from_targets_file
 from utils.import_util import import_variant_set_from_vcf
 from variants.common import determine_visible_field_names
-from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_variant_filter import lookup_variants
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.variant_sets import update_variant_in_set_memberships
@@ -328,45 +326,6 @@ def samples_upload_through_browser_sample_data(request):
     dataset.save(update_fields=['status'])
 
     return HttpResponse(json.dumps({}), content_type='application/json')
-
-
-@login_required
-def export_variant_set_as_csv(request):
-    """Returns a response to download a file for all of
-    the samples contained in the variant set.
-    """
-    variant_set_uid = request.POST.get('variant_set_uid', None)
-    if not variant_set_uid:
-        raise Http404
-
-    # Make sure that the variant set is in a Project belonging to the user.
-    variant_set = get_object_or_404(VariantSet,
-            uid=variant_set_uid,
-            reference_genome__project__owner=request.user.get_profile())
-
-    # Get the variants passing the filter.
-    filter_string = 'IN_SET(%s)' % variant_set_uid
-    filter_result = get_variants_that_pass_filter(
-            filter_string, variant_set.reference_genome)
-    variant_list = filter_result.variant_set
-
-    # Export data as csv.
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="variant_set.csv"'
-    csv_field_names = [
-        'position',
-        'ref',
-        'alt'
-    ]
-    writer = csv.DictWriter(response, csv_field_names)
-    writer.writeheader()
-    for variant in variant_list:
-        writer.writerow({
-            'position': variant.position,
-            'ref': variant.ref_value,
-            'alt': variant.get_variants_as_string(),
-        })
-    return response
 
 
 # Key in the GET params containing the string for filtering the variants.
@@ -669,6 +628,7 @@ def refresh_materialized_variant_table(request):
     return HttpResponse('ok')
 
 
+@require_GET
 @login_required
 def export_variants_as_csv(request):
     """Handles a request to download variants in .csv format.
@@ -678,12 +638,11 @@ def export_variants_as_csv(request):
             project__owner=request.user.get_profile(),
             uid=ref_genome_uid)
 
-    # NOTE: Currently a no-op.
-    variant_id_list = []
+    filter_string = request.GET.get('filter_string', '')
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="variants.csv"'
-    export_melted_variant_view(reference_genome, variant_id_list, response)
+    export_melted_variant_view(reference_genome, filter_string, response)
     return response
 
 
