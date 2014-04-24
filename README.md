@@ -226,6 +226,10 @@ To reuse the Postgresql database, wiping it rather than destroying and creating 
 
     (venv)$ REUSE_DB=1 ./manage.py test
 
+Note that for some reason integration tests currently fail if run with the form:
+
+    (venv)$ REUSE_DB=0 ./scripts/run_integration_tests.sh
+
 ### Integration Tests
 
 We recently introduced the concept of integration tests to our code. Previously,
