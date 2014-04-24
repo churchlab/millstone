@@ -128,7 +128,7 @@ def find_variants_with_tool(alignment_group, variant_params):
     # Finding variants means that all the aligning is complete, so now we
     # are VARIANT_CALLING.
     alignment_group.status = AlignmentGroup.STATUS.VARIANT_CALLING
-    alignment_group.save()
+    alignment_group.save(update_fields=['status'])
 
     # Create subdirectory for this tool
     tool_dir = os.path.join(common_params['output_dir'], tool_name)
