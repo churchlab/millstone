@@ -3,15 +3,13 @@ model_view_utils - Functions to decorate model_view output before sending
 to datatables.
 """
 
-from collections import defaultdict
 from math import floor
 from itertools import chain
 from itertools import groupby
 
-
+from django.conf import settings
 from django.core.urlresolvers import reverse
 
-import settings
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
@@ -97,6 +95,7 @@ def create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
 
     return full_href
 
+
 def create_variant_links_field(variant_as_dict, reference_genome,
         alignment_group, jbrowse_track_names):
     """
@@ -110,7 +109,8 @@ def create_variant_links_field(variant_as_dict, reference_genome,
     if MELTED_SCHEMA_KEY__ES_UID in variant_as_dict:
         es_field = variant_as_dict[MELTED_SCHEMA_KEY__ES_UID]
 
-        if es_field is None: es_list = []
+        if es_field is None:
+            es_list = []
 
         # melted view, one experiment sample:
         elif isinstance(es_field, basestring) and es_field is not None:
@@ -176,9 +176,9 @@ def create_variant_links_field(variant_as_dict, reference_genome,
             button['title'] += ' (too many samples)'
             button['glyph'] += ' disabled'
 
-        button_html = ('<a target=' + button.get('target','"_blank"') +
-            ' href="' + button.get('href','#') + '"' +
-            ' title="' + button.get('title','') + '">' +
+        button_html = ('<a target=' + button.get('target', '"_blank"') +
+            ' href="' + button.get('href', '#') + '"' +
+            ' title="' + button.get('title', '') + '">' +
             '<span class="glyphicon ' + button['glyph'] +
             '"></span></a>')
 
@@ -186,10 +186,10 @@ def create_variant_links_field(variant_as_dict, reference_genome,
 
     return ' '.join(all_buttons_html)
 
+
 def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
-        '''
-        Display a small badge if a variant is het.
-        '''
+        """Displasy a small badge if a variant is het.
+        """
         marginal_set_classes = 'gd-warn-set-badge outline'
 
         ve_data = variant_as_dict['VE_DATA']
@@ -213,7 +213,7 @@ def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
                 num_het = sum([alt_het[1] for alt_het in group])
                 alt_string = ' %s (%d)' % (alt, len(list(group)) - maybe_dec)
                 if num_het:
-                    alt_string +=(' <span class="%s" ' +
+                    alt_string += (' <span class="%s" ' +
                             'title="%d Marginal calls (IS_HET=TRUE)">' +
                             '&frac12;</span>') % (
                             marginal_set_classes,
@@ -229,5 +229,4 @@ def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
                 value += (' <span class="%s" ' +
                         'title="Marginal call (IS_HET=TRUE)">' +
                         '&frac12;</span>') % marginal_set_classes
-
         return value

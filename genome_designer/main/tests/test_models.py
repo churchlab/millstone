@@ -8,7 +8,7 @@ import os
 from django.conf import settings
 from django.test import TestCase
 
-from scripts.import_util import import_reference_genome_from_local_file
+from utils.import_util import import_reference_genome_from_local_file
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSample
@@ -21,7 +21,7 @@ from main.models import VariantCallerCommonData
 from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
 from main.testing_util import create_common_entities
-from scripts.util import uppercase_underscore
+from utils import uppercase_underscore
 import subprocess
 
 

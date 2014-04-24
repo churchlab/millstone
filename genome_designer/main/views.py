@@ -6,7 +6,6 @@ NOTE: Put new Ajax-only actions into main/xhr_handlers.py.
 
 import json
 import os
-import sys
 
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -23,19 +22,15 @@ from django.shortcuts import render
 from registration.backends.simple.views import RegistrationView
 
 from main.adapters import adapt_model_instance_to_frontend
-from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
-from main.model_views import MeltedVariantView
 from main.models import AlignmentGroup
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
-from main.models import Variant
 from main.models import VariantSet
-from main.models import VariantToVariantSet
 from pipeline.pipeline_runner import run_pipeline
-from scripts.import_util import import_variant_set_from_vcf
+from utils.import_util import import_variant_set_from_vcf
 import settings
 
 # Tags used to indicate which tab we are on.
@@ -48,6 +43,7 @@ def home_view(request):
     """
     context = {}
     return render(request, 'home.html', context)
+
 
 def demo_splash_view(request):
     """The main landing page.
@@ -226,27 +222,6 @@ def sample_list_view(request, project_uid):
         'error_string': error_string
     }
     return render(request, 'sample_list.html', context)
-
-
-@login_required
-def sample_list_targets_template(request):
-    """Let the user download a blank sample targets template as a tab
-    separated values file (.tsv) so they can fill it in and upload
-    it back to the server.
-    """
-    context = {}
-    return render(request, 'sample_list_targets_template.tsv', context,
-            content_type='text/tab-separated-values')
-
-
-@login_required
-def variant_set_upload_template(request):
-    """Let the user download a blank variant set template as a blank
-    VCF file to be filled in.
-    """
-    context = {}
-    return render(request, 'variant_set_upload_template.vcf', context,
-            content_type='text/tab-separated-values')
 
 
 @login_required
@@ -492,53 +467,28 @@ def _create_variant_set_empty(project, ref_genome_uid, variant_set_name):
 def variant_set_view(request, project_uid, variant_set_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
-    variant_set = VariantSet.objects.get(
+    variant_set = get_object_or_404(VariantSet,
             reference_genome__project=project,
             uid=variant_set_uid)
 
     # Initial javascript data.
     init_js_data = json.dumps({
-        'entity': adapt_model_instance_to_frontend(variant_set)
+        'entity': {
+            'uid': variant_set.uid,
+            'project': adapt_model_instance_to_frontend(project),
+            'refGenomeUid': variant_set.reference_genome.uid
+        }
     })
 
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
         'variant_set': variant_set,
-        'variant_to_variant_set_json': adapt_model_to_frontend(
-                VariantToVariantSet,
-                {'variant_set': variant_set}),
         'init_js_data': init_js_data
     }
 
     return render(request, 'variant_set.html', context)
 
-
-@login_required
-def single_variant_view(request, project_uid, ref_genome_uid, variant_uid):
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-    reference_genome = ReferenceGenome.objects.get(project=project,
-        uid=ref_genome_uid)
-
-    variant = get_object_or_404(Variant,
-            uid=variant_uid,
-            reference_genome=reference_genome)
-
-    melted_variant_list = MeltedVariantView.variant_as_melted_list(variant)
-
-    fe_melted_variant_list = adapt_model_or_modelview_list_to_frontend(
-            melted_variant_list,
-            variant_key_map=reference_genome.variant_key_map)
-
-    context = {
-        'project': project,
-        'tab_root': TAB_ROOT__DATA,
-        'variant': variant,
-        'melted_variant_list': fe_melted_variant_list
-    }
-
-    return render(request, 'single_variant_view.html', context)
 
 class RegistrationViewWrapper(RegistrationView):
     """

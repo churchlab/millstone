@@ -21,8 +21,8 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from main.testing_util import create_common_entities
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
-from scripts.dynamic_snp_filter_key_map import update_filter_key_map
+from variants.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
+from variants.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
 from variants.common import determine_visible_field_names
 from variants.common import ParseError

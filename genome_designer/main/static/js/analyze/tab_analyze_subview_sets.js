@@ -56,10 +56,7 @@ gd.TabAnalyzeSubviewSets = gd.TabAnalyzeSubviewAbstractBase.extend({
 
     $.get('/_/sets', requestData,
         _.bind(this.handleGetVariantSetListResponse, this));
-    this.listenTo(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
-        _.bind(this.listenToControls, this));    
   },
-
 
   /** Handles the data fetch response. */
   handleGetVariantSetListResponse: function(response) {
@@ -79,7 +76,17 @@ gd.TabAnalyzeSubviewSets = gd.TabAnalyzeSubviewAbstractBase.extend({
         objList: objList,
         fieldConfig: fieldConfig,
         controlsTemplate: '/_/templates/variant_set_list_controls',
-        requestData: {},
+        requestData: {
+          'projectUid': this.model.get('project').uid,
+        },
     });
-  }
+
+    this.listenTo(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
+        _.bind(this.listenToControls, this));
+  },
+
+  listenToControls: function() {
+    alert('Not working yet. Please use Data > Variant Sets view to create' +
+        'VariantSets.');
+  },
 });

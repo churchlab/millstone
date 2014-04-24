@@ -1,7 +1,9 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-<h1 class="gd-header">Variant Sets</h1>
+<div class="gd-header h1">
+  Variant Sets
+</div>
 
 {% if error_string %}
 <div class="alert alert-error alert-block">
@@ -16,7 +18,6 @@
 
 <script type="text/javascript">
   VIEW_TAG = 'VARIANT_SET_LIST';
-  IS_S3_BACKEND = '{{project.is_s3_backed}}';
 
   {% autoescape off %}
     INIT_JS_DATA = {{init_js_data}};

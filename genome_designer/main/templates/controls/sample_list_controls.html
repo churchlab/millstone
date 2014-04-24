@@ -13,9 +13,15 @@
         </li>
         -->
         <li>
-          <a href="#gd-samples-upload-through-browser-modal"
+          <a href="#gd-samples-upload-single-sample-through-browser-modal"
               data-toggle="modal">
             Upload through browser...
+          </a>
+        </li>
+        <li>
+          <a href="#gd-samples-upload-through-browser-modal"
+              data-toggle="modal">
+            Batch upload through browser...
           </a>
         </li>
         <li>
@@ -36,6 +42,8 @@
     </div>
   </form>
 </div>
+
+{% include "controls/upload_single_sample_through_browser_modal.html" %}
 
 {% include "controls/upload_samples_through_browser_modal.html" %}
 

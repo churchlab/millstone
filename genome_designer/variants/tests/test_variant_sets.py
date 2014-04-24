@@ -20,8 +20,8 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from main.testing_util import create_common_entities
-from scripts.import_util import add_dataset_to_entity
-from scripts.import_util import copy_dataset_to_entity_data_dir
+from utils.import_util import add_dataset_to_entity
+from utils.import_util import copy_dataset_to_entity_data_dir
 from variants.variant_sets import add_variants_to_set_from_bed
 from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__ADD
 from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__REMOVE

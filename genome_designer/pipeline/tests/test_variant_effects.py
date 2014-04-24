@@ -28,10 +28,10 @@ from pipeline.variant_effects import get_snpeff_config_path
 from pipeline.variant_effects import populate_record_eff
 from pipeline.snv_calling import VCF_DATASET_TYPE
 from pipeline.snv_calling import VCF_ANNOTATED_DATASET_TYPE
-from scripts.import_util import add_dataset_to_entity
-from scripts.import_util import copy_and_add_dataset_source
-from scripts.import_util import copy_dataset_to_entity_data_dir
-from scripts.import_util import import_reference_genome_from_local_file
+from utils.import_util import add_dataset_to_entity
+from utils.import_util import copy_and_add_dataset_source
+from utils.import_util import copy_dataset_to_entity_data_dir
+from utils.import_util import import_reference_genome_from_local_file
 from settings import PWD as GD_ROOT
 
 

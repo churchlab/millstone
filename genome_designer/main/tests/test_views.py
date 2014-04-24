@@ -94,10 +94,6 @@ class TestViews(TestCase):
                 # Samples
                 reverse('main.views.sample_list_view',
                         args=(test_project.uid,)),
-
-                # Variants
-                reverse('main.views.single_variant_view',
-                        args=(test_project.uid, ref_genome.uid, variant.uid)),
         ]
 
         # The fake web browser client used to make requests.

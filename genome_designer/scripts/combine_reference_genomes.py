@@ -9,8 +9,8 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from main.models import Dataset
 from main.models import ReferenceGenome
-from scripts.import_util import add_dataset_to_entity
-from scripts.util import generate_safe_filename_prefix_from_label
+from utils.import_util import add_dataset_to_entity
+from utils import generate_safe_filename_prefix_from_label
 
 
 def combine_list(reference_genome_list, new_ref_genome_label, project):

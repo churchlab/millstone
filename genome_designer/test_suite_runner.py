@@ -8,12 +8,12 @@ import shutil
 
 from django.conf import settings
 from django_nose import NoseTestSuiteRunner
+from djcelery_testworker.testcase import CeleryWorkerThread
 
 
 class TempFilesystemTestSuiteRunner(NoseTestSuiteRunner):
     """Subclasses the nose test runner in order to use a temp filesystem.
     """
-
     def setup_databases(self):
         self.setup_temp_filesystem()
         return super(TempFilesystemTestSuiteRunner, self).setup_databases()
@@ -40,15 +40,7 @@ class CustomTestSuiteRunner(TempFilesystemTestSuiteRunner):
     """
 
     def setup_test_environment(self, **kwargs):
-        # Catch leftover .pyc from, say, changing git branches.
-        assert_no_orphaned_pyc_files('.')
-
-        # Make sure the startup function works.
-        # As of implementation, this function adds a custom function to
-        # our Postgres database.
-        from django.db.models.signals import post_syncdb
-        import main
-        post_syncdb.connect(handle_post_syncdb_startup, sender=main.models)
+        setup_test_environment_common()
 
         # Don't use Celery for tests. If we ever want to test with Celery,
         # we'll need to create a different TestSuiteRunner.
@@ -57,6 +49,56 @@ class CustomTestSuiteRunner(TempFilesystemTestSuiteRunner):
         settings.BROKER_BACKEND = 'memory'
 
         return super(CustomTestSuiteRunner, self).setup_test_environment()
+
+
+class IntegrationTestSuiteRunner(TempFilesystemTestSuiteRunner):
+    """TestSuiteRunner for integration tests.
+
+    Main feature: Starts a celery worker connected to the test database.
+    """
+
+    def setup_test_environment(self, **kwargs):
+        setup_test_environment_common()
+
+        return super(IntegrationTestSuiteRunner, self).setup_test_environment()
+
+    def setup_databases(self):
+        super_result = super(IntegrationTestSuiteRunner, self).setup_databases()
+
+        # Setup celery worker AFTER database is setup.
+        self.setup_celery_worker()
+
+        return super_result
+
+    def setup_celery_worker(self):
+        # Start celery worker thread.
+        self.celery_worker_thread = CeleryWorkerThread(options=['--verbose'])
+        self.celery_worker_thread.daemon = True
+        self.celery_worker_thread.start()
+
+        # Wait for the worker to be ready.
+        self.celery_worker_thread.is_ready.wait()
+        if self.celery_worker_thread.error:
+            raise self.celery_worker_thread
+
+    def teardown_test_environment(self):
+        self.celery_worker_thread.join(5)
+        return super(IntegrationTestSuiteRunner, self).teardown_test_environment()
+
+
+
+def setup_test_environment_common():
+    """Common setup procedures.
+    """
+    # Catch leftover .pyc from, say, changing git branches.
+    assert_no_orphaned_pyc_files('.')
+
+    # Make sure the startup function works.
+    # As of implementation, this function adds a custom function to
+    # our Postgres database.
+    from django.db.models.signals import post_syncdb
+    import main
+    post_syncdb.connect(handle_post_syncdb_startup, sender=main.models)
 
 
 def handle_post_syncdb_startup(sender, **kwargs):

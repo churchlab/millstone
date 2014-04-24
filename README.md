@@ -159,7 +159,7 @@ the application.
 
 2. From one terminal, start the celery server.
 
-        (venv)$ ./run_celery.sh
+        (venv)$ ./scripts/run_celery.sh
 
 3. Open another terminal and start the django server.
 
@@ -185,20 +185,34 @@ You can grant these by logging into the Posgres shell and running:
 ## Tests
 
 We currently use [django-nose](https://pypi.python.org/pypi/django-nose) for
-testing. This package should be seamlessly hooked up to Django's normal testing
-so you can do the standard `manage.py` command:
+testing.
 
-    (venv)$ python manage.py test
+To run unit tests:
+
+    (venv)$ ./scripts/run_unit_tests.sh
+
+To run integration tests:
+
+    (venv)$ ./scripts/run_integration_tests.sh
 
 Nose also allows us to run tests only in specific modules.
 
 In order to run only the tests in, say, the `main` app directory, run:
 
-    (venv)$ python manage.py test main
+    (venv)$ ./scripts/run_unit_tests.sh main
 
 And for only the tests in `scripts` call:
 
-    (venv)$ python manage.py test scripts
+    (venv)$ ./scripts/run_unit_tests.sh main
+
+For integration tests, unfortunately you'll have to do it a slightly different way (TODO: Fix this):
+
+    (venv)$ ./manage.py test --settings=tests.integration_test_settings tests/integration/test_pipeline_integration.py:TestAlignmentPipeline.test_run_pipeline
+
+The same form works for unit tests, just use `--settings=tests.test_settings`
+
+Note, in the following examples we use a standard `manage.py test` root, but you should adhere to the
+examples above.
 
 To run a single test module, run:
 
@@ -212,8 +226,62 @@ To reuse the Postgresql database, wiping it rather than destroying and creating 
 
     (venv)$ REUSE_DB=1 ./manage.py test
 
+Note that for some reason integration tests currently fail if run with the form:
+
+    (venv)$ REUSE_DB=0 ./scripts/run_integration_tests.sh
+
+### Integration Tests
+
+We recently introduced the concept of integration tests to our code. Previously,
+many of our unit tests outgrew their unit-ness, but we were still treating them
+like so.
+
+We created an IntegrationTestSuiteRunner where the main difference is that
+we start up a celery server that handles processing tasks. We are migrating
+tests that should really be integration tests to be covered under this label.
+
+When adding a test (see below), if your test touches multiple code units, it's
+likely that's more appropriate to put it under integration test coverage. We'll
+add notes shortly about how to add new integration tests.
+
+To run integration tests, use this command. This uses nose so you can use
+the same options and features as before.
+
+    (venv)$ ./scripts/run_integration_tests.py
+
+HINT: When debugging integration tests, it may be necessary to manually clean
+up previously stared `celerytestworker`s. There is a script to do this for you:
+
+    $ ./scripts/kill_celerytestworkers.sh
+
+### Debugging Tests / Dealing with Craziness
+
+Our test framework isn't perfect. Here are some potential problems and other
+hints that might help.
+
+#### `ps aux` and `grep` are your friends
+
+To see running celery processes:
+
+    ps aux | grep celery
+
+To see running integration test:
+
+    ps aux | grep python.*integration
+
+To kill the process associated with the integration test (e.g. 777)
+
+    kill 777
+
+To kill orphaned celerytestworker processes, we actually have a script:
+
+    ./scripts/kill_celerytestworkers.sh
+
 
 ### Adding Tests
+
+(Right now, this documentation is only for unit tests. Information for
+integration tests is coming soon.)
 
 Nose automatically discovers files with names of the form `test_*.py` as test
 files.

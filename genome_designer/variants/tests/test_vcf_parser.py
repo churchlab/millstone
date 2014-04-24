@@ -15,10 +15,10 @@ from main.models import Project
 from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
-from scripts.import_util import copy_and_add_dataset_source
-from scripts.import_util import import_reference_genome_from_local_file
-from scripts.vcf_parser import parse_alignment_group_vcf
+from utils.import_util import copy_and_add_dataset_source
+from utils.import_util import import_reference_genome_from_local_file
 from settings import PWD as GD_ROOT
+from variants.vcf_parser import parse_alignment_group_vcf
 
 TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'

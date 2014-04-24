@@ -55,16 +55,13 @@ gd.App.prototype.run = function() {
       break;
 
     case 'VARIANT_SET':
-      var view = new gd.VariantSetView();
+      var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var view = new gd.VariantSetView({'model': model});
       break;
 
     case 'VARIANT_SET_LIST':
       var model = new Backbone.Model(INIT_JS_DATA.entity);
       var view = new gd.VariantSetListView({'model': model});
-      break;
-
-    case 'SINGLE_VARIANT_VIEW':
-      var view = new gd.SingleVariantView();
       break;
 
     case 'GENE':

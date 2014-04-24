@@ -1,5 +1,7 @@
 /**
  * @fileoverview Base object for views related to analysis.
+ *
+ * TODO: Refactor to use gd.VariantsTableComponent.
  */
 
 gd.TabAnalyzeBaseView = Backbone.View.extend(

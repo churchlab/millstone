@@ -14,7 +14,7 @@ from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
-from scripts.dynamic_snp_filter_key_map import update_filter_key_map
+from variants.dynamic_snp_filter_key_map import update_filter_key_map
 
 
 SV_TYPES = {

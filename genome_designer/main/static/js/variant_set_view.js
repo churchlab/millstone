@@ -7,24 +7,18 @@ gd.VariantSetView = Backbone.View.extend({
   el: '#gd-page-container',
 
   initialize: function() {
-    // Field config for the datatable.
-    this.fieldConfig = VARIANT_TO_VARIANT_SET_DATA.field_config;
-
-    // List of objects to display in the datatable.
-    this.variantToVariantSetData = VARIANT_TO_VARIANT_SET_DATA.obj_list;
-
+    this.filterString = 'variant_set_uid = ' + this.model.get('uid');
     this.render();
   },
 
   render: function() {
     this.decorateSidebar();
 
-    this.datatable = new gd.DataTableComponent({
-        el: $('#gd-datatable-hook'),
-        objList: this.variantToVariantSetData,
-        fieldConfig: this.fieldConfig
+    this.variantsTableComponent = new gd.VariantsTableComponent({
+      model: this.model,
+      filterString: this.filterString,
+      filterDisabled: true,
     });
-
   },
 
   /** Decorate the side nav bar. */
@@ -36,7 +30,25 @@ gd.VariantSetView = Backbone.View.extend({
     'click #gd-variant-set-view-export-as-csv': 'handleExportCsv',
   },
 
+  /** Dynamically populate form fields and submit. */
   handleExportCsv: function() {
-    $('#gd-variant-sets-export-csv-form').submit();
-  }
+    var formJqueryObj = $('#gd-variant-sets-export-csv-form');
+
+    // Append the form fields.
+    this._appendInputFieldToForm(formJqueryObj, 'ref_genome_uid',
+        this.model.get('refGenomeUid'));
+    this._appendInputFieldToForm(formJqueryObj, 'filter_string',
+        this.filterString);
+
+    // Submit the form. This cause a download to start.
+    formJqueryObj.submit();
+  },
+
+  /** Helper method to append input value to form. */
+  _appendInputFieldToForm: function(formJqueryObj, name, value) {
+    formJqueryObj.append(_.template(
+        '<input type="hidden" name="<%= name %>" value="<%= value %>">',
+        {name: name, value: value}
+    ));
+  },
 });

@@ -135,10 +135,10 @@ def alignment_controls(request):
             render_to_string('controls/alignment_controls.html',
             context))
 
+
 def variant_set_list_controls(request):
     """Returns the Variant Set List control box.
     """
-    assert 'projectUid' in request.GET
     context = RequestContext(request)
 
     context['ref_genome_list'] = get_list_or_404(ReferenceGenome,

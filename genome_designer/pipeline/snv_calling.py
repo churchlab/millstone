@@ -17,10 +17,10 @@ from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
 from read_alignment import get_insert_size
 from main.s3 import project_files_needed
-from scripts.vcf_parser import parse_alignment_group_vcf
-from scripts.jbrowse_util import add_vcf_track
-from scripts.util import uppercase_underscore
+from utils.jbrowse_util import add_vcf_track
+from utils import uppercase_underscore
 from settings import TOOLS_DIR
+from variants.vcf_parser import parse_alignment_group_vcf
 from variants.variant_sets import add_variants_to_set_from_bed
 from variant_effects import run_snpeff
 
@@ -48,13 +48,17 @@ def get_common_tool_params(alignment_group):
             'sample_alignments': _find_valid_sample_alignments(alignment_group, alignment_type),
             }
 
-# Returns a tuple of variant tools params to pass into find_variants_with_tool
+
 def get_variant_tool_params():
+    """Returns a tuple of variant tools params to pass into
+    find_variants_with_tool.
+    """
     return (
             ('freebayes', Dataset.TYPE.VCF_FREEBAYES, run_freebayes),
             ('pindel', Dataset.TYPE.VCF_PINDEL, run_pindel),
             ('delly', Dataset.TYPE.VCF_DELLY, run_delly),
-            )
+    )
+
 
 def _get_fasta_ref(alignment_group):
     # Grab the reference genome fasta for the alignment.

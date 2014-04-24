@@ -27,8 +27,14 @@ import vcf
 
 from main.exceptions import InputError
 from main.models import ReferenceGenome
-from scripts.filter_key_map_constants import *
-from scripts.util import uppercase_underscore
+from variants.filter_key_map_constants import EXPERIMENT_SAMPLE_HARD_CODED
+from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
+from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
+from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
+from variants.filter_key_map_constants import MAP_KEY__EXPERIMENT_SAMPLE
+from variants.filter_key_map_constants import SNP_CALLER_COMMON_DATA_HARD_CODED
+from variants.filter_key_map_constants import SNP_EVIDENCE_HARD_CODED
+from variants.filter_key_map_constants import SNP_VARIANT_HARD_CODED
 
 
 def initialize_filter_key_map():

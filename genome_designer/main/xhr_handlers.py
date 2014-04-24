@@ -6,7 +6,6 @@ reasonable separation point is to separate page actions from Ajax actions.
 """
 
 import copy
-import csv
 import json
 import os
 from StringIO import StringIO
@@ -36,7 +35,6 @@ from main.model_views import adapt_variant_to_frontend
 from main.model_views import GeneView
 from main.models import AlignmentGroup
 from main.models import Dataset
-from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Region
@@ -45,25 +43,25 @@ from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
-from scripts.data_export_util import export_melted_variant_view
-from scripts.jbrowse_util import compile_tracklist_json
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__COMMON_DATA
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__ALTERNATE
-from scripts.dynamic_snp_filter_key_map import MAP_KEY__EVIDENCE
-from scripts.import_util import import_reference_genome_from_local_file
-from scripts.import_util import import_reference_genome_from_ncbi
-from scripts.import_util import import_samples_from_targets_file
-from scripts.import_util import create_sample_models_for_eventual_upload
-from scripts.import_util import import_variant_set_from_vcf
+from utils.data_export_util import export_melted_variant_view
+from utils.jbrowse_util import compile_tracklist_json
+from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
+from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
+from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
+from utils.import_util import create_samples_from_row_data
+from utils.import_util import create_sample_models_for_eventual_upload
+from utils.import_util import import_reference_genome_from_local_file
+from utils.import_util import import_reference_genome_from_ncbi
+from utils.import_util import import_samples_from_targets_file
+from utils.import_util import import_variant_set_from_vcf
 from variants.common import determine_visible_field_names
-from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_variant_filter import lookup_variants
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.variant_sets import update_variant_in_set_memberships
 from variants.variant_sets import update_variant_in_set_memberships__all_matching_filter
 
 if settings.S3_ENABLED:
-    from scripts.import_util import parse_targets_file, import_reference_genome_from_s3, import_samples_from_s3
+    from utils.import_util import parse_targets_file, import_reference_genome_from_s3, import_samples_from_s3
     from s3 import s3_get_string
 
 
@@ -162,6 +160,56 @@ def create_ref_genome_from_ncbi(request):
     result = {
         'error': error_string,
     }
+
+    return HttpResponse(json.dumps(result), content_type='application/json')
+
+
+@login_required
+@require_POST
+def upload_single_sample(request):
+    # Read params / validate.
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.POST['projectUid'])
+    if not 'fastq1' in request.FILES:
+        raise Http404
+    sample_label = request.POST.get('sampleLabel', None)
+    if not sample_label:
+        raise Http404
+
+    # Save uploaded Samples to temp location.
+    if not os.path.exists(settings.TEMP_FILE_ROOT):
+        os.mkdir(settings.TEMP_FILE_ROOT)
+    fastq1_uploaded_file = request.FILES['fastq1']
+    if not os.path.exists(settings.TEMP_FILE_ROOT):
+        os.mkdir(settings.TEMP_FILE_ROOT)
+    _, fastq1_temp_file_location = tempfile.mkstemp(
+        suffix='_' + fastq1_uploaded_file.name,
+        dir=settings.TEMP_FILE_ROOT)
+    with open(fastq1_temp_file_location, 'w') as temp_file_fh:
+        temp_file_fh.write(fastq1_uploaded_file.read())
+
+    # Maybe handle fastq2.
+    fastq2_uploaded_file = None
+    if 'fastq2' in request.FILES:
+        fastq2_uploaded_file = request.FILES['fastq2']
+        _, fastq2_temp_file_location = tempfile.mkstemp(
+            suffix='_' + fastq2_uploaded_file.name,
+            dir=settings.TEMP_FILE_ROOT)
+        with open(fastq2_temp_file_location, 'w') as temp_file_fh:
+            temp_file_fh.write(fastq2_uploaded_file.read())
+
+    result = {}
+
+    # Create the data structure that the util expects and create samples.
+    try:
+        data_source_list = [{
+            'Sample_Name': sample_label,
+            'Read_1_Path': fastq1_temp_file_location,
+            'Read_2_Path': fastq2_temp_file_location
+        }]
+        create_samples_from_row_data(project, data_source_list, move=False)
+    except Exception as e:
+        result['error'] = str(e)
 
     return HttpResponse(json.dumps(result), content_type='application/json')
 
@@ -278,45 +326,6 @@ def samples_upload_through_browser_sample_data(request):
     dataset.save(update_fields=['status'])
 
     return HttpResponse(json.dumps({}), content_type='application/json')
-
-
-@login_required
-def export_variant_set_as_csv(request):
-    """Returns a response to download a file for all of
-    the samples contained in the variant set.
-    """
-    variant_set_uid = request.POST.get('variant_set_uid', None)
-    if not variant_set_uid:
-        raise Http404
-
-    # Make sure that the variant set is in a Project belonging to the user.
-    variant_set = get_object_or_404(VariantSet,
-            uid=variant_set_uid,
-            reference_genome__project__owner=request.user.get_profile())
-
-    # Get the variants passing the filter.
-    filter_string = 'IN_SET(%s)' % variant_set_uid
-    filter_result = get_variants_that_pass_filter(
-            filter_string, variant_set.reference_genome)
-    variant_list = filter_result.variant_set
-
-    # Export data as csv.
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="variant_set.csv"'
-    csv_field_names = [
-        'position',
-        'ref',
-        'alt'
-    ]
-    writer = csv.DictWriter(response, csv_field_names)
-    writer.writeheader()
-    for variant in variant_list:
-        writer.writerow({
-            'position': variant.position,
-            'ref': variant.ref_value,
-            'alt': variant.get_variants_as_string(),
-        })
-    return response
 
 
 # Key in the GET params containing the string for filtering the variants.
@@ -619,6 +628,7 @@ def refresh_materialized_variant_table(request):
     return HttpResponse('ok')
 
 
+@require_GET
 @login_required
 def export_variants_as_csv(request):
     """Handles a request to download variants in .csv format.
@@ -628,12 +638,11 @@ def export_variants_as_csv(request):
             project__owner=request.user.get_profile(),
             uid=ref_genome_uid)
 
-    # NOTE: Currently a no-op.
-    variant_id_list = []
+    filter_string = request.GET.get('filter_string', '')
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="variants.csv"'
-    export_melted_variant_view(reference_genome, variant_id_list, response)
+    export_melted_variant_view(reference_genome, filter_string, response)
     return response
 
 

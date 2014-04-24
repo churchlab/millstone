@@ -54,10 +54,6 @@ urlpatterns = patterns('',
     url(r'^projects/([\w-]+)/samples$',
             'main.views.sample_list_view'),
 
-    # Variants
-    url(r'^projects/([\w-]+)/refgenomes/([\w-]+)/variants/([\w-]+)$',
-            'main.views.single_variant_view'),
-
     # Demo Splash
     url(r'^demo_splash$',
             'main.views.demo_splash_view'),
@@ -82,8 +78,6 @@ urlpatterns = patterns('',
 
     url(r'^_/sets$',
             'main.xhr_handlers.get_variant_set_list'),
-    url(r'^_/sets/exportcsv$',
-            'main.xhr_handlers.export_variant_set_as_csv'),
     url(r'^_/sets/create$',
             'main.xhr_handlers.create_variant_set'),
 
@@ -103,6 +97,8 @@ urlpatterns = patterns('',
 
     url(r'^_/samples$',
             'main.xhr_handlers.get_samples'),
+    url(r'^_/samples/upload_single_sample$',
+            'main.xhr_handlers.upload_single_sample'),
     url(r'^_/samples/create_from_server_location$',
             'main.xhr_handlers.create_samples_from_server_location'),
     url(r'^_/samples/samples_upload_through_browser_template$',

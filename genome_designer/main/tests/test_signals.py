@@ -19,7 +19,7 @@ from main.models import VariantEvidence
 from main.models import AlignmentGroup
 from main.model_utils import get_dataset_with_type
 
-from scripts.import_util import import_reference_genome_from_local_file
+from utils.import_util import import_reference_genome_from_local_file
 
 
 TEST_USERNAME = 'testuser'

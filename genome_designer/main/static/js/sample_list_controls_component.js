@@ -25,6 +25,19 @@ gd.SamplesControlsComponent = Backbone.View.extend({
 
   listenToControls: function() {
     // New pattern where this component creates a new modal component on click.
+    $('#gd-samples-upload-single-sample-through-browser-modal').on(
+        'shown.bs.modal', _.bind(function (e) {
+          if (!this.uploadSingleSampleModal) {
+            this.uploadSingleSampleModal =
+                new gd.UploadSingleSampleModal({model: this.model});
+          }
+        }, this));
+
+    $('#gd-samples-upload-single-sample-through-browser-modal').on(
+        'hidden.bs.modal', _.bind(function () {
+          this.trigger('MODELS_UPDATED');
+        }, this));
+
     $('#gd-samples-upload-through-browser-modal').on('shown.bs.modal',
         _.bind(function (e) {
           if (!this.sampleUploadThroughBrowserModal) {
