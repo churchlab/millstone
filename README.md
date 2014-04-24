@@ -288,9 +288,13 @@ files.
 
 ## Bootstrapping Test Data
 
+First make sure Celery is running. In another terminal do:
+
+    (venv)$ ./scripts/run_celery.sh
+
 From the `genome_designer` directory, run:
 
-    (venv)$ python scripts/bootstrap_data.py
+    (venv)$ python scripts/bootstrap_data.py full
 
 NOTE: This will delete the entire dev database and re-create it with the
 hard-coded test models only.
