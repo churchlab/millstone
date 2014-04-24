@@ -11,7 +11,19 @@
     <span class="caret"></span>
   </button>
   <ul class="dropdown-menu">
-    <li><a id="gd-variant-set-view-export-as-csv" href="#">Export to csv</a></li>
+    <li>
+      <a id="gd-variant-set-view-export-as-csv" href="#">
+        Export to csv
+      </a>
+    </li>
+    {% if is_print_mage_oligos_enabled %}
+      <li>
+        <a href="#gd-variant-set-print-mage-oligos-modal"
+            data-toggle="modal">
+          Print MAGE Oligos
+        </a>
+      </li>
+    {% endif %}
   </ul>
 </div>
 
@@ -30,4 +42,7 @@
     INIT_JS_DATA = {{init_js_data}};
   {% endautoescape %}
 </script>
+
+{% include "controls/print_mage_oligos_modal.html" %}
+
 {% endblock %}

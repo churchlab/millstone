@@ -465,6 +465,9 @@ def _create_variant_set_empty(project, ref_genome_uid, variant_set_name):
 
 @login_required
 def variant_set_view(request, project_uid, variant_set_uid):
+    """Data view for a single VariantSet which includes options for taking
+    actions on the VariantSet.
+    """
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
     variant_set = get_object_or_404(VariantSet,
@@ -484,7 +487,8 @@ def variant_set_view(request, project_uid, variant_set_uid):
         'project': project,
         'tab_root': TAB_ROOT__DATA,
         'variant_set': variant_set,
-        'init_js_data': init_js_data
+        'init_js_data': init_js_data,
+        'is_print_mage_oligos_enabled': settings.FLAG__PRINT_MAGE_OLIGOS_ENABLED
     }
 
     return render(request, 'variant_set.html', context)
