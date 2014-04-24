@@ -2,12 +2,14 @@
 Experimenting with Django transactions.
 """
 
+import os
 import random
+import sys
 
-# Since this script is intended to be used from the terminal, setup the
-# environment first so that django and model imports work.
-from utils import setup_django_env
-setup_django_env()
+# Setup Django environment.
+sys.path.append(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), '../'))
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from django.contrib.auth.models import User
 from django.db import transaction

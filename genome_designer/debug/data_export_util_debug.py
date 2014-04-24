@@ -4,14 +4,12 @@ Debugging data_export_util.py.
 
 import csv
 import os
+import sys
 
-# Since this script is intended to be used from the terminal, setup the
-# environment first so that django and model imports work.
-PWD = os.path.dirname(os.path.realpath(__file__ ))
-scripts_path = os.path.join(PWD, '../scripts')
-os.sys.path.append(scripts_path)
-from utils import setup_django_env
-setup_django_env()
+# Setup Django environment.
+sys.path.append(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), '../'))
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from data_export_util import export_melted_variant_view
 from main.models import ReferenceGenome
