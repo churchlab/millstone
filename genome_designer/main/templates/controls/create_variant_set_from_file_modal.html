@@ -12,7 +12,8 @@
       <div id="modalFromFileTabContent" class="tab-content">
         <div class="tab-pane fade in active" id="modalFromFile_upload">
           <p>To add a new Variant Set (a list of putative SNPs that you want grouped together) you need to make and upload a <i>VCF file</i> that has information about each SNP relative to a reference genome.<strong> First download <a href="/templates/variant_set_upload_template.vcf">this template</a></strong>, open it in a text editor, and fill it in. Only required columns are CHROM, POS, ID, REF, and ALT. ID can be blank. More information on the VCF format is <a target="_blank" href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41">here</a>.
-            <form id="gd-variant-set-create-form-from-file" enctype="multipart/form-data" method="POST">
+            <form id="gd-variant-set-create-form-from-file" enctype="multipart/form-data"
+                method="POST" onsubmit="return false">
               <input type="hidden" name="createSetType" value="from-file">
               <div class="form-group">
                 <input type="text" name="variantSetName" class="form-control"
