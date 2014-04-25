@@ -189,9 +189,9 @@ def find_variants_with_tool(alignment_group, variant_params):
     flag_variants_from_bed(alignment_group, Dataset.TYPE.BED_CALLABLE_LOCI)
 
     for sample_alignment in sample_alignment_list:
-    bwa_align = get_dataset_with_type(sample_alignment, "BWA BAM")
-    bwa_align.status = Dataset.STATUS.FINISHED
-    bwa_align.save(update_fields=['status'])
+        bwa_align = get_dataset_with_type(sample_alignment, "BWA BAM")
+        bwa_align.status = Dataset.STATUS.FINISHED
+        bwa_align.save(update_fields=['status'])
 
     return True
 
