@@ -88,8 +88,12 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     jbrowse_track_names = get_jbrowse_track_names(reference_genome)
 
     # HACK: Only one AlignmentGroup right now.
-    hack_single_alignment_group = AlignmentGroup.objects.filter(
-            reference_genome=reference_genome)[0]
+    associated_alignment_groups = AlignmentGroup.objects.filter(
+            reference_genome=reference_genome)
+    if len(associated_alignment_groups) > 0:
+        hack_single_alignment_group = associated_alignment_groups[0]
+    else:
+        hack_single_alignment_group = None
 
     # Aggregate list of objects that are ready for display by the frontend.
     fe_obj_list = []
@@ -116,8 +120,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             if field == 'links':
                 value = create_variant_links_field(
                         melted_variant_obj, reference_genome,
-                        hack_single_alignment_group,
-                        jbrowse_track_names)
+                        jbrowse_track_names, hack_single_alignment_group)
             elif field == MELTED_SCHEMA_KEY__VS_LABEL:
                 value = _adapt_variant_set_label_field(
                         melted_variant_obj, reference_genome.project.uid,
@@ -307,7 +310,7 @@ def _adapt_variant_set_label_field(variant_as_dict, project_uid, melted,
 
 
 def _adapt_variant_set_label_field__melted(variant_as_dict, project_uid,
-        reference_genome, alignment_group):
+        reference_genome, alignment_group=None):
     # Build a dictionary of individual HTML string anchors mapped by label,
     # so we can sort it at the very end.
     variant_set_anchor_map = {}
@@ -346,7 +349,7 @@ def _adapt_variant_set_label_field__melted(variant_as_dict, project_uid,
 
 
 def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid,
-        reference_genome, alignment_group):
+        reference_genome, alignment_group=None):
     # If there is an empty row (no ExperimentSample associated),
     # then all the counts will be off by one, so we need to decrement
     # them.
@@ -408,14 +411,16 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid,
 
 
 def _create_variant_set_analyze_view_link(project_uid, variant_set_uid,
-        reference_genome, alignment_group):
+        reference_genome, alignment_group=None):
     """Create link to Analyze view filtered by this variant set.
     """
-    root_href = reverse('main.views.tab_root_analyze',
-            args=(reference_genome.project.uid,
-                    alignment_group.uid, 'variants'))
+    reverse_args = [reference_genome.project.uid]
+    if alignment_group is not None:
+        reverse_args += [alignment_group.uid, 'variants']
+    root_href = reverse('main.views.tab_root_analyze', args=reverse_args)
     filter_part = '?filter=VARIANT_SET_UID=%s&melt=0' % (variant_set_uid,)
     return root_href + filter_part
+
 
 # Field that provides links to melted view, JBrowse, etc.
 LINKS_FIELD = {

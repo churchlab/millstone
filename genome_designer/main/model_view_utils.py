@@ -53,16 +53,15 @@ def get_jbrowse_track_names(reference_genome):
 # HELPER FXNS FOR GENERATING MODEL VIEW LINKS ============================
 
 def create_single_variant_page_link_for_variant_object(variant_as_dict,
-        reference_genome, alignment_group):
+        reference_genome, alignment_group=None):
     """Constructs the label as an anchor that links to the single variant view.
     """
-    # Generate link to Analyze view for this single variant.
-    root_href = reverse('main.views.tab_root_analyze',
-            args=(reference_genome.project.uid,
-                    alignment_group.uid, 'variants'))
+    reverse_args = [reference_genome.project.uid]
+    if alignment_group is not None:
+        reverse_args += [alignment_group.uid, 'variants']
+    root_href = reverse('main.views.tab_root_analyze', args=reverse_args)
     filter_part = '?filter=UID=%s&melt=1' % (variant_as_dict['UID'],)
     full_href = root_href + filter_part
-
     return full_href
 
 
@@ -97,7 +96,7 @@ def create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
 
 
 def create_variant_links_field(variant_as_dict, reference_genome,
-        alignment_group, jbrowse_track_names):
+        jbrowse_track_names, alignment_group=None):
     """
     Create a list of icon links for the variant datatable view.
     """
