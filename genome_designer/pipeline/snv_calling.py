@@ -131,9 +131,13 @@ def find_variants_with_tool(alignment_group, variant_params):
     # are VARIANT_CALLING.
     alignment_group.status = AlignmentGroup.STATUS.VARIANT_CALLING
     alignment_group.save(update_fields=['status'])
+    # This needs to be changed when we get more aligners, as for now we can assume it's a BWA_ALIGN object
+    # adding in a alignment_type variable would allow for that but would mess things up more than I'm comfortable with
+    # atm
     for sample_alignment in sample_alignment_list:
-        sample_alignment.status = Dataset.STATUS.VARIANT_CALLING
-        sample_alignment.save(update_fields=['status'])
+        bwa_align = get_dataset_with_type(sample_alignment, "BWA_ALIGN")
+        bwa_align.status = Dataset.STATUS.VARIANT_CALLING
+        bwa_align.save(update_fields=['status'])
     # Create subdirectory for this tool
     tool_dir = os.path.join(common_params['output_dir'], tool_name)
     ensure_exists_0775_dir(tool_dir)
