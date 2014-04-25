@@ -125,11 +125,15 @@ def find_variants_with_tool(alignment_group, variant_params):
     common_params = get_common_tool_params(alignment_group)
     tool_name, vcf_dataset_type, tool_function = variant_params
 
+    sample_alignment_list = (
+            alignment_group.experimentsampletoalignment_set.all())
     # Finding variants means that all the aligning is complete, so now we
     # are VARIANT_CALLING.
     alignment_group.status = AlignmentGroup.STATUS.VARIANT_CALLING
     alignment_group.save(update_fields=['status'])
-
+    for sample_alignment in sample_alignment_list:
+        sample_alignment.status = Dataset.STATUS.VARIANT_CALLING
+        sample_alignment.save(update_fields=['status'])
     # Create subdirectory for this tool
     tool_dir = os.path.join(common_params['output_dir'], tool_name)
     ensure_exists_0775_dir(tool_dir)
