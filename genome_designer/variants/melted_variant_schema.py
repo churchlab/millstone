@@ -174,7 +174,8 @@ MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS = [
 ] + [
     'va_data', # Needed to hard-code showing INFO_EFF_GENE,
     'es_data',
-    've_data'
+    've_data',
+    'vccd_data'
 ]
 
 # Map from queryable fields to schema info (e.g. type, num).

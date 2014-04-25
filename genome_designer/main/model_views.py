@@ -155,6 +155,24 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             # field config object constructed separately below.
             visible_field_pairs.append((field, value))
 
+        # Append catch all INFO column field
+        # TODO use variables instead of magic strings
+        va_data = melted_variant_obj['VA_DATA']
+        vccd_data = melted_variant_obj['VCCD_DATA']
+        if vccd_data and vccd_data[0]:
+            # is SV: make info of the form "SV [type] [length]"
+            if 'INFO_SVTYPE' in vccd_data[0]:
+                visible_field_pairs.append(('INFO', 'SV %s %d' %
+                    (vccd_data[0]['INFO_SVTYPE'], vccd_data[0].get('INFO_SVLEN', ''))))
+            # is SNP: make info equal to the AA field
+            elif va_data and va_data[0]:  # is SNP
+                visible_field_pairs.append(('INFO', va_data[0].get('INFO_EFF_AA', '')))
+            # unknown: just leave info field blank
+            else:
+                visible_field_pairs.append(('INFO', ''))
+        else:
+            visible_field_pairs.append(('INFO', ''))
+
         fe_obj_list.append(dict(visible_field_pairs))
 
     # Create the config dict that tells DataTables js how to display each col.
@@ -181,6 +199,14 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
         if fdict.get('last'):
             last_idxes.append(displayed_idx)
         displayed_idx += 1
+
+    # Add metadata for INFO column
+    obj_field_config.append({
+      'mData': 'INFO',
+      'sTitle': 'Info',
+      'bSortable': False
+      })
+    displayed_idx += 1
 
     # Finally, move these fields to the end.
     for i in last_idxes:
@@ -436,7 +462,6 @@ OPTIONAL_DEFAULT_FIELDS = [
     {'field': 'INFO_EFF_GENE', 'verbose': 'Gene', 'format': 'gather'}, # va_data
     {'field': 'INFO_EFF_IMPACT', 'verbose': 'Impact', 'format': 'gather',
             'recase':'title'}, # va_data
-    {'field': 'INFO_EFF_AA', 'verbose': 'AA', 'format': 'gather'}, # va_data
 ]
 
 

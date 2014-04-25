@@ -377,8 +377,7 @@ def postprocess_pindel_vcf(vcf_file):
 
     # add some additional VCF fields
     with open(vcf_file + '.tmp', 'w') as fh:
-        fh.write('##INFO=<ID=SVMETHOD,Number=1,Type=String,Description="Type of approach used to detect SV">\n')
-        fh.write('##INFO=<ID=EFF_IMPACT,Number=A,Type=String,Description="Effect impact {High, Moderate, Low, Modifier}.">\n')
+        fh.write('##INFO=<ID=METHOD,Number=1,Type=String,Description="Type of approach used to detect SV">\n')
 
     vcf_writer = vcf.Writer(open(vcf_file + '.tmp', 'a'), vcf_reader)
     for record in vcf_reader:
@@ -391,9 +390,7 @@ def postprocess_pindel_vcf(vcf_file):
             continue
 
         # update some fields
-        record.__dict__['INFO']['SVMETHOD'] = 'PINDEL'
-        record.__dict__['INFO']['EFF_IMPACT'] = '%s_%d' % \
-                (record.__dict__['INFO'].get('SVTYPE', ''), svlen)
+        record.__dict__['INFO']['METHOD'] = 'PINDEL'
 
         vcf_writer.write_record(record)
 
@@ -405,15 +402,12 @@ def postprocess_delly_vcf(vcf_file):
 
     # add some additional VCF fields
     with open(vcf_file + '.tmp', 'w') as fh:
-        fh.write('##INFO=<ID=EFF_IMPACT,Number=A,Type=String,Description="Effect impact {High, Moderate, Low, Modifier}.">\n')
+        fh.write('##INFO=<ID=METHOD,Number=1,Type=String,Description="Type of approach used to detect SV">\n')
 
-    vcf_writer = vcf.Writer(open(vcf_file + '.tmp', 'w'), vcf_reader)
+    vcf_writer = vcf.Writer(open(vcf_file + '.tmp', 'a'), vcf_reader)
     for record in vcf_reader:
         # update some fields
-        record.__dict__['INFO']['SVMETHOD'] = 'DELLY'
-        record.__dict__['INFO']['EFF_IMPACT'] = '%s_%d' % \
-                (record.__dict__['INFO'].get('SVTYPE', ''),
-                record.__dict__['INFO'].get('SVLEN', 0))
+        record.__dict__['INFO']['METHOD'] = 'DELLY'
 
         vcf_writer.write_record(record)
 
