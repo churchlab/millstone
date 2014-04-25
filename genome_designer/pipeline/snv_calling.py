@@ -135,7 +135,7 @@ def find_variants_with_tool(alignment_group, variant_params):
     # adding in a alignment_type variable would allow for that but would mess things up more than I'm comfortable with
     # atm
     for sample_alignment in sample_alignment_list:
-        bwa_align = get_dataset_with_type(sample_alignment, "BWA_ALIGN")
+        bwa_align = get_dataset_with_type(sample_alignment, "BWA BAM")
         bwa_align.status = Dataset.STATUS.VARIANT_CALLING
         bwa_align.save(update_fields=['status'])
     # Create subdirectory for this tool
