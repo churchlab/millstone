@@ -13,7 +13,7 @@
         <div class="tab-pane fade in active" id="modalFromFile_upload">
           <p>To load samples from a location on the server, you need to make a <i>targets file</i> that has information about and points to the individual samples.<strong> First download <a href="/templates/sample_list_targets_template.tsv">this template</a></strong>, open it in Excel or a text editor, and fill it in.
           <form id="gd-samples-create-from-server-location"
-              enctype="multipart/form-data" method="POST">
+              enctype="multipart/form-data" method="POST" onsubmit="return false">
             <input type="hidden" name="projectUid" value="{{project.uid}}">
             <input type="file" name="targetsFile" title="Upload Sample Targets File">
           </form>

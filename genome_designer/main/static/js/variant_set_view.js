@@ -19,11 +19,23 @@ gd.VariantSetView = Backbone.View.extend({
       filterString: this.filterString,
       filterDisabled: true,
     });
+
+    this.listenToControls();
   },
 
   /** Decorate the side nav bar. */
   decorateSidebar: function() {
     $('#gd-sidenav-link-variant-sets').addClass('active');
+  },
+
+  listenToControls: function() {
+    $('#gd-variant-set-print-mage-oligos-modal').on('shown.bs.modal',
+        _.bind(function (e) {
+          if (!this.printMageOligosModal) {
+            this.printMageOligosModal=
+                new gd.PrintMageOligosModal({model: this.model});
+          }
+        }, this));
   },
 
   events: {
