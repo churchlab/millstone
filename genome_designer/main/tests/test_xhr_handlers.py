@@ -30,6 +30,7 @@ from main.testing_util import TEST_PASSWORD
 from main.testing_util import TEST_USERNAME
 from main.xhr_handlers import samples_upload_through_browser_sample_data
 from main.xhr_handlers import upload_single_sample
+from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__FILTER_STRING
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__ERROR
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__TOTAL
@@ -178,7 +179,8 @@ class TestGetVariantList(TestCase):
         """
         request_data = {
             'refGenomeUid': self.ref_genome.uid,
-            'projectUid': self.project.uid
+            'projectUid': self.project.uid,
+            VARIANT_LIST_REQUEST_KEY__FILTER_STRING: 'nonesense'
         }
         response = self.client.get(self.url, request_data)
         self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
