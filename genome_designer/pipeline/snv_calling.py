@@ -125,11 +125,19 @@ def find_variants_with_tool(alignment_group, variant_params):
     common_params = get_common_tool_params(alignment_group)
     tool_name, vcf_dataset_type, tool_function = variant_params
 
+    sample_alignment_list = (
+            alignment_group.experimentsampletoalignment_set.all())
     # Finding variants means that all the aligning is complete, so now we
     # are VARIANT_CALLING.
     alignment_group.status = AlignmentGroup.STATUS.VARIANT_CALLING
-    alignment_group.save()
-
+    alignment_group.save(update_fields=['status'])
+    # This needs to be changed when we get more aligners, as for now we can assume it's a BWA_ALIGN object
+    # adding in a alignment_type variable would allow for that but would mess things up more than I'm comfortable with
+    # atm
+    for sample_alignment in sample_alignment_list:
+        bwa_align = get_dataset_with_type(sample_alignment, "BWA BAM")
+        bwa_align.status = Dataset.STATUS.VARIANT_CALLING
+        bwa_align.save(update_fields=['status'])
     # Create subdirectory for this tool
     tool_dir = os.path.join(common_params['output_dir'], tool_name)
     ensure_exists_0775_dir(tool_dir)
@@ -179,6 +187,11 @@ def find_variants_with_tool(alignment_group, variant_params):
     parse_alignment_group_vcf(alignment_group, vcf_dataset_type)
 
     flag_variants_from_bed(alignment_group, Dataset.TYPE.BED_CALLABLE_LOCI)
+
+    for sample_alignment in sample_alignment_list:
+        bwa_align = get_dataset_with_type(sample_alignment, "BWA BAM")
+        bwa_align.status = Dataset.STATUS.FINISHED
+        bwa_align.save(update_fields=['status'])
 
     return True
 
