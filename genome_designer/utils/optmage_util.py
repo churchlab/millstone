@@ -6,7 +6,6 @@ from optmage.oligo_designer import OligoTarget
 from optmage.oligo_designer import OligoWriter
 from optmage.oligo_designer import OptMAGEConfig
 from optmage.oligo_designer import OPT_MAGE_MUTATION_TYPE__SUBSTITUTION
-from optmage.oligo_designer import OLIGO_TARGET_REQUIRED_PARAMS
 
 from main.exceptions import ValidationException
 from variants.vcf_parser import SV_TYPES
@@ -23,12 +22,13 @@ def print_mage_oligos(variant_set, output_filehandle, target_id_prefix):
         ValidationException
     """
     # First validate that we support printing oligos for this type.
-    _validate_variant_set_for_printing_mage_oligos(variant_set)
+    passing_variants = _validate_variant_set_for_printing_mage_oligos(
+            variant_set)
 
     config = OptMAGEConfig()
 
     oligo_target_list = []
-    for variant in variant_set.variants.all():
+    for variant in passing_variants:
         alt_value = variant.variantalternate_set.all()[0].alt_value
         oligo_target_list.append(OligoTarget(config, {
                 'target_id': variant.position,
@@ -49,19 +49,34 @@ def print_mage_oligos(variant_set, output_filehandle, target_id_prefix):
 
 def _validate_variant_set_for_printing_mage_oligos(variant_set):
     """Validates the VariantSet to make sure we support printing oligos
-    of this type.
+    of this type. Discards Variants for which it doesn't make sense to
+    make oligos (e.g if no VariantAlternate).
+
+    Args:
+        variant_set: The VariantSet we are printing oligos for.
+
+    Returns:
+        List of Variants that pass.
 
     Raises:
         ValidationException
     """
+    passing_variants = []
     for variant in variant_set.variants.all():
         # Don't support SV types.
         if variant.type in SV_TYPES.values():
             raise ValidationException("SVs Not supported")
 
+        # No alt, silently skip.
+        if variant.variantalternate_set.count() == 0:
+            continue
+
         # Don't support case of multiple alts.
-        if variant.variantalternate_set.count() != 1:
-            raise ValidationException("All Variants must have exactly one alt.")
+        if variant.variantalternate_set.count() > 1:
+            raise ValidationException(
+                    "All Variants must have exactly one alt. " +
+                    "Variant with uid " + variant.uid + " has " +
+                    str(variant.variantalternate_set.count()))
 
         ref_value = variant.ref_value
         alt_value = variant.variantalternate_set.all()[0]
@@ -69,6 +84,5 @@ def _validate_variant_set_for_printing_mage_oligos(variant_set):
         if ref_value == alt_value:
             raise ValidationException("Nothing to do.")
 
-
-# def _determine_mutation_type(variant):
-#     if variant.ref ==
+        passing_variants.append(variant)
+    return passing_variants

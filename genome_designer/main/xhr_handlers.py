@@ -45,16 +45,17 @@ from main.models import VariantSet
 from main.models import S3File
 from utils.data_export_util import export_melted_variant_view
 from utils.jbrowse_util import compile_tracklist_json
-from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
-from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
-from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
 from utils.import_util import create_samples_from_row_data
 from utils.import_util import create_sample_models_for_eventual_upload
 from utils.import_util import import_reference_genome_from_local_file
 from utils.import_util import import_reference_genome_from_ncbi
 from utils.import_util import import_samples_from_targets_file
 from utils.import_util import import_variant_set_from_vcf
+from utils.optmage_util import print_mage_oligos
 from variants.common import determine_visible_field_names
+from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
+from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
+from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
 from variants.materialized_variant_filter import lookup_variants
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.variant_sets import update_variant_in_set_memberships
@@ -754,6 +755,7 @@ def compile_jbrowse_and_redirect(request):
     get_values = urllib.urlencode(request.GET).replace('+','%20')
     return HttpResponseRedirect('jbrowse/index.html' + '?' + get_values)
 
+
 @login_required
 @require_POST
 def create_variant_set(request):
@@ -832,6 +834,18 @@ def _create_variant_set_empty(ref_genome, variant_set_name):
             reference_genome=ref_genome,
             label=variant_set_name)
     return ''
+
+
+@login_required
+def print_mage_oligos_for_variant_set(request):
+    variant_set_uid = request.GET.get('variant_set_uid')
+    variant_set = get_object_or_404(VariantSet,
+            reference_genome__project__owner=request.user.get_profile(),
+            uid=variant_set_uid)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="oligos.csv"'
+    print_mage_oligos(variant_set, response, 'o_')
+    return response
 
 
 if settings.S3_ENABLED:
