@@ -9,9 +9,22 @@
       <div class="modal-body">
         <form id="gd-variant-set-print-mage-oligos-form" method="GET"
             action="/_/sets/print_mage_oligos">
-          <input type="hidden" name="variant_set_uid" value="{{variant_set.uid}}">
+          <input type="hidden" name="variantSetUid" value="{{variant_set.uid}}">
+
+          <h4>Experiment Direction</h4>
+
+          <div class="form-group">
+            <label class="radio">
+              <input type="radio" name="experimentDir" value="F" checked>
+              Forward (oligos that would introduce these changes)
+            </label>
+            <label class="radio">
+              <input type="radio" name="experimentDir" value="R">
+              Reverse (oligos that would revert these changes)
+            </label>
+          </div>
         </form>
-      </div>
+      </div><!-- modal-body -->
 
       <div class="modal-footer">
         <button class="btn btn-default" data-dismiss="modal">

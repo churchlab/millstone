@@ -838,13 +838,14 @@ def _create_variant_set_empty(ref_genome, variant_set_name):
 
 @login_required
 def print_mage_oligos_for_variant_set(request):
-    variant_set_uid = request.GET.get('variant_set_uid')
+    variant_set_uid = request.GET.get('variantSetUid')
     variant_set = get_object_or_404(VariantSet,
             reference_genome__project__owner=request.user.get_profile(),
             uid=variant_set_uid)
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="oligos.csv"'
-    print_mage_oligos(variant_set, response, 'o_')
+    print_mage_oligos(variant_set, response, 'o_',
+            experiment_dir=request.GET.get('experimentDir'))
     return response
 
 
