@@ -5,7 +5,7 @@ import os
 import time
 
 from django.conf import settings
-from django.test import TransactionTestCase
+from djcelery_testworker.testcase import CeleryWorkerTestCase
 import vcf
 
 from main.models import AlignmentGroup
@@ -20,7 +20,7 @@ from utils.import_util import import_reference_genome_from_local_file
 from variants.vcf_parser import extract_raw_data_dict
 
 
-class TestSVPipeline(TransactionTestCase):
+class TestSVPipeline(CeleryWorkerTestCase):
 
     def setUp(self):
         user = User.objects.create_user('test_username_sv', password='password',

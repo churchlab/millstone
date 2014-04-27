@@ -8,7 +8,6 @@ import shutil
 
 from django.conf import settings
 from django_nose import NoseTestSuiteRunner
-from djcelery_testworker.testcase import CeleryWorkerThread
 
 
 class TempFilesystemTestSuiteRunner(NoseTestSuiteRunner):
@@ -54,37 +53,15 @@ class CustomTestSuiteRunner(TempFilesystemTestSuiteRunner):
 class IntegrationTestSuiteRunner(TempFilesystemTestSuiteRunner):
     """TestSuiteRunner for integration tests.
 
-    Main feature: Starts a celery worker connected to the test database.
+    This differs from CustomTestSuiteRunner in that we don't set celery to use
+    in-memory / force synchronous. TestCases processed using this runner should
+    inherit from djcelery_testworker.testcase.CeleryWorkerTestCase.
     """
 
     def setup_test_environment(self, **kwargs):
         setup_test_environment_common()
 
         return super(IntegrationTestSuiteRunner, self).setup_test_environment()
-
-    def setup_databases(self):
-        super_result = super(IntegrationTestSuiteRunner, self).setup_databases()
-
-        # Setup celery worker AFTER database is setup.
-        self.setup_celery_worker()
-
-        return super_result
-
-    def setup_celery_worker(self):
-        # Start celery worker thread.
-        self.celery_worker_thread = CeleryWorkerThread(options=['--verbose'])
-        self.celery_worker_thread.daemon = True
-        self.celery_worker_thread.start()
-
-        # Wait for the worker to be ready.
-        self.celery_worker_thread.is_ready.wait()
-        if self.celery_worker_thread.error:
-            raise self.celery_worker_thread
-
-    def teardown_test_environment(self):
-        self.celery_worker_thread.join(5)
-        return super(IntegrationTestSuiteRunner, self).teardown_test_environment()
-
 
 
 def setup_test_environment_common():
