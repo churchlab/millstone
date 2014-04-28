@@ -91,8 +91,6 @@ USE_L10N = True
 # Example: "/home/media/media.lawrence.com/media/"
 MEDIA_ROOT = 'temp_data'
 
-TEMP_FILE_ROOT = os.path.join(MEDIA_ROOT, 'tmp')
-
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 # Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
