@@ -47,7 +47,6 @@ from model_utils import get_dataset_with_type
 from model_utils import make_choices_tuple
 from model_utils import UniqueUidModelMixin
 from model_utils import VisibleFieldMixin
-from pipeline.read_alignment_util import ensure_bwa_index
 from utils import uppercase_underscore
 from settings import TOOLS_DIR
 from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
