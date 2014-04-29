@@ -1,0 +1,30 @@
+<div id="gd-variant-set-ref-genome-maker-modal" class="modal fade">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h3>Generate New Reference Genome</h3>
+      </div>
+
+      <div class="modal-body">
+        <form id="gd-variant-set-ref-genome-maker-form">
+          <input type="hidden" name="variantSetUid" value="{{variant_set.uid}}">
+          <div class="form-group">
+            <label>New Reference Genome Label</label>
+            <input type="text" name="refGenomeLabel" class="form-control">
+          </div>
+        </form>
+      </div><!-- modal-body -->
+
+      <div class="modal-footer">
+        <button class="btn btn-default" data-dismiss="modal">
+          Cancel
+        </button>
+        <button id="gd-variant-sets-ref-genome-maker-submit"
+            class="btn btn-primary">
+          Submit
+        </button>
+      </div><!-- modal-footer -->
+    </div><!-- modal-content -->
+  </div><!-- modal-dialog -->
+</div>

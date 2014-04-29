@@ -16,16 +16,12 @@ from itertools import chain
 from string import Template
 from StringIO import StringIO
 
-
-from main.models import Project
-from main.models import ReferenceGenome
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
 from main.model_utils import clean_filesystem_location
 from utils import ensure_line_lengths
 from utils import uppercase_underscore
-from utils.import_util import sanitize_record_id
 import settings
 
 # TODO: These should be set somewhere else. snpeff_util and vcf_parser also use

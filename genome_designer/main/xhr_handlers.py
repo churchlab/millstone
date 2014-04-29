@@ -52,6 +52,7 @@ from utils.import_util import import_reference_genome_from_ncbi
 from utils.import_util import import_samples_from_targets_file
 from utils.import_util import import_variant_set_from_vcf
 from utils.optmage_util import print_mage_oligos
+from utils.reference_genome_maker_util import generate_new_reference_genome
 from variants.common import determine_visible_field_names
 from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
 from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
@@ -847,6 +848,30 @@ def print_mage_oligos_for_variant_set(request):
     print_mage_oligos(variant_set, response, 'o_',
             experiment_dir=request.GET.get('experimentDir'))
     return response
+
+
+@login_required
+@require_POST
+def generate_new_ref_genome_for_variant_set(request):
+    variant_set_uid = request.POST.get('variantSetUid')
+    variant_set = get_object_or_404(VariantSet,
+            reference_genome__project__owner=request.user.get_profile(),
+            uid=variant_set_uid)
+    new_ref_genome_label = request.POST.get('refGenomeLabel')
+    ref_genome_maker_params = {
+        'label': new_ref_genome_label
+    }
+
+    error_string = ''
+    try:
+        generate_new_reference_genome(variant_set, ref_genome_maker_params)
+    except ValidationException as e:
+        error_string = str(e)
+
+    result = {
+        'error': error_string
+    }
+    return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 if settings.S3_ENABLED:

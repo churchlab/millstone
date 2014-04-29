@@ -24,6 +24,15 @@
         </a>
       </li>
     {% endif %}
+
+    {% if is_generate_new_reference_genome_enabled %}
+      <li>
+        <a href="#gd-variant-set-ref-genome-maker-modal"
+            data-toggle="modal">
+          Generate New Reference Genome
+        </a>
+      </li>
+    {% endif %}
   </ul>
 </div>
 
@@ -44,5 +53,7 @@
 </script>
 
 {% include "controls/print_mage_oligos_modal.html" %}
+
+{% include "controls/ref_genome_maker_modal.html" %}
 
 {% endblock %}

@@ -488,7 +488,10 @@ def variant_set_view(request, project_uid, variant_set_uid):
         'tab_root': TAB_ROOT__DATA,
         'variant_set': variant_set,
         'init_js_data': init_js_data,
-        'is_print_mage_oligos_enabled': settings.FLAG__PRINT_MAGE_OLIGOS_ENABLED
+        'is_print_mage_oligos_enabled':
+                settings.FLAG__PRINT_MAGE_OLIGOS_ENABLED,
+        'is_generate_new_reference_genome_enabled':
+                settings.FLAG__GENERATE_NEW_REFERENCE_GENOME_ENABLED
     }
 
     return render(request, 'variant_set.html', context)

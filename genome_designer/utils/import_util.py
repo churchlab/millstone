@@ -21,15 +21,19 @@ from django.db import transaction
 from main.celery_util import assert_celery_running
 from main.exceptions import ValidationException
 from main.models import Dataset
-from main.models import get_dataset_with_type
 from main.models import ExperimentSample
 from main.models import ReferenceGenome
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from main.model_utils import clean_filesystem_location
+from main.model_utils import get_dataset_with_type
 from main.s3 import project_files_needed
+from pipeline.read_alignment_util import ensure_bwa_index
+from pipeline.variant_effects import build_snpeff
 from utils import generate_safe_filename_prefix_from_label
 from utils import uppercase_underscore
+from utils.jbrowse_util import prepare_jbrowse_ref_sequence
+from utils.jbrowse_util import add_genbank_file_track
 from variants.vcf_parser import get_or_create_variant
 
 
@@ -204,8 +208,6 @@ def generate_fasta_from_genbank(ref_genome):
     copy_and_add_dataset_source(ref_genome, dataset_type,
             dataset_type, fasta_filename)
 
-    return
-
 
 def generate_gff_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a GFF, generate
@@ -245,8 +247,6 @@ def generate_gff_from_genbank(ref_genome):
     dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE['gff']
     copy_and_add_dataset_source(ref_genome, dataset_type,
             dataset_type, gff_filename)
-
-    return
 
 
 def import_reference_genome_from_ncbi(project, label, record_id, import_format):
@@ -840,3 +840,41 @@ def add_dataset_to_entity(entity, dataset_label, dataset_type,
     entity.save()
 
     return dataset
+
+
+def prepare_ref_genome_related_datasets(ref_genome, dataset):
+    """Prepares data related to a ReferenceGenome.
+
+    For example, if only Genbank exists, creates a Fasta Dataset.
+
+    If related Datasets exists, this function is a no-op.
+
+    Args:
+        ref_genome: ReferenceGenome.
+        dataset: A dataset pointing to a genome.
+
+    Raises:
+        AssertionError if dataset status is NOT_STARTED.
+    """
+    assert dataset.status != Dataset.STATUS.NOT_STARTED
+
+    if dataset.type == Dataset.TYPE.REFERENCE_GENOME_FASTA:
+        # Run jbrowse ref genome processing
+        prepare_jbrowse_ref_sequence(ref_genome)
+
+    elif dataset.type == Dataset.TYPE.REFERENCE_GENOME_GENBANK:
+        # Run snpeff build after creating ReferenceGenome obj.
+        build_snpeff(ref_genome)
+
+        # These functions are NO-OPS if the respective Datasets exist.
+        generate_fasta_from_genbank(ref_genome)
+        generate_gff_from_genbank(ref_genome)
+
+        # Run jbrowse genbank genome processing for genes
+        add_genbank_file_track(ref_genome)
+
+    # We create the bwa index once here, so that alignments running in
+    # parallel don't step on each others' toes.
+    ref_genome_fasta = get_dataset_with_type(ref_genome,
+            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    ensure_bwa_index(ref_genome_fasta)

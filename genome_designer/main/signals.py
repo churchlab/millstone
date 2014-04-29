@@ -20,15 +20,9 @@ from models import UserProfile
 from models import VariantEvidence
 from models import VariantSet
 from models import VariantToVariantSet
-from pipeline.read_alignment_util import ensure_bwa_index
+from utils.import_util import prepare_ref_genome_related_datasets
 from variants.dynamic_snp_filter_key_map import initialize_filter_key_map
 from variants.dynamic_snp_filter_key_map import update_sample_filter_key_map
-from utils.import_util import generate_fasta_from_genbank
-from utils.import_util import generate_gff_from_genbank
-from utils.import_util import get_dataset_with_type
-from utils.jbrowse_util import prepare_jbrowse_ref_sequence
-from utils.jbrowse_util import add_genbank_file_track
-from pipeline.variant_effects import build_snpeff
 
 
 # Since the registration flow creates a django User object, we want to make
@@ -97,43 +91,28 @@ pre_delete.connect(pre_ref_genome_delete, sender=ReferenceGenome,
 
 
 def post_add_seq_to_ref_genome(sender, instance, **kwargs):
-    """ When a dataset gets added to a ref_genome, we need to do some things
-    if the ref_genome is a fasta or a genbank - run snpeff, jbrowse prep, and
-    convert genbank to fasta and gff. Each pk in pk_set is a Dataset object."""
+    """When a dataset gets added to a ref_genome, we need generate some
+    additional data via prepare_ref_genome_related_datasets().
 
-    #Skip unless we've already added the relationship
+    If the ref_genome is a fasta or a genbank - run snpeff, jbrowse prep, and
+    convert genbank to fasta and gff. Each pk in pk_set is a Dataset object.
+
+    NOTE: If the associated Dataset has the NOT_READY status, then this signal
+    will abort before doing anything interesting and it's up to the client
+    to handle calling prepare_ref_genome_related_datasets().
+    """
+    # Skip unless we've already added the relationship
     if kwargs['action'] != 'post_add':
         return
 
+    # TODO: Why is this a loop? When will this ever have more than one pk in
+    # kwargs['pk_set']?
     model = kwargs['model']
     for pk in kwargs['pk_set']:
         dataset = model.objects.get(pk=pk)
-        if dataset.type == Dataset.TYPE.REFERENCE_GENOME_FASTA:
-            # Run jbrowse ref genome processing
-            prepare_jbrowse_ref_sequence(instance)
-
-        elif dataset.type == Dataset.TYPE.REFERENCE_GENOME_GENBANK:
-            # Run snpeff build after creating ReferenceGenome obj
-            build_snpeff(instance)
-            # If no FASTA exists, then create it from the genbank
-            # (this is done post-save so it should work if both files are
-            # present)
-            if not instance.dataset_set.filter(
-                    type=Dataset.TYPE.REFERENCE_GENOME_FASTA).exists():
-                generate_fasta_from_genbank(instance)
-                generate_gff_from_genbank(instance)
-
-            # Run jbrowse genbank genome processing for genes
-            add_genbank_file_track(instance)
-
-    # Run snpeff and jbrowse housekeeping after linking seq file dataset to a
-    #   reference genome obj
-
-    # Create the bwa index before perfoming the alignments in parallel.
-    ref_genome_fasta = get_dataset_with_type(
-            instance,
-            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-    ensure_bwa_index(ref_genome_fasta)
+        if dataset.status == Dataset.STATUS.NOT_STARTED:
+            continue
+        prepare_ref_genome_related_datasets(instance, dataset)
 
 m2m_changed.connect(post_add_seq_to_ref_genome,
     sender=ReferenceGenome.dataset_set.through,

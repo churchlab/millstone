@@ -82,6 +82,8 @@ urlpatterns = patterns('',
             'main.xhr_handlers.create_variant_set'),
     url(r'^_/sets/print_mage_oligos$',
             'main.xhr_handlers.print_mage_oligos_for_variant_set'),
+    url(r'^_/sets/generate_new_ref_genome$',
+            'main.xhr_handlers.generate_new_ref_genome_for_variant_set'),
 
     url(r'^_/variants$',
             'main.xhr_handlers.get_variant_list'),

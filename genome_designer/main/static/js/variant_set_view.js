@@ -29,11 +29,21 @@ gd.VariantSetView = Backbone.View.extend({
   },
 
   listenToControls: function() {
+    // Modal for printing MAGE oligos.
     $('#gd-variant-set-print-mage-oligos-modal').on('shown.bs.modal',
         _.bind(function (e) {
           if (!this.printMageOligosModal) {
             this.printMageOligosModal=
                 new gd.PrintMageOligosModal({model: this.model});
+          }
+        }, this));
+
+    // Modal for generating reference genome.
+    $('#gd-variant-set-ref-genome-maker-modal').on('shown.bs.modal',
+        _.bind(function (e) {
+          if (!this.refGenomeMakerModal) {
+            this.refGenomeMakerModal =
+                new gd.RefGenomeMakerModal({model: this.model});
           }
         }, this));
   },
