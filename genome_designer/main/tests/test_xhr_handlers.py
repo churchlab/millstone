@@ -170,6 +170,83 @@ class TestGetVariantList(TestCase):
                 for obj in variant_obj_list])
         self.assertEqual(set(range(TOTAL_NUM_VARIANTS)), variant_position_set)
 
+    def test_melted(self):
+        """Test melted view.
+        """
+        alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1',
+            reference_genome=self.ref_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
+        TOTAL_NUM_VARIANTS = 10
+        for pos in range(TOTAL_NUM_VARIANTS):
+            # We need all these models for testing because this is what the
+            # materialized view create requires to return non-null results.
+            variant = Variant.objects.create(
+                    type=Variant.TYPE.TRANSITION,
+                    reference_genome=self.ref_genome,
+                    chromosome='chrom',
+                    position=pos,
+                    ref_value='A')
+
+            VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='G')
+
+            common_data_obj = VariantCallerCommonData.objects.create(
+                variant=variant,
+                source_dataset=self.vcf_dataset,
+                alignment_group=alignment_group,
+                data={u'INFO_DP': 20, u'INFO_PQR': 0.0})
+
+            VariantEvidence.objects.create(
+                experiment_sample=self.sample_obj_1,
+                variant_caller_common_data=common_data_obj)
+
+        # Sanity check that the Variants were actually created.
+        self.assertEqual(TOTAL_NUM_VARIANTS, Variant.objects.filter(
+                reference_genome=self.ref_genome,).count())
+
+        request_data = {
+            'refGenomeUid': self.ref_genome.uid,
+            'projectUid': self.project.uid,
+            'melt': '1'
+        }
+        response = self.client.get(self.url, request_data)
+
+        self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
+
+        response_data = json.loads(response.content)
+
+        # Make sure expected keys in response.
+        EXPECTED_RESPONSE_KEYS = set([
+            VARIANT_LIST_RESPONSE_KEY__LIST,
+            VARIANT_LIST_RESPONSE_KEY__TOTAL,
+            VARIANT_LIST_RESPONSE_KEY__SET_LIST,
+            VARIANT_LIST_RESPONSE_KEY__KEY_MAP,
+        ])
+        self.assertEqual(EXPECTED_RESPONSE_KEYS, set(response_data.keys()),
+                "Missing keys %s\nGot keys %s" % (
+                        str(EXPECTED_RESPONSE_KEYS -
+                                set(response_data.keys())),
+                        str(set(response_data.keys()))))
+
+        self.assertEqual(TOTAL_NUM_VARIANTS,
+                response_data[VARIANT_LIST_RESPONSE_KEY__TOTAL])
+
+        # Check total variants returned is correct.
+        variant_data_obj = json.loads(response_data[
+                VARIANT_LIST_RESPONSE_KEY__LIST])
+        variant_obj_list = variant_data_obj['obj_list']
+        self.assertTrue(TOTAL_NUM_VARIANTS, len(variant_obj_list))
+
+        # Check positions are correct.
+        def _get_position_from_frontend_object(fe_obj):
+            return int(re.match('([0-9]+)', str(fe_obj[
+                    MELTED_SCHEMA_KEY__POSITION])).group(1))
+        variant_position_set = set([_get_position_from_frontend_object(obj)
+                for obj in variant_obj_list])
+        self.assertEqual(set(range(TOTAL_NUM_VARIANTS)), variant_position_set)
 
     def test_does_not_throw_500_on_server_error(self):
         """For user input errors, get_variant_list should not throw a 500 error.

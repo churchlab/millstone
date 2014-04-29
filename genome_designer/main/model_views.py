@@ -162,7 +162,7 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
         # TODO use variables instead of magic strings
         va_data = melted_variant_obj['VA_DATA']
         vccd_data = melted_variant_obj['VCCD_DATA']
-        if vccd_data and vccd_data[0]:
+        if isinstance(vccd_data, list) and len(vccd_data) > 0 and vccd_data[0]:
             # is SV: make info of the form "SV [type] [length]"
             if 'INFO_SVTYPE' in vccd_data[0]:
                 visible_field_pairs.append(('INFO', 'SV %s %d' %
