@@ -371,25 +371,58 @@ def _get_dataset_paths(sample_alignment_list, dataset_type):
     return dataset_locations
 
 
-# Postprocess vcfs output by different tools, so their format is the same.
+def _common_postprocess_vcf(vcf_reader):
+    # Do postprocessing in common to Pindel and Delly VCFs.
+    modified_header_lines = []
+
+    # These properties should be part of VA_DATA, although SV tools will
+    #   output at most one property in each row and set Number=1 in the
+    #   VCF header line. The easiest way to store these properties in
+    #   VA_DATA is just to postprocess the VCF here and change these
+    #   header lines to all say Number=A.
+    va_properties = ['SVTYPE', 'SVLEN']
+    def modify_header(header_line):
+        if any([prop in header_line for prop in va_properties]):
+            header_line = header_line.replace('Number=1', 'Number=A')
+            modified_header_lines.append(header_line)
+        return header_line
+    vcf_reader._header_lines = map(modify_header, vcf_reader._header_lines)
+
+    # Also add a field for METHOD.
+    method_header_line = '##INFO=<ID=METHOD,Number=1,Type=String,' + \
+        'Description="Type of approach used to detect SV">\n'
+    modified_header_lines.append(method_header_line)
+    vcf_reader._header_lines.append(method_header_line)
+
+    # Now update the header lines in vcf_reader.infos map as well.
+    parser = vcf.parser._vcf_metadata_parser()
+    for header_line in modified_header_lines:
+        key, val = parser.read_info(header_line)
+        vcf_reader.infos[key] = val
+
+
+# Postprocess vcfs output by Pindel and Delly, so their information is
+#   customized to whatever is needed in Millstone, and the format is
+#   the same as that of Freebayes.
 def postprocess_pindel_vcf(vcf_file):
     vcf_reader = vcf.Reader(open(vcf_file))
 
-    # add some additional VCF fields
-    with open(vcf_file + '.tmp', 'w') as fh:
-        fh.write('##INFO=<ID=METHOD,Number=1,Type=String,Description="Type of approach used to detect SV">\n')
+    _common_postprocess_vcf(vcf_reader)
 
+    # Write the modified VCF to a temp file.
     vcf_writer = vcf.Writer(open(vcf_file + '.tmp', 'a'), vcf_reader)
     for record in vcf_reader:
-        # pindel uses negative SVLEN for deletions; make them positive
-        svlen = abs(record.__dict__['INFO'].get('SVLEN', 0))
-        record.__dict__['INFO']['SVLEN'] = svlen
+        if 'SVLEN' not in record.__dict__['INFO']:
+            continue  # should not happen
 
-        # ignore small variants
-        if svlen < 10:
+        # pindel uses negative SVLEN for deletions; make them positive
+        svlen = abs(record.__dict__['INFO']['SVLEN'][0])  # always have one entry
+        record.__dict__['INFO']['SVLEN'] = [svlen]
+
+        if svlen < 10:  # ignore small variants
             continue
 
-        # update some fields
+        # update METHOD field
         record.__dict__['INFO']['METHOD'] = 'PINDEL'
 
         vcf_writer.write_record(record)
@@ -400,16 +433,11 @@ def postprocess_pindel_vcf(vcf_file):
 def postprocess_delly_vcf(vcf_file):
     vcf_reader = vcf.Reader(open(vcf_file))
 
-    # add some additional VCF fields
-    with open(vcf_file + '.tmp', 'w') as fh:
-        fh.write('##INFO=<ID=METHOD,Number=1,Type=String,Description="Type of approach used to detect SV">\n')
+    _common_postprocess_vcf(vcf_reader)
 
     vcf_writer = vcf.Writer(open(vcf_file + '.tmp', 'a'), vcf_reader)
     for record in vcf_reader:
-        # update some fields
         record.__dict__['INFO']['METHOD'] = 'DELLY'
-
         vcf_writer.write_record(record)
 
-    # move temporary file back
     subprocess.check_call(['mv', vcf_file + '.tmp', vcf_file])

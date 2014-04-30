@@ -161,19 +161,18 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
         # Append catch all INFO column field
         # TODO use variables instead of magic strings
         va_data = melted_variant_obj['VA_DATA']
-        vccd_data = melted_variant_obj['VCCD_DATA']
-        if isinstance(vccd_data, list) and len(vccd_data) > 0 and vccd_data[0]:
-            # is SV: make info of the form "SV [type] [length]"
-            if 'INFO_SVTYPE' in vccd_data[0]:
+        if isinstance(va_data, list):
+            va_data = va_data[0]  # melted; get first va_data of list
+        if va_data:
+            if 'INFO_SVTYPE' in va_data:
+                # is SV: make info of the form "SV [type] [length]"
                 visible_field_pairs.append(('INFO', 'SV %s %d' %
-                    (vccd_data[0]['INFO_SVTYPE'], vccd_data[0].get('INFO_SVLEN', ''))))
-            # is SNP: make info equal to the AA field
-            elif va_data and va_data[0]:  # is SNP
-                visible_field_pairs.append(('INFO', va_data[0].get('INFO_EFF_AA', '')))
-            # unknown: just leave info field blank
+                    (va_data['INFO_SVTYPE'], va_data.get('INFO_SVLEN', ''))))
             else:
-                visible_field_pairs.append(('INFO', ''))
+                # is SNP: make info equal to the AA field
+                visible_field_pairs.append(('INFO', va_data.get('INFO_EFF_AA', '')))
         else:
+            # unknown: just leave info field blank
             visible_field_pairs.append(('INFO', ''))
 
         fe_obj_list.append(dict(visible_field_pairs))

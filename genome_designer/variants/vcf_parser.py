@@ -123,14 +123,9 @@ def extract_raw_data_dict(vcf_record):
 
     # The TYPE is just a property of the record object.
     # TODO: Do we care about the var_subtype()? (ts/tv/complex/sv type/etc?)
-    # sv callers store the type in vcf_record.INFO['SVTYPE']
-    if hasattr(vcf_record, 'INFO') and 'SVTYPE' in dict(vcf_record.INFO):
-        data_dict['TYPE'] = SV_TYPES.get(dict(vcf_record.INFO)['SVTYPE'],
-                UNKNOWN_VARIANT_TYPE)
-    elif hasattr(vcf_record, 'var_type'):
-        data_dict['TYPE'] = str(vcf_record.var_type)
-    else:
-        data_dict['TYPE'] = UNKNOWN_VARIANT_TYPE
+    # Just store UNKNOWN into TYPE, because the field is not used
+    #   (if SV, the type is stored in SVTYPE)
+    data_dict['TYPE'] = UNKNOWN_VARIANT_TYPE
 
     # Populate 'INFO'
     if hasattr(vcf_record, 'INFO'):
