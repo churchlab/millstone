@@ -365,6 +365,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
   /** Handles a click on one of the melted toggle buttons. */
   handleMeltedToggleClick: function(e) {
     // Update the model.
+    this.setUIDoneLoadingState();
     this.model.set('is_melted', Boolean($(e.target).data('melted')));
     this.model.set('filterString', $('#gd-new-filter-input').val());
     this.updateVariantList();
