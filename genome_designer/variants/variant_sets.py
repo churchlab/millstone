@@ -153,7 +153,7 @@ def add_variants_to_set_from_bed(sample_alignment, bed_dataset):
 
         for i, line in enumerate(bed_dataset_fh):
             try:
-                chrom, start, end, feature = line.split('\t')
+                chrom, start, end, feature = line.strip().split('\t')
                 # make a new interval from start to end
                 new_ivl = interval([start, end])
 

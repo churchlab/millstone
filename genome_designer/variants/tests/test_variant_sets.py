@@ -116,6 +116,10 @@ class TestAddVariantsToSetFromBed(TestCase):
         vs_to_v_map = add_variants_to_set_from_bed(
                 sample_alignment, bed_dataset)
 
+        variant_set_labels = set([vs.label for vs in vs_to_v_map.keys()])
+        self.assertEqual(set(['POOR_MAPPING_QUALITY', 'NO_COVERAGE']),
+                variant_set_labels)
+
         for variant_set, variants in vs_to_v_map.items():
             for v in variants:
                 # POOR MAPPING QUAL should be from 101 to 200
