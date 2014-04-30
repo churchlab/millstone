@@ -69,6 +69,7 @@ class VariantFilterEvaluator(object):
         self.pagination_start = query_args.get('pagination_start', 0)
         self.pagination_len = query_args.get('pagination_len', -1)
         self.visible_key_names = query_args.get('visible_key_names', [])
+        self.act_as_generator = query_args.get('act_as_generator', False)
 
         # If True, SELECT *. It's up to the caller to prevent returning
         # unintended data (e.g. native ids) to the frontend.
@@ -184,10 +185,20 @@ class VariantFilterEvaluator(object):
         # evaluations.
         cursor = connection.cursor()
         cursor.execute(sql_statement, where_clause_args)
-        result_list = [dict(zip([col[0].upper() for col in cursor.description], row))
-                for row in cursor.fetchall()]
 
-        return result_list
+        # Column header data.
+        col_descriptions = [col[0].upper() for col in cursor.description]
+
+        # Either act as a generator, or return all results.
+        if self.act_as_generator:
+            def as_generator():
+              next_row = cursor.fetchone()
+              while next_row:
+                  yield dict(zip(col_descriptions, next_row))
+                  next_row = cursor.fetchone()
+            return as_generator()
+        else:
+            return [dict(zip(col_descriptions, row)) for row in cursor.fetchall()]
 
     def _select_clause(self):
         """Determines the SELECT clause for the materialized view.

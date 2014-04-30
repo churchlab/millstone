@@ -21,6 +21,7 @@ from django.http import Http404
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
+from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
@@ -642,9 +643,10 @@ def export_variants_as_csv(request):
 
     filter_string = request.GET.get('filter_string', '')
 
-    response = HttpResponse(content_type='text/csv')
+    response = StreamingHttpResponse(
+            export_melted_variant_view(reference_genome, filter_string),
+            content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="variants.csv"'
-    export_melted_variant_view(reference_genome, filter_string, response)
     return response
 
 

@@ -3,8 +3,9 @@ Methods for exporting data.
 """
 
 import csv
+import StringIO
 
-from variants.materialized_variant_filter import lookup_variants
+from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 
 
@@ -19,14 +20,13 @@ CORE_VARIANT_KEYS = [
 ]
 
 
-def export_melted_variant_view(ref_genome, filter_string, csvfile):
-    """Exports Variants as a flat .csv file.
+def export_melted_variant_view(ref_genome, filter_string):
+    """Generator that yields rows of a csv file.
 
     Args:
         ref_genome: ReferenceGenome these Variants belong to.
         filter_string: Limit the returned Variants to those that match this
             filter.
-        csvfile: File object to which we write the result.
     """
     mvm = MeltedVariantMaterializedViewManager(ref_genome)
     mvm.create_if_not_exists_or_invalid()
@@ -35,8 +35,8 @@ def export_melted_variant_view(ref_genome, filter_string, csvfile):
     query_args = {}
     query_args['filter_string'] = filter_string
     query_args['select_all'] = True
-    lookup_variant_result = lookup_variants(query_args, ref_genome)
-    result_list = lookup_variant_result.result_list
+    query_args['act_as_generator'] = True
+    variant_iterator = get_variants_that_pass_filter(query_args, ref_genome)
 
     # We write the core keys and key-values specific to this ref_genome.
     ref_genome_specific_data_keys = (
@@ -54,10 +54,19 @@ def export_melted_variant_view(ref_genome, filter_string, csvfile):
     # Create a set that is used to quickly check which fields to return.
     csv_field_names_set = set(csv_field_names)
 
-    # Write the data.
-    writer = csv.DictWriter(csvfile, csv_field_names)
+    # Create a csv writer that uses a StringIO buffer.
+    # Every time we write a row, we flush the buffer and yield the data.
+    output_buffer = StringIO.StringIO()
+    writer = csv.DictWriter(output_buffer, csv_field_names)
+
+    # Write header
     writer.writeheader()
-    for v_idx, variant_data in enumerate(result_list):
+    output_buffer.seek(0)
+    data = output_buffer.read()
+    output_buffer.truncate(0)
+    yield data
+
+    for variant_data in variant_iterator:
         row_data = {}
         for key in CORE_VARIANT_KEYS:
             row_data[key] = variant_data[key]
@@ -76,3 +85,7 @@ def export_melted_variant_view(ref_genome, filter_string, csvfile):
         _add_key_value(variant_data['VE_DATA'])
 
         writer.writerow(row_data)
+        output_buffer.seek(0)
+        data = output_buffer.read()
+        output_buffer.truncate(0)
+        yield data
