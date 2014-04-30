@@ -39,10 +39,11 @@ def export_melted_variant_view(ref_genome, filter_string, csvfile):
     result_list = lookup_variant_result.result_list
 
     # We write the core keys and key-values specific to this ref_genome.
-
     ref_genome_specific_data_keys = (
         ref_genome.get_variant_caller_common_map().keys() +
-        ref_genome.get_variant_evidence_map().keys()
+        ref_genome.get_variant_evidence_map().keys() +
+        ref_genome.get_variant_alternate_map().keys() +
+        ref_genome.get_experiment_sample_map().keys()
     )
 
     all_keys = CORE_VARIANT_KEYS + ref_genome_specific_data_keys
