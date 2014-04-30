@@ -291,6 +291,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     // Append the form fields.
     this._appendInputFieldToForm(formJqueryObj, 'ref_genome_uid',
         this.model.get('refGenomeUid'));
+    this._appendInputFieldToForm(formJqueryObj, 'filter_string',
+        this.model.get('filterString'));
     if (this.datatableComponent.isAllMatchingFilterSelected()) {
       this._appendInputFieldToForm(formJqueryObj, 'get_all_matching_filter', 1);
     } else {
