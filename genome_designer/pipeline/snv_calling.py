@@ -286,7 +286,8 @@ def run_pindel(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename
         '-P', pindel_root,
         '-r', fasta_ref,
         '-R', 'name',
-        '-d', 'date'
+        '-d', 'date',
+        '-mc', '1',  # just need one read to show 1/1 in vcf
     ])
 
     postprocess_pindel_vcf(vcf_output_filename)
