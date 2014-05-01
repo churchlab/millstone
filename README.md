@@ -35,9 +35,14 @@ packages.
 
         $ source ~/pyenvs/genome-designer-env/bin/activate .
 
-4. Install the dependencies in your virtual environment. We've exported the requirements in the requirements.txt file. In theory, these should all be installable with the single command:
+4. Install the dependencies in your virtual environment. We use the convention of running `pip freeze` to a .txt file containing a list of requirements.
+Most users will want to do:
 
-        $ pip install -r requirements.txt
+        $ pip install -r requirements/deploy.txt
+
+If you plan on editing the code, you should run:
+
+        $ pip install -r requirements/dev.txt
 
 However, in reality, this doesn't seem to work perfectly. In particular, it may
 be necessary to install specific packages first.
