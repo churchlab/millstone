@@ -3,8 +3,10 @@ Methods for exporting data.
 """
 
 import csv
+import os
 import StringIO
 
+from django.conf import settings
 import vcf
 
 from variants.materialized_variant_filter import get_variants_that_pass_filter
@@ -93,18 +95,13 @@ def export_melted_variant_view(ref_genome, filter_string):
         yield data
 
 
-class VcfTemplate(object):
-    """Vcf template object, required by vcf.Writer().
-    """
+VCF_TEMPLATE_PATH = os.path.join(settings.PWD, 'test_data', 'vcf_template.vcf')
 
-    def __init__(self):
-        self.metadata = {}
-        self.infos = {}
-        self.formats = {}
-        self.filters = {}
-        self.alts = {}
-        self._column_headers = []
-        self.samples = []
+# We use a fake single sample. The reason for this is that the external library
+# reference_genome_maker expects there to be a sample in case there are
+# multiple alts. We're not necessarily set on continuing to do it this way,
+# but we're happy enough with it for now.
+PLACEHOLDER_SAMPLE_NAME = 'fake_sid'
 
 
 def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):
@@ -117,15 +114,16 @@ def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):
         out_vcf_fh = vcf_dest_path_or_filehandle
 
     # The vcf.Writer() requires a template vcf in order to structure itself.
-    # For now, we just give it a fake object that represents a vcf with
-    # no header.
-    vcf_template = VcfTemplate()
+    # We read in a generic template to satisfy this.
+    with open(VCF_TEMPLATE_PATH) as template_fh:
+        vcf_template = vcf.Reader(template_fh)
 
     vcf_writer = vcf.Writer(out_vcf_fh, vcf_template)
     for variant in variant_set.variants.all():
         alts = variant.variantalternate_set.all()
         assert len(alts) == 1, "Only support variants with exactly one alt."
         alt_value = alts[0].alt_value
+
         record = vcf.model._Record(
                 variant.chromosome,
                 variant.position,
@@ -135,7 +133,12 @@ def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):
                 1, # QUAL
                 [], # FILTER
                 {}, # INFO
-                '', # FORMAT
-                {}, # sample_indexes
+                'GT:DP:RO:QR:AO:QA:GL', # FORMAT
+                {PLACEHOLDER_SAMPLE_NAME: 0}, # sample_indexes
         )
+        # Add a placeholder sample.
+        calldata_type = vcf.model.make_calldata_tuple(['GT'])
+        placeholder_sample_data = calldata_type(GT='1/1')
+        record.samples = [vcf.model._Call(
+                record, PLACEHOLDER_SAMPLE_NAME, placeholder_sample_data)]
         vcf_writer.write_record(record)

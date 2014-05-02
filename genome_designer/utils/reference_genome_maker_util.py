@@ -13,6 +13,8 @@ from main.model_utils import clean_filesystem_location
 from main.models import Dataset
 from main.models import ReferenceGenome
 from utils import generate_safe_filename_prefix_from_label
+from utils.data_export_util import export_variant_set_as_vcf
+from utils.data_export_util import PLACEHOLDER_SAMPLE_NAME
 from utils.import_util import prepare_ref_genome_related_datasets
 
 
@@ -25,6 +27,9 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
             ReferenceGenome.
         new_ref_genome_params: Dictionary of params, including:
             * label (required): Label for the new ReferenceGenome.
+
+    Returns:
+        The new ReferenceGenome.
 
     Raises:
         ValidationException if we don't support this use case.
@@ -77,8 +82,9 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
                 suffix='_' + filename_prefix + '.vcf',
                 dir=settings.TEMP_FILE_ROOT)
 
-        # NO-OP for now.
-        sample_id = None
+        export_variant_set_as_vcf(variant_set, vcf_path)
+
+        sample_id = PLACEHOLDER_SAMPLE_NAME
 
         dataset.status = Dataset.STATUS.COMPUTING
         dataset.save(update_fields=['status'])
@@ -99,6 +105,8 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
         # Since the post_add_seq_to_ref_genome() signal couldn't run before,
         # we need to make sure to run it now.
         prepare_ref_genome_related_datasets(reference_genome, dataset)
+
+        return reference_genome
 
     except Exception as e:
         raise ValidationException(str(e))
