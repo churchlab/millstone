@@ -5,6 +5,8 @@ Methods for exporting data.
 import csv
 import StringIO
 
+import vcf
+
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 
@@ -89,3 +91,51 @@ def export_melted_variant_view(ref_genome, filter_string):
         data = output_buffer.read()
         output_buffer.truncate(0)
         yield data
+
+
+class VcfTemplate(object):
+    """Vcf template object, required by vcf.Writer().
+    """
+
+    def __init__(self):
+        self.metadata = {}
+        self.infos = {}
+        self.formats = {}
+        self.filters = {}
+        self.alts = {}
+        self._column_headers = []
+        self.samples = []
+
+
+def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):
+    """Exports a VariantSet as a vcf.
+    """
+    # Allow dest input as path or filehandle.
+    if isinstance(vcf_dest_path_or_filehandle, str):
+        out_vcf_fh = open(vcf_dest_path_or_filehandle, 'w')
+    else:
+        out_vcf_fh = vcf_dest_path_or_filehandle
+
+    # The vcf.Writer() requires a template vcf in order to structure itself.
+    # For now, we just give it a fake object that represents a vcf with
+    # no header.
+    vcf_template = VcfTemplate()
+
+    vcf_writer = vcf.Writer(out_vcf_fh, vcf_template)
+    for variant in variant_set.variants.all():
+        alts = variant.variantalternate_set.all()
+        assert len(alts) == 1, "Only support variants with exactly one alt."
+        alt_value = alts[0].alt_value
+        record = vcf.model._Record(
+                variant.chromosome,
+                variant.position,
+                variant.uid,
+                variant.ref_value,
+                alt_value,
+                1, # QUAL
+                [], # FILTER
+                {}, # INFO
+                '', # FORMAT
+                {}, # sample_indexes
+        )
+        vcf_writer.write_record(record)
