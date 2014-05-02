@@ -125,6 +125,14 @@ class TestSVCallers(TestCase):
         # Grab the resulting variants.
         variants = Variant.objects.filter(reference_genome=self.reference_genome)
 
+        # Confirm that 2 variants found.
+        self.assertEqual(2, len(variants))
+
+        # Make sure we found a variant of each type.
+        # NOTE: Added to highlight where test is failing.
+        variant_types_found = set([variant.type for variant in variants])
+        self.assertEqual(set(['DELETION', 'DUPLICATION']), variant_types_found)
+
         # Check that there is a deletion around base 5000.
         # Check that there is a tandem duplication around base 15000.
         foundDeletion = False
