@@ -8,6 +8,7 @@ import tempfile
 from django.conf import settings
 from reference_genome_maker import vcf_to_genbank
 
+# from debug.debug_util import FakeException
 from main.exceptions import ValidationException
 from main.model_utils import clean_filesystem_location
 from main.models import Dataset
@@ -82,7 +83,8 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
                 suffix='_' + filename_prefix + '.vcf',
                 dir=settings.TEMP_FILE_ROOT)
 
-        export_variant_set_as_vcf(variant_set, vcf_path)
+        with open(vcf_path, 'w') as vcf_fh:
+            export_variant_set_as_vcf(variant_set, vcf_fh)
 
         sample_id = PLACEHOLDER_SAMPLE_NAME
 
