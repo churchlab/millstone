@@ -1,5 +1,5 @@
 """
-Functions for calling SNPs.
+Functions for calling Variants.
 """
 
 import os
@@ -191,11 +191,11 @@ def flag_variants_from_bed(alignment_group, bed_dataset_type):
         # If there is no callable_loci bed, skip the sample alignment.
         # TODO: Make this extensible to other BED files we might have
         callable_loci_bed = get_dataset_with_type(
-                entity=sample_alignment, 
+                entity=sample_alignment,
                 type=Dataset.TYPE.BED_CALLABLE_LOCI)
 
         if not callable_loci_bed: continue
-        
+
         # need to add sample_alignment and bed_dataset here.
         add_variants_to_set_from_bed(
                 sample_alignment= sample_alignment,
@@ -363,7 +363,7 @@ def _get_dataset_paths(sample_alignment_list, dataset_type):
 
     dataset_locations = []
 
-    # These sample alignments should have already 
+    # These sample alignments should have already
     # been validated in _find_valid_sample_alignments...
     for sample_alignment in sample_alignment_list:
         dataset = get_dataset_with_type(sample_alignment, dataset_type)

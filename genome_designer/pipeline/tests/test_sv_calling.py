@@ -17,8 +17,8 @@ from main.models import Project
 from main.models import User
 from main.models import Variant
 from main.models import VariantAlternate
-from pipeline.snv_calling import find_variants_with_tool
-from pipeline.snv_calling import get_variant_tool_params
+from pipeline.variant_calling import find_variants_with_tool
+from pipeline.variant_calling import get_variant_tool_params
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import copy_dataset_to_entity_data_dir

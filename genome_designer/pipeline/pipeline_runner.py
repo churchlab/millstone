@@ -19,8 +19,8 @@ from main.models import ReferenceGenome
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from pipeline.read_alignment import align_with_bwa_mem
-from pipeline.snv_calling import get_variant_tool_params
-from pipeline.snv_calling import find_variants_with_tool
+from pipeline.variant_calling import get_variant_tool_params
+from pipeline.variant_calling import find_variants_with_tool
 
 
 def run_pipeline(alignment_group_label, ref_genome, sample_list):

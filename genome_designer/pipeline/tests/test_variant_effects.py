@@ -26,8 +26,8 @@ from pipeline.variant_effects import build_snpeff
 from pipeline.variant_effects import run_snpeff
 from pipeline.variant_effects import get_snpeff_config_path
 from pipeline.variant_effects import populate_record_eff
-from pipeline.snv_calling import VCF_DATASET_TYPE
-from pipeline.snv_calling import VCF_ANNOTATED_DATASET_TYPE
+from pipeline.variant_calling import VCF_DATASET_TYPE
+from pipeline.variant_calling import VCF_ANNOTATED_DATASET_TYPE
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import copy_dataset_to_entity_data_dir
