@@ -16,6 +16,7 @@ from main.models import get_dataset_with_type
 from main.models import Project
 from main.models import User
 from main.models import Variant
+from main.models import VariantAlternate
 from pipeline.snv_calling import find_variants_with_tool
 from pipeline.snv_calling import get_variant_tool_params
 from utils.import_util import add_dataset_to_entity
@@ -128,20 +129,24 @@ class TestSVCallers(TestCase):
         # Confirm that 2 variants found.
         self.assertEqual(2, len(variants))
 
-        # Make sure we found a variant of each type.
-        # NOTE: Added to highlight where test is failing.
-        variant_types_found = set([variant.type for variant in variants])
-        self.assertEqual(set(['DELETION', 'DUPLICATION']), variant_types_found)
+        variant_map = {}
+        for variant in variants:
+            variant_alternates = VariantAlternate.objects.filter(variant=variant)
+
+            # There should be only one variant alternate per SV.
+            self.assertEqual(len(variant_alternates), 1)
+
+            pos = variant.position
+            svtype = variant_alternates[0].data['INFO_SVTYPE']
+            svlen = variant_alternates[0].data['INFO_SVLEN']
+            variant_map[svtype] = (pos, svlen)
 
         # Check that there is a deletion around base 5000.
+        self.assertTrue('DEL' in variant_map)
+        self.assertTrue(abs(variant_map['DEL'][0] - 5000) <= 3)
+        self.assertTrue(abs(variant_map['DEL'][1] - 400) <= 3)
+
         # Check that there is a tandem duplication around base 15000.
-        foundDeletion = False
-        foundDuplication = False
-        print [(variant.position, variant.type) for variant in variants]
-        for variant in variants:
-            if abs(variant.position - 5000) <= 3 and variant.type == 'DELETION':
-                foundDeletion = True
-            elif abs(variant.position - 15000) <= 3 and variant.type == 'DUPLICATION':
-                foundDuplication = True
-        self.assertTrue(foundDeletion)
-        self.assertTrue(foundDuplication)
+        self.assertTrue('DUP:TANDEM' in variant_map)
+        self.assertTrue(abs(variant_map['DUP:TANDEM'][0] - 15000) <= 3)
+        self.assertTrue(abs(variant_map['DUP:TANDEM'][1] - 400) <= 3)
