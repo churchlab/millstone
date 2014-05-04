@@ -1,7 +1,7 @@
-genome-designer-v2
+Millstone
 ==================
 
-Second generation of Genome Designer
+Millstone is a distributed bioinformatics software platform designed to facilitate genome engineering for synthetic biology. Automate iterative design, analysis, and debugging for projects involving hundreds of microbial genomes.
 
 ## Dependencies
 
