@@ -27,8 +27,7 @@ gd.AlignmentView = Backbone.View.extend({
     // hook up the button to re-running the alignment as soon
     // as they are drawn.
     this.listenTo(this.datatable, 'DONE_CONTROLS_REDRAW',
-        _.bind(this.listenToAlignmentControls, this));
-    
+        _.bind(this.decorateAlignmentControls, this));
   },
 
   /** Decorate the side nav bar. */
@@ -37,12 +36,24 @@ gd.AlignmentView = Backbone.View.extend({
   },
 
   /** Create component to wrap samples controls, and listen for events. */
-  listenToAlignmentControls: function() {
+  decorateAlignmentControls: function() {
+    if (this.model.get('alignment_group').status == 'COMPLETED') {
+      var templateData = {
+          projectUid: this.model.get('project').uid,
+          alignmentGroupUid: this.model.get('alignment_group').uid,
+      };
+      $('#gd-ag-controls-toolbar').append(_.template(
+        '<a class="btn btn-primary" ' +
+            'href="/projects/<%= projectUid %>/analyze/' +
+                '<%= alignmentGroupUid %>/variants">' +
+          'Go to Variants for this alignment&hellip;' +
+        '</a>'
+      , templateData));
+    }
 
     $('#gd-alignments-rerun-variants-btn').click(
         _.bind(this.handleRerunVariantsClick, this));
-
-  },  
+  },
 
   /** Tells the server to re-run variant calling for this alignment group. */
   handleRerunVariantsClick: function() {
