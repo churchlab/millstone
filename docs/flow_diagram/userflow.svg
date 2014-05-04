@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/PR-SVG-20010719/DTD/svg10.dtd">
+<svg width="16cm" height="37cm" viewBox="226 33 314 738" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g>
+    <rect style="fill: #ffffff" x="289.9" y="34.4" width="249.1" height="42"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="289.9" y="34.4" width="249.1" height="42"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="414.45" y="59.3">
+      <tspan x="414.45" y="59.3">Upload Data</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="392.15" y="93" width="144.7" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="392.15" y="93" width="144.7" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="464.5" y="115.9">
+      <tspan x="464.5" y="115.9">Reference Genome</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="383.876" y="151.4" width="154.75" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="383.876" y="151.4" width="154.75" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="461.251" y="174.3">
+      <tspan x="461.251" y="174.3">Experiment Samples</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="287.9" y="205.4" width="249.1" height="42"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="287.9" y="205.4" width="249.1" height="42"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="412.45" y="230.3">
+      <tspan x="412.45" y="230.3">Run Alignment and Variant Calling</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="287.486" y="465.123" width="249.1" height="42"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="287.486" y="465.123" width="249.1" height="42"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="412.036" y="490.023">
+      <tspan x="412.036" y="490.023">Analyze</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="388.486" y="682.123" width="147.514" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="388.486" y="682.123" width="147.514" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="462.243" y="705.023">
+      <tspan x="462.243" y="705.023">Print MAGE Oligos</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="327.486" y="732.123" width="208.55" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="327.486" y="732.123" width="208.55" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="431.761" y="755.023">
+      <tspan x="431.761" y="755.023">Generate Reference Genome</tspan>
+    </text>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 289.9,55.4 A 90.4566,90.4566 0 0 0 277.844,222.094"/>
+    <polygon style="fill: #000000" points="275.858,227.396 286.959,226.063 279.231,217.982 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="275.858,227.396 286.959,226.063 279.231,217.982 "/>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 287.9,226.4 A 241.431,241.431 0 0 0 281.801,476.716"/>
+    <polygon style="fill: #000000" points="277.364,479.523 286.949,485.279 285.803,474.158 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="277.364,479.523 286.949,485.279 285.803,474.158 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="390.9" y="260.4" width="144.7" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="390.9" y="260.4" width="144.7" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="463.25" y="283.3">
+      <tspan x="463.25" y="283.3">Alignment: Bwa</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="366.844" y="308.714" width="169.9" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="366.844" y="308.714" width="169.9" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="451.794" y="331.614">
+      <tspan x="451.794" y="331.614">SNV Calling: Freebayes</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="348.475" y="361.4" width="188.75" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="348.475" y="361.4" width="188.75" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="442.85" y="384.3">
+      <tspan x="442.85" y="384.3">Variant Calling: Pindel</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="347.9" y="412.4" width="188.75" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="347.9" y="412.4" width="188.75" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="442.275" y="435.3">
+      <tspan x="442.275" y="435.3">Variant Calling: Lumpy</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="346.9" y="521.4" width="188.75" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="346.9" y="521.4" width="188.75" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="441.275" y="544.3">
+      <tspan x="441.275" y="544.3">Assign to VariantSets</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="347.9" y="573.4" width="188.75" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="347.9" y="573.4" width="188.75" height="38"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="442.275" y="596.3">
+      <tspan x="442.275" y="596.3">View in JBrowse</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="286.9" y="627.4" width="249.1" height="42"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="286.9" y="627.4" width="249.1" height="42"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="411.45" y="652.3">
+      <tspan x="411.45" y="652.3">Design</tspan>
+    </text>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 287.486,486.123 A 84.7848,84.7848 0 0 0 276.679,644.524"/>
+    <polygon style="fill: #000000" points="274.917,649.951 285.944,648.106 277.852,640.391 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="274.917,649.951 285.944,648.106 277.852,640.391 "/>
+  </g>
+</svg>
