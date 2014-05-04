@@ -24,10 +24,11 @@ from pipeline.variant_calling import find_variants_with_tool
 
 
 def run_pipeline(alignment_group_label, ref_genome, sample_list):
-    """
-    Creates an AlignmentGroup if not created and kicks off alignment for each one.
+    """Creates an AlignmentGroup if not created and kicks off alignments
+    for those ExperimentSampleToAlignments that did not succeed.
 
     Args:
+        alignment_group_label: Name for this alignment.
         ref_genome: ReferenceGenome instance
         sample_list: List of sample instances. Must belong to same project as
             ReferenceGenomes.
@@ -54,10 +55,11 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
             reference_genome=ref_genome,
             aligner=AlignmentGroup.ALIGNER.BWA)
 
-    # The pipeline has two phases:
-    # 1) Alignments - run in parallel.
-    # 2) Variant calling - each variant caller runs in parallel, but waits
-    #    for all alignments to be complete before starting.
+    # The pipeline has two synchronous phases, each of whose components
+    # maybe run in parallel:
+    #     1) Alignments - run in parallel.
+    #     2) Variant calling - each variant caller runs in parallel, but waits
+    #         for all alignments to be complete before starting.
 
     # NOTE: Since we don't want results to be passed as arguments in the
     # chain, use .si(...) and not .s(...)
@@ -83,7 +85,6 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
                     type=Dataset.TYPE.BWA_ALIGN,
                     status=Dataset.STATUS.NOT_STARTED)
             sample_alignment.dataset_set.add(bwa_dataset)
-            sample_alignment.save()
 
         # Add it to the list of alignments to run, unless already done.
         if not bwa_dataset.status == Dataset.STATUS.READY:

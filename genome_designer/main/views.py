@@ -255,7 +255,7 @@ def alignment_view(request, project_uid, alignment_group_uid):
     if request.POST:
         run_pipeline(alignment_group.label, alignment_group.reference_genome,
                 alignment_group.get_samples())
-        return HttpResponse('ok')
+        return HttpResponse(json.dumps({}), content_type='application/json')
 
     # Initial javascript data.
     init_js_data = json.dumps({
@@ -302,6 +302,14 @@ def alignment_create_view(request, project_uid):
             assert len(ref_genome_list) == 1, (
                 "Exactly one reference genome must be provided.")
             ref_genome = ref_genome_list[0]
+
+            # Make sure AlignmentGroup has a unique name, because run_pipeline
+            # will re-use an alignment based on label, reference genome,
+            # aligner. We are currently hard-coding the aligner to BWA.
+            assert AlignmentGroup.objects.filter(
+                    label=alignment_group_name,
+                    reference_genome=ref_genome).count() == 0, (
+                            "Please pick unique alignment name.")
 
             sample_list = ExperimentSample.objects.filter(
                     project=project,
