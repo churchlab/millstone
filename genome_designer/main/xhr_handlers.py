@@ -17,6 +17,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.core.urlresolvers import reverse
 from django.http import Http404
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
@@ -866,13 +867,22 @@ def generate_new_ref_genome_for_variant_set(request):
 
     error_string = ''
     try:
-        generate_new_reference_genome(variant_set, ref_genome_maker_params)
+        new_ref_genome = generate_new_reference_genome(
+                variant_set, ref_genome_maker_params)
     except ValidationException as e:
         error_string = str(e)
 
-    result = {
-        'error': error_string
-    }
+    if not error_string:
+        assert new_ref_genome
+        result = {
+            'redirect': reverse(
+                    'main.views.reference_genome_view',
+                    args=(new_ref_genome.project.uid, new_ref_genome.uid)),
+        }
+    else:
+        result = {
+            'error': error_string
+        }
     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
