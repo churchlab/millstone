@@ -68,7 +68,8 @@ gd.AlignmentCreateView = Backbone.View.extend({
   decorateSamplesControls: function() {
     this.samplesControlsComponent = new gd.SamplesControlsComponent({
       el: '#gd-datatable-samples-hook-control',
-      model: this.model
+      model: this.model,
+      datatableComponent: this.samplesDatatable
     });
 
     this.listenTo(this.samplesControlsComponent, 'MODELS_UPDATED',
