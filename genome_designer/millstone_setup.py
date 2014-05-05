@@ -56,7 +56,7 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/3mr5x3di2p513ma/tabix-0.2.4-darwin.zip'
         ],
         'Linux': [
-            'https://www.dropbox.com/s/38y3p2e7za4conk/tabix-0.2.4-linux.zip'  
+            'https://www.dropbox.com/s/38y3p2e7za4conk/tabix-0.2.4-linux.zip'
         ]
     },
     'pindel' : {
@@ -85,11 +85,17 @@ TOOLS_URLS = {
     },
     'picard' : [
         'https://www.dropbox.com/s/189loxsmsch1xbb/picard-tools-1.96.zip'
-    ]
-
+    ],
+    'lumpy' : {
+        'Darwin' : [
+            'https://www.dropbox.com/s/kzo9tk9lxieaask/lumpy-0.2.1-darwin.zip'
+        ],
+        'Linux' : [
+            'https://www.dropbox.com/s/spivtdr4ud76ba2/lumpy-0.2.1-linux.zip'
+        ]
 }
 
-# For any tools that have multiple executables that need permission changes, 
+# For any tools that have multiple executables that need permission changes,
 # for tools whose executables arent named after their tool
 TOOLS_TO_EXECUTABLES = {
     'tabix' : ['tabix','bgzip'],
@@ -165,12 +171,12 @@ def download_tools(tools= TOOLS_URLS.keys()):
         if not tool in TOOLS_TO_EXECUTABLES:
             tool_bin_files = [os.path.join(dest_dir,tool)]
         else:
-            tool_bin_files = [os.path.join(dest_dir, exe) 
+            tool_bin_files = [os.path.join(dest_dir, exe)
                     for exe in TOOLS_TO_EXECUTABLES[tool]]
-                    
+
         for tool_bin_file in tool_bin_files:
             if os.path.exists(tool_bin_file):
-                os.chmod(tool_bin_file, 
+                os.chmod(tool_bin_file,
                         stat.S_IXUSR | stat.S_IWUSR | stat.S_IRUSR)
 
 def _get_file_url_from_dropbox(dropbox_url, filename):
