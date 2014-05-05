@@ -768,6 +768,30 @@ def get_alignment_groups(request):
 
 
 @login_required
+@require_POST
+def alignment_groups_delete(request):
+    """Deletes AlignmentGroups.
+    """
+    request_data = json.loads(request.body)
+    uid_list = request_data.get('uidList', [])
+    if len(uid_list) == 0:
+        raise Http404
+
+    # First make sure all the samples belong to this user.
+    to_delete = AlignmentGroup.objects.filter(
+            reference_genome__project__owner=request.user.get_profile(),
+            uid__in=uid_list)
+    if not len(to_delete) == len(uid_list):
+        raise Http404
+
+    # Validation successful, delete.
+    to_delete.delete()
+
+    # Return success response.
+    return HttpResponse(json.dumps({}), content_type='application/json')
+
+
+@login_required
 @require_GET
 def is_materialized_view_valid(request):
     """Checks whether the materialized view is valid for this ReferenceGenome.
