@@ -183,6 +183,13 @@ post_save.connect(post_alignment_group_create, sender=AlignmentGroup,
         dispatch_uid='alignment_group_create')
 
 
+def pre_alignment_group_delete(sender, instance, **kwargs):
+    instance.delete_model_data_dir()
+    instance.reference_genome.drop_materialized_view()
+pre_delete.connect(pre_alignment_group_delete, sender=AlignmentGroup,
+        dispatch_uid='alignment_group_delete')
+
+
 def post_vtvs_save(sender, instance, created, **kwargs):
     instance.variant.reference_genome.invalidate_materialized_view()
 post_save.connect(post_vtvs_save, sender=VariantToVariantSet,

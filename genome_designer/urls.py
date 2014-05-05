@@ -98,6 +98,8 @@ urlpatterns = patterns('',
 
     url(r'^_/alignmentgroups$',
             'main.xhr_handlers.get_alignment_groups'),
+    url(r'^_/alignmentgroups/delete$',
+            'main.xhr_handlers.alignment_groups_delete'),
 
     url(r'^_/samples$',
             'main.xhr_handlers.get_samples'),

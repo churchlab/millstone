@@ -757,6 +757,15 @@ class AlignmentGroup(UniqueUidModelMixin):
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
+    def delete_model_data_dir(self):
+        """Removes all data associated with this model.
+
+        WARNING: Be careful with this method!
+        """
+        data_dir = self.get_model_data_dir()
+        if os.path.exists(data_dir):
+            shutil.rmtree(data_dir)
+
     @property
     def href(self):
         """Link to url view for this model.

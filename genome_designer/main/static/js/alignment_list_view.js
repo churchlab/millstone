@@ -13,11 +13,29 @@ gd.AlignmentListView = Backbone.View.extend({
   render: function() {
     $('#gd-sidenav-link-alignments').addClass('active');
 
-    this.datatable = new gd.DataTableComponent({
+    this.redrawDatatable();
+  },
+
+  /** Draws or redraws the table. */
+  redrawDatatable: function() {
+    this.datatableComponent = new gd.DataTableComponent({
         el: $('#gd-alignment_list_view-datatable-hook'),
         serverTarget: '/_/alignmentgroups',
         controlsTemplate: '/_/templates/alignment_list_controls',
         requestData: {projectUid: this.model.get('uid')},
     });
+
+    this.listenTo(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
+        _.bind(this.decorateControls, this));
+  },
+
+  decorateControls: function() {
+    this.controlsComponent = new gd.AlignmentListControlsComponent({
+      el: '#gd-sample-list-view-datatable-hook-control',
+      datatableComponent: this.datatableComponent
+    });
+
+    this.listenTo(this.controlsComponent, 'MODELS_UPDATED',
+        _.bind(this.redrawDatatable, this));
   }
 });
