@@ -4,8 +4,10 @@
  */
 
 
-gd.SamplesControlsComponent = Backbone.View.extend({
+gd.SamplesControlsComponent = gd.DataTableControlsComponent.extend({
   initialize: function() {
+    gd.DataTableControlsComponent.prototype.initialize.call(this);
+
     if (!this.model) {
       throw "SampleControlsComponent requires model.";
     }
@@ -20,10 +22,10 @@ gd.SamplesControlsComponent = Backbone.View.extend({
   },
 
   render: function() {
-    this.listenToControls();
+    this.decorateControls();
   },
 
-  listenToControls: function() {
+  decorateControls: function() {
     // New pattern where this component creates a new modal component on click.
     $('#gd-samples-upload-single-sample-through-browser-modal').on(
         'shown.bs.modal', _.bind(function (e) {
@@ -55,6 +57,65 @@ gd.SamplesControlsComponent = Backbone.View.extend({
     // Old pattern where this component listens to modal controls.
     $('#gd-samples-create-from-server-location-submit').click(
         _.bind(this.handleCreateFromServerLocation, this));
+
+    this.drawDropdownOptions();
+  },
+
+  /** Draws dropdown options. */
+  drawDropdownOptions: function() {
+    // Option to delete samples.
+    var deleteOptionHtml = '<a href="#" class="gd-id-samples-delete">Delete</a>';
+    this.addDropdownOption(deleteOptionHtml);
+    $('.gd-id-samples-delete').click(_.bind(this.handleDelete, this));
+  },
+
+  /** Show loading feedback while loading. */
+  setUIStartLoadingState: function() {
+    this.loadingSpinner = new gd.Spinner();
+    this.loadingSpinner.spin()
+  },
+
+  /** Reset UI changes after loading complete.. */
+  setUIDoneLoadingState: function() {
+    if (this.loadingSpinner) {
+      this.loadingSpinner.stop();
+    }
+  },
+
+  /** Sends request to delete selected samples. */
+  handleDelete: function() {
+    var sampleUidList = this.datatableComponent.getCheckedRowUids();
+
+    // If nothing to do, show message.
+    if (!sampleUidList.length) {
+      alert("Please select samples to delete.");
+      return;
+    }
+
+    // Get confirmation from user.
+    var agree = confirm("Are you sure you want delete these samples?");
+    if (!agree) {
+      return;
+    }
+
+    this.setUIStartLoadingState();
+
+    var postData = {
+        sampleUidList: sampleUidList,
+    };
+
+    $.post('/_/samples/delete', JSON.stringify(postData),
+        _.bind(this.handleDeleteResponse, this));
+  },
+
+  handleDeleteResponse: function(response) {
+    this.setUIDoneLoadingState();
+
+    if ('error' in response && response.error.length) {
+      alert(response.error);
+    } else {
+      window.location.reload();
+    }
   },
 
   handleCreateFromServerLocation: function() {

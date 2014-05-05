@@ -37,6 +37,8 @@ from main.model_views import adapt_variant_to_frontend
 from main.model_views import GeneView
 from main.models import AlignmentGroup
 from main.models import Dataset
+from main.models import ExperimentSample
+from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Region
@@ -329,6 +331,48 @@ def samples_upload_through_browser_sample_data(request):
     dataset.status = Dataset.STATUS.READY
     dataset.save(update_fields=['status'])
 
+    return HttpResponse(json.dumps({}), content_type='application/json')
+
+
+@login_required
+@require_POST
+def samples_delete(request):
+    """Deletes ExperimentSamples that are not part of an AlignmentGroup.
+    """
+    request_data = json.loads(request.body)
+    sample_uid_list = request_data.get('sampleUidList', [])
+    if len(sample_uid_list) == 0:
+        raise Http404
+
+    # First make sure all the samples belong to this user.
+    samples_to_delete = ExperimentSample.objects.filter(
+            project__owner=request.user.get_profile(),
+            uid__in=sample_uid_list)
+    if not len(samples_to_delete) == len(sample_uid_list):
+        raise Http404
+
+    # Next, make sure none of these samples are part of an AlignmentGroup.
+    samples_associated_with_alignment = []
+    for sample in samples_to_delete:
+        if (ExperimentSampleToAlignment.objects.filter(
+                experiment_sample=sample).count() > 0):
+            samples_associated_with_alignment.append(sample)
+    if len(samples_associated_with_alignment) > 0:
+        affected_samples = ', '.join([
+                s.label for s in samples_associated_with_alignment])
+        error_string = (
+                '%s associated with an alignment. You must delete '
+                'all related alignments for a sample before deleting it.' % (
+                        affected_samples))
+        result = {
+            'error': error_string,
+        }
+        return HttpResponse(json.dumps(result), content_type='application/json')
+
+    # Validation successful, delete.
+    samples_to_delete.delete()
+
+    # Return success response.
     return HttpResponse(json.dumps({}), content_type='application/json')
 
 

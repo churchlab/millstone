@@ -120,7 +120,7 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
   },
 
   /**
-   * Add a dropdown option to the datatable.
+   * DEPRECATED. Use AbstractDataTableControlsComponent.addDropdownOption.
    */
   addDropdownOption: function (html, clickEvent) {
     var rendered = '<li role="presentation"><a role="menuitem" tabindex="-1" onclick="' + 
