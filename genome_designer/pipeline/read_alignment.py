@@ -8,6 +8,7 @@ import os
 import re
 import string
 import subprocess
+import sys
 
 from celery import task
 
@@ -24,7 +25,6 @@ from utils.jbrowse_util import add_bed_file_track
 from settings import TOOLS_DIR
 from settings import BASH_PATH
 from utils import titlecase_spaces
-
 
 SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
 
@@ -535,6 +535,113 @@ def get_insert_size(sample_alignment):
                 found_line = True
     return insert_size
 
+def get_discordant_read_pairs(sample_alignment):
+    """Isolate discordant pairs of reads from a sample alignment.
+    """
+    bam_dataset = get_dataset_with_type(sample_alignment, Dataset.TYPE.BWA_ALIGN)
+    bam_filename = bam_dataset.get_absolute_location()
+
+    assert os.path.exists(bam_filename), "BAM file '%s' is missing." % (
+            bam_filename)
+
+    # NOTE: This assumes the index just adds at .bai, w/ same path otherwise
+    # - will this always be true?
+    assert os.path.exists(bam_filename+'.bai'), (
+            "BAM index '%s' is missing.") % (bam_filename + '.bai')
+
+
+    bam_discordant_fn = os.path.join(sample_alignment.get_model_data_dir(),
+            'bwa_discordant_pairs.bam')
+
+    bwa_disc_dataset = Dataset.objects.create(
+            label=Dataset.TYPE.BWA_DISCORDANT,
+            type=Dataset.TYPE.BWA_DISCORDANT,
+            status=Dataset.STATUS.NOT_STARTED)
+
+    sample_alignment.dataset_set.add(bwa_disc_dataset)
+    sample_alignment.save()
+
+    # Use bam read alignment flags to pull out discordant pairs only
+    filter_discordant = ' | '.join([
+            '{samtools} view -u -F 0x0002 {bam_filename} ',
+            '{samtools} view -u -F 0x0100 - ',
+            '{samtools} view -u -F 0x0004 - ',
+            '{samtools} view -u -F 0x0008 - ',
+            '{samtools} view -b -F 0x0400 - ']).format(
+                    samtools=SAMTOOLS_BINARY,
+                    bam_filename=bam_filename)
+
+    with open(bam_discordant_fn, 'w') as fh:
+        subprocess.check_call(filter_discordant,
+                stdout=fh,
+                shell=True, executable=BASH_PATH)
+
+    # sort the discordant reads, overwrite the old file
+    subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_fn,
+            os.path.splitext(bam_discordant_fn)[0]])
+
+    bwa_disc_dataset.filesystem_location = clean_filesystem_location(
+            bam_discordant_fn)
+    bwa_disc_dataset.save()
+
+    return bwa_disc_dataset
+
+def get_split_reads(sample_alignment):
+    """Isolate split reads from a sample alignment.
+
+    This uses a python script supplied with Lumppy, that is run as a
+    separate process.
+
+    NOTE THAT THIS SCRIPT ONLY WORKS WITH BWA MEM.
+    """
+    bam_dataset = get_dataset_with_type(sample_alignment, Dataset.TYPE.BWA_ALIGN)
+    bam_filename = bam_dataset.get_absolute_location()
+
+    assert os.path.exists(bam_filename), "BAM file '%s' is missing." % (
+            bam_filename)
+
+    # NOTE: This assumes the index just adds at .bai, w/ same path otherwise
+    # - will this always be true?
+    assert os.path.exists(bam_filename+'.bai'), (
+            "BAM index '%s' is missing.") % (bam_filename + '.bai')
+
+
+    bam_split_fn = os.path.join(sample_alignment.get_model_data_dir(),
+            'bwa_split_reads.bam')
+
+    bwa_split_dataset = Dataset.objects.create(
+            label=Dataset.TYPE.BWA_SPLIT,
+            type=Dataset.TYPE.BWA_SPLIT,
+            status=Dataset.STATUS.NOT_STARTED)
+
+    sample_alignment.dataset_set.add(bwa_split_dataset)
+    sample_alignment.save()
+
+    # Use lumpy bwa-mem split read script to pull out split reads.
+    filter_split_reads = ' | '.join([
+            '{samtools} view -h {bam_filename}',
+            'python {lumpy_bwa_mem_sr_script} -i stdin',
+            '{samtools} view -Sb -']).format(
+                    samtools=SAMTOOLS_BINARY,
+                    bam_filename=bam_filename,
+                    lumpy_bwa_mem_sr_script= os.path.join(
+                            TOOLS_DIR, 'lumpy','extractSplitReads_BwaMem'))
+
+    with open(bam_split_fn, 'w') as fh:
+        subprocess.check_call(filter_split_reads,
+                stdout=fh,
+                shell=True,
+                executable=BASH_PATH)
+
+    # sort the split reads, overwrite the old file
+    subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_fn,
+            os.path.splitext(bam_split_fn)[0]])
+
+    bwa_split_dataset.filesystem_location = clean_filesystem_location(
+            bam_split_fn)
+    bwa_split_dataset.save()
+
+    return bwa_split_dataset
 
 ##############################################################################
 # Clean-ups

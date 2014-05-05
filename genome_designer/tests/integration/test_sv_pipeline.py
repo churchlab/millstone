@@ -125,6 +125,7 @@ class TestSVPipeline(CeleryWorkerTestCase):
 
         # Verify that all expected SVs exist (all have length 400)
         verify_variant_type(pindel_variants, 'DEL', 25000, 400)
+        assert False
 
         # dbg: this test fails b/c delly doesn't find the deletion.
         #verify_variant_type(delly_variants, 'DELETION', 25000, 400)

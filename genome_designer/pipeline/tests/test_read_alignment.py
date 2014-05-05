@@ -4,6 +4,7 @@ Tests for read_alignment.py
 
 import json
 import os
+import subprocess
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -15,7 +16,11 @@ from main.models import get_dataset_with_type
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
+from main.model_utils import clean_filesystem_location
 from pipeline.read_alignment import align_with_bwa_mem
+from pipeline.read_alignment import get_discordant_read_pairs
+from pipeline.read_alignment import get_split_reads
+from settings import TOOLS_DIR
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
 from utils.jbrowse_util import compile_tracklist_json
@@ -39,6 +44,11 @@ TEST_FASTQ1_GZ = os.path.join(settings.PWD, 'test_data', 'compressed_fastq',
 TEST_FASTQ2_GZ = os.path.join(settings.PWD, 'test_data', 'compressed_fastq',
         'sample0.simLibrary.2.fq.gz')
 
+TEST_DISC_SPLIT_BAM = os.path.join(settings.PWD, 'test_data',
+        'discordant_split_reads',
+        'bwa_align.bam')
+
+SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
 
 class TestAlignmentPipeline(TestCase):
 
@@ -95,7 +105,7 @@ class TestAlignmentPipeline(TestCase):
         experiment_sample_alignment = align_with_bwa_mem(
                 alignment_group, sample_alignment, project=self.project)
 
-        # Check that the run was successful as indicatedby the Dataset status.
+        # Check that the run was successful as indicated by the Dataset status.
 
         # UNCOMMENT FOR DEBUG
         # error = get_dataset_with_type(
@@ -107,7 +117,7 @@ class TestAlignmentPipeline(TestCase):
 
         bwa_align_dataset = get_dataset_with_type(
                 experiment_sample_alignment, Dataset.TYPE.BWA_ALIGN)
-        
+
         self.assertEqual(Dataset.STATUS.READY, bwa_align_dataset.status)
 
         # Check that the alignment data was saved to a valid destination.
@@ -199,7 +209,7 @@ class TestAlignmentPipeline(TestCase):
                     found_bam_track = True
 
                     # Also check that the urlTemplate is correct.
-                    if not self.reference_genome.project.is_s3_backed():                            
+                    if not self.reference_genome.project.is_s3_backed():
                         EXPECTED_URL_TEMPLATE = os.path.join(
                                 settings.JBROWSE_DATA_URL_ROOT,
                                 bwa_align_dataset.filesystem_location)
@@ -209,3 +219,108 @@ class TestAlignmentPipeline(TestCase):
 
                     break
             self.assertTrue(found_bam_track)
+
+class TestAlignmentPieces(TestCase):
+
+    def setUp(self):
+        user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
+                email=TEST_EMAIL)
+        self.project = Project.objects.create(owner=user.get_profile(),
+                title='Test Project')
+
+        # Create a ref genome.
+        self.reference_genome = import_reference_genome_from_local_file(
+                self.project, 'ref_genome', TEST_FASTA, 'fasta')
+
+        # Create a sample.
+        self.experiment_sample = ExperimentSample.objects.create(
+                project=self.project, label='sample1')
+
+        # Create a sample for compressed fastq data.
+        self.compressed_experiment_sample = ExperimentSample.objects.create(
+                project=self.project, label='sample1')
+
+        # Add fastq files to first sample.
+        copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1, TEST_FASTQ1)
+        copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2, TEST_FASTQ2)
+
+        # Add compressed fastq files to second sample.
+        copy_and_add_dataset_source(self.compressed_experiment_sample,
+                Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ1, TEST_FASTQ1_GZ)
+        copy_and_add_dataset_source(self.compressed_experiment_sample,
+                Dataset.TYPE.FASTQ2, Dataset.TYPE.FASTQ2, TEST_FASTQ2_GZ)
+
+    def test_get_discordant_read_pairs(self):
+
+        # Create a new alignment group.
+        alignment_group = AlignmentGroup.objects.create(
+                label='test alignment', reference_genome=self.reference_genome)
+
+        # Create the expected models.
+        sample_alignment = ExperimentSampleToAlignment.objects.create(
+                alignment_group=alignment_group,
+                experiment_sample=self.experiment_sample)
+        bwa_dataset = Dataset.objects.create(
+                label=Dataset.TYPE.BWA_ALIGN,
+                type=Dataset.TYPE.BWA_ALIGN,
+                status=Dataset.STATUS.READY)
+        bwa_dataset.filesystem_location = clean_filesystem_location(
+                TEST_DISC_SPLIT_BAM)
+        bwa_dataset.save()
+
+        sample_alignment.dataset_set.add(bwa_dataset)
+        sample_alignment.save()
+
+        bwa_disc_dataset = get_discordant_read_pairs(sample_alignment)
+        bwa_disc_dataset_loc = bwa_disc_dataset.get_absolute_location()
+
+        self.assertTrue(os.path.exists(bwa_disc_dataset_loc), (
+                "No file at location %s" % bwa_disc_dataset_loc))
+
+        self.assertEqual(bwa_disc_dataset_loc, get_dataset_with_type(
+                sample_alignment,
+                Dataset.TYPE.BWA_DISCORDANT).get_absolute_location())
+
+        # check line counts
+        p = subprocess.Popen([SAMTOOLS_BINARY, 'view', bwa_disc_dataset_loc],
+                stdout=subprocess.PIPE)
+        self.assertEqual(134, sum([1 for line in p.stdout]))
+
+
+    def test_get_split_reads(self):
+
+        # Create a new alignment group.
+        alignment_group = AlignmentGroup.objects.create(
+                label='test alignment', reference_genome=self.reference_genome)
+
+        # Create the expected models.
+        sample_alignment = ExperimentSampleToAlignment.objects.create(
+                alignment_group=alignment_group,
+                experiment_sample=self.experiment_sample)
+        bwa_dataset = Dataset.objects.create(
+                label=Dataset.TYPE.BWA_ALIGN,
+                type=Dataset.TYPE.BWA_ALIGN,
+                status=Dataset.STATUS.READY)
+        bwa_dataset.filesystem_location = clean_filesystem_location(
+                TEST_DISC_SPLIT_BAM)
+        bwa_dataset.save()
+
+        sample_alignment.dataset_set.add(bwa_dataset)
+        sample_alignment.save()
+
+        bwa_sr_dataset = get_split_reads(sample_alignment)
+        bwa_sr_dataset_loc = bwa_sr_dataset.get_absolute_location()
+
+        self.assertTrue(os.path.exists(bwa_sr_dataset_loc), (
+                "No file at location %s" % bwa_sr_dataset_loc))
+
+        self.assertEqual(bwa_sr_dataset_loc, get_dataset_with_type(
+                sample_alignment,
+                Dataset.TYPE.BWA_SPLIT).get_absolute_location())
+
+        # check line counts
+        p = subprocess.Popen([SAMTOOLS_BINARY, 'view', bwa_sr_dataset_loc],
+                stdout=subprocess.PIPE)
+        self.assertEqual(3, sum([1 for line in p.stdout]))

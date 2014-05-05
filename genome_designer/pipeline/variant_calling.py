@@ -32,6 +32,7 @@ from variant_effects import run_snpeff
 VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
 # Dataset type to use for snp annotation.
 VCF_ANNOTATED_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
+
 # Dataset type for results of finding SVs.
 VCF_PINDEL_TYPE = Dataset.TYPE.VCF_PINDEL
 VCF_DELLY_TYPE = Dataset.TYPE.VCF_DELLY
@@ -324,11 +325,19 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename,
 
     # run delly for each type of transformation
     for transformation, vcf_output in zip(transformations, vcf_outputs):
+
+        print ['%s/delly/delly' % TOOLS_DIR,
+            '-t', transformation,
+            '-o', vcf_output,
+            '-g', fasta_ref] + new_bam_files
+
         # not checked_call, because delly errors if it doesn't find any SVs
         subprocess.call(['%s/delly/delly' % TOOLS_DIR,
             '-t', transformation,
             '-o', vcf_output,
             '-g', fasta_ref] + new_bam_files)
+
+
 
     # combine the separate vcfs for each transformation
     vcf_outputs = filter(lambda file: os.path.exists(file), vcf_outputs)

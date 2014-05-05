@@ -103,6 +103,8 @@ class Dataset(UniqueUidModelMixin):
         FASTQ1 = 'FASTQ Forward'
         FASTQ2 = 'FASTQ Reverse'
         BWA_ALIGN = 'BWA BAM'
+        BWA_DISCORDANT = 'BWA BAM Discordant Paired Reads'
+        BWA_SPLIT = 'BWA BAM Split Reads'
         BWA_ALIGN_ERROR = 'BWA Alignment Error'
         VCF_FREEBAYES = 'Freebayes VCF'
         VCF_PINDEL = 'Pindel VCF'
@@ -119,13 +121,15 @@ class Dataset(UniqueUidModelMixin):
     # This relationship lets us know where the dataset points. This
     # is important in case we want to duplicate this dataset in order
     # to make a compressed/uncompressed version - we need to hook it
-    # up to the correct related models after copying. 
+    # up to the correct related models after copying.
     TYPE_TO_RELATED_MODEL = {
         TYPE.REFERENCE_GENOME_FASTA : 'referencegenome_set',
         TYPE.REFERENCE_GENOME_GENBANK : 'referencegenome_set',
         TYPE.FASTQ1 : 'experimentsample_set',
         TYPE.FASTQ2 : 'experimentsample_set',
         TYPE.BWA_ALIGN : 'experimentsampletoalignment_set',
+        TYPE.BWA_DISCORDANT : 'experimentsampletoalignment_set',
+        TYPE.BWA_SPLIT : 'experimentsampletoalignment_set',
         TYPE.BWA_ALIGN_ERROR : 'alignmentgroup_set',
         TYPE.VCF_FREEBAYES : 'alignmentgroup_set',
         TYPE.VCF_PINDEL : 'alignmentgroup_set',
