@@ -51,7 +51,9 @@ gd.AlignmentListControlsComponent = gd.DataTableControlsComponent.extend({
     }
 
     // Get confirmation from user.
-    var agree = confirm("Are you sure you want delete these samples?");
+    var agree = confirm(
+        "Are you sure you want delete these alignments? This will delete all " +
+        "associated variants.");
     if (!agree) {
       return;
     }
