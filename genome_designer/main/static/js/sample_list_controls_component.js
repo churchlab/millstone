@@ -114,7 +114,7 @@ gd.SamplesControlsComponent = gd.DataTableControlsComponent.extend({
     if ('error' in response && response.error.length) {
       alert(response.error);
     } else {
-      window.location.reload();
+      this.trigger('MODELS_UPDATED');
     }
   },
 
