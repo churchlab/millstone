@@ -35,7 +35,8 @@ gd.RefGenomeListView = Backbone.View.extend({
 
   decorateControls: function() {
     this.refGenomeControlsComponent = new gd.RefGenomeControlsComponent({
-      el: '#gd-ref-genome-list-view-datatable-hook-control'
+      el: '#gd-ref-genome-list-view-datatable-hook-control',
+      datatableComponent: this.datatableComponent
     });
 
     this.listenTo(this.refGenomeControlsComponent, 'MODELS_UPDATED',

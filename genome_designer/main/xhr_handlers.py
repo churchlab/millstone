@@ -172,6 +172,30 @@ def create_ref_genome_from_ncbi(request):
 
 @login_required
 @require_POST
+def ref_genomes_delete(request):
+    """Deletes ReferenceGenomes.
+    """
+    request_data = json.loads(request.body)
+    ref_genome_uid_list = request_data.get('refGenomeUidList', [])
+    if len(ref_genome_uid_list) == 0:
+        raise Http404
+
+    # First make sure all the samples belong to this user.
+    ref_genomes_to_delete = ReferenceGenome.objects.filter(
+            project__owner=request.user.get_profile(),
+            uid__in=ref_genome_uid_list)
+    if not len(ref_genomes_to_delete) == len(ref_genome_uid_list):
+        raise Http404
+
+    # Validation successful, delete.
+    ref_genomes_to_delete.delete()
+
+    # Return success response.
+    return HttpResponse(json.dumps({}), content_type='application/json')
+
+
+@login_required
+@require_POST
 def upload_single_sample(request):
     # Read params / validate.
     project = get_object_or_404(Project, owner=request.user.get_profile(),

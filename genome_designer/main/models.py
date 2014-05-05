@@ -53,6 +53,7 @@ from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
 from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
 from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
 from variants.filter_key_map_constants import MAP_KEY__EXPERIMENT_SAMPLE
+from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 
 BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
 
@@ -563,6 +564,12 @@ class ReferenceGenome(UniqueUidModelMixin):
     def invalidate_materialized_view(self):
         self.is_materialized_variant_view_valid = False
         self.save(update_fields=['is_materialized_variant_view_valid'])
+
+    def drop_materialized_view(self):
+        """Deletes associated materialized view.
+        """
+        mvm = MeltedVariantMaterializedViewManager(self)
+        mvm.drop()
 
 
 class ExperimentSample(UniqueUidModelMixin):

@@ -4,20 +4,24 @@
  */
 
 
-gd.RefGenomeControlsComponent = Backbone.View.extend({
+gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
   initialize: function() {
-    this.listenToControls();
+    gd.DataTableControlsComponent.prototype.initialize.call(this);
+
+    this.decorateControls();
 
     this.maybeCreateFineS3Uploader();
   },
 
-  listenToControls: function() {
+  decorateControls: function() {
     $('#gd-ref-genome-upload-through-browser-submit').click(
         _.bind(this.handleUploadThroughBrowser, this));
     $('#gd-ref-genome-upload-from-server-location-submit').click(
         _.bind(this.handleCreateFromServerLocation, this));
     $('#gd-ref-genome-create-from-ncbi-submit').click(
         _.bind(this.handleCreateFromNCBI, this));
+
+    this.drawDropdownOptions();
   },
 
   /** Puts UI in the loading state. */
@@ -223,6 +227,54 @@ gd.RefGenomeControlsComponent = Backbone.View.extend({
     }
 
     return true;
+  },
+
+   /** Draws dropdown options. */
+  drawDropdownOptions: function() {
+    // Option to delete samples.
+    var deleteOptionHtml =
+        '<a href="#" class="gd-id-refgenomes-delete">Delete</a>';
+    this.addDropdownOption(deleteOptionHtml);
+    $('.gd-id-refgenomes-delete').click(_.bind(this.handleDelete, this));
+  },
+
+  /** Sends request to delete selected samples. */
+  handleDelete: function() {
+    var refGenomeUidList = this.datatableComponent.getCheckedRowUids();
+
+    // If nothing to do, show message.
+    if (!refGenomeUidList.length) {
+      alert("Please select reference genomes to delete.");
+      return;
+    }
+
+    // Get confirmation from user.
+    var agree = confirm(
+        "Are you sure you want delete these reference genomes? " +
+        "This will also delete any alignments and variants associated " +
+        "with this reference genome.");
+    if (!agree) {
+      return;
+    }
+
+    this.enterLoadingState();
+
+    var postData = {
+        refGenomeUidList: refGenomeUidList,
+    };
+
+    $.post('/_/ref_genomes/delete', JSON.stringify(postData),
+        _.bind(this.handleDeleteResponse, this));
+  },
+
+  handleDeleteResponse: function(response) {
+    this.exitLoadingState();
+
+    if ('error' in response && response.error.length) {
+      alert(response.error);
+    } else {
+      this.trigger('MODELS_UPDATED');
+    }
   },
 
   /**

@@ -86,6 +86,7 @@ post_save.connect(post_ref_genome_create, sender=ReferenceGenome,
 # Delete all Project data when it is deleted.
 def pre_ref_genome_delete(sender, instance, **kwargs):
     instance.delete_model_data_dir()
+    instance.drop_materialized_view()
 pre_delete.connect(pre_ref_genome_delete, sender=ReferenceGenome,
         dispatch_uid='ref_genome_delete')
 
