@@ -109,6 +109,7 @@ class Dataset(UniqueUidModelMixin):
         VCF_FREEBAYES = 'Freebayes VCF'
         VCF_PINDEL = 'Pindel VCF'
         VCF_DELLY = 'Delly VCF'
+        VCF_LUMPY = 'Lumpy VCF'
         VCF_USERINPUT = 'User VCF'
         VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'

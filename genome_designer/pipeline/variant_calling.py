@@ -9,6 +9,8 @@ import vcf
 
 from celery import task
 
+from pipeline.read_alignment import get_insert_size
+from pipeline.read_alignment import get_read_length
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
@@ -24,9 +26,9 @@ from variants.vcf_parser import parse_alignment_group_vcf
 from variants.variant_sets import add_variants_to_set_from_bed
 from variant_effects import run_snpeff
 
-# TODO: These VCF types should be set somewhere else. snpeff_util and vcf_parser
-# also use them, but where should they go? settings.py seems logical, but it
-# cannot import from models.py... -dbg
+# TODO: These VCF types should be set somewhere else. snpeff_util and
+# vcf_parser also use them, but where should they go? settings.py seems
+# logical, but it cannot import from models.py... -dbg
 
 # Dataset type to use for snp calling.
 VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
@@ -46,7 +48,8 @@ def get_common_tool_params(alignment_group):
             'alignment_type': alignment_type,
             'fasta_ref': _get_fasta_ref(alignment_group),
             'output_dir': _create_output_dir(alignment_group),
-            'sample_alignments': _find_valid_sample_alignments(alignment_group, alignment_type),
+            'sample_alignments': _find_valid_sample_alignments(
+                    alignment_group, alignment_type),
             }
 
 
@@ -58,6 +61,7 @@ def get_variant_tool_params():
             ('freebayes', Dataset.TYPE.VCF_FREEBAYES, run_freebayes),
             ('pindel', Dataset.TYPE.VCF_PINDEL, run_pindel),
             ('delly', Dataset.TYPE.VCF_DELLY, run_delly),
+            ('lumpy', Dataset.TYPE.VCF_LUMPY, run_lumpy),
     )
 
 
@@ -69,7 +73,8 @@ def _get_fasta_ref(alignment_group):
 
 def _create_output_dir(alignment_group):
     # Prepare a directory to put the output files.
-    # We'll put them in /projects/<project_uid>/alignment_groups/vcf/<variant tool>/
+    # We'll put them in
+    #     /projects/<project_uid>/alignment_groups/vcf/<variant tool>/
     #     <alignment_type>.vcf
     # We'll save these for now, maybe it's not necessary later.
     vcf_dir = os.path.join(alignment_group.get_model_data_dir(), 'vcf')
@@ -164,7 +169,8 @@ def find_variants_with_tool(alignment_group, variant_params):
 
     # Do the following only for freebayes; right now just special if condition
     if tool_name == 'freebayes':
-        # For now, automatically run snpeff if a genbank annotation is available.
+        # For now, automatically run snpeff if a genbank annotation is
+        # available.
         # If no annotation, then skip it, and pass the unannotated vcf type.
         if alignment_group.reference_genome.is_annotated():
             run_snpeff(alignment_group, Dataset.TYPE.BWA_ALIGN)
@@ -243,8 +249,8 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
     return True # success
 
 
-def run_pindel(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename,
-        alignment_type, **kwargs):
+def run_pindel(fasta_ref, sample_alignments, vcf_output_dir,
+        vcf_output_filename, alignment_type, **kwargs):
     """Run pindel to find SVs."""
     vcf_dataset_type = VCF_PINDEL_TYPE
 
@@ -261,7 +267,8 @@ def run_pindel(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename
     pindel_config = os.path.join(vcf_output_dir, 'pindel_config.txt')
     at_least_one_config_line_written = False
     with open(pindel_config, 'w') as fh:
-        for bam_file, sample, insert_size in zip(bam_files, samples, insert_sizes):
+        for bam_file, sample, insert_size in zip(
+                bam_files, samples, insert_sizes):
 
             # Skip bad alignments.
             if insert_size == -1:
@@ -295,9 +302,227 @@ def run_pindel(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename
 
     return True # success
 
+def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
+    vcf_output_filename, alignment_type, **kwargs):
+    """
+    https://github.com/arq5x/lumpy-sv
+    """
 
-def run_delly(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename,
-        alignment_type, **kwargs):
+    # TODO, look for these three in kwargs before setting?
+
+    global_lumpy_options = ['-mw',1,'-tt',0.0]
+
+    # split reads should be given a higher weight than discordant pairs.
+    shared_sr_options= {
+        'back_distance':20,
+        'weight':2,
+        'min_mapping_threshold':20
+    }
+
+    shared_pe_options = {
+        'back_distance' : 20,
+        'weight' : 1,
+        'min_mapping_threshold' : 20,
+        'discordant_z' : 4
+    }
+
+    pe_sample_options = []
+    sr_sample_options = []
+
+    # lumpy uses integer sample IDs, so this is a lookup table.
+    sample_id_dict = {}
+    sample_uid_order = []
+
+    # build up the option strings for each sample
+    for i, sa in enumerate(sample_alignments):
+
+        sample_uid = sa.experiment_sample.uid
+        sample_uid_order.append(sample_uid)
+        sample_id_dict[i] = sample_uid
+        bam_pe_dataset = get_dataset_with_type(
+                sa, Dataset.TYPE.BWA_DISCORDANT)
+
+
+        bam_pe_file = bam_pe_dataset.get_absolute_location()
+        bam_sr_dataset = get_dataset_with_type(
+                sa, Dataset.TYPE.BWA_SPLIT)
+        bam_sr_file = bam_sr_dataset.get_absolute_location()
+
+        ins_size, ins_stdev = get_insert_size(sa, stdev=True)
+        histo_file = os.path.join(sa.get_model_data_dir(),
+                'insert_size_histogram.txt')
+        read_length = get_read_length(sa)
+
+        if bam_pe_file:
+            pe_sample_str = ','.join([
+                'bam_file:'+bam_pe_file,
+                'histo_file:'+histo_file,
+                'mean:'+str(ins_size),
+                'stdev:'+str(ins_stdev),
+                'read_length:'+str(read_length),
+                'min_non_overlap:'+str(read_length),
+                'id:'+str(i),
+                ] + ['%s:%d' % (k,v) for k,v in shared_pe_options.items()])
+        else:
+            bam_pe_str = ''
+
+        if bam_sr_file:
+            sr_sample_str = ','.join([
+                'bam_file:'+bam_sr_file,
+                'id:'+str(i),
+                ] + ['%s:%d' % (k,v) for k,v in shared_sr_options.items()])
+        else:
+            sr_sample_str = ''
+
+        if bam_pe_file: 
+            pe_sample_options.extend(['-pe',pe_sample_str])
+        if bam_sr_file:
+            sr_sample_options.extend(['-sr',sr_sample_str])
+
+    # combine the options and call lumpy
+    combined_options = [str(o) for o in (global_lumpy_options +
+        pe_sample_options + sr_sample_options)]
+
+    lumpy_output = os.path.splitext(vcf_output_filename)[0] + '.txt'
+
+    print combined_options
+
+    with open(lumpy_output, 'w') as fh:
+        subprocess.check_call(
+                ['%s/lumpy/lumpy' % TOOLS_DIR] + combined_options,
+                stdout=fh)
+
+    # convert lumpy output to VCF.
+    # 1. chromosome 1
+    # 2. interval 1 start
+    # 3. interval 1 end
+    # 4. chromosome 2
+    # 5. interval 2 start
+    # 6. interval 2 end
+    # 7. id
+    # 8. evidence set score
+    # 9. strand 1
+    # 10. strand 2
+    # 11. type
+    # 12. id of samples containing evidence for this breakpoint
+    # 13. strand configurations observed in the evidence set
+    # 14. point within the two breakpoint with the maximum probability
+    # 15. segment of each breakpoint that contains 95% of the probability
+    fieldnames = [
+        'chr_1',
+        'ivl_1_start',
+        'ivl_1_end',
+        'chr_2',
+        'ivl_2_start',
+        'ivl_2_end',
+        'id',
+        'evidence_score',
+        'strand_1',
+        'strand_2',
+        'svtype',
+        'sample_ids',
+        'strand_configs',
+        'breakpoint_max',
+        'breakpoint_95_reg'
+    ]
+
+    lumpy_vcf_header = "\n".join([
+        '##fileformat=VCFv4.0',
+        '##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">',
+        '##INFO=<ID=END_CHR,Number=-1,Type=String,Description="End chromosome of the variant described in this record">',
+        '##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">',
+        '##INFO=<ID=SVLEN,Number=-1,Type=Integer,Description="Difference in length between REF and ALT alleles">',
+        '##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">',
+        '##INFO=<ID=STRAND_1,Number=1,Type=String,Description="Strand Orientation of SV Start">',
+        '##INFO=<ID=STRAND_2,Number=1,Type=String,Description="Strand Orientation of SV End">',
+        '##INFO=<ID=METHOD,Number=1,Type=String,Description="SV Caller used to predict">',
+        '##INFO=<ID=DP,Number=-1,Type=String,Description="combined depth across samples">',
+        '##ALT=<ID=DEL,Description="Deletion">',
+        '##ALT=<ID=DUP,Description="Duplication">',
+        '##ALT=<ID=INS,Description="Insertion of novel sequence">',
+        '##ALT=<ID=INV,Description="Inversion">',
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+        '##FORMAT=<ID=AO,Number=1,Type=Integer,Description="Alternate Allele Observations">'])
+
+    lumpy_vcf_col_header = "\t".join([
+        '#CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT']+sample_uid_order)
+
+    def lumpy_output_line_to_vcf(fields, sample_id_dict, sample_uid_order):
+
+        bp_start, bp_end = [i.split(':') for i in
+                fields['breakpoint_max'][4:].split(';')]
+
+        _, fields['ivl_1'] = bp_start
+        _, fields['ivl_2'] = bp_end
+
+        vcf_format_str = '\t'.join(['{chr_1}','{ivl_1}',
+            '.','N','<{svtype}>','{evidence_score}',
+            '.','{info_string}','GT:AO','{genotypes}'])
+
+        info_format_str = (
+                'IMPRECISE;'
+                'SVTYPE={svtype};'
+                'END={ivl_2};'
+                'END_CHR={chr_2};'
+                'STRAND_1={strand_1};'
+                'STRAND_2={strand_2};'
+                'SVLEN={svlen};'
+                'METHOD=LUMPY;'
+                'DP={reads}')
+
+        # SVLEN is only calculable (easily) if it is an intrachromosal event
+        if fields['chr_1'] == fields['chr_2']:
+            fields['svlen'] = int(fields['ivl_2']) - int(fields['ivl_1'])
+
+            # negative number if it's a deletion
+            if 'DEL' in fields['svtype']:
+                fields['svlen'] = -1 * fields['svlen']
+        else:
+            fields['svlen'] == 0
+
+        # looks like TYPE:DELETION
+        # first 3 letters, should be INV, DUP, DEL, INS, etc
+        fields['svtype'] = fields['svtype'][5:8]
+
+        # Split up the sample ids
+        gt_dict = dict([(sample_uid, '.')
+                for sample_uid in sample_id_dict.values()])
+        fields['sample_ids'] = fields['sample_ids'][4:].split(';')
+
+        # initialize total read count for this SV
+        fields['reads'] = 0
+
+        # make the genotype field strings per sample
+        for id_field in fields['sample_ids']:
+            sample_id, reads = id_field.split(',')
+            fields['reads'] += int(reads)
+            # convert lumpy sample ID to our UID
+            sample_uid = sample_id_dict[int(sample_id)]
+            gt_dict[sample_uid] = ':'.join(['1/1',reads])
+
+        fields['genotypes'] = '\t'.join(
+                [gt_dict[uid] for uid in sample_uid_order])
+
+        fields['info_string'] = info_format_str.format(
+                **fields)
+
+        return vcf_format_str.format(**fields)
+
+    with open(lumpy_output, 'r') as lumpy_in:
+        with open(vcf_output_filename, 'w') as lumpy_out:
+            print >> lumpy_out, lumpy_vcf_header
+            print >> lumpy_out, lumpy_vcf_col_header
+            for line in lumpy_in:
+                fields = dict(zip(fieldnames, line.split()))
+                print >> lumpy_out, lumpy_output_line_to_vcf(fields,
+                        sample_id_dict, sample_uid_order)
+
+    return True
+
+
+
+def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
+        vcf_output_filename, alignment_type, **kwargs):
     """Run delly to find SVs."""
     vcf_dataset_type = VCF_DELLY_TYPE
 
@@ -309,7 +534,7 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename,
     vcf_outputs = map(lambda transformation:
             '%s_%s.vcf' % (delly_root, transformation), transformations)
 
-    # Rename bam files, because Delly uses the name of the file as the sample uid.
+    # Rename bam files, because Delly uses the name of the file as sample uid.
     # Use cp instead of mv, because other sv callers will be reading from the
     #   original bam file.
 
@@ -318,7 +543,8 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir, vcf_output_filename,
 
     new_bam_files = []
     for bam_file, sample in zip(bam_files, samples):
-        new_bam_file = os.path.join(os.path.dirname(bam_file), sample.uid + '.bam')
+        new_bam_file = os.path.join(
+                os.path.dirname(bam_file), sample.uid + '.bam')
         subprocess.check_call(['cp', bam_file, new_bam_file])
         subprocess.check_call(['cp', bam_file + '.bai', new_bam_file + '.bai'])
         new_bam_files.append(new_bam_file)
@@ -426,7 +652,8 @@ def postprocess_pindel_vcf(vcf_file):
             continue  # should not happen
 
         # pindel uses negative SVLEN for deletions; make them positive
-        svlen = abs(record.__dict__['INFO']['SVLEN'][0])  # always have one entry
+        # always have one entry
+        svlen = abs(record.__dict__['INFO']['SVLEN'][0])
         record.__dict__['INFO']['SVLEN'] = [svlen]
 
         if svlen < 10:  # ignore small variants

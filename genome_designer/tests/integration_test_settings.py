@@ -9,4 +9,5 @@ ENABLED_VARIANT_CALLERS = [
     'freebayes',
     'pindel',
     'delly',
+    'lumpy'
 ]

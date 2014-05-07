@@ -2,6 +2,7 @@
 Methods for aligning raw fastq reads to a reference genome.
 """
 
+from collections import defaultdict
 import copy
 from datetime import datetime
 import os
@@ -145,6 +146,10 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
         bwa_dataset.filesystem_location = clean_filesystem_location(
                 result_bam_file)
         bwa_dataset.save()
+
+        # Isolate split and discordant reads for SV calling.
+        get_discordant_read_pairs(sample_alignment)
+        get_split_reads(sample_alignment)
 
         # Add track to JBrowse.
         add_bam_file_track(alignment_group.reference_genome, sample_alignment,
@@ -499,11 +504,39 @@ def _get_callable_loci_output_filename(bam_file_location):
     return os.path.splitext(bam_file_location)[0] + '.callable_loci.bed'
 
 
-def get_insert_size(sample_alignment):
+def get_read_length(sample_alignment):
+    """Returns the median read length for this sample alignment by looking
+    at the, at most, first 1000 reads.
+    """
+
+    bam_file = get_dataset_with_type(sample_alignment,
+            Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+
+    p = subprocess.Popen([SAMTOOLS_BINARY, 'view', bam_file],
+        stdout=subprocess.PIPE)
+
+    lines = 0
+    base_sum = 0
+
+    for line in p.stdout:
+        try:
+            base_sum += len(line.split('\t')[9])
+        except:
+            break
+        lines += 1
+        if lines > 1000: break
+
+    return int(base_sum / lines)
+
+def get_insert_size(sample_alignment, stdev=False):
     """Returns the average insert size for a bam_file.
 
     If the insert size can't be calculated, perhaps because of a bad alignment,
     return -1.
+
+    If stdev is True, return the both mean and stdev as a tuple.
+
+    This also creates a file called 'insert_size_histogram.txt' with histogram statistics.
     """
     picard_metrics = get_dataset_with_type(sample_alignment,
             Dataset.TYPE.PICARD_INSERT_METRICS)
@@ -524,16 +557,54 @@ def get_insert_size(sample_alignment):
 
     # Read through the output file until you get to the data labels line,
     # then take the first value in the following line.
+    print metric_filename
     with open(metric_filename) as fh:
-        found_line = False
+        headers = False
+        get_hist_counts = False
+        insert_histogram = defaultdict(int)
         insert_size = -1
+        num_pairs = None
         for line in fh:
-            if found_line:
-                insert_size = line.split()[0]
-                break
+
+            # Parse pair metric table
+            if headers:
+                metrics_dict = dict(zip(headers,line.split('\t')))
+                num_pairs = metrics_dict['READ_PAIRS']
+                headers = False # turn this flag off after 1 line
+
+            # Parse insert histogram (this is at the end)
+            if get_hist_counts:
+                try:
+                    size, count = line.split()
+                    size = int(size)
+                    count = int(count)
+                    insert_histogram[size] = count
+                except ValueError:
+                    break
+
+            # Flags for identifying regions of the output
             if re.match('MEDIAN_INSERT_SIZE', line):
-                found_line = True
-    return insert_size
+                headers = line.split('\t')
+            if re.match('insert_size', line):
+                assert num_pairs, ('Picard Insert Metrics error: '
+                        'metrics should come before histogram.')
+                get_hist_counts = True
+
+        histogram_file = os.path.join(
+                sample_alignment.get_model_data_dir(),
+                'insert_size_histogram.txt')
+
+    with open(histogram_file, 'w') as fh:
+        for i in range(1,max(insert_histogram.values())):
+            pct = float(insert_histogram[i]) / float(num_pairs)
+            print >> fh, "%d\t%d" % (i, pct)
+
+    if stdev:
+        return (
+            int(metrics_dict['MEDIAN_INSERT_SIZE']),
+            float(metrics_dict['STANDARD_DEVIATION']))
+    else:
+        return int(metrics_dict['MEDIAN_INSERT_SIZE'])
 
 def get_discordant_read_pairs(sample_alignment):
     """Isolate discordant pairs of reads from a sample alignment.
@@ -548,7 +619,6 @@ def get_discordant_read_pairs(sample_alignment):
     # - will this always be true?
     assert os.path.exists(bam_filename+'.bai'), (
             "BAM index '%s' is missing.") % (bam_filename + '.bai')
-
 
     bam_discordant_fn = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_discordant_pairs.bam')
@@ -627,18 +697,25 @@ def get_split_reads(sample_alignment):
                     lumpy_bwa_mem_sr_script= os.path.join(
                             TOOLS_DIR, 'lumpy','extractSplitReads_BwaMem'))
 
-    with open(bam_split_fn, 'w') as fh:
-        subprocess.check_call(filter_split_reads,
-                stdout=fh,
-                shell=True,
-                executable=BASH_PATH)
+    try:
+        with open(bam_split_fn, 'w') as fh:
+            subprocess.check_call(filter_split_reads,
+                    stdout=fh,
+                    shell=True,
+                    executable=BASH_PATH)
 
-    # sort the split reads, overwrite the old file
-    subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_fn,
-            os.path.splitext(bam_split_fn)[0]])
+        # sort the split reads, overwrite the old file
+        subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_fn,
+                os.path.splitext(bam_split_fn)[0]])
 
-    bwa_split_dataset.filesystem_location = clean_filesystem_location(
-            bam_split_fn)
+        bwa_split_dataset.filesystem_location = clean_filesystem_location(
+                bam_split_fn)
+
+    except subprocess.CalledProcessError:
+        # if there are no split reads, then fail.
+        bwa_split_dataset.filesystem_location = None
+        bwa_split_dataset.status = Dataset.STATUS.FAILED
+
     bwa_split_dataset.save()
 
     return bwa_split_dataset
