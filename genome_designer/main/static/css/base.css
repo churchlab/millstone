@@ -432,3 +432,8 @@ div.dataTables_paginate ul.pagination {
 .btn.disabled {
   color: white;
 }
+
+.gd-ag-status-text {
+  font-weight: bold;
+  margin-left: 10px;
+}
