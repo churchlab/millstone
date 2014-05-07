@@ -20,6 +20,8 @@ from main.model_utils import clean_filesystem_location
 from pipeline.read_alignment import align_with_bwa_mem
 from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
+from pipeline.read_alignment import get_read_length
+from pipeline.read_alignment import get_insert_size
 from settings import TOOLS_DIR
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
@@ -252,7 +254,6 @@ class TestAlignmentPieces(TestCase):
         copy_and_add_dataset_source(self.compressed_experiment_sample,
                 Dataset.TYPE.FASTQ2, Dataset.TYPE.FASTQ2, TEST_FASTQ2_GZ)
 
-    def test_get_discordant_read_pairs(self):
 
         # Create a new alignment group.
         alignment_group = AlignmentGroup.objects.create(
@@ -273,14 +274,20 @@ class TestAlignmentPieces(TestCase):
         sample_alignment.dataset_set.add(bwa_dataset)
         sample_alignment.save()
 
-        bwa_disc_dataset = get_discordant_read_pairs(sample_alignment)
+        self.bwa_dataset = bwa_dataset
+        self.sample_alignment = sample_alignment
+
+
+    def test_get_discordant_read_pairs(self):
+
+        bwa_disc_dataset = get_discordant_read_pairs(self.sample_alignment)
         bwa_disc_dataset_loc = bwa_disc_dataset.get_absolute_location()
 
         self.assertTrue(os.path.exists(bwa_disc_dataset_loc), (
                 "No file at location %s" % bwa_disc_dataset_loc))
 
         self.assertEqual(bwa_disc_dataset_loc, get_dataset_with_type(
-                sample_alignment,
+                self.sample_alignment,
                 Dataset.TYPE.BWA_DISCORDANT).get_absolute_location())
 
         # check line counts
@@ -291,36 +298,28 @@ class TestAlignmentPieces(TestCase):
 
     def test_get_split_reads(self):
 
-        # Create a new alignment group.
-        alignment_group = AlignmentGroup.objects.create(
-                label='test alignment', reference_genome=self.reference_genome)
-
-        # Create the expected models.
-        sample_alignment = ExperimentSampleToAlignment.objects.create(
-                alignment_group=alignment_group,
-                experiment_sample=self.experiment_sample)
-        bwa_dataset = Dataset.objects.create(
-                label=Dataset.TYPE.BWA_ALIGN,
-                type=Dataset.TYPE.BWA_ALIGN,
-                status=Dataset.STATUS.READY)
-        bwa_dataset.filesystem_location = clean_filesystem_location(
-                TEST_DISC_SPLIT_BAM)
-        bwa_dataset.save()
-
-        sample_alignment.dataset_set.add(bwa_dataset)
-        sample_alignment.save()
-
-        bwa_sr_dataset = get_split_reads(sample_alignment)
+        bwa_sr_dataset = get_split_reads(self.sample_alignment)
         bwa_sr_dataset_loc = bwa_sr_dataset.get_absolute_location()
 
         self.assertTrue(os.path.exists(bwa_sr_dataset_loc), (
                 "No file at location %s" % bwa_sr_dataset_loc))
 
         self.assertEqual(bwa_sr_dataset_loc, get_dataset_with_type(
-                sample_alignment,
+                self.sample_alignment,
                 Dataset.TYPE.BWA_SPLIT).get_absolute_location())
 
         # check line counts
         p = subprocess.Popen([SAMTOOLS_BINARY, 'view', bwa_sr_dataset_loc],
                 stdout=subprocess.PIPE)
         self.assertEqual(3, sum([1 for line in p.stdout]))
+
+    def test_get_read_length(self):
+
+        self.assertEqual(get_read_length(self.sample_alignment), 70)
+
+    def test_get_insert_size(self):
+
+        mean, stdev = get_insert_size(self.sample_alignment, stdev=True)
+
+        self.assertEqual(mean, 499)
+        self.assertAlmostEqual(stdev, 50, delta=1)
