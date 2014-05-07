@@ -64,6 +64,9 @@ gd.AlignmentView = Backbone.View.extend({
       $('#gd-alignments-rerun-variants-btn').click(
           _.bind(this.handleRerunVariantsClick, this));
     }
+
+    $('#gd-ag-controls-toolbar').append(
+      '<span class="gd-ag-status-text">' + this.model.get('alignment_group').status + '</span>');
   },
 
   /**
