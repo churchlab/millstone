@@ -93,6 +93,7 @@ TOOLS_URLS = {
         'Linux' : [
             'https://www.dropbox.com/s/spivtdr4ud76ba2/lumpy-0.2.1-linux.zip'
         ]
+    }
 }
 
 # For any tools that have multiple executables that need permission changes,
