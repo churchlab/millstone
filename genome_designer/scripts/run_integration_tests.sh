@@ -8,4 +8,4 @@ else
   exit 1
 fi
 
-./manage.py test --settings=tests.integration_test_settings tests/integration
+./manage.py test -s --settings=tests.integration_test_settings tests/integration
