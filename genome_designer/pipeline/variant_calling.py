@@ -353,7 +353,12 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
                 'insert_size_histogram.txt')
         read_length = get_read_length(sa)
 
-        if bam_pe_file:
+        if bam_pe_dataset.status != Dataset.STATUS.FAILED and bam_pe_file:
+
+            assert os.path.isfile(bam_pe_file), (
+                    '{file} is not empty but is not a file!'.format(
+                            file=bam_sr_file))
+
             pe_sample_str = ','.join([
                 'bam_file:'+bam_pe_file,
                 'histo_file:'+histo_file,
@@ -366,7 +371,12 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
         else:
             bam_pe_str = ''
 
-        if bam_sr_file:
+        if bam_sr_dataset.status != Dataset.STATUS.FAILED and bam_sr_file:
+
+            assert os.path.isfile(bam_sr_file), (
+                    '{file} is not empty but is not a file!'.format(
+                            file=bam_sr_file))
+
             sr_sample_str = ','.join([
                 'bam_file:'+bam_sr_file,
                 'id:'+str(i),
@@ -374,9 +384,9 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
         else:
             sr_sample_str = ''
 
-        if bam_pe_file: 
+        if  bam_pe_dataset.status != Dataset.STATUS.FAILED and bam_pe_file:
             pe_sample_options.extend(['-pe',pe_sample_str])
-        if bam_sr_file:
+        if bam_sr_dataset.status != Dataset.STATUS.FAILED and bam_sr_file:
             sr_sample_options.extend(['-sr',sr_sample_str])
 
     # combine the options and call lumpy
@@ -387,10 +397,15 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
 
     print combined_options
 
-    with open(lumpy_output, 'w') as fh:
-        subprocess.check_call(
-                ['%s/lumpy/lumpy' % TOOLS_DIR] + combined_options,
-                stdout=fh)
+    try:
+        with open(lumpy_output, 'w') as fh:
+            subprocess.check_call(
+                    ['%s/lumpy/lumpy' % TOOLS_DIR] + combined_options,
+                    stdout=fh)
+    except subprocess.CalledProcessError, e:
+        print 'Lumpy failed. Command: {command}'.format(
+                command=['%s/lumpy/lumpy' % TOOLS_DIR] + combined_options)
+        raise e
 
     # convert lumpy output to VCF.
     # 1. chromosome 1
