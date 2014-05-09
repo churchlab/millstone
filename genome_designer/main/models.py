@@ -134,6 +134,7 @@ class Dataset(UniqueUidModelMixin):
         TYPE.BWA_ALIGN_ERROR : 'alignmentgroup_set',
         TYPE.VCF_FREEBAYES : 'alignmentgroup_set',
         TYPE.VCF_PINDEL : 'alignmentgroup_set',
+        TYPE.VCF_LUMPY : 'alignmentgroup_set',
         TYPE.VCF_DELLY : 'alignmentgroup_set',
         TYPE.VCF_USERINPUT : 'variantset_set',
         TYPE.VCF_FREEBAYES_SNPEFF : 'alignmentgroup_set'
