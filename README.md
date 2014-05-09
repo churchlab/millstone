@@ -189,8 +189,16 @@ You can grant these by logging into the Posgres shell and running:
 
 ## Tests
 
+We have two kinds of tests: unit and integration. Unit tests are intended
+to be more specific tests of smaller pieces of the code, while integration
+tests attempt to connect multiple pieces. Also, the integration tests actually
+start celery worker intstances to simulate what happens in an async
+environment while our unit tests use `CELERY_ALWAYS_EAGER = True` to mock out
+testing celery.
+
 We currently use [django-nose](https://pypi.python.org/pypi/django-nose) for
-testing.
+running tests, which provides a better interface than Django's native testing
+setup (although this might not be true with the latest Django).
 
 To run unit tests:
 
@@ -210,7 +218,8 @@ And for only the tests in `scripts` call:
 
     (venv)$ ./scripts/run_unit_tests.sh main
 
-For integration tests, unfortunately you'll have to do it a slightly different way (TODO: Fix this):
+For integration tests, we haven't figured out the optimal syntax in the test
+script so to run individual tests, you'll need to do it this more explicit way:
 
     (venv)$ ./manage.py test --settings=tests.integration_test_settings tests/integration/test_pipeline_integration.py:TestAlignmentPipeline.test_run_pipeline
 
@@ -264,6 +273,18 @@ up previously stared `celerytestworker`s. There is a script to do this for you:
 Our test framework isn't perfect. Here are some potential problems and other
 hints that might help.
 
+#### Celery workers not starting?
+
+You might see this error:
+
+    AssertionError: No running Celery workers were found.
+
+So far, we're aware of a couple reasons you might see this:
+
+* Another integration test in the same run failed, causing all
+  subsequent integration tests to fail.
+* celerytestworkers were not shut down (use script above to kill them).
+
 #### `ps aux` and `grep` are your friends
 
 To see running celery processes:
@@ -281,6 +302,12 @@ To kill the process associated with the integration test (e.g. 777)
 To kill orphaned celerytestworker processes, we actually have a script:
 
     ./scripts/kill_celerytestworkers.sh
+
+#### Running individual tests
+
+This command runs a specific integration test and doesn't capture stdout:
+
+    ./manage.py test -s --settings=tests.integration_test_settings tests/integration/test_pipeline_integration.py:TestAlignmentPipeline.test_run_pipeline
 
 
 ### Adding Tests
