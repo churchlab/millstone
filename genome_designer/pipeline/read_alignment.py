@@ -348,7 +348,8 @@ def add_groups(experiment_sample, input_bam_file, bam_output_file, error_output)
     from main.models import ensure_exists_0775_dir
     # Create a temp directory in the experiment_sample data dir else we run out of space
     # with big alignment jobs.
-    picard_tmp_dir = os.path.join(experiment_sample.get_model_data_dir(), 'picard_tmp')
+    picard_tmp_dir = os.path.join(experiment_sample.get_model_data_dir(),
+            'picard_tmp')
     ensure_exists_0775_dir(picard_tmp_dir)
 
     prefix = experiment_sample.uid
@@ -713,7 +714,7 @@ def get_split_reads(sample_alignment):
 
     except subprocess.CalledProcessError:
         # if there are no split reads, then fail.
-        bwa_split_dataset.filesystem_location = None
+        bwa_split_dataset.filesystem_location = ''
         bwa_split_dataset.status = Dataset.STATUS.FAILED
 
     bwa_split_dataset.save()
