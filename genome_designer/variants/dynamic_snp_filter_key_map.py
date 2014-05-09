@@ -188,11 +188,22 @@ def _assert_unique_keys(variant_key_map):
     Other parts of the code make the assumption that they subkeys are unique.
     I'm open to changing this requirement as long as we do it safely.
     """
-    field_name_sets = [set(variant_key_map[submap].keys())
+    field_name_sets = [(submap, set(variant_key_map[submap].keys()))
             for submap in variant_key_map.keys()]
     # Check all pairs for intersections.
-    for i in range(len(field_name_sets)):
-        for j in range(len(field_name_sets)):
+    for i in range(len(field_name_sets[1])):
+        for j in range(len(field_name_sets[1])):
+            submap_i = field_name_sets[i][0]
+            submap_j = field_name_sets[j][0]
+
             if i <= j:
                 continue
-            assert not (field_name_sets[i] & field_name_sets[j])
+            assert not (field_name_sets[i][1] & field_name_sets[j][1]), (
+                'Duplicate SNP filter keys between submaps {submap_i}'
+                ' and {submap_j}. Keys in commmon: {common_keys}'.format(
+                    submap_i= submap_i,
+                    submap_j = submap_j,
+                    common_keys = ' '.join(
+                            field_name_sets[i][1] & field_name_sets[j][1])
+                )
+            )

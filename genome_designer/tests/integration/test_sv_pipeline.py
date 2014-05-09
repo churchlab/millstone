@@ -15,6 +15,8 @@ from main.models import get_dataset_with_type
 from main.models import Project
 from main.models import User
 from pipeline.pipeline_runner import run_pipeline
+from pipeline.variant_calling import get_variant_tool_params
+import settings
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
 from variants.vcf_parser import extract_raw_data_dict
@@ -71,10 +73,14 @@ class TestSVPipeline(CeleryWorkerTestCase):
                 'indiv_tracks')))
 
         vcf_files = {}
-        for vcf_type in [Dataset.TYPE.VCF_FREEBAYES,
-                Dataset.TYPE.VCF_PINDEL, Dataset.TYPE.VCF_DELLY]:
+        vcf_types = [t[1] for t in get_variant_tool_params()
+                if t[0] in settings.ENABLED_VARIANT_CALLERS]
+
+        for vcf_type in vcf_types:
             vcf_dataset = get_dataset_with_type(alignment_group_obj, vcf_type)
-            self.assertIsNotNone(vcf_dataset)
+            self.assertIsNotNone(vcf_dataset,
+                    msg='Missing vcf_dataset for {vcf_type}.'.format(
+                            vcf_type= vcf_type))
             vcf_location = vcf_dataset.get_absolute_location()
             self.assertTrue(os.path.exists(vcf_location))
             vcf_files[vcf_type] = vcf_location
@@ -89,8 +95,12 @@ class TestSVPipeline(CeleryWorkerTestCase):
                     raw_data_dict = extract_raw_data_dict(record)
 
                     # we should expect exactly 1 alternate
-                    assert len(raw_data_dict['INFO_SVLEN']) == 1
-                    assert len(raw_data_dict['INFO_SVTYPE']) == 1
+                    assert len(raw_data_dict['INFO_SVLEN']) == 1, (
+                        'length of INFO_SVLEN > 1: {svlen}'.format(
+                                svlen=raw_data_dict['INFO_SVLEN']))
+                    assert len(raw_data_dict['INFO_SVTYPE']) == 1, (
+                        'length of INFO_SVLEN > 1: {svtype}'.format(
+                                svtype=raw_data_dict['INFO_SVTYPE']))
 
                     variant_type = str(raw_data_dict.get('INFO_SVTYPE',
                             raw_data_dict.get('TYPE'))[0])
@@ -103,8 +113,8 @@ class TestSVPipeline(CeleryWorkerTestCase):
                         })
             return variants
 
-        pindel_variants = get_variants(Dataset.TYPE.VCF_PINDEL)
-        delly_variants = get_variants(Dataset.TYPE.VCF_DELLY)
+        #pindel_variants = get_variants(Dataset.TYPE.VCF_PINDEL)
+        #delly_variants = get_variants(Dataset.TYPE.VCF_DELLY)
         lumpy_variants = get_variants(Dataset.TYPE.VCF_LUMPY)
 
         # Helper function for checking a specific variant type
