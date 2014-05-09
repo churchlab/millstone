@@ -21,6 +21,8 @@ from main.models import ReferenceGenome
 from main.model_utils import clean_filesystem_location
 from main.s3 import project_files_needed
 from pipeline.read_alignment_util import ensure_bwa_index
+from pipeline.read_alignment_util import index_bam_file
+
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import add_bed_file_track
 from settings import TOOLS_DIR
@@ -258,11 +260,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         ], stderr=error_output)
 
         # 2b. Index the sorted result.
-        subprocess.check_call([
-            SAMTOOLS_BINARY,
-            'index',
-            sorted_bam_file_location,
-        ], stderr=error_output)
+        index_bam_file(sorted_bam_file_location, error_output)
 
     # 3. Compute insert size metrics
     # Subsequent steps screw up pairing info so this has to
@@ -286,11 +284,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     )
     if effective_mask['indel_realigner']:
         # Make sure the previous result is indexed.
-        subprocess.check_call([
-                SAMTOOLS_BINARY,
-                'index',
-                grouped_bam_file_location,
-        ], stderr=error_output)
+        index_bam_file(grouped_bam_file_location, error_output)
 
         realign_given_indels(
                 experiment_sample,
@@ -321,9 +315,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
             ], stderr=error_output, stdout=fh)
 
         # Re-index this new bam file.
-        subprocess.check_call([
-            SAMTOOLS_BINARY, 'index', final_bam_location],
-            stderr=error_output)
+        index_bam_file(final_bam_location, error_output)
 
     else:
         final_bam_location = realigned_bam_file_location
@@ -335,11 +327,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
 
     # 8. Create index.
     if effective_mask['index']:
-        subprocess.check_call([
-            SAMTOOLS_BINARY,
-            'index',
-            final_bam_location,
-        ], stderr=error_output)
+        index_bam_file(final_bam_location, error_output)
 
     return final_bam_location
 
@@ -618,8 +606,8 @@ def get_discordant_read_pairs(sample_alignment):
 
     # NOTE: This assumes the index just adds at .bai, w/ same path otherwise
     # - will this always be true?
-    assert os.path.exists(bam_filename+'.bai'), (
-            "BAM index '%s' is missing.") % (bam_filename + '.bai')
+    if not os.path.exists(bam_filename+'.bai'):
+        index_bam_file(bam_filename)
 
     bam_discordant_fn = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_discordant_pairs.bam')
@@ -673,8 +661,8 @@ def get_split_reads(sample_alignment):
 
     # NOTE: This assumes the index just adds at .bai, w/ same path otherwise
     # - will this always be true?
-    assert os.path.exists(bam_filename+'.bai'), (
-            "BAM index '%s' is missing.") % (bam_filename + '.bai')
+    if not os.path.exists(bam_filename+'.bai'):
+        index_bam_file(bam_filename)
 
 
     bam_split_fn = os.path.join(sample_alignment.get_model_data_dir(),

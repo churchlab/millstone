@@ -263,16 +263,15 @@ class TestAlignmentPieces(TestCase):
         sample_alignment = ExperimentSampleToAlignment.objects.create(
                 alignment_group=alignment_group,
                 experiment_sample=self.experiment_sample)
-        bwa_dataset = Dataset.objects.create(
-                label=Dataset.TYPE.BWA_ALIGN,
-                type=Dataset.TYPE.BWA_ALIGN,
-                status=Dataset.STATUS.READY)
-        bwa_dataset.filesystem_location = clean_filesystem_location(
-                TEST_DISC_SPLIT_BAM)
-        bwa_dataset.save()
 
-        sample_alignment.dataset_set.add(bwa_dataset)
-        sample_alignment.save()
+        bwa_dataset = copy_and_add_dataset_source(
+                sample_alignment,
+                dataset_label=Dataset.TYPE.BWA_ALIGN,
+                dataset_type=Dataset.TYPE.BWA_ALIGN,
+                original_source_location=TEST_DISC_SPLIT_BAM)
+
+        bwa_dataset.status = status=Dataset.STATUS.READY
+        bwa_dataset.save()
 
         self.bwa_dataset = bwa_dataset
         self.sample_alignment = sample_alignment
