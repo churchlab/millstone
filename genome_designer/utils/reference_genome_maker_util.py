@@ -5,8 +5,9 @@ Utils for working with ReferenceGenome maker.
 import os
 import tempfile
 
+from Bio import SeqIO
 from django.conf import settings
-from reference_genome_maker import vcf_to_genbank
+from reference_genome_maker import reference_genome_maker
 
 # from debug.debug_util import FakeException
 from main.exceptions import ValidationException
@@ -66,9 +67,10 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
         reference_genome.dataset_set.add(dataset)
 
         # Prepare params for calling referece_genome_maker.
-        original_genbank_path = original_ref_genome.dataset_set.get(
-                type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).\
+        original_fasta_path = original_ref_genome.dataset_set.get(
+                type=Dataset.TYPE.REFERENCE_GENOME_FASTA).\
                         get_absolute_location()
+        sequence_record = SeqIO.read(original_fasta_path, 'fasta')
 
         filename_prefix = generate_safe_filename_prefix_from_label(
                 new_ref_genome_label)
@@ -92,8 +94,8 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
         dataset.save(update_fields=['status'])
 
         try:
-            new_ref_genome_seq_record = vcf_to_genbank.run(
-                    original_genbank_path, output_root, vcf_path, sample_id)
+            new_ref_genome_seq_record = reference_genome_maker.run(
+                    sequence_record, output_root, vcf_path)
         except Exception as e:
             dataset.status = Dataset.STATUS.FAILED
             dataset.save(update_fields=['status'])

@@ -2,4 +2,4 @@
 
 -e git+ssh://git@github.com/churchlab/django-celery-testworker.git@b9007154bba8a5da1c39826b34bf3191a5087a7e#egg=django_celery_testworker-dev
 -e git+ssh://git@github.com/churchlab/optmage.git@7a50e8ffde7f31078ea50166d74fdb3830871500#egg=optmage-dev
--e git+ssh://git@github.com/churchlab/reference_genome_maker.git@d1a0e71811577011a0db7805bacb7db513f5195c#egg=reference_genome_maker-dev
+-e git+ssh://git@github.com/churchlab/reference_genome_maker.git@79b8bf66b56d3b9680a7cffd54501e59276595ee#egg=reference_genome_maker-dev
