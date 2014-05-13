@@ -470,7 +470,8 @@ OPTIONAL_DEFAULT_FIELDS = [
 
 
 def get_all_fields(reference_genome, visible_key_names, melted=False):
-    """Gets the list of columns that will be displayed on DataTables.
+    """Gets the list of columns that will be displayed on DataTables, in
+    display order.
 
     Args:
         reference_genome: The ReferenceGenome. We pass this so that we have a
@@ -480,7 +481,8 @@ def get_all_fields(reference_genome, visible_key_names, melted=False):
             response.
 
     Returns:
-        Tuple of default fields, optional fields, and additional fields
+        Tuple of default fields, optional fields, and additional fields,
+        in display order.
     """
     if melted:
         default_field_dict_list = MELTED_VARIANT_FIELD_DICT_LIST
@@ -510,9 +512,19 @@ def get_all_fields(reference_genome, visible_key_names, melted=False):
     additional_visible_field_dict_list = _prepare_additional_visible_keys(
             visible_key_names, key_to_parent_map)
 
-    return (default_field_dict_list +
+    combined_list = (default_field_dict_list +
             optional_default_field_dict_list +
             additional_visible_field_dict_list)
+
+    # Before we return, put last fields last.
+    final_list = []
+    last_fields = []
+    for field in combined_list:
+        if 'last' in field:
+            last_fields.append(field)
+        else:
+            final_list.append(field)
+    return final_list + last_fields
 
 
 def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,

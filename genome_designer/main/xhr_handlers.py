@@ -464,6 +464,9 @@ def get_variant_list(request):
             all_fields = get_all_fields(
                     reference_genome, query_args['visible_key_names'],
                     melted=query_args['is_melted'])
+            # Get rid of hidden fields for sorting consideration.
+            all_fields = [field for field in all_fields
+                if not ('hide' in field and field['hide'])]
             if query_args['sortCol'] <= len(all_fields):
                 query_args['sort_by_column'] = \
                     all_fields[query_args['sortCol'] - 1]['field']
