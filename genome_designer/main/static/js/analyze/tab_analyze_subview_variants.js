@@ -130,6 +130,8 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         _.bind(this.setUIDoneLoadingState, this));
     this.listenTo(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
         _.bind(this.listenToControls, this));
+    this.listenTo(this.datatableComponent, 'DATA_FETCH_ERROR',
+        _.bind(this.handleGetVariantListError, this));
   },
 
 

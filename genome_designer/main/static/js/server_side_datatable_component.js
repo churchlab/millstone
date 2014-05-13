@@ -119,7 +119,7 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
 
 
   /**
- * Updates the datatable view based on the data available.
+   * Updates the datatable view based on the data available.
    *
    * @param {array} objList List of objects to display
    * @param {array} fieldConfig List of column config objects. These must
@@ -212,9 +212,14 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
         // This is the change to the code copied from jquery.datatable.js.
         // We convert the server json response to what is expected by
         // the rest of the DataTables machinery.
-        fnCallback(this.cleanServerResponse(json, oSettings));
-
-        this.trigger('DONE_LOADING');
+        if (json.error) {
+          // Send trivial data on to rest of DataTable.
+          fnCallback({aaData: []});
+          this.trigger('DATA_FETCH_ERROR', json.error);
+        } else {
+          fnCallback(this.cleanServerResponse(json, oSettings));
+          this.trigger('DONE_LOADING');
+        }
       }, this),
       'dataType': "json",
       'cache': false,
