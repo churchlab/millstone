@@ -16,7 +16,6 @@ from main.models import Project
 from main.models import User
 from pipeline.pipeline_runner import run_pipeline
 from pipeline.variant_calling import get_variant_tool_params
-import settings
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
 from variants.vcf_parser import extract_raw_data_dict
@@ -113,21 +112,25 @@ class TestSVPipeline(CeleryWorkerTestCase):
                         })
             return variants
 
-        #pindel_variants = get_variants(Dataset.TYPE.VCF_PINDEL)
-        #delly_variants = get_variants(Dataset.TYPE.VCF_DELLY)
+        pindel_variants = get_variants(Dataset.TYPE.VCF_PINDEL)
+        delly_variants = get_variants(Dataset.TYPE.VCF_DELLY)
         lumpy_variants = get_variants(Dataset.TYPE.VCF_LUMPY)
+
+        print 'pindel', pindel_variants
+        print 'delly', delly_variants
+        print 'lumpy', lumpy_variants
 
         # Helper function for checking a specific variant type
         def verify_variant_type(variants, variant_type, pos, length):
             for variant in variants:
                 # Check variant against following gauntlet.
                 if variant['type'] != variant_type:
-                    break # Fail, incorrect type.
-                if abs(variant['pos'] - pos) >= 50:
-                    break # Fail, incorrect position.
+                    continue # Fail, incorrect type.
+                if abs(abs(variant['pos']) - pos) >= 100:
+                    continue # Fail, incorrect position.
                 if (length != -1 and
-                        abs(abs(variant['length']) - length) >= 50):
-                    break # Fail, incorrect length.
+                        abs(abs(variant['length']) - length) >= 100):
+                    continue # Fail, incorrect length.
                 # Success, variant made it through gauntlet.
                 return
 
