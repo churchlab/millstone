@@ -182,7 +182,11 @@ See instructions for setting up PostgresSQL database:
 
 In order to run tests with Postgres, your user will need CREATE permissions.
 Otherwise you might get an error creating a database.
-You can grant these by logging into the Posgres shell and running:
+You can grant these by logging into the Posgres shell:
+
+    sudo -u postgres psql
+
+and then running:
 
     ALTER USER django CREATEDB;
 
