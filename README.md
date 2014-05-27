@@ -145,13 +145,12 @@ message broker, for which we use RabbitMQ which is the default for Celery.
 
 
 
-### Other third-party tools
+### Run the Millstone setup script.
 
-For most third-party tools that the application depends on, we've put them in a
-Dropbox, as either Mac OS X or Linux binaries. Run `setup.py` which should
-create a `tools/` dir and will download the correct build for your system.
-We recommend using our builds, as they have been tested with the rest of
-the application.
+The following installs various third-party bioinformatics tools and sets up
+JBrowse.
+
+    ./millstone_setup.py.
 
 
 ## Running the application
