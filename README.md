@@ -178,7 +178,7 @@ the application.
 See instructions for setting up PostgresSQL database:
 <https://overlappingminds.com/thoughts/069accf7-ccb4-4b7a-bd40-022c49a053cd>
 
-*NOTE:* Be sure to make local db config changes in `conf/local_settings.py`.
+*NOTE:* Be sure to make local db config changes in `genome_designer/conf/local_settings.py`.
 
 In order to run tests with Postgres, your user will need CREATE permissions.
 Otherwise you might get an error creating a database.
