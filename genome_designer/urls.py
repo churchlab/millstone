@@ -158,7 +158,7 @@ urlpatterns = patterns('',
     # the static jbrowse/ pages.
     ###########################################################################
     url(r'^redirect_jbrowse$',
-            'main.xhr_handlers.compile_jbrowse_and_redirect'),
+            'main.views.compile_jbrowse_and_redirect'),
 
 )
 

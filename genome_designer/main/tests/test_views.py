@@ -21,6 +21,8 @@ TEST_EMAIL = 'test@test.com'
 STATUS_CODE__SUCCESS = 200
 STATUS_CODE__NOT_LOGGED_IN = 302
 STATUS_CODE__NOT_FOUND = 404
+STATUS_CODE__REDIRECT = 302
+STATUS_CODE__SERVER_ERROR = 500
 
 
 class TestViews(TestCase):
@@ -29,23 +31,24 @@ class TestViews(TestCase):
         # Test models.
         user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
                 email=TEST_EMAIL)
-        test_project = Project.objects.create(owner=user.get_profile(),
+        self.test_project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
-        ref_genome = ReferenceGenome.objects.create(project=test_project,
-                label='refgenome', num_chromosomes=1, num_bases=1000)
+        self.ref_genome = ReferenceGenome.objects.create(
+                project=self.test_project, label='refgenome', num_chromosomes=1,
+                num_bases=1000)
 
         alignment_group = AlignmentGroup.objects.create(
                 label='Alignment 1',
-                reference_genome=ref_genome,
+                reference_genome=self.ref_genome,
                 aligner=AlignmentGroup.ALIGNER.BWA)
         variant = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
-                reference_genome=ref_genome,
+                reference_genome=self.ref_genome,
                 chromosome='chrom',
                 position=10,
                 ref_value='A')
 
-        var_alt = VariantAlternate.objects.create(
+        VariantAlternate.objects.create(
                 variant=variant,
                 alt_value='G')
 
@@ -65,35 +68,35 @@ class TestViews(TestCase):
         self.specific_entity_urls = [
                 # Tab base views.
                 reverse('main.views.project_view',
-                        args=(test_project.uid,)),
+                        args=(self.test_project.uid,)),
                 reverse('main.views.tab_root_analyze',
-                        args=(test_project.uid,)),
+                        args=(self.test_project.uid,)),
 
                 # Project-specific views
                 reverse('main.views.project_view',
-                        args=(test_project.uid,)),
+                        args=(self.test_project.uid,)),
 
                 # Reference genomes
                 reverse('main.views.reference_genome_list_view',
-                        args=(test_project.uid,)),
+                        args=(self.test_project.uid,)),
                 reverse('main.views.reference_genome_view',
-                        args=(test_project.uid, ref_genome.uid)),
+                        args=(self.test_project.uid, self.ref_genome.uid)),
 
                 # Alignments
                 reverse('main.views.alignment_list_view',
-                        args=(test_project.uid,)),
+                        args=(self.test_project.uid,)),
                 reverse('main.views.alignment_create_view',
-                        args=(test_project.uid,)),
+                        args=(self.test_project.uid,)),
                 reverse('main.views.alignment_view',
-                        args=(test_project.uid, alignment_group.uid)),
+                        args=(self.test_project.uid, alignment_group.uid)),
 
                 # Variant sets
                 reverse('main.views.variant_set_list_view',
-                        args=(test_project.uid,)),
+                        args=(self.test_project.uid,)),
 
                 # Samples
                 reverse('main.views.sample_list_view',
-                        args=(test_project.uid,)),
+                        args=(self.test_project.uid,)),
         ]
 
         # The fake web browser client used to make requests.
@@ -108,7 +111,6 @@ class TestViews(TestCase):
                 ("Simple url test failed for %s with status code %d. " +
                         "Expected status code %d.") % (
                                 url, response.status_code, expected_status_code))
-
 
     def test_views__logged_out(self):
         """Tests calling the views without a logged in user.
@@ -152,3 +154,24 @@ class TestViews(TestCase):
                 self.no_login_required_urls)
         for url in success_urls:
             self.assert_url_response(url, STATUS_CODE__SUCCESS)
+
+    def test_compile_jbrowse_and_redirect(self):
+        """Tests the JBrowse redirect handler.
+        """
+        self.client.login(username=TEST_USERNAME, password=TEST_PASSWORD)
+
+        # If invalid ids, then 404.
+        url = ('/redirect_jbrowse?data=/jbrowse/gd_data/projects/167e93/' +
+                'ref_genomes/ad561ec6/jbrowse')
+        self.assert_url_response(url, STATUS_CODE__NOT_FOUND)
+
+        # If valid ids, then successful redirect.
+        url = ('/redirect_jbrowse?data=/jbrowse/gd_data/projects/%s/ref_genomes/%s/jbrowse' % (
+                    self.test_project.uid, self.ref_genome.uid))
+        self.assert_url_response(url, STATUS_CODE__REDIRECT)
+
+        # Incorrect. Note the "http://localhost" incorrectly injected.
+        url = ('/redirect_jbrowse?data=http://localhost/jbrowse/gd_data/'
+                'projects/16167e93/ref_genomes/ad561ec6/jbrowse')
+        with self.assertRaises(AssertionError):
+            self.client.get(url)

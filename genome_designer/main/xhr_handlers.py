@@ -9,9 +9,7 @@ import copy
 import json
 import os
 from StringIO import StringIO
-import re
 import tempfile
-import urllib
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -21,7 +19,6 @@ from django.core.urlresolvers import reverse
 from django.http import Http404
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
-from django.http import HttpResponseRedirect
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
@@ -48,7 +45,6 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
 from utils.data_export_util import export_melted_variant_view
-from utils.jbrowse_util import compile_tracklist_json
 from utils.import_util import create_samples_from_row_data
 from utils.import_util import create_sample_models_for_eventual_upload
 from utils.import_util import import_reference_genome_from_local_file
@@ -827,32 +823,6 @@ def get_ref_genomes(request):
 
     return HttpResponse(response_data,
             content_type='application/json')
-
-@login_required
-def compile_jbrowse_and_redirect(request):
-    """Compiles the jbrowse tracklist and redirects to jbrowse
-    """
-
-    # First, grab the data string and get the project and ref genome from it
-    data_string = request.GET.get('data')
-    regexp_str = (r'/jbrowse/gd_data/projects/(?P<project_uid>\w+)' +
-            r'/ref_genomes/(?P<ref_genome_uid>\w+)/jbrowse')
-    uid_match = re.match(regexp_str, data_string)
-        
-    # Make sure the uids are kosher
-    project = get_object_or_404(Project,
-        owner=request.user.get_profile(),
-        uid=uid_match.group('project_uid'))
-
-    reference_genome = get_object_or_404(ReferenceGenome,
-        uid=uid_match.group('ref_genome_uid'))
-
-    # Recompile the tracklist from components and symlink subdirs
-    compile_tracklist_json(reference_genome)
-
-    # Finally, pass the GET along to the jbrowse static page.
-    get_values = urllib.urlencode(request.GET).replace('+','%20')
-    return HttpResponseRedirect('jbrowse/index.html' + '?' + get_values)
 
 
 @login_required

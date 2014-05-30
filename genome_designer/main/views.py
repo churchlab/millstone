@@ -6,6 +6,8 @@ NOTE: Put new Ajax-only actions into main/xhr_handlers.py.
 
 import json
 import os
+import re
+import urllib
 
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -31,6 +33,7 @@ from main.models import ExperimentSampleToAlignment
 from main.models import VariantSet
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import import_variant_set_from_vcf
+from utils.jbrowse_util import compile_tracklist_json
 import settings
 
 # Tags used to indicate which tab we are on.
@@ -503,6 +506,36 @@ def variant_set_view(request, project_uid, variant_set_uid):
     }
 
     return render(request, 'variant_set.html', context)
+
+
+@login_required
+def compile_jbrowse_and_redirect(request):
+    """Compiles the jbrowse tracklist and redirects to jbrowse
+    """
+    # First, grab the data string and get the project and ref genome from it
+    data_string = request.GET.get('data')
+    regexp_str = (r'/jbrowse/gd_data/projects/(?P<project_uid>\w+)' +
+            r'/ref_genomes/(?P<ref_genome_uid>\w+)/jbrowse')
+    uid_match = re.match(regexp_str, data_string)
+    assert uid_match, "Incorrect URL passed in data key to redirect_jbrowse"
+
+    reference_genome = get_object_or_404(ReferenceGenome,
+        project__owner=request.user.get_profile(),
+        uid=uid_match.group('ref_genome_uid'))
+
+    # Recompile the tracklist from components and symlink subdirs
+    compile_tracklist_json(reference_genome)
+
+    # Finally, pass the GET along to the jbrowse static page.
+    get_values = urllib.urlencode(request.GET).replace('+', '%20')
+
+    maybe_force_nginx = ''
+    if settings.DEBUG_FORCE_JBROWSE_NGINX:
+        maybe_force_nginx = 'http://localhost'
+    full_redirect_url = (maybe_force_nginx + '/jbrowse/index.html' + '?' +
+            get_values)
+
+    return HttpResponseRedirect(full_redirect_url)
 
 
 class RegistrationViewWrapper(RegistrationView):
