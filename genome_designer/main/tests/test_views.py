@@ -135,20 +135,20 @@ class TestViews(TestCase):
 
 
     def test_views__logged_in_non_owner(self):
-         """Tests calling views with the non-owner logged in.
-         """
-         OTHER_USERNAME = 'justtest'
-         OTHER_PASSWORD = 'other_password'
-         OTHER_EMAIL = 'justtest@me.com'
-         user = User.objects.create_user(
-                 OTHER_USERNAME, password=OTHER_PASSWORD, email=OTHER_EMAIL)
-         self.client.login(username=OTHER_USERNAME, password=OTHER_PASSWORD)
+        """Tests calling views with the non-owner logged in.
+        """
+        OTHER_USERNAME = 'justtest'
+        OTHER_PASSWORD = 'other_password'
+        OTHER_EMAIL = 'justtest@me.com'
+        User.objects.create_user(
+                OTHER_USERNAME, password=OTHER_PASSWORD, email=OTHER_EMAIL)
+        self.client.login(username=OTHER_USERNAME, password=OTHER_PASSWORD)
 
-         error_urls = self.specific_entity_urls
-         for url in error_urls:
-             self.assert_url_response(url, STATUS_CODE__NOT_FOUND)
+        error_urls = self.specific_entity_urls
+        for url in error_urls:
+            self.assert_url_response(url, STATUS_CODE__NOT_FOUND)
 
-         success_urls = (self.non_specific_login_required_urls +
-                 self.no_login_required_urls)
-         for url in success_urls:
-             self.assert_url_response(url, STATUS_CODE__SUCCESS)
+        success_urls = (self.non_specific_login_required_urls +
+                self.no_login_required_urls)
+        for url in success_urls:
+            self.assert_url_response(url, STATUS_CODE__SUCCESS)
