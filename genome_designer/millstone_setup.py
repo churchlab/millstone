@@ -193,7 +193,7 @@ def _get_file_url_from_dropbox(dropbox_url, filename):
             'Could not get file %s from Dropbox URL %s. Check settings.' % (
                 filename, dropbox_url))
 
-    return url_soup.find_all(href=re.compile(filename))[0]['href']
+    return url_soup.find_all(id='default_content_download_button')[0]['href']
 
 
 def setup_jbrowse():
