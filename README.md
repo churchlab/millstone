@@ -188,6 +188,11 @@ You can grant these by logging into the Posgres shell:
 and then running:
 
     ALTER USER django CREATEDB;
+    
+## Gotchas
+
+crlibm missing (required by pyinterval).  This is how we automate installation of crlibm:
+<https://github.com/churchlab/cloudbiolinux/blob/millstone/cloudbio/custom/millstone.py>
 
 
 ## Tests
