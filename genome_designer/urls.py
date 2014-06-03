@@ -95,6 +95,8 @@ urlpatterns = patterns('',
             'main.xhr_handlers.export_variants_as_csv'),
     url(r'^_/variants/is_materialized_view_valid$',
             'main.xhr_handlers.is_materialized_view_valid'),
+    url(r'^_/variants/delete$',
+        'main.xhr_handlers.variant_set_delete'),
 
     url(r'^_/alignmentgroups$',
             'main.xhr_handlers.get_alignment_groups'),
