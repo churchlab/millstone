@@ -252,6 +252,8 @@ To reuse the Postgresql database, wiping it rather than destroying and creating 
 Note that for some reason integration tests currently fail if run with the form:
 
     (venv)$ REUSE_DB=0 ./scripts/run_integration_tests.sh
+    
+Make sure you have R and unafold installed to avoid errors.
 
 ### Integration Tests
 
