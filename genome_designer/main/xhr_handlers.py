@@ -188,6 +188,27 @@ def ref_genomes_delete(request):
 
     # Return success response.
     return HttpResponse(json.dumps({}), content_type='application/json')
+@login_required
+@require_POST
+def variant_sets_delete(request):
+    """Deletes a list of variant sets.
+    """
+    request_data = json.loads(request.body)
+    variant_set_uid_list = request_data.get('variantSetUidList')
+
+    #First make sure all the sets belong to this user.
+    variant_sets_to_delete = VariantSet.objects.filter(
+        reference_genome__project__owner=request.user.get_profile(),
+        uid__in=variant_set_uid_list)
+
+    if not len(variant_sets_to_delete) == len(variant_set_uid_list):
+        raise Http404
+
+    #Validation succcessful, delete
+    variant_sets_to_delete.delete()
+
+    #Return success response
+    return HttpResponse(json.dumps({}), content_type='application/json')
 
 
 @login_required

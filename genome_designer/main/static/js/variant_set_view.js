@@ -50,6 +50,38 @@ gd.VariantSetView = Backbone.View.extend({
 
   events: {
     'click #gd-variant-set-view-export-as-csv': 'handleExportCsv',
+    'click #gd-variant-set-view-delete' : 'handleDeleteSet',
+  },
+
+  handleDeleteSet: function() {
+    var agree = confirm(
+      "Are you sure you want to delete this variant set?\n" +
+      "Individual variants will be preserved."
+      );
+    if (!agree) {
+      return;
+    }
+
+    this.enterLoadingState()
+
+    var variantSetUidList = [this.model.get('uid')];
+
+    var postData = {
+      variantSetUidList: variantSetUidList,
+    }
+    $.post('/_/variants/delete',JSON.stringify(postData),
+      _.bind(this.handleDeleteResponse,this));
+  },
+
+  handleDeleteResponse: function(response) {
+    this.exitLoadingState();
+
+    if ('error' in response && response.error.length) {
+      alert(response.error);
+    } else {
+      var projectUid = this.model.get('project').uid;
+      window.location.href = "/projects/" + projectUid + "/sets";
+    }
   },
 
   /** Dynamically populate form fields and submit. */
@@ -64,6 +96,22 @@ gd.VariantSetView = Backbone.View.extend({
 
     // Submit the form. This cause a download to start.
     formJqueryObj.submit();
+  },
+
+  /** Puts UI in the loading state. */
+  enterLoadingState: function() {
+    $(".gd-id-form-submit-button")
+        .prop('disabled', true);
+
+    this.loadingSpinner = new gd.Spinner();
+    this.loadingSpinner.spin();
+  },
+
+  /** Puts UI in the loading state. */
+  exitLoadingState: function() {
+    $(".gd-id-form-submit-button")
+        .prop('disabled', false);
+    this.loadingSpinner.stop();
   },
 
   /** Helper method to append input value to form. */

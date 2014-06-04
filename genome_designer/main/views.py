@@ -490,7 +490,7 @@ def variant_set_view(request, project_uid, variant_set_uid):
         'entity': {
             'uid': variant_set.uid,
             'project': adapt_model_instance_to_frontend(project),
-            'refGenomeUid': variant_set.reference_genome.uid
+            'refGenomeUid': variant_set.reference_genome.uid,
         }
     })
 
