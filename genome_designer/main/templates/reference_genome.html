@@ -1,7 +1,9 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-  <h1>Reference Genome: {{reference_genome.label}}</h1>
+  <div class="gd-header h1">
+    Reference Genome: {{reference_genome.label}}
+  </div>
 
   <a href="{{jbrowse_link}}" target="_blank">JBrowse</a>
 
