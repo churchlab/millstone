@@ -211,4 +211,5 @@ def setup_jbrowse():
             JBROWSE_DATA_SYMLINK_PATH)
 
 if __name__ == '__main__':
-    setup(sys.argv[1:])
+    #setup(sys.argv[1:])
+    setup_jbrowse()
