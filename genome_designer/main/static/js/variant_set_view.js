@@ -59,14 +59,15 @@ gd.VariantSetView = Backbone.View.extend({
       "Individual variants will be preserved."
       );
     if (!agree) {
-      return
+      return;
     }
 
     this.enterLoadingState()
 
-    var variantSetUid = this.model.get('uid');
+    var variantSetUidList = [this.model.get('uid')];
+
     var postData = {
-      variantSetUid: variantSetUid,
+      variantSetUidList: variantSetUidList,
     }
     $.post('/_/variants/delete',JSON.stringify(postData),
       _.bind(this.handleDeleteResponse,this));
@@ -78,7 +79,7 @@ gd.VariantSetView = Backbone.View.extend({
     if ('error' in response && response.error.length) {
       alert(response.error);
     } else {
-      projectUid = this.model.get('projectUid');
+      var projectUid = this.model.get('project').uid;
       window.location.href = "/projects/" + projectUid + "/sets";
     }
   },
