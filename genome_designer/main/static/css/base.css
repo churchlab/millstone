@@ -439,7 +439,7 @@ div.dataTables_paginate ul.pagination {
 }
 
 /*modals, working here; limiting modal size (in theory), #149, bound the size of field select*/
-.modal-content{
+#gd-filter-key-modal .modal-content{
   height: 92vh;
   overflow: auto;
 }
