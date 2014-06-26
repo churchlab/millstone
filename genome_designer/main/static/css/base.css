@@ -437,3 +437,10 @@ div.dataTables_paginate ul.pagination {
   font-weight: bold;
   margin-left: 10px;
 }
+
+/*modals, working here; limiting modal size (in theory), #149, bound the size of field select*/
+.modal-content{
+  height: 92vh;
+  overflow: auto;
+}
+
