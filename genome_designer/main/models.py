@@ -500,6 +500,7 @@ class ReferenceGenome(UniqueUidModelMixin):
 
     def get_client_jbrowse_data_path(self):
         if self.project.is_s3_backed():
+            assert False, "url is incorrect."
             return os.path.join(
                     'http://%s.s3.amazonaws.com/' % settings.S3_BUCKET,
                     'projects',
@@ -508,13 +509,8 @@ class ReferenceGenome(UniqueUidModelMixin):
                     str(self.uid),
                     'jbrowse')
         else:
-            # Allow forcing through nginx (dev only).
-            maybe_force_nginx = ''
-            if settings.DEBUG_FORCE_JBROWSE_NGINX:
-                maybe_force_nginx = 'http://localhost'
-
             return os.path.join(
-                    maybe_force_nginx + '/jbrowse/gd_data/',
+                    '/jbrowse/gd_data/',
                     'projects',
                     str(self.project.uid),
                     'ref_genomes',

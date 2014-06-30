@@ -6,6 +6,7 @@ Must set DEMO_MODE = True in local_settings.py.
 
 # Views that are visible in demo mode.
 DEMO_SAFE_VIEWS = [
+    'main.views.compile_jbrowse_and_redirect',
     'main.views.home_view',
     'main.views.project_list_view',
     'main.views.project_view',
@@ -26,7 +27,6 @@ DEMO_SAFE_VIEWS = [
     'main.xhr_handlers.get_samples',
     'main.xhr_handlers.is_materialized_view_valid',
     'main.xhr_handlers.get_ref_genomes',
-    'main.xhr_handlers.compile_jbrowse_and_redirect',
     'main.template_xhrs.variant_filter_controls',
     'main.template_xhrs.variant_set_list_controls',
     'main.template_xhrs.alignment_controls',

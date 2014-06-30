@@ -7,6 +7,7 @@ Millstone is a distributed bioinformatics software platform designed to facilita
 
 * Postgresql 9.3 (only this version has been tested)
 * R (for Picard)
+* Unafold (http://dinamelt.rit.albany.edu/download.php)
 * Python deps: See requirements.txt / instructions below
 
 ## Installation
@@ -145,13 +146,12 @@ message broker, for which we use RabbitMQ which is the default for Celery.
 
 
 
-### Other third-party tools
+### Run the Millstone setup script.
 
-For most third-party tools that the application depends on, we've put them in a
-Dropbox, as either Mac OS X or Linux binaries. Run `setup.py` which should
-create a `tools/` dir and will download the correct build for your system.
-We recommend using our builds, as they have been tested with the rest of
-the application.
+The following installs various third-party bioinformatics tools and sets up
+JBrowse.
+
+    ./millstone_setup.py.
 
 
 ## Running the application
@@ -178,13 +178,22 @@ the application.
 See instructions for setting up PostgresSQL database:
 <https://overlappingminds.com/thoughts/069accf7-ccb4-4b7a-bd40-022c49a053cd>
 
-*NOTE:* Be sure to make local db config changes in `conf/local_settings.py`.
+*NOTE:* Be sure to make local db config changes in `genome_designer/conf/local_settings.py`.
 
 In order to run tests with Postgres, your user will need CREATE permissions.
 Otherwise you might get an error creating a database.
-You can grant these by logging into the Posgres shell and running:
+You can grant these by logging into the Posgres shell:
+
+    sudo -u postgres psql
+
+and then running:
 
     ALTER USER django CREATEDB;
+    
+## Gotchas
+
+crlibm missing (required by pyinterval).  This is how we automate installation of crlibm:
+<https://github.com/churchlab/cloudbiolinux/blob/millstone/cloudbio/custom/millstone.py>
 
 
 ## Tests
@@ -243,6 +252,8 @@ To reuse the Postgresql database, wiping it rather than destroying and creating 
 Note that for some reason integration tests currently fail if run with the form:
 
     (venv)$ REUSE_DB=0 ./scripts/run_integration_tests.sh
+    
+Make sure you have R and unafold installed to avoid errors.
 
 ### Integration Tests
 
