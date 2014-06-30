@@ -30,6 +30,7 @@ Implementation Notes:
 """
 
 from contextlib import contextmanager
+from datetime import datetime
 import os
 import shutil
 import subprocess
@@ -768,6 +769,12 @@ class AlignmentGroup(UniqueUidModelMixin):
                 'main.views.alignment_view',
                 args=(self.reference_genome.project.uid, self.uid))
 
+    @property
+    def run_time(self):
+        """Time elapsed since alignment start.
+        """
+        return datetime.now() - self.start_time if self.start_time != None else 'Not running'
+
     @classmethod
     def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
@@ -778,7 +785,8 @@ class AlignmentGroup(UniqueUidModelMixin):
                 {'field':'aligner'},
                 {'field':'status', 'verbose':'Job Status'},
                 {'field':'start_time'},
-                {'field':'end_time'}]
+                {'field':'end_time'},
+                {'field':'run_time'}]
 
     def get_samples(self):
         """Many different tasks require getting the sample (or their UIDs)
