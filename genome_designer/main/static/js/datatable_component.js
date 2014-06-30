@@ -48,6 +48,31 @@ gd.DataTableComponent = gd.AbstractDataTableComponent.extend({
         }, this));
   },
 
+  getDataDictList: function() {
+    // Returns a list in which each element is a dictionary
+    // with keys for each of the mData values in fieldConfig
+    // and their corresponding value for each object in objList.
+    var fields = this.options.fieldConfig;
+    var objs = this.options.objList;
+
+    var obj_dict;
+    var out_list = [];
+
+    for(var o = 0; o < objs.length; o++) {
+
+      obj_dict = {};
+
+      for(var f = 0; f < fields.length; f++) {
+
+        obj_dict[fields[f].mData] = objs[o][fields[f].mData];
+      }
+
+      out_list.push(obj_dict);
+    }
+
+    return out_list;
+  },
+
   /** Override. */
   render: function() {
     // Draw the Datatable.
