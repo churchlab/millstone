@@ -437,3 +437,9 @@ div.dataTables_paginate ul.pagination {
   font-weight: bold;
   margin-left: 10px;
 }
+
+#gd-filter-key-modal .modal-content{
+  height: 92vh;
+  overflow: auto;
+}
+
