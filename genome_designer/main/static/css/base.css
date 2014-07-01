@@ -116,6 +116,12 @@ body {
   margin-top: 6px;
 }
 
+.gd-nowrap {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .gd-header {
   margin-top: 0px;
   /*border-bottom: 1px solid #dddddd;*/
@@ -127,7 +133,6 @@ body {
   border-bottom: 1px solid #dddddd;
   margin-bottom: 8px;
 }
-
 
 .gd-header > h1 {
   margin-top: 0px;
