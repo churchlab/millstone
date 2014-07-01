@@ -1,8 +1,9 @@
 {% extends "tab_base.html" %}
 
 {% block content%}
-<div class="gd-header h1">
+<div class="gd-header h1 gd-nowrap">
   Variant Set {{variant_set.label}}
+  <small><em>of reference genome <b>{{variant_set.reference_genome}}</b></em></small>
 </div>
 
 <div class="dropdown gd-variant-set-view-dropdown">
