@@ -123,7 +123,14 @@ def find_variants_with_tool(alignment_group, variant_params):
     Returns:
         Boolean indicating whether we made it through this entire function.
     """
-    common_params = get_common_tool_params(alignment_group)
+    # TODO: More informative failure information.
+    try:
+        common_params = get_common_tool_params(alignment_group)
+    except:
+        alignment_group.status = AlignmentGroup.STATUS.FAILED
+        alignment_group.save(update_fields=['status'])
+        return False
+
     tool_name, vcf_dataset_type, tool_function = variant_params
 
     # Finding variants means that all the aligning is complete, so now we

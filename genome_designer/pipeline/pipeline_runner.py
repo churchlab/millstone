@@ -142,11 +142,14 @@ def pipeline_completion_tasks(variant_caller_group_result, alignment_group):
     if hasattr(variant_caller_group_result, 'join'):
         variant_caller_group_result.join()
 
-    print 'FINISHING PIPELINE.'
+    # Get fresh copy of alignment_group.
+    alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
 
-    # The alignment group is now officially complete.
-    alignment_group.status = AlignmentGroup.STATUS.COMPLETED
+    if alignment_group.status != AlignmentGroup.STATUS.VARIANT_CALLING:
+        alignment_group.status = AlignmentGroup.STATUS.FAILED
+    else:
+        # The alignment group is now officially complete.
+        alignment_group.status = AlignmentGroup.STATUS.COMPLETED
+
     alignment_group.end_time = datetime.now()
     alignment_group.save()
-
-    print alignment_group.status

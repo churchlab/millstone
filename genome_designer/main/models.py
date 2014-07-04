@@ -773,7 +773,18 @@ class AlignmentGroup(UniqueUidModelMixin):
     def run_time(self):
         """Time elapsed since alignment start.
         """
-        return datetime.now() - self.start_time if self.start_time != None else 'Not running'
+        # Check whether running.
+        NOT_RUNNING_STATUSES = [
+                AlignmentGroup.STATUS.FAILED,
+                AlignmentGroup.STATUS.NOT_STARTED,
+                AlignmentGroup.STATUS.COMPLETED,
+                AlignmentGroup.STATUS.UNKNOWN
+        ]
+        if self.start_time is None or self.status in NOT_RUNNING_STATUSES:
+            return 'Not running'
+
+        # If here, return time elapsed since start.
+        return datetime.now() - self.start_time
 
     @classmethod
     def get_field_order(clazz, **kwargs):
