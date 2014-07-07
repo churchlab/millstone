@@ -59,6 +59,7 @@ gd.AlignmentCreateView = Backbone.View.extend({
         serverTarget: '/_/samples',
         controlsTemplate: '/_/templates/sample_list_controls',
         requestData: {projectUid: this.model.get('uid')},
+        extraDatatableParams: {'iDisplayLength': 1000},
     });
 
     this.listenTo(this.samplesDatatable, 'DONE_CONTROLS_REDRAW',
