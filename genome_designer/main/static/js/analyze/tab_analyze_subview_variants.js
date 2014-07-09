@@ -251,7 +251,6 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         {'model': variantFieldSelectModel});
     this.listenTo(this.variantFieldSelect, 'updateSelectedFields',
         _.bind(this.handleUpdateSelectedFields, this));
-
   },
 
 
@@ -271,6 +270,76 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
           onSuccess();
         }, this));
   },
+
+
+  /** Parses the form files and prepares the data. */
+  prepareRequestDataForEmptyVariantSet: function(formId) {
+    var requestData = {}
+    var formInputs = $('#' + formId + ' :input');
+    _.each(formInputs, function(inputObj) {
+      requestData[inputObj.name] = inputObj.value;
+    });
+    return requestData;
+  },
+
+  /** Validates the request to be sent to the server. */
+  validateCreateEmptyVariantSetRequestData: function(requestData) {
+    if (!requestData['refGenomeUid'].length) {
+      alert('Please select a reference genome.');
+      return false;
+    }
+
+    if (!requestData['variantSetName'].length) {
+      alert('Please enter a variant set name.');
+      return false;
+    }
+
+    return true;
+  },
+
+  /** Handles creating a new empty Variant set. */
+  handleFormSubmitCreateEmptyVariantSet: function() {
+
+    // Parse the inputs.
+    var requestData = this.prepareRequestDataForEmptyVariantSet('gd-variant-set-form-empty');
+    // Validate the request client-side.
+    if (!this.validateCreateEmptyVariantSetRequestData(requestData)) {
+      return;
+    }
+
+    // Make the request.
+    $.post('/_/sets/create', requestData, function(responseData) {
+      // Check for error and show in ui. Don't reload the page.
+      if (responseData.error.length) {
+        alert('Error creating variant set: ' + responseData.error);
+        return;
+      }
+
+      $("#gd-variant-set-form-empty-submit").disabled = true;
+
+      // Success, reload the page.
+      window.location.reload();
+    });
+  },
+
+  /** Creates a new empty variant set **/
+  handleCreateNewEmptyVariantSet: function() {
+
+    var requestData = {
+      'refGenomeUid': this.model.get('refGenomeUid'),
+    }
+
+    $.get('/_/templates/create_new_empty_variant_set', requestData, _.bind(
+      function (data) {
+        $("#gd-datatable-hook").append(data);
+        $('#modalEmpty').modal('show');
+
+        $('#gd-variant-set-form-empty-submit').click(
+          _.bind(this.handleFormSubmitCreateEmptyVariantSet, this));
+
+    }, this));
+  },
+
 
   /**
    * Starts a download of selected Variants .csv format.
@@ -385,6 +454,13 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         this.variantSetList, 'remove', 'Remove from set');
     $('.gd-id-variant-set-action').click(
         _.bind(this.handleVariantSetActionClick, this));
+
+    // Create 'Create new variant set' button
+    var createNewVariantSetOption =
+        '<a href="#" class="gd-id-create-new-empty-variant-set">Create new empty variant set</a>';
+    this.datatableComponent.addDropdownOption(createNewVariantSetOption, '');
+    $('.gd-id-create-new-empty-variant-set').click(
+        _.bind(this.handleCreateNewEmptyVariantSet, this));
 
     // Create option to export selected.
     var exportOptionHtml =
