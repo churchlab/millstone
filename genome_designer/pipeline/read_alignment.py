@@ -13,12 +13,12 @@ import sys
 
 from celery import task
 
-from main.models import get_dataset_with_type
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from main.models import ReferenceGenome
 from main.model_utils import clean_filesystem_location
+from main.model_utils import get_dataset_with_type
 from main.s3 import project_files_needed
 from pipeline.read_alignment_util import ensure_bwa_index
 from pipeline.read_alignment_util import index_bam_file
@@ -595,9 +595,26 @@ def get_insert_size(sample_alignment, stdev=False):
     else:
         return int(metrics_dict['MEDIAN_INSERT_SIZE'])
 
+
 def get_discordant_read_pairs(sample_alignment):
     """Isolate discordant pairs of reads from a sample alignment.
     """
+    # First, check if completed dataset already exists.
+    bwa_disc_dataset = get_dataset_with_type(
+            sample_alignment, Dataset.TYPE.BWA_DISCORDANT)
+    if bwa_disc_dataset is not None:
+        if bwa_disc_dataset.status == Dataset.STATUS.READY:
+            return bwa_disc_dataset
+    else:
+        bwa_disc_dataset = Dataset.objects.create(
+                label=Dataset.TYPE.BWA_DISCORDANT,
+                type=Dataset.TYPE.BWA_DISCORDANT)
+        sample_alignment.dataset_set.add(bwa_disc_dataset)
+
+    # If here, we are going to run or re-run the Dataset.
+    bwa_disc_dataset.status = Dataset.STATUS.NOT_STARTED
+    bwa_disc_dataset.save(update_fields=['status'])
+
     bam_dataset = get_dataset_with_type(sample_alignment, Dataset.TYPE.BWA_ALIGN)
     bam_filename = bam_dataset.get_absolute_location()
 
@@ -612,38 +629,43 @@ def get_discordant_read_pairs(sample_alignment):
     bam_discordant_fn = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_discordant_pairs.bam')
 
-    bwa_disc_dataset = Dataset.objects.create(
-            label=Dataset.TYPE.BWA_DISCORDANT,
-            type=Dataset.TYPE.BWA_DISCORDANT,
-            status=Dataset.STATUS.NOT_STARTED)
 
-    sample_alignment.dataset_set.add(bwa_disc_dataset)
-    sample_alignment.save()
+    try:
+      bwa_disc_dataset.status = Dataset.STATUS.COMPUTING
+      bwa_disc_dataset.save(update_fields=['status'])
 
-    # Use bam read alignment flags to pull out discordant pairs only
-    filter_discordant = ' | '.join([
-            '{samtools} view -u -F 0x0002 {bam_filename} ',
-            '{samtools} view -u -F 0x0100 - ',
-            '{samtools} view -u -F 0x0004 - ',
-            '{samtools} view -u -F 0x0008 - ',
-            '{samtools} view -b -F 0x0400 - ']).format(
-                    samtools=SAMTOOLS_BINARY,
-                    bam_filename=bam_filename)
+      # Use bam read alignment flags to pull out discordant pairs only
+      filter_discordant = ' | '.join([
+              '{samtools} view -u -F 0x0002 {bam_filename} ',
+              '{samtools} view -u -F 0x0100 - ',
+              '{samtools} view -u -F 0x0004 - ',
+              '{samtools} view -u -F 0x0008 - ',
+              '{samtools} view -b -F 0x0400 - ']).format(
+                      samtools=SAMTOOLS_BINARY,
+                      bam_filename=bam_filename)
 
-    with open(bam_discordant_fn, 'w') as fh:
-        subprocess.check_call(filter_discordant,
-                stdout=fh,
-                shell=True, executable=BASH_PATH)
+      with open(bam_discordant_fn, 'w') as fh:
+          subprocess.check_call(filter_discordant,
+                  stdout=fh,
+                  shell=True, executable=BASH_PATH)
 
-    # sort the discordant reads, overwrite the old file
-    subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_fn,
-            os.path.splitext(bam_discordant_fn)[0]])
+      # sort the discordant reads, overwrite the old file
+      subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_fn,
+              os.path.splitext(bam_discordant_fn)[0]])
 
-    bwa_disc_dataset.filesystem_location = clean_filesystem_location(
-            bam_discordant_fn)
+
+      bwa_disc_dataset.filesystem_location = clean_filesystem_location(
+              bam_discordant_fn)
+      bwa_disc_dataset.status = Dataset.STATUS.READY
+
+    except subprocess.CalledProcessError:
+        bwa_disc_dataset.filesystem_location = ''
+        bwa_disc_dataset.status = Dataset.STATUS.FAILED
+
     bwa_disc_dataset.save()
 
     return bwa_disc_dataset
+
 
 def get_split_reads(sample_alignment):
     """Isolate split reads from a sample alignment.
@@ -653,6 +675,22 @@ def get_split_reads(sample_alignment):
 
     NOTE THAT THIS SCRIPT ONLY WORKS WITH BWA MEM.
     """
+    bwa_split_dataset = get_dataset_with_type(
+            sample_alignment, Dataset.TYPE.BWA_SPLIT)
+    if bwa_split_dataset is not None:
+        if bwa_split_dataset.status == Dataset.STATUS.READY:
+            return bwa_split_dataset
+    else:
+        bwa_split_dataset = Dataset.objects.create(
+                label=Dataset.TYPE.BWA_SPLIT,
+                type=Dataset.TYPE.BWA_SPLIT,
+                status=Dataset.STATUS.NOT_STARTED)
+        sample_alignment.dataset_set.add(bwa_split_dataset)
+
+    # If here, we are going to run or re-run the Dataset.
+    bwa_split_dataset.status = Dataset.STATUS.NOT_STARTED
+    bwa_split_dataset.save(update_fields=['status'])
+
     bam_dataset = get_dataset_with_type(sample_alignment, Dataset.TYPE.BWA_ALIGN)
     bam_filename = bam_dataset.get_absolute_location()
 
@@ -664,17 +702,8 @@ def get_split_reads(sample_alignment):
     if not os.path.exists(bam_filename+'.bai'):
         index_bam_file(bam_filename)
 
-
     bam_split_fn = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_split_reads.bam')
-
-    bwa_split_dataset = Dataset.objects.create(
-            label=Dataset.TYPE.BWA_SPLIT,
-            type=Dataset.TYPE.BWA_SPLIT,
-            status=Dataset.STATUS.NOT_STARTED)
-
-    sample_alignment.dataset_set.add(bwa_split_dataset)
-    sample_alignment.save()
 
     # Use lumpy bwa-mem split read script to pull out split reads.
     filter_split_reads = ' | '.join([
@@ -687,6 +716,9 @@ def get_split_reads(sample_alignment):
                             TOOLS_DIR, 'lumpy','extractSplitReads_BwaMem'))
 
     try:
+        bwa_split_dataset.status = Dataset.STATUS.COMPUTING
+        bwa_split_dataset.save(update_fields=['status'])
+
         with open(bam_split_fn, 'w') as fh:
             subprocess.check_call(filter_split_reads,
                     stdout=fh,
@@ -697,6 +729,7 @@ def get_split_reads(sample_alignment):
         subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_fn,
                 os.path.splitext(bam_split_fn)[0]])
 
+        bwa_split_dataset.status = Dataset.STATUS.READY
         bwa_split_dataset.filesystem_location = clean_filesystem_location(
                 bam_split_fn)
 

@@ -14,10 +14,11 @@ from pipeline.read_alignment import get_read_length
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
-from main.models import get_dataset_with_type
 from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
+from read_alignment import get_discordant_read_pairs
 from read_alignment import get_insert_size
+from read_alignment import get_split_reads
 from main.s3 import project_files_needed
 from utils.jbrowse_util import add_vcf_track
 from utils import uppercase_underscore
@@ -339,13 +340,11 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
         sample_uid = sa.experiment_sample.uid
         sample_uid_order.append(sample_uid)
         sample_id_dict[i] = sample_uid
-        bam_pe_dataset = get_dataset_with_type(
-                sa, Dataset.TYPE.BWA_DISCORDANT)
 
-
+        bam_pe_dataset = get_discordant_read_pairs(sa)
         bam_pe_file = bam_pe_dataset.get_absolute_location()
-        bam_sr_dataset = get_dataset_with_type(
-                sa, Dataset.TYPE.BWA_SPLIT)
+
+        bam_sr_dataset = get_split_reads(sa)
         bam_sr_file = bam_sr_dataset.get_absolute_location()
 
         ins_size, ins_stdev = get_insert_size(sa, stdev=True)
