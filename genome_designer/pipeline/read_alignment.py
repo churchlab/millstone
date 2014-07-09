@@ -598,49 +598,54 @@ def get_insert_size(sample_alignment, stdev=False):
 
 
 def _filter_out_interchromosome_reads(bam_filename, overwrite_input=True):
-    """Filters out reads that have endpoints on different chromosomes.
+    """Filters out read pairs which lie on different chromosomes.
 
     Args:
         bam_filename: Path to bam file.
         overwrite_input: If True, overwrite the input file.
     """
-    temp_file = os.path.splitext(bam_filename)[0] + '.nointerchrom.bam'
+    output_root = os.path.splitext(bam_filename)[0]
+    initial_sam_intermediate = output_root + '.sam'
+    filtered_sam_intermediate = output_root + '.filtered.sam'
+    final_bam = output_root + '.nointerchrom.bam'
 
-    # Open file for reading row by row in SAM format
-    # (preserve header with -h option).
-    p_samtools_view = subprocess.Popen(
-            [SAMTOOLS_BINARY, 'view', '-h', bam_filename],
-            stdout=subprocess.PIPE)
+    # Convert to SAM (preserve header with -h option).
+    with open(initial_sam_intermediate, 'w') as output_fh:
+        p_samtools_view = subprocess.call(
+                [SAMTOOLS_BINARY, 'view', '-h', bam_filename],
+                stdout=output_fh)
 
-    # Write the result to the temp file.
-    with open(temp_file, 'w') as temp_fh:
-        # We want to write the result in bam format, so open a samtools view
-        # process that converts input passed on its stdin into binary format
-        # and writes output as bam.
-        p_write_output = subprocess.Popen(
-                [SAMTOOLS_BINARY, 'view', '-bS', '-'],
-                stdin=subprocess.PIPE,
-                stdout=temp_fh)
+    # Filter.
+    with open(filtered_sam_intermediate, 'w') as output_fh:
+        with open(initial_sam_intermediate) as input_fh:
+            for line in input_fh:
+                parts = line.split('\t')
 
-        # This code does the filtering.
-        for line in p_samtools_view.stdout:
-            parts = line.split('\t')
+                # Always write header lines.
+                if parts[0][0] == '@':
+                    output_fh.write(line)
+                    continue
 
-            # Always write header lines.
-            if parts[0][0] == '@':
-                p_write_output.stdin.write(line)
-                continue
+                # For all other lines, only keep lines where RNAME and RNEXT are
+                # the same, as indicated by '=' in 7th col.
+                rnext_col = parts[6]
+                if rnext_col == '=':
+                    output_fh.write(line)
+                    continue
 
-            # For all other lines, only keep lines where RNAME and RNEXT are
-            # the same, as indicated by '=' in 7th col.
-            rnext_col = parts[6]
-            if rnext_col == '=':
-                p_write_output.stdin.write(line)
-                continue
+    # Write final bam.
+    with open(final_bam, 'w') as fh:
+        p_samtools_view = subprocess.call(
+                [SAMTOOLS_BINARY, 'view', '-bS', filtered_sam_intermediate],
+                stdout=fh)
 
     # Move temp file to the original file location.
     if overwrite_input:
-        shutil.move(temp_file, bam_filename)
+        shutil.move(final_bam, bam_filename)
+
+    # Delete intermediate files.
+    os.remove(initial_sam_intermediate)
+    os.remove(filtered_sam_intermediate)
 
 
 def get_discordant_read_pairs(sample_alignment):
@@ -701,6 +706,8 @@ def get_discordant_read_pairs(sample_alignment):
       subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_filename,
               os.path.splitext(bam_discordant_filename)[0]])
 
+      _filter_out_interchromosome_reads(bam_discordant_filename)
+
       bwa_disc_dataset.filesystem_location = clean_filesystem_location(
               bam_discordant_filename)
       bwa_disc_dataset.status = Dataset.STATUS.READY
@@ -750,7 +757,7 @@ def get_split_reads(sample_alignment):
     if not os.path.exists(bam_filename+'.bai'):
         index_bam_file(bam_filename)
 
-    bam_split_fn = os.path.join(sample_alignment.get_model_data_dir(),
+    bam_split_filename = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_split_reads.bam')
 
     # Use lumpy bwa-mem split read script to pull out split reads.
@@ -767,19 +774,21 @@ def get_split_reads(sample_alignment):
         bwa_split_dataset.status = Dataset.STATUS.COMPUTING
         bwa_split_dataset.save(update_fields=['status'])
 
-        with open(bam_split_fn, 'w') as fh:
+        with open(bam_split_filename, 'w') as fh:
             subprocess.check_call(filter_split_reads,
                     stdout=fh,
                     shell=True,
                     executable=BASH_PATH)
 
         # sort the split reads, overwrite the old file
-        subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_fn,
-                os.path.splitext(bam_split_fn)[0]])
+        subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_filename,
+                os.path.splitext(bam_split_filename)[0]])
+
+        _filter_out_interchromosome_reads(bam_split_filename)
 
         bwa_split_dataset.status = Dataset.STATUS.READY
         bwa_split_dataset.filesystem_location = clean_filesystem_location(
-                bam_split_fn)
+                bam_split_filename)
 
     except subprocess.CalledProcessError:
         # if there are no split reads, then fail.
