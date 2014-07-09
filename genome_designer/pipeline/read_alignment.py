@@ -7,6 +7,7 @@ import copy
 from datetime import datetime
 import os
 import re
+import shutil
 import string
 import subprocess
 import sys
@@ -596,6 +597,52 @@ def get_insert_size(sample_alignment, stdev=False):
         return int(metrics_dict['MEDIAN_INSERT_SIZE'])
 
 
+def _filter_out_interchromosome_reads(bam_filename, overwrite_input=True):
+    """Filters out reads that have endpoints on different chromosomes.
+
+    Args:
+        bam_filename: Path to bam file.
+        overwrite_input: If True, overwrite the input file.
+    """
+    temp_file = os.path.splitext(bam_filename)[0] + '.nointerchrom.bam'
+
+    # Open file for reading row by row in SAM format
+    # (preserve header with -h option).
+    p_samtools_view = subprocess.Popen(
+            [SAMTOOLS_BINARY, 'view', '-h', bam_filename],
+            stdout=subprocess.PIPE)
+
+    # Write the result to the temp file.
+    with open(temp_file, 'w') as temp_fh:
+        # We want to write the result in bam format, so open a samtools view
+        # process that converts input passed on its stdin into binary format
+        # and writes output as bam.
+        p_write_output = subprocess.Popen(
+                [SAMTOOLS_BINARY, 'view', '-bS', '-'],
+                stdin=subprocess.PIPE,
+                stdout=temp_fh)
+
+        # This code does the filtering.
+        for line in p_samtools_view.stdout:
+            parts = line.split('\t')
+
+            # Always write header lines.
+            if parts[0][0] == '@':
+                p_write_output.stdin.write(line)
+                continue
+
+            # For all other lines, only keep lines where RNAME and RNEXT are
+            # the same, as indicated by '=' in 7th col.
+            rnext_col = parts[6]
+            if rnext_col == '=':
+                p_write_output.stdin.write(line)
+                continue
+
+    # Move temp file to the original file location.
+    if overwrite_input:
+        shutil.move(temp_file, bam_filename)
+
+
 def get_discordant_read_pairs(sample_alignment):
     """Isolate discordant pairs of reads from a sample alignment.
     """
@@ -603,7 +650,8 @@ def get_discordant_read_pairs(sample_alignment):
     bwa_disc_dataset = get_dataset_with_type(
             sample_alignment, Dataset.TYPE.BWA_DISCORDANT)
     if bwa_disc_dataset is not None:
-        if bwa_disc_dataset.status == Dataset.STATUS.READY:
+        if (bwa_disc_dataset.status == Dataset.STATUS.READY and
+                os.path.exists(bwa_disc_dataset.get_absolute_location())):
             return bwa_disc_dataset
     else:
         bwa_disc_dataset = Dataset.objects.create(
@@ -626,7 +674,7 @@ def get_discordant_read_pairs(sample_alignment):
     if not os.path.exists(bam_filename+'.bai'):
         index_bam_file(bam_filename)
 
-    bam_discordant_fn = os.path.join(sample_alignment.get_model_data_dir(),
+    bam_discordant_filename = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_discordant_pairs.bam')
 
 
@@ -644,18 +692,17 @@ def get_discordant_read_pairs(sample_alignment):
                       samtools=SAMTOOLS_BINARY,
                       bam_filename=bam_filename)
 
-      with open(bam_discordant_fn, 'w') as fh:
+      with open(bam_discordant_filename, 'w') as fh:
           subprocess.check_call(filter_discordant,
                   stdout=fh,
                   shell=True, executable=BASH_PATH)
 
       # sort the discordant reads, overwrite the old file
-      subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_fn,
-              os.path.splitext(bam_discordant_fn)[0]])
-
+      subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_filename,
+              os.path.splitext(bam_discordant_filename)[0]])
 
       bwa_disc_dataset.filesystem_location = clean_filesystem_location(
-              bam_discordant_fn)
+              bam_discordant_filename)
       bwa_disc_dataset.status = Dataset.STATUS.READY
 
     except subprocess.CalledProcessError:
@@ -678,7 +725,8 @@ def get_split_reads(sample_alignment):
     bwa_split_dataset = get_dataset_with_type(
             sample_alignment, Dataset.TYPE.BWA_SPLIT)
     if bwa_split_dataset is not None:
-        if bwa_split_dataset.status == Dataset.STATUS.READY:
+        if (bwa_split_dataset.status == Dataset.STATUS.READY and
+                os.path.exists(bwa_split_dataset.get_absolute_location())):
             return bwa_split_dataset
     else:
         bwa_split_dataset = Dataset.objects.create(
