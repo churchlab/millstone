@@ -72,6 +72,7 @@ urlpatterns = patterns('',
     url(r'^templates/variant_set_upload_template.vcf$',
             'main.upload_template_views.variant_set_upload_template'),
 
+
     ###########################################################################
     # XHR Actions
     ###########################################################################
@@ -153,6 +154,8 @@ urlpatterns = patterns('',
             'main.template_xhrs.reference_genome_list_controls'),
     url(r'^_/templates/sample_list_controls$',
             'main.template_xhrs.sample_list_controls'),
+    url(r'^_/templates/create_new_empty_variant_set$',
+            'main.template_xhrs.create_new_empty_variant_set'),
 
     ###########################################################################
     # Jbrowse Redirect

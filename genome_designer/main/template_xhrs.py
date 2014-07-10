@@ -152,3 +152,21 @@ def variant_set_list_controls(request):
     return HttpResponse(
             render_to_string('controls/variant_set_list_controls.html',
             context))
+
+
+def create_new_empty_variant_set(request):
+    """Creating a new empty variant set
+    """
+    ref_genome_uid = request.GET.get('refGenomeUid')
+
+    ref_genome_list = [get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)]
+
+    context = {
+        'ref_genome_list': ref_genome_list
+    }
+
+    return HttpResponse(render_to_string(
+        'controls/create_empty_variant_set_modal.html', context))
+
