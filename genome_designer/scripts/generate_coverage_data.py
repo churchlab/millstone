@@ -26,9 +26,15 @@ def analyze_coverage(sample_alignment, output_dir):
     output_path = os.path.join(output_dir, output_filename)
 
     with open(output_path, 'w') as fh:
-        subprocess.check_call([
+        p_mpileup = subprocess.Popen([
                 '%s/samtools/samtools' % settings.TOOLS_DIR,
                 'mpileup',
                 '-f', ref_genome_fasta_location,
                 input_bam_file
-        ], stdout=fh)
+        ], stdout=subprocess.PIPE)
+
+        subprocess.check_call([
+                'cut',
+                '-f',
+                '-4'
+        ], stdin=p_mpileup.stdout, stdout=fh)
