@@ -24,6 +24,7 @@ from main.s3 import project_files_needed
 from pipeline.read_alignment_util import ensure_bwa_index
 from pipeline.read_alignment_util import index_bam_file
 
+from utils.bam_utils import filter_bam_file_by_row
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import add_bed_file_track
 from settings import TOOLS_DIR
@@ -604,48 +605,17 @@ def _filter_out_interchromosome_reads(bam_filename, overwrite_input=True):
         bam_filename: Path to bam file.
         overwrite_input: If True, overwrite the input file.
     """
-    output_root = os.path.splitext(bam_filename)[0]
-    initial_sam_intermediate = output_root + '.sam'
-    filtered_sam_intermediate = output_root + '.filtered.sam'
-    final_bam = output_root + '.nointerchrom.bam'
+    def is_rnext_same(line):
+        parts = line.split('\t')
+        rnext_col = parts[6]
+        return rnext_col == '='
 
-    # Convert to SAM (preserve header with -h option).
-    with open(initial_sam_intermediate, 'w') as output_fh:
-        p_samtools_view = subprocess.call(
-                [SAMTOOLS_BINARY, 'view', '-h', bam_filename],
-                stdout=output_fh)
-
-    # Filter.
-    with open(filtered_sam_intermediate, 'w') as output_fh:
-        with open(initial_sam_intermediate) as input_fh:
-            for line in input_fh:
-                parts = line.split('\t')
-
-                # Always write header lines.
-                if parts[0][0] == '@':
-                    output_fh.write(line)
-                    continue
-
-                # For all other lines, only keep lines where RNAME and RNEXT are
-                # the same, as indicated by '=' in 7th col.
-                rnext_col = parts[6]
-                if rnext_col == '=':
-                    output_fh.write(line)
-                    continue
-
-    # Write final bam.
-    with open(final_bam, 'w') as fh:
-        p_samtools_view = subprocess.call(
-                [SAMTOOLS_BINARY, 'view', '-bS', filtered_sam_intermediate],
-                stdout=fh)
-
-    # Move temp file to the original file location.
     if overwrite_input:
-        shutil.move(final_bam, bam_filename)
+        output_bam_path = bam_filename
+    else:
+        output_bam_path = os.path.splitext(bam_filename)[0] + '.nointerchrom.bam'
 
-    # Delete intermediate files.
-    os.remove(initial_sam_intermediate)
-    os.remove(filtered_sam_intermediate)
+    filter_bam_file_by_row(bam_filename, is_rnext_same, output_bam_path)
 
 
 def get_discordant_read_pairs(sample_alignment):
