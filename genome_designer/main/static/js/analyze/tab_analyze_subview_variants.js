@@ -308,19 +308,27 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     }
 
     // Make the request.
-    $.post('/_/sets/create', requestData, function(responseData) {
+    $.post('/_/sets/create', requestData, _.bind(function(responseData) {
       // Check for error and show in ui. Don't reload the page.
       if (responseData.error.length) {
         alert('Error creating variant set: ' + responseData.error);
         return;
       }
 
-      $("#gd-variant-set-form-empty-submit").disabled = true;
+      // The common data.
+      var postData = {
+          refGenomeUid: this.model.get('refGenomeUid'),
+          variantSetAction: 'add',
+          variantSetUid: responseData['variantSetUid']
+      };
 
-      // Success, reload the page.
-      window.location.reload();
-    });
+      this.modifyVariantSetMembership(postData);
+
+      $('#gd-variant-set-form-empty-submit').disabled = true;
+      $('#gd-create-empty-variant-set-form').modal('hide');
+    }, this));
   },
+
 
   /** Creates a new empty variant set **/
   handleCreateNewEmptyVariantSet: function() {
@@ -331,8 +339,9 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     $.get('/_/templates/create_new_empty_variant_set', requestData, _.bind(
       function (data) {
+
         $("#gd-datatable-hook").append(data);
-        $('#modalEmpty').modal('show');
+        $('#gd-create-empty-variant-set-form').modal('show');
 
         $('#gd-variant-set-form-empty-submit').click(
           _.bind(this.handleFormSubmitCreateEmptyVariantSet, this));
@@ -457,9 +466,9 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
     // Create 'Create new variant set' button
     var createNewVariantSetOption =
-        '<a href="#" class="gd-id-create-new-empty-variant-set">Create new empty variant set</a>';
+        '<a href="#" class="gd-id-add-to-new-variant-set">Add to new variant set</a>';
     this.datatableComponent.addDropdownOption(createNewVariantSetOption, '');
-    $('.gd-id-create-new-empty-variant-set').click(
+    $('.gd-id-add-to-new-variant-set').click(
         _.bind(this.handleCreateNewEmptyVariantSet, this));
 
     // Create option to export selected.
@@ -512,7 +521,6 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
 
   /** Handles a click on a variant set action button. */
   handleVariantSetActionClick: function(ev) {
-    var postUrl = '/_/variants/modify_set_membership';
 
     // The common data.
     var postData = {
@@ -520,6 +528,26 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
         variantSetAction: $(ev.target).data('variant-set-action'),
         variantSetUid: $(ev.target).data('variant-set-uid')
     };
+
+    this.modifyVariantSetMembership(postData);
+  },
+
+
+  /** 
+   * Modifies set membership, posts to server. 
+   *
+   * @param partialPostData. Data that describes the action to be taken.
+   *    Other data to be added to this request internally. 
+   *    Required keys:
+   *        * refGenomeUid
+   *        * variantSetAction
+   *        * variantSetUid
+   */
+  modifyVariantSetMembership: function(partialPostData){
+
+    var postUrl = '/_/variants/modify_set_membership';
+
+    var postData = _.clone(partialPostData);
 
     // The appropriate selected row data, or the filter.
     if (this.datatableComponent.isAllMatchingFilterSelected()) {
