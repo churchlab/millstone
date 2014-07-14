@@ -869,13 +869,14 @@ def create_variant_set(request):
 
     # Create new variant set, depending on type of form submitted.
     if create_set_type == 'from-file':
-        error_string = _create_variant_set_from_file(request, ref_genome,
+        create_result = _create_variant_set_from_file(request, ref_genome,
                 variant_set_name)
     else:
-        error_string = _create_variant_set_empty(ref_genome, variant_set_name)
+        create_result = _create_variant_set_empty(ref_genome, variant_set_name)
 
     result = {
-        'error': error_string
+        'error': create_result['error_str'],
+        'variantSetUid': create_result['variant_set_uid']
     }
 
     return HttpResponse(json.dumps(result), content_type='application/json')
@@ -885,8 +886,9 @@ def _create_variant_set_from_file(request, ref_genome, variant_set_name):
     """Creates a variant set from uploaded vcf file.
 
     Returns:
-        A string indicating any errors that occurred. If no errors, then
-        the empty string.
+        Dictionary with keys:
+            * error_str: Either empty string or description of error that occurred
+            * variant_set_uid: uid of the new VariantSet
     """
     error_string = ''
 
@@ -895,14 +897,19 @@ def _create_variant_set_from_file(request, ref_genome, variant_set_name):
     variant_set_file = os.path.join(settings.MEDIA_ROOT, path)
 
     try:
-        import_variant_set_from_vcf(ref_genome, variant_set_name,
+        file_variant_set = import_variant_set_from_vcf(ref_genome, variant_set_name,
                 variant_set_file)
     except Exception as e:
         error_string = 'Import error: ' + str(e)
     finally:
         os.remove(variant_set_file)
 
-    return error_string
+    result = {
+        'error_str': error_string,
+        'variant_set_uid': file_variant_set.uid
+    }
+    
+    return result
 
 
 def _create_variant_set_empty(ref_genome, variant_set_name):
@@ -911,19 +918,28 @@ def _create_variant_set_empty(ref_genome, variant_set_name):
     A VariantSet with the given name can't exist already.
 
     Returns:
-        A string indicating any errors that occurred. If no errors, then
-        the empty string.
+        Dictionary with keys:
+            * error_str: Either empty string or description of error that occurred
+            * variant_set_uid: uid of the new VariantSet
     """
     exists_set_with_same_name = bool(VariantSet.objects.filter(
         reference_genome=ref_genome,
         label=variant_set_name).count())
     if exists_set_with_same_name:
-        return 'Variant set %s exists' % variant_set_name
+        error_string = 'Variant set %s exists' % variant_set_name
+    else:
+        error_string = ''
 
-    VariantSet.objects.create(
+    empty_variant_set = VariantSet.objects.create(
             reference_genome=ref_genome,
             label=variant_set_name)
-    return ''
+
+    result = {
+        'error_str': error_string,
+        'variant_set_uid': empty_variant_set.uid
+    }
+    
+    return result
 
 
 @login_required
