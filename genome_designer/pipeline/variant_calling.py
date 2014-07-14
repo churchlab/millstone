@@ -392,7 +392,8 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
     combined_options = [str(o) for o in (global_lumpy_options +
         pe_sample_options + sr_sample_options)]
 
-    lumpy_output = os.path.splitext(vcf_output_filename)[0] + '.txt'
+    lumpy_output = (os.path.splitext(vcf_output_filename)[0] + '_' +
+            sample_uid + '_' + '.txt')
 
     print combined_options
 
