@@ -113,7 +113,8 @@ class Dataset(UniqueUidModelMixin):
         VCF_USERINPUT = 'User VCF'
         VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
-        PICARD_INSERT_METRICS = 'Picard Insert'
+        LUMPY_INSERT_METRICS_HISTOGRAM = 'Lumpy Insert Metrics Histogram'
+        LUMPY_INSERT_METRICS_MEAN_STDEV = 'Lumpy Insert Metrics Mean Stdev'
 
 
     TYPE_CHOICES = make_choices_tuple(TYPE)

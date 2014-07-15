@@ -3,29 +3,27 @@ Functions for calling Variants.
 """
 
 import os
-import re
 import subprocess
-import vcf
 
 from celery import task
+from django.conf import settings
+import vcf
 
-from pipeline.read_alignment import get_insert_size
-from pipeline.read_alignment import get_read_length
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
-from read_alignment import get_discordant_read_pairs
-from read_alignment import get_insert_size
-from read_alignment import get_split_reads
 from main.s3 import project_files_needed
+from pipeline.read_alignment import get_discordant_read_pairs
+from pipeline.read_alignment import get_insert_size_mean_and_stdev
+from pipeline.read_alignment import get_read_length
+from pipeline.read_alignment import get_split_reads
 from utils.jbrowse_util import add_vcf_track
 from utils import uppercase_underscore
-from settings import TOOLS_DIR
 from variants.vcf_parser import parse_alignment_group_vcf
 from variants.variant_sets import add_variants_to_set_from_bed
-from variant_effects import run_snpeff
+from pipeline.variant_effects import run_snpeff
 
 # TODO: These VCF types should be set somewhere else. snpeff_util and
 # vcf_parser also use them, but where should they go? settings.py seems
@@ -40,30 +38,19 @@ VCF_ANNOTATED_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 VCF_PINDEL_TYPE = Dataset.TYPE.VCF_PINDEL
 VCF_DELLY_TYPE = Dataset.TYPE.VCF_DELLY
 
+
 # Returns a dictionary of common parameters required for all variant callers
-# (freebayes, pindel, delly)
+# (freebayes, pindel, delly, lumpy).
 def get_common_tool_params(alignment_group):
     alignment_type = Dataset.TYPE.BWA_ALIGN
     return {
-            'alignment_group': alignment_group,
-            'alignment_type': alignment_type,
-            'fasta_ref': _get_fasta_ref(alignment_group),
-            'output_dir': _create_output_dir(alignment_group),
-            'sample_alignments': _find_valid_sample_alignments(
-                    alignment_group, alignment_type),
-            }
-
-
-def get_variant_tool_params():
-    """Returns a tuple of variant tools params to pass into
-    find_variants_with_tool.
-    """
-    return (
-            ('freebayes', Dataset.TYPE.VCF_FREEBAYES, run_freebayes),
-            ('pindel', Dataset.TYPE.VCF_PINDEL, run_pindel),
-            ('delly', Dataset.TYPE.VCF_DELLY, run_delly),
-            ('lumpy', Dataset.TYPE.VCF_LUMPY, run_lumpy),
-    )
+        'alignment_group': alignment_group,
+        'alignment_type': alignment_type,
+        'fasta_ref': _get_fasta_ref(alignment_group),
+        'output_dir': _create_output_dir(alignment_group),
+        'sample_alignments': _find_valid_sample_alignments(
+                alignment_group, alignment_type),
+    }
 
 
 def _get_fasta_ref(alignment_group):
@@ -71,6 +58,7 @@ def _get_fasta_ref(alignment_group):
     return get_dataset_with_type(
             alignment_group.reference_genome,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
 
 def _create_output_dir(alignment_group):
     # Prepare a directory to put the output files.
@@ -232,7 +220,7 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
         bam_part.append(bam_file)
 
     # Build the full command and execute it for all bam files at once.
-    full_command = (['%s/freebayes/freebayes' %  TOOLS_DIR] + bam_part + [
+    full_command = (['%s/freebayes/freebayes' %  settings.TOOLS_DIR] + bam_part + [
         '--fasta-reference', fasta_ref,
         '--pvar', '0.001',
         '--ploidy', '2',
@@ -255,12 +243,13 @@ def run_pindel(fasta_ref, sample_alignments, vcf_output_dir,
     """Run pindel to find SVs."""
     vcf_dataset_type = VCF_PINDEL_TYPE
 
-    if not os.path.isdir('%s/pindel' % TOOLS_DIR):
+    if not os.path.isdir('%s/pindel' % settings.TOOLS_DIR):
         raise Exception('Pindel is not installed. Aborting.')
 
     bam_files = _get_dataset_paths(sample_alignments, alignment_type)
     samples = [sa.experiment_sample for sa in sample_alignments]
-    insert_sizes = [get_insert_size(sa) for sa in sample_alignments]
+    insert_sizes = [get_insert_size_mean_and_stdev(sa) for sa in
+            sample_alignments]
 
     assert len(bam_files) == len(insert_sizes)
 
@@ -272,9 +261,10 @@ def run_pindel(fasta_ref, sample_alignments, vcf_output_dir,
                 bam_files, samples, insert_sizes):
 
             # Skip bad alignments.
-            if insert_size == -1:
+            mean, stdev = insert_size
+            if mean == -1:
                 continue
-            fh.write('%s %s %s\n' % (bam_file, insert_size, sample.uid))
+            fh.write('%s %s %s\n' % (bam_file, mean, sample.uid))
             at_least_one_config_line_written = True
 
     if not at_least_one_config_line_written:
@@ -283,7 +273,7 @@ def run_pindel(fasta_ref, sample_alignments, vcf_output_dir,
 
     # Build the full pindel command.
     pindel_root = vcf_output_filename[:-4]  # get rid of .vcf extension
-    subprocess.check_call(['%s/pindel/pindel' % TOOLS_DIR,
+    subprocess.check_call(['%s/pindel/pindel' % settings.TOOLS_DIR,
         '-f', fasta_ref,
         '-i', pindel_config,
         '-c', 'ALL',
@@ -291,7 +281,7 @@ def run_pindel(fasta_ref, sample_alignments, vcf_output_dir,
     ])
 
     # convert all different structural variant types to vcf
-    subprocess.check_call(['%s/pindel/pindel2vcf' % TOOLS_DIR,
+    subprocess.check_call(['%s/pindel/pindel2vcf' % settings.TOOLS_DIR,
         '-P', pindel_root,
         '-r', fasta_ref,
         '-R', 'name',
@@ -347,10 +337,15 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
         bam_sr_dataset = get_split_reads(sa)
         bam_sr_file = bam_sr_dataset.get_absolute_location()
 
-        ins_size, ins_stdev = get_insert_size(sa, stdev=True)
-        histo_file = os.path.join(sa.get_model_data_dir(),
-                'insert_size_histogram.txt')
-        read_length = get_read_length(sa)
+        ins_size, ins_stdev = get_insert_size_mean_and_stdev(sa)
+        histo_dataset = get_dataset_with_type(sa,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM)
+        assert histo_dataset, "Histogram could not be computed."
+        histo_file = histo_dataset.get_absolute_location()
+
+        sa_bam_file = get_dataset_with_type(sa,
+                Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+        read_length = get_read_length(sa_bam_file)
 
         if bam_pe_dataset.status != Dataset.STATUS.FAILED and bam_pe_file:
 
@@ -395,16 +390,14 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
     lumpy_output = (os.path.splitext(vcf_output_filename)[0] + '_' +
             sample_uid + '_' + '.txt')
 
-    print combined_options
-
     try:
         with open(lumpy_output, 'w') as fh:
             subprocess.check_call(
-                    ['%s/lumpy/lumpy' % TOOLS_DIR] + combined_options,
+                    ['%s/lumpy/lumpy' % settings.TOOLS_DIR] + combined_options,
                     stdout=fh)
     except subprocess.CalledProcessError, e:
         print 'Lumpy failed. Command: {command}'.format(
-                command=['%s/lumpy/lumpy' % TOOLS_DIR] + combined_options)
+                command=['%s/lumpy/lumpy' % settings.TOOLS_DIR] + combined_options)
         raise e
 
     # convert lumpy output to VCF.
@@ -523,6 +516,10 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
 
         return vcf_format_str.format(**fields)
 
+    # DEBUG
+    import shutil
+    shutil.copyfile(lumpy_output, '/home/glebk/Desktop/millstone_lumpy.txt')
+
     with open(lumpy_output, 'r') as lumpy_in:
         with open(vcf_output_filename, 'w') as lumpy_out:
             print >> lumpy_out, lumpy_vcf_header
@@ -541,7 +538,7 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
     """Run delly to find SVs."""
     vcf_dataset_type = VCF_DELLY_TYPE
 
-    if not os.path.isdir('%s/delly' % TOOLS_DIR):
+    if not os.path.isdir('%s/delly' % settings.TOOLS_DIR):
         raise Exception('Delly is not installed. Aborting.')
 
     delly_root = vcf_output_filename[:-4]  # get rid of .vcf extension
@@ -567,18 +564,11 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
     # run delly for each type of transformation
     for transformation, vcf_output in zip(transformations, vcf_outputs):
 
-        print ['%s/delly/delly' % TOOLS_DIR,
-            '-t', transformation,
-            '-o', vcf_output,
-            '-g', fasta_ref] + new_bam_files
-
         # not checked_call, because delly errors if it doesn't find any SVs
-        subprocess.call(['%s/delly/delly' % TOOLS_DIR,
+        subprocess.call(['%s/delly/delly' % settings.TOOLS_DIR,
             '-t', transformation,
             '-o', vcf_output,
             '-g', fasta_ref] + new_bam_files)
-
-
 
     # combine the separate vcfs for each transformation
     vcf_outputs = filter(lambda file: os.path.exists(file), vcf_outputs)
@@ -592,7 +582,7 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
     else:
         # hack: create empty vcf
         subprocess.check_call(['touch', delly_root])
-        subprocess.check_call(['%s/pindel/pindel2vcf' % TOOLS_DIR,
+        subprocess.check_call(['%s/pindel/pindel2vcf' % settings.TOOLS_DIR,
             '-p', delly_root,  # TODO does this work?
             '-r', fasta_ref,
             '-R', 'name',
@@ -693,3 +683,42 @@ def postprocess_delly_vcf(vcf_file):
         vcf_writer.write_record(record)
 
     subprocess.check_call(['mv', vcf_file + '.tmp', vcf_file])
+
+
+# Map from variant caller name to params.
+VARIANT_TOOL_PARAMS_MAP = {
+    'freebayes': {
+        'dataset_type': Dataset.TYPE.VCF_FREEBAYES,
+        'runner_fn': run_freebayes
+    },
+    'pindel': {
+        'dataset_type': Dataset.TYPE.VCF_PINDEL,
+        'runner_fn': run_pindel
+    },
+    'delly': {
+        'dataset_type': Dataset.TYPE.VCF_DELLY,
+        'runner_fn': run_delly
+    },
+    'lumpy': {
+        'dataset_type': Dataset.TYPE.VCF_LUMPY,
+        'runner_fn': run_lumpy
+    }
+}
+
+
+def get_variant_tool_params():
+    """DEPRECATED: Use VARIANT_TOOL_PARAMS_MAP directly.
+
+    Returns a tuple of variant tools params to pass into
+    find_variants_with_tool().
+    """
+    tool_params_list = []
+    for tool in ('freebayes', 'pindel', 'delly', 'lumpy'):
+        tool_params = VARIANT_TOOL_PARAMS_MAP[tool]
+        tool_params_list.append(
+                adapt_variant_tool_params_to_tuple(tool, tool_params))
+    return tool_params_list
+
+
+def adapt_variant_tool_params_to_tuple(tool_name, params_dict):
+    return (tool_name, params_dict['dataset_type'], params_dict['runner_fn'])

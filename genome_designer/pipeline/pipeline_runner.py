@@ -23,9 +23,16 @@ from pipeline.variant_calling import get_variant_tool_params
 from pipeline.variant_calling import find_variants_with_tool
 
 
-def run_pipeline(alignment_group_label, ref_genome, sample_list):
-    """Creates an AlignmentGroup if not created and kicks off alignments
-    for those ExperimentSampleToAlignments that did not succeed.
+def run_pipeline(alignment_group_label, ref_genome, sample_list,
+        perform_variant_calling=True):
+    """Runs the entire bioinformatics pipeline, including alignment and
+    variant calling.
+
+    Steps:
+        * Create AlignmentGroup if not created
+        * get_or_create ExperimentSampleToAlignments and respective Datasets
+        * Kick off alignments
+        * When all alignments are done, kick off variant calling
 
     Args:
         alignment_group_label: Name for this alignment.
@@ -104,27 +111,32 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
 
     # Aggregate variant callers, which run in parallel once all alignments
     # are done.
-    variant_caller_group = group([find_variants_with_tool.si(
-                    alignment_group, variant_params,
-                    project=ref_genome.project)
-            for variant_params in get_variant_tool_params() if
-                    variant_params[0] in settings.ENABLED_VARIANT_CALLERS])
+    if perform_variant_calling:
+        variant_caller_group = group([find_variants_with_tool.si(
+                        alignment_group, variant_params,
+                        project=ref_genome.project)
+                for variant_params in get_variant_tool_params() if
+                        variant_params[0] in settings.ENABLED_VARIANT_CALLERS])
+    else:
+        variant_caller_group = None
 
     pipeline_completion = pipeline_completion_tasks.s(
             alignment_group=alignment_group)
 
+
+
     # Put together the whole pipeline.
-    # We check for there being more than 0 alignments since celery
-    # expects groups to have at least 1 task. Is there a better way to do this?
+    # Since this method might be called after alignments have already been
+    # complete and only variant calling needs to be done, it's possible
+    # for there to be no alignment tasks to do, in which case we skip adding
+    # an empty group to the chain else celery will throw an error.
+    groups = []
     if len(alignment_task_signatures) > 0:
-        whole_pipeline = chain(
-                align_task_group,
-                variant_caller_group,
-                pipeline_completion)
-    else:
-        whole_pipeline = chain(
-                variant_caller_group,
-                pipeline_completion)
+        groups.append(align_task_group)
+    if variant_caller_group is not None:
+        groups.append(variant_caller_group)
+    groups.append(pipeline_completion)
+    whole_pipeline = chain(*groups)
 
     # Run the pipeline.
     ref_genome.save()
@@ -135,18 +147,13 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list):
 
 @task
 def pipeline_completion_tasks(variant_caller_group_result, alignment_group):
-    """
-    Things that happen when the pipeline completes that don't need
-    to be run in parallel.
+    """Final set of synchronous steps after all alignments and variant callers
+    are finished.
     """
     if hasattr(variant_caller_group_result, 'join'):
         variant_caller_group_result.join()
-
-    print 'FINISHING PIPELINE.'
 
     # The alignment group is now officially complete.
     alignment_group.status = AlignmentGroup.STATUS.COMPLETED
     alignment_group.end_time = datetime.now()
     alignment_group.save()
-
-    print alignment_group.status

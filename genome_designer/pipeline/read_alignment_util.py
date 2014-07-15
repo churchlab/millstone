@@ -19,8 +19,10 @@ from settings import TOOLS_DIR
 
 SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
 
+
 def ensure_bwa_index(ref_genome_fasta, error_output=None):
-    """Creates the bwa index if it doesn't exist already.
+    """Creates the reference genome index required by bwa, if it doesn't exist
+    already.
 
     We rely on the convention that the index file location is the fasta
     location with the extension '.bwt' appended to it.
@@ -60,8 +62,8 @@ def build_bwa_index(ref_genome_fasta, error_output=None):
         ref_genome_fasta
     ], stderr=error_output)
 
-def index_bam_file(bam_file, error_output=None):
 
+def index_bam_file(bam_file, error_output=None):
     subprocess.check_call([
             SAMTOOLS_BINARY,
             'index',

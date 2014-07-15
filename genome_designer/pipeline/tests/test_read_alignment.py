@@ -21,7 +21,7 @@ from pipeline.read_alignment import align_with_bwa_mem
 from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
 from pipeline.read_alignment import get_read_length
-from pipeline.read_alignment import get_insert_size
+from pipeline.read_alignment import get_insert_size_mean_and_stdev
 from settings import TOOLS_DIR
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
@@ -313,12 +313,11 @@ class TestAlignmentPieces(TestCase):
         self.assertEqual(3, sum([1 for line in p.stdout]))
 
     def test_get_read_length(self):
-
-        self.assertEqual(get_read_length(self.sample_alignment), 70)
+        bam_file = get_dataset_with_type(self.sample_alignment,
+                Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+        self.assertEqual(70, get_read_length(bam_file))
 
     def test_get_insert_size(self):
-
-        mean, stdev = get_insert_size(self.sample_alignment, stdev=True)
-
+        mean, stdev = get_insert_size_mean_and_stdev(self.sample_alignment)
         self.assertEqual(mean, 499)
         self.assertAlmostEqual(stdev, 50, delta=1)

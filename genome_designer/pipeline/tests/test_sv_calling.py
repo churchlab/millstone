@@ -19,10 +19,13 @@ from main.models import Variant
 from main.models import VariantAlternate
 from pipeline.variant_calling import find_variants_with_tool
 from pipeline.variant_calling import get_variant_tool_params
+from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import copy_dataset_to_entity_data_dir
 from utils.import_util import import_reference_genome_from_local_file
+from testing_utils.sv_testing_utils import get_sv_variants
+from testing_utils.sv_testing_utils import verify_variant_type
 
 
 TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'sv_testing', 'small_data',
@@ -150,3 +153,63 @@ class TestSVCallers(TestCase):
         self.assertTrue('DUP:TANDEM' in variant_map)
         self.assertTrue(abs(variant_map['DUP:TANDEM'][0] - 15000) <= 3)
         self.assertTrue(abs(variant_map['DUP:TANDEM'][1] - 400) <= 3)
+
+
+class TestLumpy(TestCase):
+    """Tests for lumpy.
+    """
+
+    def setUp(self):
+        user = User.objects.create_user('test_username_sv', password='password',
+                email='test@example.com')
+
+        # Grab a project.
+        self.project = Project.objects.create(title='test project',
+                owner=user.get_profile())
+
+        # Use genome with deletion from our sv testing repo:
+        # https://github.com/churchlab/structural-variants-testing
+        DELETION_TEST_DATA_DIR = os.path.join(settings.PWD, 'test_data',
+                'sv_testing', 'deletion_bd5a1123')
+        REF = os.path.join(DELETION_TEST_DATA_DIR, 'small_ref.fa')
+        FASTQ1 = os.path.join(DELETION_TEST_DATA_DIR, 'deletion_bd5a1123.1.fq')
+        FASTQ2 = os.path.join(DELETION_TEST_DATA_DIR, 'deletion_bd5a1123.2.fq')
+        BWA_ALIGNMENT = os.path.join(DELETION_TEST_DATA_DIR,
+                'deletion_bd5a1123.bam')
+
+        # Create Datasets / import data.
+        self.reference_genome = import_reference_genome_from_local_file(
+                self.project, 'ref_genome', REF, 'fasta')
+        self.experiment_sample = ExperimentSample.objects.create(
+                project=self.project, label='sample1')
+        copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1, FASTQ1)
+        copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2, FASTQ2)
+
+        # Create an alignment that's already complete, so we can focus on
+        # testing variant calling only.
+        self.alignment_group = AlignmentGroup.objects.create(
+                label='test alignment', reference_genome=self.reference_genome)
+
+        sample_1 = ExperimentSample.objects.create(
+                uid=TEST_SAMPLE_UID,
+                project=self.project,
+                label='sample1')
+
+        sample_alignment = ExperimentSampleToAlignment.objects.create(
+                alignment_group=self.alignment_group,
+                experiment_sample=sample_1)
+        copy_and_add_dataset_source(sample_alignment, Dataset.TYPE.BWA_ALIGN,
+                Dataset.TYPE.BWA_ALIGN, BWA_ALIGNMENT)
+
+    def test_find_deletion(self):
+        lumpy_params_dict = VARIANT_TOOL_PARAMS_MAP['lumpy']
+        lumpy_params = ('lumpy', lumpy_params_dict['dataset_type'],
+                lumpy_params_dict['runner_fn'])
+        find_variants_with_tool(self.alignment_group, lumpy_params,
+                project=self.project)
+        lumpy_variants = get_sv_variants(self.alignment_group,
+                Dataset.TYPE.VCF_LUMPY)
+        print lumpy_variants
+        self.assertTrue(verify_variant_type(lumpy_variants, 'DEL', 10000, 1000))

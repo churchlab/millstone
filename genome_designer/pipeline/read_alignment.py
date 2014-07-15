@@ -10,6 +10,8 @@ import re
 import shutil
 import string
 import subprocess
+from subprocess import PIPE
+from subprocess import Popen
 import sys
 
 from celery import task
@@ -25,12 +27,14 @@ from pipeline.read_alignment_util import ensure_bwa_index
 from pipeline.read_alignment_util import index_bam_file
 
 from utils.bam_utils import filter_bam_file_by_row
+from utils.import_util import add_dataset_to_entity
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import add_bed_file_track
 from settings import TOOLS_DIR
 from settings import BASH_PATH
 from utils import titlecase_spaces
 
+LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/pairend_distro.py' % TOOLS_DIR
 SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
 
 
@@ -398,26 +402,61 @@ def realign_given_indels(
     ], stderr=error_output)
 
 
-def compute_insert_metrics(bam_file_location, sample_alignment, stderr=None):
-    output = _get_metrics_output_filename(bam_file_location)
-    histogram_file = os.path.splitext(bam_file_location)[0] + '.histmet.txt'
-    subprocess.check_call([
-        'java', '-Xmx1024M',
-        '-jar', '%s/picard/CollectInsertSizeMetrics.jar' % TOOLS_DIR,
-        'I=' + bam_file_location,
-        'O=' + output,
-        'HISTOGRAM_FILE=' + histogram_file,
-        'VALIDATION_STRINGENCY=LENIENT' # Prevent unmapped read problems
-    ], stderr=stderr)
+def compute_insert_metrics(bam_file, sample_alignment, stderr=None):
+    """Computes read fragment insert size distribution.
 
-    # Add insert metrics file as a dataset
-    insert_metrics = Dataset.objects.create(
-            label=Dataset.TYPE.PICARD_INSERT_METRICS,
-            type=Dataset.TYPE.PICARD_INSERT_METRICS,
-            filesystem_location=clean_filesystem_location(output))
+    Creates a Dataset for each of:
+        * histogram file
+        * file with mean and stdev comma-separated
+    """
+    histo_file = os.path.split(bam_file)[0] + '.insert_size_histogram.txt'
+    mean_stdev_file = os.path.split(bam_file)[0] + '.insert_size_mean_stdev.txt'
 
-    sample_alignment.dataset_set.add(insert_metrics)
-    sample_alignment.save()
+    # First, we analyze the bam distribution.
+    read_bam_cmd = [
+            SAMTOOLS_BINARY,
+            'view',
+            bam_file
+    ]
+    p1 = Popen(read_bam_cmd, stdout=PIPE, stderr=stderr)
+
+    read_length = get_read_length(bam_file)
+
+    pairend_distro_cmd = [
+        LUMPY_PAIREND_DISTRO_BIN,
+        '-r', str(read_length),
+        '-X', '4', # num stdevs from end to extend
+        '-N', '10000', # number to sample
+        '-o', histo_file
+    ]
+    p2 = Popen(pairend_distro_cmd, stdin=p1.stdout, stdout=PIPE, stderr=stderr)
+
+    # Allow p1 to receive a SIGPIPE if p2 exits.
+    p1.stdout.close()
+
+    # Run the command and get mean, stdev
+    mean_and_stdev_str = p2.communicate()[0]
+    raw_mean, raw_stdev = mean_and_stdev_str.split('\t')
+    mean = int(float(raw_mean.split(':')[1].strip()))
+    stdev = int(float(raw_stdev.split(':')[1].strip()))
+
+    # Lumpy doesn't like stdev of 0.
+    if stdev < 1:
+        stdev = 1
+
+    # Save the histogram file as a Dataset.
+    add_dataset_to_entity(sample_alignment,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM,
+            filesystem_location=histo_file)
+
+    # Write mean, stdev to another file and create another Dataset.
+    with open(mean_stdev_file, 'w') as fh:
+        fh.write("%d,%d" % (mean, stdev))
+    add_dataset_to_entity(sample_alignment,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV,
+            filesystem_location=mean_stdev_file)
 
 
 def compute_callable_loci(reference_genome, sample_alignment,
@@ -495,13 +534,11 @@ def _get_callable_loci_output_filename(bam_file_location):
     return os.path.splitext(bam_file_location)[0] + '.callable_loci.bed'
 
 
-def get_read_length(sample_alignment):
+def get_read_length(bam_file):
     """Returns the median read length for this sample alignment by looking
     at the, at most, first 1000 reads.
     """
-
-    bam_file = get_dataset_with_type(sample_alignment,
-            Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+    assert len(os.path.splitext(bam_file)[1]), "Invalid bam: %s" % bam_file
 
     p = subprocess.Popen([SAMTOOLS_BINARY, 'view', bam_file],
         stdout=subprocess.PIPE)
@@ -515,87 +552,60 @@ def get_read_length(sample_alignment):
         except:
             break
         lines += 1
-        if lines > 1000: break
+        if lines > 1000:
+            break
+
+    p.stdout.close()
 
     return int(base_sum / lines)
 
-def get_insert_size(sample_alignment, stdev=False):
-    """Returns the average insert size for a bam_file.
+
+def get_insert_size_mean_and_stdev(sample_alignment, stderr=None, _iteration=0):
+    """Returns a tuple (mean, stdev) for insert sizes from the alignment.
+
+    Calls the compute functoin if metrics don't exist.
 
     If the insert size can't be calculated, perhaps because of a bad alignment,
-    return -1.
+    returns (-1, -1).
 
-    If stdev is True, return the both mean and stdev as a tuple.
+    Args:
+        sample_alignment: ExperimentSampleToAlignment we want metrics for.
+        iteration: Used internally to avoid getting stuck in case where
+            computation repeatedly fails.
 
-    This also creates a file called 'insert_size_histogram.txt' with histogram statistics.
+    Returns:
+        Tuple of ints (mean, stdev).
     """
-    picard_metrics = get_dataset_with_type(sample_alignment,
-            Dataset.TYPE.PICARD_INSERT_METRICS)
+    # Prevent getting stuck in case computation keeps failing.
+    if _iteration >= 3:
+        return (-1, -1)
 
-    if picard_metrics is None:
+    def _compute():
+        """Calls compute function then recursively calls
+        get_insert_size_mean_and_stdev().
+        """
         bam_file = get_dataset_with_type(sample_alignment,
                 Dataset.TYPE.BWA_ALIGN).get_absolute_location()
-        compute_insert_metrics(bam_file, sample_alignment, stderr=None)
-        picard_metrics = get_dataset_with_type(sample_alignment,
-            Dataset.TYPE.PICARD_INSERT_METRICS)
+        compute_insert_metrics(bam_file, sample_alignment, stderr=stderr)
+        return get_insert_size_mean_and_stdev(sample_alignment, stderr,
+                _iteration=_iteration + 1)
 
-    try:
-        metric_filename = picard_metrics.get_absolute_location()
-        assert os.path.exists(metric_filename)
-    except:
-        # if it doesn't work, return -1
-        return -1
+    mean_stdev_dataset = get_dataset_with_type(sample_alignment,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV)
+    if not mean_stdev_dataset:
+        return _compute()
 
-    # Read through the output file until you get to the data labels line,
-    # then take the first value in the following line.
-    print metric_filename
-    with open(metric_filename) as fh:
-        headers = False
-        get_hist_counts = False
-        insert_histogram = defaultdict(int)
-        insert_size = -1
-        num_pairs = None
-        for line in fh:
+    file_location = mean_stdev_dataset.get_absolute_location()
+    if not os.path.exists(file_location):
+        return _compute()
 
-            # Parse pair metric table
-            if headers:
-                metrics_dict = dict(zip(headers,line.split('\t')))
-                num_pairs = metrics_dict['READ_PAIRS']
-                headers = False # turn this flag off after 1 line
-
-            # Parse insert histogram (this is at the end)
-            if get_hist_counts:
-                try:
-                    size, count = line.split()
-                    size = int(size)
-                    count = int(count)
-                    insert_histogram[size] = count
-                except ValueError:
-                    break
-
-            # Flags for identifying regions of the output
-            if re.match('MEDIAN_INSERT_SIZE', line):
-                headers = line.split('\t')
-            if re.match('insert_size', line):
-                assert num_pairs, ('Picard Insert Metrics error: '
-                        'metrics should come before histogram.')
-                get_hist_counts = True
-
-        histogram_file = os.path.join(
-                sample_alignment.get_model_data_dir(),
-                'insert_size_histogram.txt')
-
-    with open(histogram_file, 'w') as fh:
-        for i in range(1,max(insert_histogram.values())):
-            pct = float(insert_histogram[i]) / float(num_pairs)
-            print >> fh, "%d\t%d" % (i, pct)
-
-    if stdev:
-        return (
-            int(metrics_dict['MEDIAN_INSERT_SIZE']),
-            float(metrics_dict['STANDARD_DEVIATION']))
-    else:
-        return int(metrics_dict['MEDIAN_INSERT_SIZE'])
+    with open(file_location) as fh:
+        combined_str = fh.read().strip()
+        parts = combined_str.split(',')
+        if not len(parts) == 2:
+            return _compute()
+        else:
+            return tuple([int(p) for p in parts])
 
 
 def _filter_out_interchromosome_reads(bam_filename, overwrite_input=True):
