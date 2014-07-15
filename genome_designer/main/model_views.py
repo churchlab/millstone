@@ -386,7 +386,7 @@ def _adapt_variant_set_label_field__cast(variant_as_dict, project_uid,
 
         # If the variant set is for this sample, then it will be filled,
         # Otherwise, it will be outlined. Cast view always uses outline.
-        variant_set_classes = ['gd-variant-set-badge', 'outline']
+        variant_set_classes = ['gd-variant-set-badge', 'outline', ' gd-nowrap']
 
         # If there are no samples associated, then don't display ': 0'
         if count > 0:
