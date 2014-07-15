@@ -523,10 +523,6 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
 
         return vcf_format_str.format(**fields)
 
-    # DEBUG
-    import shutil
-    shutil.copyfile(lumpy_output, '/home/glebk/Desktop/millstone_lumpy.txt')
-
     with open(lumpy_output, 'r') as lumpy_in:
         with open(vcf_output_filename, 'w') as lumpy_out:
             print >> lumpy_out, lumpy_vcf_header
