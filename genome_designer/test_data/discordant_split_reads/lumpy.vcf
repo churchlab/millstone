@@ -1,0 +1,23 @@
+##fileformat=VCFv4.0
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=END_CHR,Number=-1,Type=String,Description="End chromosome of the variant described in this record">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=SVLEN,Number=-1,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=STRAND_1,Number=1,Type=String,Description="Strand Orientation of SV Start">
+##INFO=<ID=STRAND_2,Number=1,Type=String,Description="Strand Orientation of SV End">
+##INFO=<ID=METHOD,Number=1,Type=String,Description="SV Caller used to predict">
+##INFO=<ID=DP,Number=-1,Type=String,Description="combined depth across samples">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DUP,Description="Duplication">
+##ALT=<ID=INS,Description="Insertion of novel sequence">
+##ALT=<ID=INV,Description="Inversion">
+##FORMAT=<ID=GT,Number=1,Type=Integer,Description="Genotype">
+##FORMAT=<ID=AO,Number=1,Type=Integer,Description="Alternate Allele Observations">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	aa236854
+Chromosome	25052	.	N	<DEL>	0	IMPRECISE;SVTYPE=DEL;END=25432;END_CHR=Chromosome;STRAND_1=+;STRAND_2=-;SVLEN=380;METHOD=LUMPY;DP=14	GT:AO	1/1:14
+Chromosome	49959	.	N	<INV>	0	IMPRECISE;SVTYPE=INV;END=50453;END_CHR=Chromosome;STRAND_1=-;STRAND_2=-;SVLEN=494;METHOD=LUMPY;DP=32	GT:AO	1/1:32
+Chromosome	75167	.	N	<DEL>	0	IMPRECISE;SVTYPE=DEL;END=75137;END_CHR=Chromosome;STRAND_1=+;STRAND_2=-;SVLEN=-30;METHOD=LUMPY;DP=2	GT:AO	1/1:2
+Chromosome	75262	.	N	<DEL>	0	IMPRECISE;SVTYPE=DEL;END=75232;END_CHR=Chromosome;STRAND_1=+;STRAND_2=-;SVLEN=-30;METHOD=LUMPY;DP=2	GT:AO	1/1:2
+Chromosome	75310	.	N	<DEL>	0.0139936	IMPRECISE;SVTYPE=DEL;END=75324;END_CHR=Chromosome;STRAND_1=+;STRAND_2=-;SVLEN=14;METHOD=LUMPY;DP=1	GT:AO	1/1:1
+Chromosome	75388	.	N	<DEL>	0.00858325	IMPRECISE;SVTYPE=DEL;END=75409;END_CHR=Chromosome;STRAND_1=+;STRAND_2=-;SVLEN=21;METHOD=LUMPY;DP=1	GT:AO	1/1:1

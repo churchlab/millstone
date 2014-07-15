@@ -302,7 +302,6 @@ CELERY_ALWAYS_EAGER = False
 # External tools
 ###############################################################################
 
-TOOLS_DIR = 'tools'
 BASH_PATH = '/bin/bash'
 
 ###############################################################################
@@ -362,8 +361,9 @@ JBROWSE_MAX_COVERAGE_TRACKS = 10
 
 ENABLED_VARIANT_CALLERS = [
     'freebayes',
-    # 'pindel',
-    # 'delly'
+    'lumpy',
+    #'pindel',
+    #'delly'
 ]
 
 # Path to snpeff java jar.

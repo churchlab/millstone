@@ -110,10 +110,12 @@ class Dataset(UniqueUidModelMixin):
         VCF_FREEBAYES = 'Freebayes VCF'
         VCF_PINDEL = 'Pindel VCF'
         VCF_DELLY = 'Delly VCF'
+        VCF_LUMPY = 'Lumpy VCF'
         VCF_USERINPUT = 'User VCF'
         VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
-        PICARD_INSERT_METRICS = 'Picard Insert'
+        LUMPY_INSERT_METRICS_HISTOGRAM = 'Lumpy Insert Metrics Histogram'
+        LUMPY_INSERT_METRICS_MEAN_STDEV = 'Lumpy Insert Metrics Mean Stdev'
 
 
     TYPE_CHOICES = make_choices_tuple(TYPE)
@@ -134,7 +136,9 @@ class Dataset(UniqueUidModelMixin):
         TYPE.BWA_ALIGN_ERROR : 'alignmentgroup_set',
         TYPE.VCF_FREEBAYES : 'alignmentgroup_set',
         TYPE.VCF_PINDEL : 'alignmentgroup_set',
+        TYPE.VCF_LUMPY : 'alignmentgroup_set',
         TYPE.VCF_DELLY : 'alignmentgroup_set',
+        TYPE.VCF_LUMPY : 'alignmentgroup_set',
         TYPE.VCF_USERINPUT : 'variantset_set',
         TYPE.VCF_FREEBAYES_SNPEFF : 'alignmentgroup_set'
     }
@@ -279,8 +283,8 @@ class Dataset(UniqueUidModelMixin):
 
         For some cases (like generating a compressed TABIX-indexed VCF),
         we want to take a dataset and generate a compressed version of
-        the file (as a separate model instance) with the same associations 
-        to other related model instances. 
+        the file (as a separate model instance) with the same associations
+        to other related model instances.
 
         TODO: We could just replace the uncompressed version with the
         compressed version with the compressed version, but right now that's
@@ -298,11 +302,11 @@ class Dataset(UniqueUidModelMixin):
         assert self.is_compressed() is False, (
                 'This dataset is already compressed.')
 
-        # Check that a compressed dataset isn't already associated with a 
-        # related model (probably just one related model).    
+        # Check that a compressed dataset isn't already associated with a
+        # related model (probably just one related model).
         related_models = self.get_related_model_set().all()
         for obj in related_models:
-            old_compressed_dataset = get_dataset_with_type(obj, self.type, 
+            old_compressed_dataset = get_dataset_with_type(obj, self.type,
                     compressed=True)
             # TODO: In this case, do we want to just return this?
             # Maybe with a warning?
@@ -310,9 +314,9 @@ class Dataset(UniqueUidModelMixin):
                 'A related model already compressed' +
                 'this dataset: {:s}'.format(
                         compressed_dataset.filesystem_location))
-            
 
-        # Generate the new compressed dataset file 
+
+        # Generate the new compressed dataset file
         # by adding the compression_type suffix
         orig_file = self.get_absolute_location()
         new_compressed_file = orig_file + compression_type

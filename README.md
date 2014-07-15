@@ -223,10 +223,6 @@ In order to run only the tests in, say, the `main` app directory, run:
 
     (venv)$ ./scripts/run_unit_tests.sh main
 
-And for only the tests in `scripts` call:
-
-    (venv)$ ./scripts/run_unit_tests.sh main
-
 For integration tests, we haven't figured out the optimal syntax in the test
 script so to run individual tests, you'll need to do it this more explicit way:
 

@@ -2,30 +2,39 @@
 Methods for aligning raw fastq reads to a reference genome.
 """
 
+from collections import defaultdict
 import copy
 from datetime import datetime
 import os
 import re
+import shutil
 import string
 import subprocess
+from subprocess import PIPE
+from subprocess import Popen
 import sys
 
 from celery import task
 
-from main.models import get_dataset_with_type
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from main.models import ReferenceGenome
 from main.model_utils import clean_filesystem_location
+from main.model_utils import get_dataset_with_type
 from main.s3 import project_files_needed
 from pipeline.read_alignment_util import ensure_bwa_index
+from pipeline.read_alignment_util import index_bam_file
+
+from utils.bam_utils import filter_bam_file_by_row
+from utils.import_util import add_dataset_to_entity
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import add_bed_file_track
 from settings import TOOLS_DIR
 from settings import BASH_PATH
 from utils import titlecase_spaces
 
+LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/pairend_distro.py' % TOOLS_DIR
 SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
 
 
@@ -146,6 +155,10 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
                 result_bam_file)
         bwa_dataset.save()
 
+        # Isolate split and discordant reads for SV calling.
+        get_discordant_read_pairs(sample_alignment)
+        get_split_reads(sample_alignment)
+
         # Add track to JBrowse.
         add_bam_file_track(alignment_group.reference_genome, sample_alignment,
                 Dataset.TYPE.BWA_ALIGN)
@@ -253,11 +266,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         ], stderr=error_output)
 
         # 2b. Index the sorted result.
-        subprocess.check_call([
-            SAMTOOLS_BINARY,
-            'index',
-            sorted_bam_file_location,
-        ], stderr=error_output)
+        index_bam_file(sorted_bam_file_location, error_output)
 
     # 3. Compute insert size metrics
     # Subsequent steps screw up pairing info so this has to
@@ -281,11 +290,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     )
     if effective_mask['indel_realigner']:
         # Make sure the previous result is indexed.
-        subprocess.check_call([
-                SAMTOOLS_BINARY,
-                'index',
-                grouped_bam_file_location,
-        ], stderr=error_output)
+        index_bam_file(grouped_bam_file_location, error_output)
 
         realign_given_indels(
                 experiment_sample,
@@ -316,9 +321,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
             ], stderr=error_output, stdout=fh)
 
         # Re-index this new bam file.
-        subprocess.check_call([
-            SAMTOOLS_BINARY, 'index', final_bam_location],
-            stderr=error_output)
+        index_bam_file(final_bam_location, error_output)
 
     else:
         final_bam_location = realigned_bam_file_location
@@ -330,11 +333,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
 
     # 8. Create index.
     if effective_mask['index']:
-        subprocess.check_call([
-            SAMTOOLS_BINARY,
-            'index',
-            final_bam_location,
-        ], stderr=error_output)
+        index_bam_file(final_bam_location, error_output)
 
     return final_bam_location
 
@@ -343,7 +342,8 @@ def add_groups(experiment_sample, input_bam_file, bam_output_file, error_output)
     from main.models import ensure_exists_0775_dir
     # Create a temp directory in the experiment_sample data dir else we run out of space
     # with big alignment jobs.
-    picard_tmp_dir = os.path.join(experiment_sample.get_model_data_dir(), 'picard_tmp')
+    picard_tmp_dir = os.path.join(experiment_sample.get_model_data_dir(),
+            'picard_tmp')
     ensure_exists_0775_dir(picard_tmp_dir)
 
     prefix = experiment_sample.uid
@@ -402,26 +402,61 @@ def realign_given_indels(
     ], stderr=error_output)
 
 
-def compute_insert_metrics(bam_file_location, sample_alignment, stderr=None):
-    output = _get_metrics_output_filename(bam_file_location)
-    histogram_file = os.path.splitext(bam_file_location)[0] + '.histmet.txt'
-    subprocess.check_call([
-        'java', '-Xmx1024M',
-        '-jar', '%s/picard/CollectInsertSizeMetrics.jar' % TOOLS_DIR,
-        'I=' + bam_file_location,
-        'O=' + output,
-        'HISTOGRAM_FILE=' + histogram_file,
-        'VALIDATION_STRINGENCY=LENIENT' # Prevent unmapped read problems
-    ], stderr=stderr)
+def compute_insert_metrics(bam_file, sample_alignment, stderr=None):
+    """Computes read fragment insert size distribution.
 
-    # Add insert metrics file as a dataset
-    insert_metrics = Dataset.objects.create(
-            label=Dataset.TYPE.PICARD_INSERT_METRICS,
-            type=Dataset.TYPE.PICARD_INSERT_METRICS,
-            filesystem_location=clean_filesystem_location(output))
+    Creates a Dataset for each of:
+        * histogram file
+        * file with mean and stdev comma-separated
+    """
+    histo_file = os.path.split(bam_file)[0] + '.insert_size_histogram.txt'
+    mean_stdev_file = os.path.split(bam_file)[0] + '.insert_size_mean_stdev.txt'
 
-    sample_alignment.dataset_set.add(insert_metrics)
-    sample_alignment.save()
+    # First, we analyze the bam distribution.
+    read_bam_cmd = [
+            SAMTOOLS_BINARY,
+            'view',
+            bam_file
+    ]
+    p1 = Popen(read_bam_cmd, stdout=PIPE, stderr=stderr)
+
+    read_length = get_read_length(bam_file)
+
+    pairend_distro_cmd = [
+        LUMPY_PAIREND_DISTRO_BIN,
+        '-r', str(read_length),
+        '-X', '4', # num stdevs from end to extend
+        '-N', '10000', # number to sample
+        '-o', histo_file
+    ]
+    p2 = Popen(pairend_distro_cmd, stdin=p1.stdout, stdout=PIPE, stderr=stderr)
+
+    # Allow p1 to receive a SIGPIPE if p2 exits.
+    p1.stdout.close()
+
+    # Run the command and get mean, stdev
+    mean_and_stdev_str = p2.communicate()[0]
+    raw_mean, raw_stdev = mean_and_stdev_str.split('\t')
+    mean = int(float(raw_mean.split(':')[1].strip()))
+    stdev = int(float(raw_stdev.split(':')[1].strip()))
+
+    # Lumpy doesn't like stdev of 0.
+    if stdev < 1:
+        stdev = 1
+
+    # Save the histogram file as a Dataset.
+    add_dataset_to_entity(sample_alignment,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM,
+            filesystem_location=histo_file)
+
+    # Write mean, stdev to another file and create another Dataset.
+    with open(mean_stdev_file, 'w') as fh:
+        fh.write("%d,%d" % (mean, stdev))
+    add_dataset_to_entity(sample_alignment,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV,
+            filesystem_location=mean_stdev_file)
 
 
 def compute_callable_loci(reference_genome, sample_alignment,
@@ -499,45 +534,120 @@ def _get_callable_loci_output_filename(bam_file_location):
     return os.path.splitext(bam_file_location)[0] + '.callable_loci.bed'
 
 
-def get_insert_size(sample_alignment):
-    """Returns the average insert size for a bam_file.
+def get_read_length(bam_file):
+    """Returns the median read length for this sample alignment by looking
+    at the, at most, first 1000 reads.
+    """
+    assert len(os.path.splitext(bam_file)[1]), "Invalid bam: %s" % bam_file
+
+    p = subprocess.Popen([SAMTOOLS_BINARY, 'view', bam_file],
+        stdout=subprocess.PIPE)
+
+    lines = 0
+    base_sum = 0
+
+    for line in p.stdout:
+        try:
+            base_sum += len(line.split('\t')[9])
+        except:
+            break
+        lines += 1
+        if lines > 1000:
+            break
+
+    p.stdout.close()
+
+    return int(base_sum / lines)
+
+
+def get_insert_size_mean_and_stdev(sample_alignment, stderr=None, _iteration=0):
+    """Returns a tuple (mean, stdev) for insert sizes from the alignment.
+
+    Calls the compute functoin if metrics don't exist.
 
     If the insert size can't be calculated, perhaps because of a bad alignment,
-    return -1.
-    """
-    picard_metrics = get_dataset_with_type(sample_alignment,
-            Dataset.TYPE.PICARD_INSERT_METRICS)
+    returns (-1, -1).
 
-    if picard_metrics is None:
+    Args:
+        sample_alignment: ExperimentSampleToAlignment we want metrics for.
+        iteration: Used internally to avoid getting stuck in case where
+            computation repeatedly fails.
+
+    Returns:
+        Tuple of ints (mean, stdev).
+    """
+    # Prevent getting stuck in case computation keeps failing.
+    if _iteration >= 3:
+        return (-1, -1)
+
+    def _compute():
+        """Calls compute function then recursively calls
+        get_insert_size_mean_and_stdev().
+        """
         bam_file = get_dataset_with_type(sample_alignment,
                 Dataset.TYPE.BWA_ALIGN).get_absolute_location()
-        compute_insert_metrics(bam_file, sample_alignment, stderr=None)
-        picard_metrics = get_dataset_with_type(sample_alignment,
-            Dataset.TYPE.PICARD_INSERT_METRICS)
+        compute_insert_metrics(bam_file, sample_alignment, stderr=stderr)
+        return get_insert_size_mean_and_stdev(sample_alignment, stderr,
+                _iteration=_iteration + 1)
 
-    try:
-        metric_filename = picard_metrics.get_absolute_location()
-        assert os.path.exists(metric_filename)
-    except:
-        # if it doesn't work, return -1
-        return -1
+    mean_stdev_dataset = get_dataset_with_type(sample_alignment,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV)
+    if not mean_stdev_dataset:
+        return _compute()
 
-    # Read through the output file until you get to the data labels line,
-    # then take the first value in the following line.
-    with open(metric_filename) as fh:
-        found_line = False
-        insert_size = -1
-        for line in fh:
-            if found_line:
-                insert_size = line.split()[0]
-                break
-            if re.match('MEDIAN_INSERT_SIZE', line):
-                found_line = True
-    return insert_size
+    file_location = mean_stdev_dataset.get_absolute_location()
+    if not os.path.exists(file_location):
+        return _compute()
+
+    with open(file_location) as fh:
+        combined_str = fh.read().strip()
+        parts = combined_str.split(',')
+        if not len(parts) == 2:
+            return _compute()
+        else:
+            return tuple([int(p) for p in parts])
+
+
+def _filter_out_interchromosome_reads(bam_filename, overwrite_input=True):
+    """Filters out read pairs which lie on different chromosomes.
+
+    Args:
+        bam_filename: Path to bam file.
+        overwrite_input: If True, overwrite the input file.
+    """
+    def is_rnext_same(line):
+        parts = line.split('\t')
+        rnext_col = parts[6]
+        return rnext_col == '='
+
+    if overwrite_input:
+        output_bam_path = bam_filename
+    else:
+        output_bam_path = os.path.splitext(bam_filename)[0] + '.nointerchrom.bam'
+
+    filter_bam_file_by_row(bam_filename, is_rnext_same, output_bam_path)
+
 
 def get_discordant_read_pairs(sample_alignment):
     """Isolate discordant pairs of reads from a sample alignment.
     """
+    # First, check if completed dataset already exists.
+    bwa_disc_dataset = get_dataset_with_type(
+            sample_alignment, Dataset.TYPE.BWA_DISCORDANT)
+    if bwa_disc_dataset is not None:
+        if (bwa_disc_dataset.status == Dataset.STATUS.READY and
+                os.path.exists(bwa_disc_dataset.get_absolute_location())):
+            return bwa_disc_dataset
+    else:
+        bwa_disc_dataset = Dataset.objects.create(
+                label=Dataset.TYPE.BWA_DISCORDANT,
+                type=Dataset.TYPE.BWA_DISCORDANT)
+        sample_alignment.dataset_set.add(bwa_disc_dataset)
+
+    # If here, we are going to run or re-run the Dataset.
+    bwa_disc_dataset.status = Dataset.STATUS.NOT_STARTED
+    bwa_disc_dataset.save(update_fields=['status'])
+
     bam_dataset = get_dataset_with_type(sample_alignment, Dataset.TYPE.BWA_ALIGN)
     bam_filename = bam_dataset.get_absolute_location()
 
@@ -546,45 +656,50 @@ def get_discordant_read_pairs(sample_alignment):
 
     # NOTE: This assumes the index just adds at .bai, w/ same path otherwise
     # - will this always be true?
-    assert os.path.exists(bam_filename+'.bai'), (
-            "BAM index '%s' is missing.") % (bam_filename + '.bai')
+    if not os.path.exists(bam_filename+'.bai'):
+        index_bam_file(bam_filename)
 
-
-    bam_discordant_fn = os.path.join(sample_alignment.get_model_data_dir(),
+    bam_discordant_filename = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_discordant_pairs.bam')
 
-    bwa_disc_dataset = Dataset.objects.create(
-            label=Dataset.TYPE.BWA_DISCORDANT,
-            type=Dataset.TYPE.BWA_DISCORDANT,
-            status=Dataset.STATUS.NOT_STARTED)
 
-    sample_alignment.dataset_set.add(bwa_disc_dataset)
-    sample_alignment.save()
+    try:
+      bwa_disc_dataset.status = Dataset.STATUS.COMPUTING
+      bwa_disc_dataset.save(update_fields=['status'])
 
-    # Use bam read alignment flags to pull out discordant pairs only
-    filter_discordant = ' | '.join([
-            '{samtools} view -u -F 0x0002 {bam_filename} ',
-            '{samtools} view -u -F 0x0100 - ',
-            '{samtools} view -u -F 0x0004 - ',
-            '{samtools} view -u -F 0x0008 - ',
-            '{samtools} view -b -F 0x0400 - ']).format(
-                    samtools=SAMTOOLS_BINARY,
-                    bam_filename=bam_filename)
+      # Use bam read alignment flags to pull out discordant pairs only
+      filter_discordant = ' | '.join([
+              '{samtools} view -u -F 0x0002 {bam_filename} ',
+              '{samtools} view -u -F 0x0100 - ',
+              '{samtools} view -u -F 0x0004 - ',
+              '{samtools} view -u -F 0x0008 - ',
+              '{samtools} view -b -F 0x0400 - ']).format(
+                      samtools=SAMTOOLS_BINARY,
+                      bam_filename=bam_filename)
 
-    with open(bam_discordant_fn, 'w') as fh:
-        subprocess.check_call(filter_discordant,
-                stdout=fh,
-                shell=True, executable=BASH_PATH)
+      with open(bam_discordant_filename, 'w') as fh:
+          subprocess.check_call(filter_discordant,
+                  stdout=fh,
+                  shell=True, executable=BASH_PATH)
 
-    # sort the discordant reads, overwrite the old file
-    subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_fn,
-            os.path.splitext(bam_discordant_fn)[0]])
+      # sort the discordant reads, overwrite the old file
+      subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_filename,
+              os.path.splitext(bam_discordant_filename)[0]])
 
-    bwa_disc_dataset.filesystem_location = clean_filesystem_location(
-            bam_discordant_fn)
+      _filter_out_interchromosome_reads(bam_discordant_filename)
+
+      bwa_disc_dataset.filesystem_location = clean_filesystem_location(
+              bam_discordant_filename)
+      bwa_disc_dataset.status = Dataset.STATUS.READY
+
+    except subprocess.CalledProcessError:
+        bwa_disc_dataset.filesystem_location = ''
+        bwa_disc_dataset.status = Dataset.STATUS.FAILED
+
     bwa_disc_dataset.save()
 
     return bwa_disc_dataset
+
 
 def get_split_reads(sample_alignment):
     """Isolate split reads from a sample alignment.
@@ -594,6 +709,23 @@ def get_split_reads(sample_alignment):
 
     NOTE THAT THIS SCRIPT ONLY WORKS WITH BWA MEM.
     """
+    bwa_split_dataset = get_dataset_with_type(
+            sample_alignment, Dataset.TYPE.BWA_SPLIT)
+    if bwa_split_dataset is not None:
+        if (bwa_split_dataset.status == Dataset.STATUS.READY and
+                os.path.exists(bwa_split_dataset.get_absolute_location())):
+            return bwa_split_dataset
+    else:
+        bwa_split_dataset = Dataset.objects.create(
+                label=Dataset.TYPE.BWA_SPLIT,
+                type=Dataset.TYPE.BWA_SPLIT,
+                status=Dataset.STATUS.NOT_STARTED)
+        sample_alignment.dataset_set.add(bwa_split_dataset)
+
+    # If here, we are going to run or re-run the Dataset.
+    bwa_split_dataset.status = Dataset.STATUS.NOT_STARTED
+    bwa_split_dataset.save(update_fields=['status'])
+
     bam_dataset = get_dataset_with_type(sample_alignment, Dataset.TYPE.BWA_ALIGN)
     bam_filename = bam_dataset.get_absolute_location()
 
@@ -602,20 +734,11 @@ def get_split_reads(sample_alignment):
 
     # NOTE: This assumes the index just adds at .bai, w/ same path otherwise
     # - will this always be true?
-    assert os.path.exists(bam_filename+'.bai'), (
-            "BAM index '%s' is missing.") % (bam_filename + '.bai')
+    if not os.path.exists(bam_filename+'.bai'):
+        index_bam_file(bam_filename)
 
-
-    bam_split_fn = os.path.join(sample_alignment.get_model_data_dir(),
+    bam_split_filename = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_split_reads.bam')
-
-    bwa_split_dataset = Dataset.objects.create(
-            label=Dataset.TYPE.BWA_SPLIT,
-            type=Dataset.TYPE.BWA_SPLIT,
-            status=Dataset.STATUS.NOT_STARTED)
-
-    sample_alignment.dataset_set.add(bwa_split_dataset)
-    sample_alignment.save()
 
     # Use lumpy bwa-mem split read script to pull out split reads.
     filter_split_reads = ' | '.join([
@@ -627,18 +750,31 @@ def get_split_reads(sample_alignment):
                     lumpy_bwa_mem_sr_script= os.path.join(
                             TOOLS_DIR, 'lumpy','extractSplitReads_BwaMem'))
 
-    with open(bam_split_fn, 'w') as fh:
-        subprocess.check_call(filter_split_reads,
-                stdout=fh,
-                shell=True,
-                executable=BASH_PATH)
+    try:
+        bwa_split_dataset.status = Dataset.STATUS.COMPUTING
+        bwa_split_dataset.save(update_fields=['status'])
 
-    # sort the split reads, overwrite the old file
-    subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_fn,
-            os.path.splitext(bam_split_fn)[0]])
+        with open(bam_split_filename, 'w') as fh:
+            subprocess.check_call(filter_split_reads,
+                    stdout=fh,
+                    shell=True,
+                    executable=BASH_PATH)
 
-    bwa_split_dataset.filesystem_location = clean_filesystem_location(
-            bam_split_fn)
+        # sort the split reads, overwrite the old file
+        subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_filename,
+                os.path.splitext(bam_split_filename)[0]])
+
+        _filter_out_interchromosome_reads(bam_split_filename)
+
+        bwa_split_dataset.status = Dataset.STATUS.READY
+        bwa_split_dataset.filesystem_location = clean_filesystem_location(
+                bam_split_filename)
+
+    except subprocess.CalledProcessError:
+        # if there are no split reads, then fail.
+        bwa_split_dataset.filesystem_location = ''
+        bwa_split_dataset.status = Dataset.STATUS.FAILED
+
     bwa_split_dataset.save()
 
     return bwa_split_dataset

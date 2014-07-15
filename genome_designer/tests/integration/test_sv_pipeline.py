@@ -15,6 +15,7 @@ from main.models import get_dataset_with_type
 from main.models import Project
 from main.models import User
 from pipeline.pipeline_runner import run_pipeline
+from pipeline.variant_calling import get_variant_tool_params
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
 from variants.vcf_parser import extract_raw_data_dict
@@ -30,13 +31,17 @@ class TestSVPipeline(CeleryWorkerTestCase):
         self.project = Project.objects.create(title='test project',
                 owner=user.get_profile())
 
-        # Create a ref genome.
-        REF = os.path.join(settings.PWD, 'test_data', 'sv_testing', 'all_svs', 'ref.fa')
-        FASTQ1 = os.path.join(settings.PWD, 'test_data', 'sv_testing', 'all_svs', 'simLibrary.1.fq')
-        FASTQ2 = os.path.join(settings.PWD, 'test_data', 'sv_testing', 'all_svs', 'simLibrary.2.fq')
+        # Use genome with deletion from our sv testing repo:
+        # https://github.com/churchlab/structural-variants-testing
+        DELETION_TEST_DATA_DIR = os.path.join(settings.PWD, 'test_data',
+                'sv_testing', 'deletion_bd5a1123')
+        REF = os.path.join(DELETION_TEST_DATA_DIR, 'small_ref.fa')
+        FASTQ1 = os.path.join(DELETION_TEST_DATA_DIR, 'deletion_bd5a1123.1.fq')
+        FASTQ2 = os.path.join(DELETION_TEST_DATA_DIR, 'deletion_bd5a1123.2.fq')
+
+        # Create Datasets / import data.
         self.reference_genome = import_reference_genome_from_local_file(
                 self.project, 'ref_genome', REF, 'fasta')
-
         self.experiment_sample = ExperimentSample.objects.create(
                 project=self.project, label='sample1')
         copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ1,
@@ -71,10 +76,14 @@ class TestSVPipeline(CeleryWorkerTestCase):
                 'indiv_tracks')))
 
         vcf_files = {}
-        for vcf_type in [Dataset.TYPE.VCF_FREEBAYES,
-                Dataset.TYPE.VCF_PINDEL, Dataset.TYPE.VCF_DELLY]:
+        vcf_types = [t[1] for t in get_variant_tool_params()
+                if t[0] in settings.ENABLED_VARIANT_CALLERS]
+
+        for vcf_type in vcf_types:
             vcf_dataset = get_dataset_with_type(alignment_group_obj, vcf_type)
-            self.assertIsNotNone(vcf_dataset)
+            self.assertIsNotNone(vcf_dataset,
+                    msg='Missing vcf_dataset for {vcf_type}.'.format(
+                            vcf_type=vcf_type))
             vcf_location = vcf_dataset.get_absolute_location()
             self.assertTrue(os.path.exists(vcf_location))
             vcf_files[vcf_type] = vcf_location
@@ -89,8 +98,12 @@ class TestSVPipeline(CeleryWorkerTestCase):
                     raw_data_dict = extract_raw_data_dict(record)
 
                     # we should expect exactly 1 alternate
-                    assert len(raw_data_dict['INFO_SVLEN']) == 1
-                    assert len(raw_data_dict['INFO_SVTYPE']) == 1
+                    assert len(raw_data_dict['INFO_SVLEN']) == 1, (
+                        'length of INFO_SVLEN > 1: {svlen}'.format(
+                                svlen=raw_data_dict['INFO_SVLEN']))
+                    assert len(raw_data_dict['INFO_SVTYPE']) == 1, (
+                        'length of INFO_SVLEN > 1: {svtype}'.format(
+                                svtype=raw_data_dict['INFO_SVTYPE']))
 
                     variant_type = str(raw_data_dict.get('INFO_SVTYPE',
                             raw_data_dict.get('TYPE'))[0])
@@ -103,39 +116,23 @@ class TestSVPipeline(CeleryWorkerTestCase):
                         })
             return variants
 
-        pindel_variants = get_variants(Dataset.TYPE.VCF_PINDEL)
-        delly_variants = get_variants(Dataset.TYPE.VCF_DELLY)
+        lumpy_variants = get_variants(Dataset.TYPE.VCF_LUMPY)
 
         # Helper function for checking a specific variant type
         def verify_variant_type(variants, variant_type, pos, length):
             for variant in variants:
                 # Check variant against following gauntlet.
                 if variant['type'] != variant_type:
-                    break # Fail, incorrect type.
-                if abs(variant['pos'] - pos) >= 50:
-                    break # Fail, incorrect position.
+                    continue # Fail, incorrect type.
+                if abs(abs(variant['pos']) - pos) >= 100:
+                    continue # Fail, incorrect position.
                 if (length != -1 and
-                        abs(abs(variant['length']) - length) >= 50):
-                    break # Fail, incorrect length.
+                        abs(abs(variant['length']) - length) >= 100):
+                    continue # Fail, incorrect length.
                 # Success, variant made it through gauntlet.
                 return
 
             # If we got here, no matches were found, fail.
             self.fail('No %s position %s found' % (variant_type, pos))
 
-        # Verify that all expected SVs exist (all have length 400)
-        verify_variant_type(pindel_variants, 'DEL', 25000, 400)
-        assert False
-
-        # dbg: this test fails b/c delly doesn't find the deletion.
-        #verify_variant_type(delly_variants, 'DELETION', 25000, 400)
-
-        # TODO: Uncomment when fixed.
-        # verify_variant_type(pindel_variants, 'INVERSION', 50000, 400)
-        # verify_variant_type(delly_variants, 'INVERSION', 50000, 400)
-
-        # pindel cannot find large insertions/duplications.
-        # delly's found length is not tested, because the
-        #   length depends on what bases are covered in the sample read.
-        # TODO: Uncomment when fixed.
-        # verify_variant_type(delly_variants, 'DUPLICATION', 75000, -1)
+        verify_variant_type(lumpy_variants, 'DEL', 10000, 1000)
