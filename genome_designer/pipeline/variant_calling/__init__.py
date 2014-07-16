@@ -3,7 +3,9 @@ Functions for calling Variants.
 """
 
 import os
+import shutil
 import subprocess
+from uuid import uuid4
 
 from celery import task
 from django.conf import settings
@@ -154,12 +156,12 @@ def find_variants_with_tool(alignment_group, variant_params):
     if len(existing_set) > 0:
         existing_set[0].delete()
 
-    dataset = Dataset.objects.create(
+    vcf_dataset = Dataset.objects.create(
             type=vcf_dataset_type,
             label=vcf_dataset_type,
             filesystem_location=clean_filesystem_location(vcf_output_filename),
     )
-    alignment_group.dataset_set.add(dataset)
+    alignment_group.dataset_set.add(vcf_dataset)
 
     # Do the following only for freebayes; right now just special if condition
     if tool_name == 'freebayes':
@@ -171,6 +173,8 @@ def find_variants_with_tool(alignment_group, variant_params):
             vcf_dataset_type = VCF_ANNOTATED_DATASET_TYPE
         else:
             vcf_dataset_type = VCF_DATASET_TYPE
+
+    sort_vcf(vcf_dataset.get_absolute_location())
 
     # Tabix index and add the VCF track to Jbrowse
     add_vcf_track(alignment_group.reference_genome, alignment_group,
@@ -488,3 +492,23 @@ def get_variant_tool_params():
 
 def adapt_variant_tool_params_to_tuple(tool_name, params_dict):
     return (tool_name, params_dict['dataset_type'], params_dict['runner_fn'])
+
+
+def sort_vcf(input_vcf_filepath):
+    """Sorts a vcf file by chromosome and position.
+
+    Overwrites the input.
+    """
+    temp_vcf = os.path.splitext(input_vcf_filepath)[0] + str(uuid4())[:8]
+    assert not os.path.exists(temp_vcf)
+
+    sort_cmd = (
+            '(grep ^"#" {original_vcf}; grep -v ^"#" {original_vcf} | '
+            'sort -k1,1 -k2,2n) > {sorted_vcf}'
+    ).format(
+            original_vcf=input_vcf_filepath,
+            sorted_vcf=temp_vcf
+    )
+    subprocess.call(sort_cmd, shell=True)
+
+    shutil.move(temp_vcf, input_vcf_filepath)

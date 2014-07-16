@@ -26,17 +26,14 @@ We perform this compile_tracklist_json() every time a link is asked for.
 """
 
 from distutils.dir_util import mkpath
+import glob
 import json
 import os
 import shutil
 import subprocess
-import glob
-from BCBio import GFF
-from Bio import SeqIO
 
+from main.model_utils import get_dataset_with_type
 from main.models import Dataset
-from main.models import get_dataset_with_type
-from main.models import ReferenceGenome
 from utils import merge_nested_dictionaries
 from settings import JBROWSE_BIN_PATH
 from settings import JBROWSE_DATA_URL_ROOT
@@ -266,13 +263,12 @@ def add_genbank_file_track(reference_genome, **kwargs):
 
     write_tracklist_json(reference_genome, tracklist_json, 'gbk')
 
-def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
-    """
-    From
 
-    JBrowse Docs:
-        http://gmod.org/wiki/JBrowse_Configuration_Guide
-                #Example_VCF-based_Variant_Track_Configuration
+def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
+    """Adds a vcf track to JBrowse for this vcf.
+
+    See JBrowse Docs:
+        http://gmod.org/wiki/JBrowse_Configuration_Guide#Example_VCF-based_Variant_Track_Configuration
     """
     # Get the vcf file location from the the Dataset of the genome
     # keyed by the alignment_type.
@@ -312,34 +308,47 @@ def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
 
 
 def _vcf_to_vcftabix(vcf_dataset):
-    """
-    Generate a compressed version of a vcf file and index it with
-    samtools tabix. Add a new dataset model instance for this compressed
-    version, with the same related objects. Flag is as compressed,
-    indexed, etc.
-    """
+    """Compresses and indexes a vcf using samtools tabix.
 
-    # 1. Check if dataset is compressed. If not, then grab the compressed
-    # version or make a compressed version.
-    if not vcf_dataset.is_compressed():
+    Creates a new Dataset model instance for this compressed version, with the
+    same related objects (e.g. pointing to the same AlignmentGroup). The
+    Dataset is flagged as compressed, indexed, etc.
+
+    Args:
+        vcf_dataset: Dataset pointing to a vcf, or its compressed version.
+            Index may or may not exist.
+
+    Returns:
+        Dataset that points to compressed version of input vcf_dataset, if it
+        wasn't compressed already. The index file is asserted to exist for this
+        compressed Dataset.
+    """
+    ### This function has two steps:
+    ###     1. Get or create compressed Dataset.
+    ###     2. Create index if it doesn't exist.
+
+    ### 1. Get or create compressed Dataset.
+    if vcf_dataset.is_compressed():
+        compressed_dataset = vcf_dataset
+    else:
         # Check for existing compressed version using related model.
         # Assume that the first model will do.
         related_model = vcf_dataset.get_related_model_set().all()[0]
         compressed_dataset = get_dataset_with_type(
-                entity= related_model,
-                type= vcf_dataset.type,
+                entity=related_model,
+                type=vcf_dataset.type,
                 compressed=True)
         # If there is no compressed dataset, then make it
         if compressed_dataset is None:
             compressed_dataset = vcf_dataset.make_compressed('.bgz')
-    else:
-        compressed_dataset = vcf_dataset
 
+    ### 2. Create index if it doesn't exist.
     if compressed_dataset.filesystem_idx_location == '':
 
         # Set the tabix index location
         compressed_dataset.filesystem_idx_location = (
                 compressed_dataset.filesystem_location + '.tbi')
+        compressed_dataset.save()
 
         # Make tabix index
         subprocess.check_call([
@@ -347,16 +356,17 @@ def _vcf_to_vcftabix(vcf_dataset):
             '-p', 'vcf',
             compressed_dataset.get_absolute_location()
         ])
-    else:
-        # If it's already here, then make sure the index is right
-        assert compressed_dataset.filesystem_idx_location == (
-                compressed_dataset.filesystem_location + '.tbi'), (
-                'Tabix index file location is not correct.')
-        assert os.path.exists(
-                compressed_dataset.get_absolute_idx_location()), (
-                'Tabix index file does not exist on filesystem.')
+
+    # Make sure the index exists, whether created now or previously.
+    assert compressed_dataset.filesystem_idx_location == (
+            compressed_dataset.filesystem_location + '.tbi'), (
+            'Tabix index file location is not correct.')
+    assert os.path.exists(
+            compressed_dataset.get_absolute_idx_location()), (
+            'Tabix index file does not exist on filesystem.')
 
     return compressed_dataset
+
 
 def add_bed_file_track(reference_genome, sample_alignment, dataset):
     """ Add a bed file to Jbrowse, like that created for CallableLoci.
