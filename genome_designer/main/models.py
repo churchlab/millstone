@@ -56,8 +56,6 @@ from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
 from variants.filter_key_map_constants import MAP_KEY__EXPERIMENT_SAMPLE
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 
-BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
-
 
 ###############################################################################
 # User-related models
@@ -179,10 +177,22 @@ class Dataset(UniqueUidModelMixin):
     # Dictionary of compression suffixes and programs to use to perform
     # various actions on a pipe
     COMPRESSION_TYPES = {
-        '.gz': {'cat': ('gzip','-dc'), 'zip': ('gzip','-c')},
-        '.bz2': {'cat': ('bzcat',), 'zip': ('bzip2','-c')},
-        '.zip': {'cat': ('unzip','-p'), 'zip': ('zip','-')},
-        '.bgz': {'cat': (BGZIP_BINARY,'-dc'), 'zip': (BGZIP_BINARY,'-c')},
+        '.gz': {
+            'cat': ('gzip', '-dc'),
+            'zip': ('gzip', '-c')
+        },
+        '.bz2': {
+            'cat': ('bzcat',),
+            'zip': ('bzip2', '-c')
+        },
+        '.zip': {
+            'cat': ('unzip', '-p'),
+            'zip': ('zip', '-')
+        },
+        '.bgz': {
+            'cat': (settings.BGZIP_BINARY, '-dc'),
+            'zip': (settings.BGZIP_BINARY, '-c')
+        },
     }
 
     def __unicode__(self):
