@@ -869,17 +869,10 @@ def create_variant_set(request):
 
     # Create new variant set, depending on type of form submitted.
     if create_set_type == 'from-file':
-        create_result = _create_variant_set_from_file(request, ref_genome,
-                variant_set_name)
+        return HttpResponse(json.dumps(_create_variant_set_from_file(request, ref_genome, variant_set_name)))
+
     else:
-        create_result = _create_variant_set_empty(ref_genome, variant_set_name)
-
-    result = {
-        'error': create_result['error_str'],
-        'variantSetUid': create_result['variant_set_uid']
-    }
-
-    return HttpResponse(json.dumps(result), content_type='application/json')
+        return HttpResponse(json.dumps(_create_variant_set_empty(ref_genome, variant_set_name)))
 
 
 def _create_variant_set_from_file(request, ref_genome, variant_set_name):
@@ -888,7 +881,6 @@ def _create_variant_set_from_file(request, ref_genome, variant_set_name):
     Returns:
         Dictionary with keys:
             * error_str: Either empty string or description of error that occurred
-            * variant_set_uid: uid of the new VariantSet
     """
     error_string = ''
 
@@ -905,10 +897,9 @@ def _create_variant_set_from_file(request, ref_genome, variant_set_name):
         os.remove(variant_set_file)
 
     result = {
-        'error_str': error_string,
-        'variant_set_uid': file_variant_set.uid
+        'error': error_string,
     }
-    
+
     return result
 
 
@@ -935,7 +926,7 @@ def _create_variant_set_empty(ref_genome, variant_set_name):
             label=variant_set_name)
 
     result = {
-        'error_str': error_string,
+        'error': error_string,
         'variant_set_uid': empty_variant_set.uid
     }
     

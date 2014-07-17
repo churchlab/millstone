@@ -21,6 +21,7 @@ from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
+from main.models import VariantSet
 from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
 from main.models import VariantEvidence
@@ -28,6 +29,7 @@ from main.testing_util import create_common_entities
 from main.testing_util import TEST_EMAIL
 from main.testing_util import TEST_PASSWORD
 from main.testing_util import TEST_USERNAME
+from main.xhr_handlers import create_variant_set
 from main.xhr_handlers import samples_upload_through_browser_sample_data
 from main.xhr_handlers import upload_single_sample
 from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__FILTER_STRING
@@ -377,3 +379,39 @@ class TestSamplesUploadThroughBrowserSampleData(TestCase):
         self.assertEqual(2, len(datasets))
         for dataset in datasets:
             self.assertEqual(Dataset.STATUS.READY, dataset.status)
+
+
+class TestVariantSetUploadThroughFile(TestCase):
+
+    def setUp(self):
+        """Override.
+        """
+        self.common_entities = create_common_entities()
+
+    def test_upload_file(self):
+        self.assertEqual(0, VariantSet.objects.count())
+        refGenome = self.common_entities['reference_genome']
+        request = HttpRequest()
+        request.POST = {
+            'refGenomeUid': refGenome.uid,
+            'variantSetName': 'newVariant',
+            'createSetType': 'from-file'
+        }
+        request.method = 'POST'
+        request.user = self.common_entities['user']
+        authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
+        self.assertTrue(request.user.is_authenticated())
+
+        #random test file selected
+        variant_set_file = os.path.join(GD_ROOT, 'test_data', 'recoli_321UAG_variant_set_upload.vcf')
+        mock_uploaded_file = UploadedFile(
+                file=StringIO.StringIO(),
+                name=variant_set_file)
+        request.FILES['vcfFile'] = mock_uploaded_file
+       
+        response = create_variant_set(request)
+
+        variantsets = VariantSet.objects.all()
+        self.assertEqual(1, len(variantsets))
+        self.assertEqual('newVariant', VariantSet.objects.get().label)
+        self.assertEqual(refGenome, VariantSet.objects.get().reference_genome)
