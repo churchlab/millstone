@@ -154,3 +154,4 @@ def get_bam_for_de_novo_alignment(sample_alignment, force_rerun=False):
 
 
 def run_velvet(sample_alignment):
+    pass
