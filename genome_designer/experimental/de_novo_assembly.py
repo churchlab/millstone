@@ -16,6 +16,14 @@ def get_unmapped_reads(sample_alignment, force_rerun=False):
     """Returns Dataset for unmapped reads from the sample alignment.
 
     Computes it if it doesn't exist already.
+
+    Args:
+        sample_alignment: Complete sample_alignment.
+        force_rerun: If True, Dataset is recomputed.
+
+    Returns:
+        Dataset that points to the bam file containing unmapped reads from
+        sample_alignment.
     """
     def derivation_fn(sample_alignment, unmapped_reads_dataset):
         # Get the original bam file.
@@ -30,7 +38,7 @@ def get_unmapped_reads(sample_alignment, force_rerun=False):
                 unmapped_reads_bam_file)
         unmapped_reads_dataset.save(update_fields=['filesystem_location'])
 
-        cmd = '{samtools} view -f 0x4 {bam_filename}'.format(
+        cmd = '{samtools} view -h -b -f 0x4 {bam_filename}'.format(
                 samtools=settings.SAMTOOLS_BINARY,
                 bam_filename=bam_filename)
         with open(unmapped_reads_bam_file, 'w') as output_fh:
