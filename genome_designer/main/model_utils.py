@@ -169,7 +169,7 @@ def get_dataset_with_type(entity, type, compressed=False):
     results = [r for r in entity.dataset_set.filter(type=type) 
             if r.is_compressed() == compressed]
     assert len(results) < 2, ("More than 2 Datasets of type %s for entity %s."
-            % (str(entity), type))
+            % (type, str(entity)))
     if len(results) > 0:
         return results[0]
     return None
