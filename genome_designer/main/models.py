@@ -105,6 +105,7 @@ class Dataset(UniqueUidModelMixin):
         BWA_DISCORDANT = 'BWA BAM Discordant Paired Reads'
         BWA_SPLIT = 'BWA BAM Split Reads'
         BWA_UNMAPPED = 'BWA Unmapped Reads'
+        BWA_FOR_DE_NOVO_ASSEMBLY = 'BWA for De Novo Assembly'
         BWA_ALIGN_ERROR = 'BWA Alignment Error'
         VCF_FREEBAYES = 'Freebayes VCF'
         VCF_PINDEL = 'Pindel VCF'
