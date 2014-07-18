@@ -46,10 +46,7 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
         # Create a ReferenceGenome to track the position.
         reference_genome = ReferenceGenome.objects.create(
                 project=original_ref_genome.project,
-                label=new_ref_genome_label,
-                num_chromosomes=original_ref_genome.num_chromosomes,
-                num_bases=-1 # Set this after ReferenceGenome is created.
-        )
+                label=new_ref_genome_label)
 
         # Location for the generated Genbank.
         filename_prefix = generate_safe_filename_prefix_from_label(
@@ -101,8 +98,7 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
             dataset.save(update_fields=['status'])
             raise e
 
-        reference_genome.num_bases = len(new_ref_genome_seq_record)
-        reference_genome.save(update_fields=['num_bases'])
+        reference_genome.save()
         dataset.status = Dataset.STATUS.READY
         dataset.save(update_fields=['status'])
 

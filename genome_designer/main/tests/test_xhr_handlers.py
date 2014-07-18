@@ -16,6 +16,7 @@ from django.test import Client
 from django.test import TestCase
 
 from main.models import AlignmentGroup
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -66,7 +67,11 @@ class TestGetVariantList(TestCase):
         self.project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(project=self.project,
-                label='refgenome', num_chromosomes=1, num_bases=1000)
+                label='refgenome')
+        self.chromosome = Chromosome.objects.create(
+            reference_genome=self.ref_genome,
+            label='Chromosome',
+            num_bases=9001)
         self.sample_obj_1 = ExperimentSample.objects.create(
                 project=self.project, label='fake sample')
 
@@ -111,7 +116,7 @@ class TestGetVariantList(TestCase):
             variant = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.ref_genome,
-                    chromosome='chrom',
+                    chromosome=self.chromosome,
                     position=pos,
                     ref_value='A')
 
@@ -130,7 +135,7 @@ class TestGetVariantList(TestCase):
 
         # Sanity check that the Variants were actually created.
         self.assertEqual(TOTAL_NUM_VARIANTS, Variant.objects.filter(
-                reference_genome=self.ref_genome,).count())
+                reference_genome=self.ref_genome).count())
 
         request_data = {
             'refGenomeUid': self.ref_genome.uid,
@@ -187,7 +192,7 @@ class TestGetVariantList(TestCase):
             variant = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.ref_genome,
-                    chromosome='chrom',
+                    chromosome=self.chromosome,
                     position=pos,
                     ref_value='A')
 
@@ -207,7 +212,7 @@ class TestGetVariantList(TestCase):
 
         # Sanity check that the Variants were actually created.
         self.assertEqual(TOTAL_NUM_VARIANTS, Variant.objects.filter(
-                reference_genome=self.ref_genome,).count())
+                reference_genome=self.ref_genome).count())
 
         request_data = {
             'refGenomeUid': self.ref_genome.uid,

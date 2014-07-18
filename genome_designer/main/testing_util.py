@@ -5,6 +5,7 @@ Utility methods for testing.
 from django.contrib.auth.models import User
 
 from main.models import AlignmentGroup
+from main.models import Chromosome
 from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
@@ -31,9 +32,12 @@ def create_common_entities():
 
     reference_genome = ReferenceGenome.objects.create(
             project=project,
-            label=TEST_REF_GENOME_LABEL,
-            num_chromosomes=1,
-            num_bases=777)
+            label=TEST_REF_GENOME_LABEL)
+
+    chromosome = Chromosome.objects.create(
+            reference_genome=reference_genome,
+            label='Chromosome',
+            num_bases=9001)
 
     sample_1 = ExperimentSample.objects.create(
             project=project,
@@ -52,6 +56,7 @@ def create_common_entities():
         'user': user,
         'project': project,
         'reference_genome': reference_genome,
+        'chromosome': chromosome,
         'sample_1': sample_1,
         'sample_2': sample_2,
         'alignment_group_1': alignment_group_1

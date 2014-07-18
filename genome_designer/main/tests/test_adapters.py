@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from main.adapters import adapt_model_to_frontend
+from main.models import Chromosome
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
@@ -31,9 +32,12 @@ class TestAdapters(TestCase):
 
         REF_GENOME_1_LABEL = 'mg1655'
         self.ref_genome_1 = ReferenceGenome.objects.create(
-            label=REF_GENOME_1_LABEL, project=test_project, num_chromosomes=1,
-            num_bases=100)
+            label=REF_GENOME_1_LABEL, project=test_project)
 
+        self.chromosome = Chromosome.objects.create(
+            reference_genome=self.ref_genome_1,
+            label='Chromosome',
+            num_bases=9001)
 
     def test_adapters__one_level(self):
         """Test adapting to a single level.
@@ -56,7 +60,7 @@ class TestAdapters(TestCase):
         variant = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome_1,
-                chromosome='chrom',
+                chromosome=self.chromosome,
                 position=100,
                 ref_value='A')
 

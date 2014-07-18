@@ -10,6 +10,7 @@ from django.test import TestCase
 from interval import interval
 
 from main.models import AlignmentGroup
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
@@ -64,7 +65,7 @@ class TestAddVariantsToSetFromBed(TestCase):
             variant = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.ref_genome_1,
-                    chromosome='Chromosome',
+                    chromosome=Chromosome.objects.get(reference_genome=self.ref_genome_1),
                     position=random.randint(101,200),
                     ref_value='A')
 
@@ -79,7 +80,7 @@ class TestAddVariantsToSetFromBed(TestCase):
             variant = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.ref_genome_1,
-                    chromosome='Chromosome',
+                    chromosome=Chromosome.objects.get(reference_genome=self.ref_genome_1),
                     position=random.randint(301,400),
                     ref_value='A')
 
@@ -93,7 +94,7 @@ class TestAddVariantsToSetFromBed(TestCase):
             variant = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.ref_genome_1,
-                    chromosome='Chromosome',
+                    chromosome=Chromosome.objects.get(reference_genome=self.ref_genome_1),
                     position=random.randint(501,600),
                     ref_value='A')
 
@@ -141,6 +142,7 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
         common_entities = create_common_entities()
         project = common_entities['project']
         self.ref_genome_1 = common_entities['reference_genome']
+        self.chromosome = common_entities['chromosome']
 
         self.sample_1 = ExperimentSample.objects.create(
                 project=project,
@@ -165,7 +167,7 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
             variant = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.ref_genome_1,
-                    chromosome='chrom',
+                    chromosome=self.chromosome,
                     position=position,
                     ref_value='A')
             variant.variantalternate_set.add(
@@ -207,7 +209,7 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
         variant_obj_list = Variant.objects.filter(
                 reference_genome=self.ref_genome_1,
                 position__gt=25,
-                chromosome='chrom')
+                chromosome=self.chromosome)
         variant_uid_sample_uid_pair_list = [obj.uid
                 for obj in variant_obj_list]
 
@@ -228,7 +230,7 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
         variant_obj_list = Variant.objects.filter(
                 reference_genome=self.ref_genome_1,
                 position__gt=75,
-                chromosome='chrom',
+                chromosome=self.chromosome,
                 variantset__uid=self.var_set1.uid)
         variant_uids_to_remove = [obj.uid for obj in variant_obj_list]
         self.assertTrue(len(variant_uids_to_remove) > 0)
@@ -257,7 +259,7 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
         variants_to_add_with_no_sample_association = Variant.objects.filter(
                 reference_genome=self.ref_genome_1,
                 position__lt=25,
-                chromosome='chrom')
+                chromosome=self.chromosome)
         variants_no_association_data_str_list = [obj.uid
                 for obj in variants_to_add_with_no_sample_association]
 
@@ -265,7 +267,7 @@ class TestAddAndRemoveVariantsFromSet(TestCase):
         variants_to_add_with_sample_association = Variant.objects.filter(
                 reference_genome=self.ref_genome_1,
                 position__gte=25,
-                chromosome='chrom')
+                chromosome=self.chromosome)
         variants_with_association_data_str_list = [
                 obj.uid + ',' + self.sample_1.uid
                 for obj in variants_to_add_with_sample_association]

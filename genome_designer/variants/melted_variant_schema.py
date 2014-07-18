@@ -90,7 +90,8 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variant.uid', MELTED_SCHEMA_KEY__U
         {'type': 'String', 'num': 1})
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.position', MELTED_SCHEMA_KEY__POSITION, False, True,
         {'type': 'Integer', 'num': 1})
-SCHEMA_BUILDER.add_melted_variant_field('main_variant.chromosome', MELTED_SCHEMA_KEY__CHROMOSOME, False, True,
+
+SCHEMA_BUILDER.add_melted_variant_field('main_chromosome.label', MELTED_SCHEMA_KEY__CHROMOSOME, False, True,
         {'type': 'String', 'num': 1})
 SCHEMA_BUILDER.add_melted_variant_field('main_variant.ref_value', MELTED_SCHEMA_KEY__REF, False, True,
         {'type': 'String', 'num': 1})

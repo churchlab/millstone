@@ -11,6 +11,7 @@ from django.conf import settings
 from django.test import TestCase
 from optmage.oligo_designer import OLIGO_TARGET_REQUIRED_PARAMS
 
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import Variant
 from main.models import VariantAlternate
@@ -51,7 +52,7 @@ class TestOptmageUtil(TestCase):
             variant = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.ref_genome,
-                    chromosome='chrom',
+                    chromosome=Chromosome.objects.get(reference_genome=self.ref_genome),
                     position=position,
                     ref_value=ref_value)
             VariantAlternate.objects.create(

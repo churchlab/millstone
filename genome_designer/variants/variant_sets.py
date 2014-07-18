@@ -171,9 +171,8 @@ def add_variants_to_set_from_bed(sample_alignment, bed_dataset):
 
     for v in variants:
         for feat, chrom_ivls in feature_disj_intervals.items():
-
-            if v.chromosome not in chrom_ivls: continue
-            if v.position in chrom_ivls[v.chromosome]:
+            if v.chromosome.label not in chrom_ivls: continue
+            if v.position in chrom_ivls[v.chromosome.label]:
                 variants_to_add[feat].append(v)
 
     # 3. Make new variant sets for any features with variants, 

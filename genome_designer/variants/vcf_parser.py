@@ -7,7 +7,8 @@ We leverage pyvcf as much as possible.
 from django.db import transaction
 import vcf
 
-from main.models import get_dataset_with_type
+from main.model_utils import get_dataset_with_type
+from main.models import Chromosome
 from main.models import ExperimentSample
 from main.models import ReferenceGenome
 from main.models import Variant
@@ -171,7 +172,7 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
 
     # Extract the REQUIRED fields from the common data object.
     type = str(raw_data_dict.pop('TYPE'))
-    chromosome = raw_data_dict.pop('CHROM')
+    chromosome_label = raw_data_dict.pop('CHROM')
     position = int(raw_data_dict.pop('POS'))
     ref_value = raw_data_dict.pop('REF')
     alt_values = raw_data_dict.pop('ALT')
@@ -179,7 +180,9 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     # Try to find an existing Variant, or create it.
     variant, created = Variant.objects.get_or_create(
             reference_genome=reference_genome,
-            chromosome=chromosome,
+            chromosome=Chromosome.objects.filter(
+                reference_genome=reference_genome,
+                label=chromosome_label)[0],
             position=position,
             ref_value=ref_value
     )

@@ -11,6 +11,7 @@ from django.db.models.signals import pre_delete
 from django.db.models.signals import post_delete
 
 from models import AlignmentGroup
+from models import Chromosome
 from models import Dataset
 from models import ExperimentSample
 from models import ExperimentSampleToAlignment
@@ -21,6 +22,7 @@ from models import VariantEvidence
 from models import VariantSet
 from models import VariantToVariantSet
 from utils.import_util import prepare_ref_genome_related_datasets
+from utils.import_util import add_chromosomes
 from variants.dynamic_snp_filter_key_map import initialize_filter_key_map
 from variants.dynamic_snp_filter_key_map import update_sample_filter_key_map
 
@@ -73,7 +75,6 @@ def post_ref_genome_create(sender, instance, created, **kwargs):
         instance.ensure_snpeff_dir()
         instance.ensure_jbrowse_dir()
 
-
         # Key Map should start out empty...
         assert not any(instance.variant_key_map)
 
@@ -114,6 +115,7 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
         if dataset.status == Dataset.STATUS.NOT_STARTED:
             continue
         prepare_ref_genome_related_datasets(instance, dataset)
+        add_chromosomes(instance, dataset)
 
 m2m_changed.connect(post_add_seq_to_ref_genome,
     sender=ReferenceGenome.dataset_set.through,

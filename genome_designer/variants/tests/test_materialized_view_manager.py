@@ -5,6 +5,7 @@ Tests for materialized_view_manager.py.
 from django.db import connection
 from django.test import TestCase
 
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import Variant
 from main.models import VariantAlternate
@@ -39,7 +40,7 @@ class TestMaterializedViewManager(TestCase):
         variant = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.common_entities['reference_genome'],
-                chromosome='chrom',
+                chromosome=Chromosome.objects.get(reference_genome=self.common_entities['reference_genome']),
                 position=2,
                 ref_value='A'
         )
@@ -92,7 +93,7 @@ class TestMaterializedViewManager(TestCase):
         variant = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.common_entities['reference_genome'],
-                chromosome='chrom',
+                chromosome=Chromosome.objects.get(reference_genome=self.common_entities['reference_genome']),
                 position=2,
                 ref_value='A'
         )

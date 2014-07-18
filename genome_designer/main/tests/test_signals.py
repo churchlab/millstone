@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -45,9 +46,12 @@ class TestSignals(TestCase):
 
         self.test_ref_genome = ReferenceGenome.objects.create(
             project=self.test_project,
-            label='boom',
-            num_chromosomes=2,
-            num_bases=1000)
+            label='boom')
+
+        self.test_chromosome = Chromosome.objects.create(
+            reference_genome=self.test_ref_genome,
+            label='Chromosome',
+            num_bases=9001)
 
         self.test_ext_ref_genome = import_reference_genome_from_local_file(
             self.test_project,
@@ -93,7 +97,7 @@ class TestSignals(TestCase):
         variant = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.test_ref_genome,
-                chromosome='chrom',
+                chromosome=self.test_chromosome,
                 position=22,
                 ref_value='A')
 

@@ -9,6 +9,7 @@ from django.test import TestCase
 import vcf
 
 from main.models import AlignmentGroup
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -51,6 +52,11 @@ class TestVCFParser(TestCase):
                 label='test alignment', reference_genome=self.reference_genome)
         copy_and_add_dataset_source(alignment_group, VCF_DATATYPE,
                 VCF_DATATYPE, TEST_GENOME_SNPS)
+
+        Chromosome.objects.create(
+            reference_genome=self.reference_genome,
+            label='Chromosome',
+            num_bases=9001)
 
         # Create experiment sample objects having UIDs that correspond to those
         # in the vcf file. This is a bit "fake" in that the actual pipeline we

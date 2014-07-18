@@ -148,7 +148,6 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
                             parent_dict_or_list, fdict)
             else:
                 value = melted_variant_obj.get(field, '')
-
             # Pass empty string when no value present.
             if value is None:
                 value = ''
@@ -157,7 +156,6 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
             # Order doesn't matter here since it's determined in the
             # field config object constructed separately below.
             visible_field_pairs.append((field, value))
-
         # Append catch all INFO column field
         # TODO use variables instead of magic strings
         va_data = melted_variant_obj['VA_DATA']
@@ -185,7 +183,6 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     # need this counter instead of enumerate() to prevent
     # counting hidden fields
     displayed_idx = 0
-
     for fdict in field_dict_list:
         if fdict.get('hide', False):
             continue
@@ -552,10 +549,9 @@ def adapt_variant_to_frontend(obj_list, reference_genome, visible_key_names,
 
     all_field_dict_list = get_all_fields(
             reference_genome, visible_key_names, melted)
-
+    
     return adapt_non_recursive(modified_obj_list, all_field_dict_list,
             reference_genome, melted)
-
 
 def _modify_obj_list_for_variant_set_display(obj_list):
     # Before we adapt the fields, we need to do some special handling because
@@ -575,6 +571,7 @@ def _modify_obj_list_for_variant_set_display(obj_list):
     #     2. For each redundant row, get rid of it, but save a reference to
     #        its variant_set_labels.
 
+    
     def _make_catch_all_key(obj):
         return (obj[MELTED_SCHEMA_KEY__UID], obj[MELTED_SCHEMA_KEY__VA_ID])
 

@@ -6,6 +6,7 @@ import StringIO
 from django.test import TestCase
 import vcf
 
+from main.models import Chromosome
 from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantSet
@@ -30,7 +31,7 @@ class TestExportVariantSetAsVcf(TestCase):
             var = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.common_entities['reference_genome'],
-                    chromosome='chrom',
+                    chromosome=self.common_entities['chromosome'],
                     position=position,
                     ref_value='A')
 
