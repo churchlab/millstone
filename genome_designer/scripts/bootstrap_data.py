@@ -13,6 +13,7 @@ this.
 import os
 import random
 import shutil
+import subprocess
 import sys
 
 # Setup the Django environment. Our setup_django_env() method is outdated.
@@ -376,12 +377,32 @@ def reset_database():
     ### Delete the old database if it exists.
     print 'Deleting old database ...'
 
+    script_string = """
+    sudo -u postgres psql -c "DROP DATABASE IF EXISTS %(db)s;"
+    sudo -u postgres psql -c "DROP USER IF EXISTS %(user)s;"
+    sudo -u postgres psql -c "CREATE USER %(user)s WITH PASSWORD '%(password)s';"
+    sudo -u postgres psql -c "CREATE DATABASE %(db)s;"
+    sudo -u postgres psql -c 'GRANT ALL PRIVILEGES ON DATABASE %(db)s to %(user)s;'
+    sudo -u postgres psql -c "ALTER USER %(user)s CREATEDB;"
+
+    """ % {
+            'db': settings.DATABASES['default']['NAME'],
+            'user': settings.DATABASES['default']['USER'],
+            'password': settings.DATABASES['default']['PASSWORD']
+            }
+    
+    proc = subprocess.Popen(script_string, shell=True, stderr=subprocess.PIPE)
+    output = proc.stderr.read()
+
+    if output:
+        raise Exception('Error while reseting databse.  Celery will have to be restarted.'
+                '\nOffending postgres error:\n' + str(output))
+
     """
     flush: removes all rows in the database.
     syncdb --all: performs syncdb on non-South apps and migrate on South apps
     migrate --fake: note that migrate has been performed in syncdb
     """
-    call_command('flush', interactive=False)
     call_command('syncdb', migrate_all=True, interactive=False)
     call_command('migrate', fake=True, interactive=False)
 
