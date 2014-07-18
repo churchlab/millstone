@@ -1343,3 +1343,59 @@ class S3File(Model):
 
     def __unicode__(self):
         return unicode(self.url())
+
+
+def get_or_create_derived_bam_dataset(sample_alignment, dataset_type,
+        derivation_fn, force_rerun=False):
+    """Gets or creates a new bam Dataset derived according to a provided function.
+
+    The purpose of this function is to abstract the boilerplate that goes into
+    creating a derived bam Dataset.
+
+    Args:
+        sample_alignment: ExperimentSampleToAlignment that is in a READY state.
+        dataset_type: Dataset.TYPE of the dataset to get.
+        derivation_fn: Function(sample_alignment, new_dataset).
+            Mutates new_dataset. Should raise CalledProcessError if there is a
+            problem during computing
+
+    Returns:
+        New Dataset.
+    """
+    # First, ensure the Dataset exists.
+    new_dataset = get_dataset_with_type(
+            sample_alignment, dataset_type)
+    if new_dataset is None:
+        new_dataset = Dataset.objects.create(
+            label=dataset_type,
+            type=dataset_type,
+            status=Dataset.STATUS.NOT_STARTED)
+        sample_alignment.dataset_set.add(new_dataset)
+
+    # Next, check if the Dataset is already computed and can just be returned.
+    if (not force_rerun and new_dataset.status == Dataset.STATUS.READY and
+            os.path.exists(new_dataset.get_absolute_location())):
+        return new_dataset
+
+    # If here, we are going to run or re-run the Dataset so we reset the status
+    # to indicate incomplete state.
+    new_dataset.status = Dataset.STATUS.NOT_STARTED
+    new_dataset.save(update_fields=['status'])
+
+    try:
+        # Start computing.
+        new_dataset.status = Dataset.STATUS.COMPUTING
+        new_dataset.save(update_fields=['status'])
+
+        derivation_fn(sample_alignment, new_dataset)
+
+        # Mark success.
+        new_dataset.status = Dataset.STATUS.READY
+
+    except subprocess.CalledProcessError:
+        new_dataset.filesystem_location = ''
+        new_dataset.status = Dataset.STATUS.FAILED
+
+    new_dataset.save()
+
+    return new_dataset
