@@ -13,6 +13,11 @@ from main.models import get_or_create_derived_bam_dataset
 from pipeline.read_alignment import get_split_reads
 
 
+VELVETH_BINARY = '%s/velvet/velveth' % settings.TOOLS_DIR
+VELVETG_BINARY = '%s/velvet/velvetg' % settings.TOOLS_DIR
+VELVET_HASH_LENGTH = 21
+
+
 def get_unmapped_reads(sample_alignment, force_rerun=False):
     """Returns Dataset for unmapped reads from the sample alignment.
 
@@ -154,4 +159,24 @@ def get_bam_for_de_novo_alignment(sample_alignment, force_rerun=False):
 
 
 def run_velvet(sample_alignment):
-    pass
+    velvet_output_dir = os.path.join(
+            sample_alignment.get_model_data_dir(), 'velvet')
+
+    bam_dataset = get_bam_for_de_novo_alignment(sample_alignment)
+    bam_file = bam_dataset.get_absolute_location()
+
+    # First run velveth to build hash of reads.
+    cmd = '{velveth} {output_dir} {hash_length} -bam {bam_file}'.format(
+            velveth=VELVETH_BINARY,
+            output_dir=velvet_output_dir,
+            hash_length=VELVET_HASH_LENGTH,
+            bam_file=bam_file
+    )
+    subprocess.call(cmd, shell=True)
+
+    # Then run velvetg to build graph and find contigs.
+    cmd = '{velvetg} {output_dir} -cov_cutoff 20 -ins_length 200 -ins_length_sd 90'.format(
+            velvetg=VELVETG_BINARY,
+            output_dir=velvet_output_dir
+    )
+    subprocess.call(cmd, shell=True)
