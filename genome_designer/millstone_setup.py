@@ -88,20 +88,23 @@ TOOLS_URLS = {
     ],
     'lumpy' : {
         'Darwin' : [
-            'https://www.dropbox.com/s/kzo9tk9lxieaask/lumpy-0.2.1-darwin.zip'
+            'https://www.dropbox.com/s/xyzmhtyjdfzhcza/lumpy-0.2.1-darwin.zip'
         ],
         'Linux' : [
-            'https://www.dropbox.com/s/spivtdr4ud76ba2/lumpy-0.2.1-linux.zip'
+            'https://www.dropbox.com/s/xl8honqq7gnh5yi/lumpy-0.2.1-linux.zip'
         ]
     }
 }
 
+
 # For any tools that have multiple executables that need permission changes,
 # for tools whose executables arent named after their tool
 TOOLS_TO_EXECUTABLES = {
-    'tabix' : ['tabix','bgzip'],
-    'pindel' : ['pindel','pindel2vcf']
+    'lumpy': ['*'], # make all executable
+    'pindel': ['pindel', 'pindel2vcf'],
+    'tabix': ['tabix', 'bgzip']
 }
+
 
 def setup(arglist):
     if len(arglist) == 0:
@@ -113,7 +116,8 @@ def setup(arglist):
             arglist.remove('jbrowse')
         download_tools(tools=arglist)
 
-def download_tools(tools= TOOLS_URLS.keys()):
+
+def download_tools(tools=TOOLS_URLS.keys()):
     # Create tools dir if it doesn't exist.
     if not os.path.isdir(TOOLS_DIR):
         os.mkdir(TOOLS_DIR)
@@ -170,15 +174,19 @@ def download_tools(tools= TOOLS_URLS.keys()):
         # the executable name is different than the tool key in TOOL_URLS,
         # use TOOLS_TO_EXECUTABLES.
         if not tool in TOOLS_TO_EXECUTABLES:
-            tool_bin_files = [os.path.join(dest_dir,tool)]
+            tool_bin_files = [tool]
         else:
-            tool_bin_files = [os.path.join(dest_dir, exe)
-                    for exe in TOOLS_TO_EXECUTABLES[tool]]
+            tool_bin_files = [exe for exe in TOOLS_TO_EXECUTABLES[tool]]
+            if '*' in tool_bin_files:
+                # All files are executables.
+                tool_bin_files = [exe for exe in os.listdir(dest_dir)]
 
-        for tool_bin_file in tool_bin_files:
-            if os.path.exists(tool_bin_file):
-                os.chmod(tool_bin_file,
+        for tbf in tool_bin_files:
+            tool_bin_path = os.path.join(dest_dir, tbf)
+            if os.path.exists(tool_bin_path):
+                os.chmod(tool_bin_path,
                         stat.S_IXUSR | stat.S_IWUSR | stat.S_IRUSR)
+
 
 def _get_file_url_from_dropbox(dropbox_url, filename):
     """
