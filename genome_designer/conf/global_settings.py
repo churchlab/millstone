@@ -361,7 +361,7 @@ JBROWSE_MAX_COVERAGE_TRACKS = 10
 
 ENABLED_VARIANT_CALLERS = [
     'freebayes',
-    'lumpy',
+    #'lumpy',
     #'pindel',
     #'delly'
 ]
