@@ -71,3 +71,6 @@ celery_manager/celery_manager/static/COMPILED/
 
 # Development Environment
 pyenvs/
+
+# Docs
+docs/_build/
