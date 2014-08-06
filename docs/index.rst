@@ -18,6 +18,7 @@ Contents:
 
   getting_started
   pipeline
+  variant_calling
 
 
 Indices and tables
