@@ -68,7 +68,6 @@ def main():
         get_bam_for_de_novo_alignment(sa,
                 force_include_reads_in_intervals=intervals,
                 force_rerun=True)
-        break
 
 
 if __name__ == '__main__':

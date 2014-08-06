@@ -2,6 +2,7 @@
 """
 
 import os
+import re
 import shutil
 import subprocess
 
@@ -190,6 +191,14 @@ def get_reads_in_interval_list(bam_filename, interval_list, output_fh):
                 break
 
 
+def _parse_sam_line(line):
+    parts = line.split()
+    return {
+        'read_id': parts[0],
+        'flags': parts[1]
+    }
+
+
 def add_paired_mates(input_sam_path, source_bam_filename, output_sam_path):
     """Creates a file at output_sam_path that contains all the reads in
     input_sam_path, as well as all of their paired mates.
@@ -199,76 +208,59 @@ def add_paired_mates(input_sam_path, source_bam_filename, output_sam_path):
 
     TODO: This is currently nasty inefficient. Is there a better way to do
     this, e.g. leverage indexing somehow?
+
+    TODO: This is potentially memory-overwhelming. Need to think about
+    the de novo assembly feature more carefully before making it user-facing.
     """
-    # First, copy the input file to output in order to preserve the header.
+    ### Strategy:
+    # 1. Copy input to output, to preserve existing reads.
+    # 2. Load all ids into a dictionary, storing information about whether
+    #    both pairs are already in the output.
+    #    NOTE: This step could potentially overwhelm memory for large datasets.
+    # 3. Loop through the bam file, checking against the id dictionary to
+    #    see whether or not we want to keep that data.
+
+    # 1. Copy input to output, to preserve existing reads.
     shutil.copyfile(input_sam_path, output_sam_path)
 
-    # First count id occurrences to avoid looking up those that happen more than
-    # once.
-    cmd = [
-            settings.SAMTOOLS_BINARY,
-            'view',
-            '-S',
-            input_sam_path
-    ]
-    initial_read_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-
-    # Input might have duplicate lines (same element of each pair repeated), so
-    # we leverage the fact that flags are unique for each of the elements in a
-    # pair to do counting.
+    # 2. Create dictionary of read ids.
     read_id_to_flags_map = {}
-    for line in initial_read_proc.stdout:
-        parts = line.split()
-        read_id = parts[0]
-        flags_value = parts[1]
-        if not read_id in read_id_to_flags_map:
-            read_id_to_flags_map[read_id] = []
-        if not read_id in read_id_to_flags_map:
-            read_id_to_flags_map[read_id] = flags_value
-        assert len(read_id_to_flags_map[read_id]) <= 2
+    with open(input_sam_path) as fh:
+        for line in fh:
+            if re.match('@', line):
+                continue
+            parsed_line = _parse_sam_line(line)
+            read_id = parsed_line['read_id']
+            flags_value = parsed_line['flags']
+            if not read_id in read_id_to_flags_map:
+                read_id_to_flags_map[read_id] = []
+            if not flags_value in read_id_to_flags_map[read_id]:
+                read_id_to_flags_map[read_id].append(flags_value)
+            assert 1 <= len(read_id_to_flags_map[read_id]) <= 2
 
-    # Next, read through the output, copying each line, and additionally
-    # searching through the bam file for the corresponding paired read.
-    # Next, read through the sam input and append lines to the output that
-    # are the corresponding mate pairs.
+    # 3. Loop through bam file, appending lines whose pairs aren't already
+    #    present.
     with open(output_sam_path, 'a') as output_fh:
-        cmd = [
+        # Use samtools to read the bam.
+        read_bam_cmd = [
                 settings.SAMTOOLS_BINARY,
                 'view',
-                '-S',
-                input_sam_path
+                source_bam_filename
         ]
-        read_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-
-        for line in read_proc.stdout:
-            parts = line.split()
-            read_id = parts[0]
-
-            # No need to look up if we already have both.
-            # if len(read_id_to_flags_map[read_id]) == 2:
-            #     continue
-
-            # Find the corresponding reads in the bam file.
-            samtools_cmd = [
-                    settings.SAMTOOLS_BINARY,
-                    'view',
-                    source_bam_filename
-            ]
-            samtools_proc = subprocess.Popen(samtools_cmd,
-                    stdout=subprocess.PIPE)
-            grep_cmd = [
-                    'grep',
-                    '-m', '2',
-                    read_id
-            ]
-            grep_proc = subprocess.Popen(grep_cmd,
-                    stdout=subprocess.PIPE, stdin=samtools_proc.stdout)
-            samtools_proc.stdout.close()
-            for bam_line in grep_proc.stdout:
-                if bam_line != line:
-                    output_fh.write(bam_line)
-            grep_proc.terminate()
-            samtools_proc.terminate()
+        samtools_proc = subprocess.Popen(read_bam_cmd, stdout=subprocess.PIPE)
+        for bam_line in samtools_proc.stdout:
+            # Use flags as unique identifier for each read (i.e. which of the
+            # pairs for a read id that we are looking at.
+            parsed_line = _parse_sam_line(bam_line)
+            read_id = parsed_line['read_id']
+            flags = parsed_line['flags']
+            if not read_id in read_id_to_flags_map:
+                continue
+            observed_flags = read_id_to_flags_map[read_id]
+            if not flags in observed_flags:
+                output_fh.write(bam_line)
+                # Update flags in case we encounter same one again.
+                observed_flags.append(flags)
 
 
 def run_velvet(sample_alignment, output_dir_name='velvet',
