@@ -264,11 +264,13 @@ def add_paired_mates(input_sam_path, source_bam_filename, output_sam_path):
 
 
 def run_velvet(sample_alignment, output_dir_name='velvet',
+        force_include_reads_in_intervals=[],
         force_rerun=False):
     velvet_output_dir = os.path.join(
             sample_alignment.get_model_data_dir(), output_dir_name)
 
     bam_dataset = get_bam_for_de_novo_alignment(sample_alignment,
+            force_include_reads_in_intervals=force_include_reads_in_intervals,
             force_rerun=force_rerun)
     bam_file = bam_dataset.get_absolute_location()
 

@@ -12,7 +12,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from Bio import SeqIO
 
-from experimental.de_novo_assembly import get_bam_for_de_novo_alignment
+from experimental.de_novo_assembly import run_velvet
 from main.models import *
 
 
@@ -65,9 +65,7 @@ def main():
 
     for idx, sa in enumerate(ag.experimentsampletoalignment_set.all()):
         print idx + 1, 'of', ag.experimentsampletoalignment_set.count()
-        get_bam_for_de_novo_alignment(sa,
-                force_include_reads_in_intervals=intervals,
-                force_rerun=True)
+        run_velvet(sa, force_include_reads_in_intervals=intervals)
 
 
 if __name__ == '__main__':
