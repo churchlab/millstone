@@ -2,6 +2,7 @@
 """
 
 import os
+import shutil
 import subprocess
 
 from django.conf import settings
@@ -54,11 +55,15 @@ def get_unmapped_reads(sample_alignment, force_rerun=False):
             Dataset.TYPE.BWA_UNMAPPED, derivation_fn, force_rerun=force_rerun)
 
 
-def get_bam_for_de_novo_alignment(sample_alignment, force_rerun=False):
+def get_bam_for_de_novo_alignment(sample_alignment,
+        force_include_reads_in_intervals=[],
+        force_rerun=False):
     """Prepares a bam file for de novo alignment.
 
     Args:
         sample_alignment: Complete sample_alignment.
+        force_include_reads_in_intervals: List of intervals where reads near
+            those intervals are included.
         force_rerun: If True, Dataset is recomputed.
 
     Returns:
@@ -85,6 +90,7 @@ def get_bam_for_de_novo_alignment(sample_alignment, force_rerun=False):
         #     a. If the corresponding pair for any read was mapped (and thus not
         #        in the unmapped dataset), grab that from the original bam file.
         # 2. Grab split reads.
+        # 2b. Add reads that are in intervals of interest.
         # 3. Sort by name so that paired reads are next to each other
         # 4. Filter out duplicate reads. Requires sort in step 3.
         # 5. Convert to bam.
@@ -93,12 +99,18 @@ def get_bam_for_de_novo_alignment(sample_alignment, force_rerun=False):
         # 0. Create intermediate files.
         intermediate_sam = (
                 os.path.splitext(de_novo_bam_filelocation)[0] + '.int.sam')
+        paired_intermediate_sam = (
+                os.path.splitext(intermediate_sam)[0] + '.paired.sam')
         sorted_intermediate_sam = (
-                os.path.splitext(intermediate_sam)[0] + '.sorted.sam')
+                os.path.splitext(paired_intermediate_sam)[0] + '.sorted.sam')
         deduped_sorted_intermediate_sam = (
                 os.path.splitext(sorted_intermediate_sam)[0] + '.deduped.sam')
-        intermediate_files = [intermediate_sam, sorted_intermediate_sam,
-                deduped_sorted_intermediate_sam]
+        intermediate_files = [
+                intermediate_sam,
+                paired_intermediate_sam,
+                sorted_intermediate_sam,
+                deduped_sorted_intermediate_sam
+        ]
 
         # 1. Get unmapped reads.
         unmapped_reads_dataset = get_unmapped_reads(sample_alignment)
@@ -107,15 +119,6 @@ def get_bam_for_de_novo_alignment(sample_alignment, force_rerun=False):
                 samtools=settings.SAMTOOLS_BINARY,
                 bam_filename=unmapped_reads_bam_file)
         with open(intermediate_sam, 'w') as output_fh:
-           subprocess.check_call(cmd, stdout=output_fh, shell=True)
-
-        # 1a. Grab the corresponding read pairs in case they were missed.
-        # We append all reads that have an unmapped mate. This will cause
-        # duplicates, but we'll remove them in the final step.
-        cmd = '{samtools} view -f 0x8 {bam_filename}'.format(
-                samtools=settings.SAMTOOLS_BINARY,
-                bam_filename=orig_bam_filename)
-        with open(intermediate_sam, 'a') as output_fh:
            subprocess.check_call(cmd, stdout=output_fh, shell=True)
 
         # 2. Grab split reads.
@@ -127,12 +130,23 @@ def get_bam_for_de_novo_alignment(sample_alignment, force_rerun=False):
         with open(intermediate_sam, 'a') as output_fh:
            subprocess.check_call(cmd, stdout=output_fh, shell=True)
 
+        # 2b. Add reads that are in any of intervals that we want to include.
+        if force_include_reads_in_intervals:
+            with open(intermediate_sam, 'a') as output_fh:
+                get_reads_in_interval_list(orig_bam_filename,
+                        force_include_reads_in_intervals, output_fh)
+
+        # 2c. For each of the reads that we've included, grab their
+        # corresponding pairs.
+        add_paired_mates(intermediate_sam, orig_bam_filename,
+                paired_intermediate_sam)
+
         # 3. Sort by name so that paired reads are next to each other
         cmd = (
                 '(grep ^"@" {sam_file}; grep -v ^"@" {sam_file} | '
                 'sort -k1,1 -k2,2n) > {sorted_sam_file}'
         ).format(
-                sam_file=intermediate_sam,
+                sam_file=paired_intermediate_sam,
                 sorted_sam_file=sorted_intermediate_sam)
         subprocess.call(cmd, shell=True)
 
@@ -158,11 +172,112 @@ def get_bam_for_de_novo_alignment(sample_alignment, force_rerun=False):
             force_rerun=force_rerun)
 
 
-def run_velvet(sample_alignment):
-    velvet_output_dir = os.path.join(
-            sample_alignment.get_model_data_dir(), 'velvet')
+def get_reads_in_interval_list(bam_filename, interval_list, output_fh):
+    """Update output_fh with reads that map to positions in the
+    interval_list. Assumes output_fh is a sam file.
+    """
+    cmd = '{samtools} view {bam_filename}'.format(
+            samtools=settings.SAMTOOLS_BINARY,
+            bam_filename=bam_filename)
+    read_proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
 
-    bam_dataset = get_bam_for_de_novo_alignment(sample_alignment)
+    for line in read_proc.stdout:
+        parts = line.split()
+        pos = int(parts[3])
+        for interval in interval_list:
+            if interval[0] <= pos <= interval[1]:
+                output_fh.write(line)
+                break
+
+
+def add_paired_mates(input_sam_path, source_bam_filename, output_sam_path):
+    """Creates a file at output_sam_path that contains all the reads in
+    input_sam_path, as well as all of their paired mates.
+
+    The resulting sam is not sorted and may contain duplicates. Clients
+    should filter elsewhere.
+
+    TODO: This is currently nasty inefficient. Is there a better way to do
+    this, e.g. leverage indexing somehow?
+    """
+    # First, copy the input file to output in order to preserve the header.
+    shutil.copyfile(input_sam_path, output_sam_path)
+
+    # First count id occurrences to avoid looking up those that happen more than
+    # once.
+    cmd = [
+            settings.SAMTOOLS_BINARY,
+            'view',
+            '-S',
+            input_sam_path
+    ]
+    initial_read_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+
+    # Input might have duplicate lines (same element of each pair repeated), so
+    # we leverage the fact that flags are unique for each of the elements in a
+    # pair to do counting.
+    read_id_to_flags_map = {}
+    for line in initial_read_proc.stdout:
+        parts = line.split()
+        read_id = parts[0]
+        flags_value = parts[1]
+        if not read_id in read_id_to_flags_map:
+            read_id_to_flags_map[read_id] = []
+        if not read_id in read_id_to_flags_map:
+            read_id_to_flags_map[read_id] = flags_value
+        assert len(read_id_to_flags_map[read_id]) <= 2
+
+    # Next, read through the output, copying each line, and additionally
+    # searching through the bam file for the corresponding paired read.
+    # Next, read through the sam input and append lines to the output that
+    # are the corresponding mate pairs.
+    with open(output_sam_path, 'a') as output_fh:
+        cmd = [
+                settings.SAMTOOLS_BINARY,
+                'view',
+                '-S',
+                input_sam_path
+        ]
+        read_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+
+        for line in read_proc.stdout:
+            parts = line.split()
+            read_id = parts[0]
+
+            # No need to look up if we already have both.
+            # if len(read_id_to_flags_map[read_id]) == 2:
+            #     continue
+
+            # Find the corresponding reads in the bam file.
+            samtools_cmd = [
+                    settings.SAMTOOLS_BINARY,
+                    'view',
+                    source_bam_filename
+            ]
+            samtools_proc = subprocess.Popen(samtools_cmd,
+                    stdout=subprocess.PIPE)
+            grep_cmd = [
+                    'grep',
+                    '-m', '2',
+                    read_id
+            ]
+            grep_proc = subprocess.Popen(grep_cmd,
+                    stdout=subprocess.PIPE, stdin=samtools_proc.stdout)
+            samtools_proc.stdout.close()
+            for bam_line in grep_proc.stdout:
+                if bam_line != line:
+                    output_fh.write(bam_line)
+            grep_proc.terminate()
+            samtools_proc.terminate()
+
+
+def run_velvet(sample_alignment, output_dir_name='velvet',
+        force_rerun=False):
+    velvet_output_dir = os.path.join(
+            sample_alignment.get_model_data_dir(), output_dir_name)
+
+    bam_dataset = get_bam_for_de_novo_alignment(sample_alignment,
+            force_rerun=force_rerun)
     bam_file = bam_dataset.get_absolute_location()
 
     # First run velveth to build hash of reads.
