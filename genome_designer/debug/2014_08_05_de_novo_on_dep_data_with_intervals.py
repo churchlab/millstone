@@ -40,11 +40,11 @@ def identify_intervals(ag):
         if f.type == 'mobile_element':
             intervals.append((f.location.start, f.location.end))
         if (f.type == 'gene' and 'gene' in f.qualifiers and
-                f.qualifiers['gene'][0] == 'lon'):
+                f.qualifiers['gene'][0] in ['lon', 'clpX']):
             found_lon = True
             intervals.append((f.location.start, f.location.end))
     assert found_lon
-    assert 47 == len(intervals)
+    assert 48 == len(intervals)
 
     # Add buffer to each interval in case reads start before or after.
     buffer_size = 150
@@ -65,7 +65,8 @@ def main():
 
     for idx, sa in enumerate(ag.experimentsampletoalignment_set.all()):
         print idx + 1, 'of', ag.experimentsampletoalignment_set.count()
-        run_velvet(sa, force_include_reads_in_intervals=intervals)
+        run_velvet(sa, force_include_reads_in_intervals=intervals,
+                output_dir_name='velvet_mobile_lon_clpX', force_rerun=True)
 
 
 if __name__ == '__main__':

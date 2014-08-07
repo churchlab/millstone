@@ -13,13 +13,17 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from main.models import *
 
+VELVET_DIR = 'velvet_mobile_lon_clpX'
+
 ag = AlignmentGroup.objects.get(uid='edc74a3d')
 
 for etsa in ag.experimentsampletoalignment_set.all():
     sample_label = etsa.experiment_sample.label
-    velvet_dir = os.path.join(etsa.get_model_data_dir(), 'velvet')
+    velvet_dir = os.path.join(etsa.get_model_data_dir(), VELVET_DIR)
     contigs_file = os.path.join(velvet_dir, 'contigs.fa')
     copy_dest = os.path.join(velvet_dir, sample_label + '.fa')
+
+    print copy_dest
 
     # Copy file
     shutil.copyfile(contigs_file, copy_dest)
