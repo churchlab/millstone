@@ -139,11 +139,16 @@ def alignment_controls(request):
 def variant_set_list_controls(request):
     """Returns the Variant Set List control box.
     """
+    # Validate the request by making sure this is a valid project for the user.
+    project = get_object_or_404(Project,
+            owner=request.user.get_profile(),
+            uid=request.GET.get('projectUid'))
+
     context = RequestContext(request)
 
-    context['ref_genome_list'] = get_list_or_404(ReferenceGenome,
-            project__owner=request.user.get_profile(),
-            project__uid=request.GET.get('projectUid'))
+    # Get the list of ReferenceGenomes for the project for the VariantSet
+    # creation modal.
+    context['ref_genome_list'] = ReferenceGenome.objects.filter(project=project)
 
     # If the request passed a tableId, then give it to Django to decorate the
     # controls.

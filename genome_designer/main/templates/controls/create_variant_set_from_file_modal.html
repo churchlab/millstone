@@ -5,62 +5,66 @@
       <h2 id="modalFromFile">Load Variant Set from File</h2>
     </div>
     <div class="modal-body">
-      <ul id="modalFromFileTab" class="nav nav-pills">
-        <li class="active"><a href="#modalFromFile_upload" data-toggle="tab">Upload</a></li>
-        <li><a href="#modalFromFile_help" data-toggle="tab">Help</a></li>
-      </ul>
-      <div id="modalFromFileTabContent" class="tab-content">
-        <div class="tab-pane fade in active" id="modalFromFile_upload">
-          <p>To add a new Variant Set (a list of putative SNPs that you want grouped together) you need to make and upload a <i>VCF file</i> that has information about each SNP relative to a reference genome.<strong> First download <a href="/templates/variant_set_upload_template.vcf">this template</a></strong>, open it in a text editor, and fill it in. Only required columns are CHROM, POS, ID, REF, and ALT. ID can be blank. More information on the VCF format is <a target="_blank" href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41">here</a>.
-            <form id="gd-variant-set-create-form-from-file" enctype="multipart/form-data"
-                method="POST" onsubmit="return false">
-              <input type="hidden" name="createSetType" value="from-file">
-              <div class="form-group">
-                <input type="text" name="variantSetName" class="form-control"
-                    placeholder="Name for this Variant Set">
-              </div>
-              <div class="form-group">
-                <label>Reference Genome
-                  <select name="refGenomeUid">
-                    {% for obj in ref_genome_list %}
-                      <option value="{{obj.uid}}">{{obj.label}}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-              </div>
-              <div class="form-group">
-                <input type="file" name="vcfFile" class="form-control" title="Upload Sample Targets File">
-              </div>
-            </form>
-          </p>
+      {% if ref_genome_list %}
+        <ul id="modalFromFileTab" class="nav nav-pills">
+          <li class="active"><a href="#modalFromFile_upload" data-toggle="tab">Upload</a></li>
+          <li><a href="#modalFromFile_help" data-toggle="tab">Help</a></li>
+        </ul>
+        <div id="modalFromFileTabContent" class="tab-content">
+          <div class="tab-pane fade in active" id="modalFromFile_upload">
+            <p>To add a new Variant Set (a list of putative SNPs that you want grouped together) you need to make and upload a <i>VCF file</i> that has information about each SNP relative to a reference genome.<strong> First download <a href="/templates/variant_set_upload_template.vcf">this template</a></strong>, open it in a text editor, and fill it in. Only required columns are CHROM, POS, ID, REF, and ALT. ID can be blank. More information on the VCF format is <a target="_blank" href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41">here</a>.
+              <form id="gd-variant-set-create-form-from-file" enctype="multipart/form-data"
+                  method="POST" onsubmit="return false">
+                <input type="hidden" name="createSetType" value="from-file">
+                <div class="form-group">
+                  <input type="text" name="variantSetName" class="form-control"
+                      placeholder="Name for this Variant Set">
+                </div>
+                <div class="form-group">
+                  <label>Reference Genome
+                    <select name="refGenomeUid">
+                      {% for obj in ref_genome_list %}
+                        <option value="{{obj.uid}}">{{obj.label}}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                </div>
+                <div class="form-group">
+                  <input type="file" name="vcfFile" class="form-control" title="Upload Sample Targets File">
+                </div>
+              </form>
+            </p>
+          </div>
+          <div class="tab-pane fade" id="modalFromFile_help">
+            <p>To add a new Variant Set (a list of putative SNPs that you want grouped together) you need to make and upload a <i>VCF file</i> that has information about each SNP relative to a reference genome.<strong> First download <a href="/templates/variant_set_upload_template.vcf">this template</a></strong>, open it in a text editor, and fill it in. Only required columns are CHROM, POS, ID, REF, and ALT. ID can be blank. More information on the VCF format is <a href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41">here</a>.
+            </p>
+            <i>Required Fields: </i>
+            <table class="table table-condensed">
+              <tr>
+                <td><small><strong>Chromosome</strong></small></td>
+                <td><small>Chromosome name in the FASTA file for this reference genome.</small></td>
+              </tr>
+                <td><small><strong>POS</strong></small></td>
+                <td><small>The reference position, with the 1st base having position 1. Positions are sorted numerically, in increasing order, within each reference sequence CHROM. It is permitted to have multiple records with the same POS.</small></td>
+              </tr>
+              </tr>
+                <td><small><strong>ID</strong></small></td>
+                <td><small><i>Optional:</i>A list of one or more semi-colon separated identifiers for this SNP, for searching and easy identification. Must be unique. </small></td>
+              </tr>
+              <tr>
+                <td><small><strong>REF</strong></small></td>
+                <td><small>Reference bases. Each base must be one of A,C,G,T,N (case insensitive). Multiple bases are permitted. The value in the POS field refers to the position of the first base in the String. For simple insertions and deletions in which either the REF or one of the ALT alleles would otherwise be null/empty, the REF and ALT Strings must include the base before the event (which must be reflected in the POS field), unless the event occurs at position 1 on the contig in which case it must include the base after the event; this padding base is not required (although it is permitted) for e.g. complex substitutions or other events where all alleles have at least one base represented in their Strings.</small></td>
+              </tr>
+              <tr>
+                <td><small><strong>ALT</strong></small></td>
+                <td><small>ALT comma separated list of alternate non-reference alleles called on at least one of the samples. Options are base Strings made up of the bases A,C,G,T,N, (case insensitive)</small></td>
+              </tr>
+            </table>
+          </div>
         </div>
-        <div class="tab-pane fade" id="modalFromFile_help">
-          <p>To add a new Variant Set (a list of putative SNPs that you want grouped together) you need to make and upload a <i>VCF file</i> that has information about each SNP relative to a reference genome.<strong> First download <a href="/templates/variant_set_upload_template.vcf">this template</a></strong>, open it in a text editor, and fill it in. Only required columns are CHROM, POS, ID, REF, and ALT. ID can be blank. More information on the VCF format is <a href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41">here</a>.
-          </p>
-          <i>Required Fields: </i>
-          <table class="table table-condensed">
-            <tr>
-              <td><small><strong>Chromosome</strong></small></td>
-              <td><small>Chromosome name in the FASTA file for this reference genome.</small></td>
-            </tr>
-              <td><small><strong>POS</strong></small></td>
-              <td><small>The reference position, with the 1st base having position 1. Positions are sorted numerically, in increasing order, within each reference sequence CHROM. It is permitted to have multiple records with the same POS.</small></td>
-            </tr>
-            </tr>
-              <td><small><strong>ID</strong></small></td>
-              <td><small><i>Optional:</i>A list of one or more semi-colon separated identifiers for this SNP, for searching and easy identification. Must be unique. </small></td>
-            </tr>
-            <tr>
-              <td><small><strong>REF</strong></small></td>
-              <td><small>Reference bases. Each base must be one of A,C,G,T,N (case insensitive). Multiple bases are permitted. The value in the POS field refers to the position of the first base in the String. For simple insertions and deletions in which either the REF or one of the ALT alleles would otherwise be null/empty, the REF and ALT Strings must include the base before the event (which must be reflected in the POS field), unless the event occurs at position 1 on the contig in which case it must include the base after the event; this padding base is not required (although it is permitted) for e.g. complex substitutions or other events where all alleles have at least one base represented in their Strings.</small></td>
-            </tr>
-            <tr>
-              <td><small><strong>ALT</strong></small></td>
-              <td><small>ALT comma separated list of alternate non-reference alleles called on at least one of the samples. Options are base Strings made up of the bases A,C,G,T,N, (case insensitive)</small></td>
-            </tr>
-          </table>
-        </div>
-      </div>
+      {% else %}
+        Please upload a reference genome first.
+      {% endif %}
     </div>
     <div class="modal-footer">
       <button class="btn" data-dismiss="modal">Cancel</button>

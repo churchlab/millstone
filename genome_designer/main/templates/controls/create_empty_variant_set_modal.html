@@ -6,21 +6,25 @@
     </div>
 
     <div class="modal-body">
-      <form id="gd-variant-set-form-empty" method="POST" onsubmit="return false">
-        <input type="hidden" name="createSetType" value="empty">
-        <div class="form-group">
-          <input type="text" name="variantSetName" class="form-control"placeholder="Name for this Variant Set">
-        </div>
-        <div class="form-group">
-          <label>Reference Genome
-            <select name="refGenomeUid">
-              {% for obj in ref_genome_list %}
-                <option value="{{obj.uid}}">{{obj.label}}</option>
-              {% endfor %}
-            </select>
-          </label>
-        </div>
-      </form>
+      {% if ref_genome_list %}
+        <form id="gd-variant-set-form-empty" method="POST" onsubmit="return false">
+          <input type="hidden" name="createSetType" value="empty">
+          <div class="form-group">
+            <input type="text" name="variantSetName" class="form-control"placeholder="Name for this Variant Set">
+          </div>
+          <div class="form-group">
+            <label>Reference Genome
+              <select name="refGenomeUid">
+                {% for obj in ref_genome_list %}
+                  <option value="{{obj.uid}}">{{obj.label}}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+        </form>
+      {% else %}
+        Please upload a ReferenceGenome first.
+      {% endif %}
     </div>
 
     <div class="modal-footer">
