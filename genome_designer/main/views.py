@@ -73,8 +73,6 @@ def project_create_view(request):
     context = {}
 
     if request.POST:
-        print 'got project create request', request
-
         try:
             project_name = request.POST.get('title')
 
