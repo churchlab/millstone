@@ -35,7 +35,8 @@ class VariantFilterEvaluator(object):
         '(position > 5) in ALL(sample1, sample2)'
     """
 
-    def __init__(self, query_args, ref_genome, scope=None):
+    def __init__(self, query_args, ref_genome, alignment_group=None,
+            scope=None):
         """Constructor.
 
         Args:
@@ -47,6 +48,8 @@ class VariantFilterEvaluator(object):
                 pagination_start: Offset of the returned query
                 pagination_len: Maximum number of returned variants, or -1 for no limit
             ref_genome: ReferenceGenome these variants are relative to.
+            alignment_group: If provided, filter results to Variants that are
+                called in this AlignmentGroup.
             scope: Optional FilterScope object which restricts the results
                 to the samples according to the semantic setting of the scope.
         """
@@ -75,6 +78,7 @@ class VariantFilterEvaluator(object):
         # unintended data (e.g. native ids) to the frontend.
         self.select_all = query_args.get('select_all', False)
         self.ref_genome = ref_genome
+        self.alignment_group = alignment_group
         self.all_key_map = get_all_key_map(self.ref_genome)
         self.scope = scope
 
@@ -152,12 +156,32 @@ class VariantFilterEvaluator(object):
         sql_statement = 'SELECT %s FROM %s ' % (select_clause,
                 self.materialized_view_manager.get_table_name())
 
-        # Maybe add WHERE clause.
+        # Maybe construct WHERE clause.
         if self.sympy_representation:
             where_clause, where_clause_args = self._where_clause()
-            sql_statement += 'WHERE (' + where_clause + ') '
         else:
+            where_clause = None
             where_clause_args = []
+
+        # Maybe add AlignmentGroup filter.
+        where_clause_alignment_group_part = None
+        if self.alignment_group:
+            where_clause_alignment_group_part = (
+                    'AG_ID = {ag_id} OR AG_ID IS NULL'.format(
+                            ag_id=self.alignment_group.id,
+                    ))
+        if where_clause:
+            if where_clause_alignment_group_part:
+                where_clause = '({ag_part}) AND ({where_clause})'.format(
+                        ag_part=where_clause_alignment_group_part,
+                        where_clause=where_clause
+                )
+        else:
+            where_clause = where_clause_alignment_group_part
+
+        # Add WHERE clause to SQL statement.
+        if where_clause:
+            sql_statement += 'WHERE (' + where_clause + ') '
 
         # If cast, need to group by position for array_agg to work.
         if not self.is_melted:
@@ -280,8 +304,9 @@ class VariantFilterEvaluator(object):
         #
         # Order doesn't matter since this is a conjunction (AND) clause.
 
-        # Store the results of binning in these data structures.
         def _conjuntion_clause(conjunction_clause):
+
+            # Store the results of binning in these data structures.
             filter_eval_results = []
             sql_ready_symbol_list = []
             remaining_triples = []
@@ -410,7 +435,7 @@ class LookupVariantsResult(object):
         self.num_total_variants = num_total_variants
 
 
-def lookup_variants(query_args, reference_genome):
+def lookup_variants(query_args, reference_genome, alignment_group=None):
     """Manages the end-to-end flow of looking up Variants that match the
     given filter.
 
@@ -418,20 +443,22 @@ def lookup_variants(query_args, reference_genome):
         LookupVariantsResult object which contains the list of matching
         Variant objects as dictionaries and a count of total results.
     """
-    # Get the Variants that pass the filter.
-    page_results = get_variants_that_pass_filter(query_args, reference_genome)
+    # Get a page of Variants that pass the filter.
+    page_results = get_variants_that_pass_filter(query_args, reference_genome,
+            alignment_group=alignment_group)
 
-    # Now get all results that pass the filter (remove limit clause)
+    # Now count how many results total pass the filter. Remove limit clause
+    # and perform COUNT only.
     query_args['count_only'] = True
     query_args['pagination_start'] = 0
     query_args['pagination_len'] = -1  # for no limit
     num_total_variants = get_variants_that_pass_filter(query_args,
-            reference_genome)[0]['COUNT']
+            reference_genome, alignment_group=alignment_group)[0]['COUNT']
 
     return LookupVariantsResult(page_results, num_total_variants)
 
 
-def get_variants_that_pass_filter(query_args, ref_genome):
+def get_variants_that_pass_filter(query_args, ref_genome, alignment_group=None):
     """Takes a complete filter string and returns the variants that pass the
     filter.
 
@@ -452,10 +479,13 @@ def get_variants_that_pass_filter(query_args, ref_genome):
         ref_genome: The ReferenceGenome this is limited to. This is a hard-coded
             parameter of sorts, since at the least we always limit comparisons
             among Variant objects to those that share a ReferenceGenome.
+        alignment_group: If provided, filter results to Variants that are
+            called in this AlignmentGroup.
 
     Returns:
         List of dictionary objects representing melted Variants.
         See materialized_view_manager.py.
     """
-    evaluator = VariantFilterEvaluator(query_args, ref_genome)
+    evaluator = VariantFilterEvaluator(query_args, ref_genome,
+            alignment_group=alignment_group)
     return evaluator.evaluate()

@@ -423,6 +423,7 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     var requestData = {
       'projectUid': this.model.get('project').uid,
       'refGenomeUid': this.model.get('refGenomeUid'),
+      'alignmentGroupUid': this.model.get('alignmentGroupUid'),
       'variantFilterString': this.model.get('filterString'),
       'melt': this.model.get('is_melted') ? 1 : 0
     };

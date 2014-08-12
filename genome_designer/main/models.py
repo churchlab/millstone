@@ -1020,8 +1020,11 @@ class VariantCallerCommonData(Model, VisibleFieldMixin):
     represents the common shared data.
 
     To be even more specific, the VCF format typically gives a row for each
-    variant, where some of the columns describe the variant, while other
-    columns have a one-to-one correspondence to the alignments provided.
+    variant, where the first several columns describe the variant in general.
+    This common data is stored in this model. There are additional columns in
+    the vcf, one per ExperimentSample, which provides data about the
+    relationship between the Variant and the ExperimentSample for that column.
+    This data is stored in VariantEvidence instances, one per column.
     """
     # Variant this object refers to. It's possible for multiple callers report
     # the same Variant so this is a many-to-one relationship.

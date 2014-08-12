@@ -438,10 +438,17 @@ def get_variant_list(request):
     # Parse the GET params.
     ref_genome_uid = request.GET.get('refGenomeUid')
     project_uid = request.GET.get('projectUid')
+    maybe_alignment_group_uid = request.GET.get('alignmentGroupUid', None)
 
-    # Get model and verify permisssions.
+    # Get models and verify permissions.
     reference_genome = get_object_or_404(ReferenceGenome,
             project__uid=project_uid, uid=ref_genome_uid)
+    if maybe_alignment_group_uid:
+        alignment_group = get_object_or_404(AlignmentGroup,
+                reference_genome=reference_genome,
+                uid=maybe_alignment_group_uid)
+    else:
+        alignment_group = None
 
     # Dictionary to hold all query specific parameters.
     query_args = {}
@@ -493,7 +500,8 @@ def get_variant_list(request):
             query_args['sort_by_column'] = ''
 
         # Get the list of Variants (or melted representation) to display.
-        lookup_variant_result = lookup_variants(query_args, reference_genome)
+        lookup_variant_result = lookup_variants(query_args, reference_genome,
+                alignment_group=alignment_group)
         variant_list = lookup_variant_result.result_list
         num_total_variants = lookup_variant_result.num_total_variants
 

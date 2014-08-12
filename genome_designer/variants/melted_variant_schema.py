@@ -25,9 +25,24 @@ class SchemaBuilder(object):
         # Check for duplicates while building.
         self.joined_table_col_name_set = set()
 
-    def add_melted_variant_field(self, source_col_name, joined_table_col_name,
-            is_null_in_variant_to_set_label, is_user_queryable,
+    def add_melted_variant_field(self,
+            source_col_name,
+            joined_table_col_name,
+            is_null_in_variant_to_set_label,
+            is_user_queryable,
             query_schema=None):
+        """Updates the schema with a field to be included in computing the
+        denormalized materialized view.
+
+        Args:
+            source_col_name: Full source name <table>.<col>
+            joined_table_col_name: Name in the materialized table
+            is_null_in_variant_to_set_label: Not required for imported variant
+            is_user_queryable: Whether the user is allowed to query for this
+                field from the ui.
+            query_schema: Dictionary that describes the schema of this
+                particular field when the user queries it.
+        """
         assert joined_table_col_name not in self.joined_table_col_name_set
         self.schema.append({
             'source_col_name': source_col_name,
@@ -59,6 +74,7 @@ MELTED_SCHEMA_KEY__VA_ID = 'VA_ID'
 MELTED_SCHEMA_KEY__ES_ID = 'ES_ID'
 MELTED_SCHEMA_KEY__VE_ID = 'VE_ID'
 MELTED_SCHEMA_KEY__VCCD_ID = 'VCCD_ID'
+MELTED_SCHEMA_KEY__ALIGNMENT_GROUP_ID = 'AG_ID'
 
 # Used for aggregate total sample count in Postgres query.
 CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT = 'SAMPLE_COUNT'
@@ -84,7 +100,12 @@ SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.id', MELTED_SCHEM
 SCHEMA_BUILDER.add_melted_variant_field('main_variantalternate.alt_value', MELTED_SCHEMA_KEY__ALT, False, True,
         {'type': 'String', 'num': 1})
 
-# Key-value data.
+# Allow filtering by AlignmentGroup.
+SCHEMA_BUILDER.add_melted_variant_field(
+        'main_variantcallercommondata.alignment_group_id',
+        MELTED_SCHEMA_KEY__ALIGNMENT_GROUP_ID, True, False)
+
+# For joining key-value data.
 SCHEMA_BUILDER.add_melted_variant_field('main_variantcallercommondata.id', MELTED_SCHEMA_KEY__VCCD_ID, True, False)
 SCHEMA_BUILDER.add_melted_variant_field('main_variantevidence.id', MELTED_SCHEMA_KEY__VE_ID, True, False)
 
