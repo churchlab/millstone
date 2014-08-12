@@ -46,7 +46,7 @@ gd.VariantSetListView = Backbone.View.extend({
     }
 
     var onSuccess = function(responseData) {
-      if (responseData.error.length) {
+      if ('error' in responseData && responseData.error.length) {
         alert('Error creating variant set: ' + responseData.error);
         return;
       }

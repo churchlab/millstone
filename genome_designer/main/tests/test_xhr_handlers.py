@@ -389,12 +389,13 @@ class TestVariantSetUploadThroughFile(TestCase):
         self.common_entities = create_common_entities()
 
     def test_upload_file(self):
+        VARIANT_SET_NAME = 'newVariant'
         self.assertEqual(0, VariantSet.objects.count())
         refGenome = self.common_entities['reference_genome']
         request = HttpRequest()
         request.POST = {
             'refGenomeUid': refGenome.uid,
-            'variantSetName': 'newVariant',
+            'variantSetName': VARIANT_SET_NAME,
             'createSetType': 'from-file'
         }
         request.method = 'POST'
@@ -403,15 +404,17 @@ class TestVariantSetUploadThroughFile(TestCase):
         self.assertTrue(request.user.is_authenticated())
 
         #random test file selected
-        variant_set_file = os.path.join(GD_ROOT, 'test_data', 'recoli_321UAG_variant_set_upload.vcf')
+        variant_set_file = os.path.join(GD_ROOT, 'test_data',
+                'recoli_321UAG_variant_set_upload.vcf')
         mock_uploaded_file = UploadedFile(
                 file=StringIO.StringIO(),
                 name=variant_set_file)
         request.FILES['vcfFile'] = mock_uploaded_file
-       
+
         response = create_variant_set(request)
+        self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
 
         variantsets = VariantSet.objects.all()
         self.assertEqual(1, len(variantsets))
-        self.assertEqual('newVariant', VariantSet.objects.get().label)
+        self.assertEqual(VARIANT_SET_NAME, VariantSet.objects.get().label)
         self.assertEqual(refGenome, VariantSet.objects.get().reference_genome)

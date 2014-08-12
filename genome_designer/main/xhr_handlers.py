@@ -869,10 +869,12 @@ def create_variant_set(request):
 
     # Create new variant set, depending on type of form submitted.
     if create_set_type == 'from-file':
-        return HttpResponse(json.dumps(_create_variant_set_from_file(request, ref_genome, variant_set_name)))
-
+        result = _create_variant_set_from_file(request, ref_genome,
+                variant_set_name)
     else:
-        return HttpResponse(json.dumps(_create_variant_set_empty(ref_genome, variant_set_name)))
+        result = _create_variant_set_empty(ref_genome, variant_set_name)
+
+    return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 def _create_variant_set_from_file(request, ref_genome, variant_set_name):
