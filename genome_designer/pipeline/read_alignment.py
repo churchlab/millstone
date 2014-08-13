@@ -409,8 +409,9 @@ def compute_insert_metrics(bam_file, sample_alignment, stderr=None):
         * histogram file
         * file with mean and stdev comma-separated
     """
-    histo_file = os.path.split(bam_file)[0] + '.insert_size_histogram.txt'
-    mean_stdev_file = os.path.split(bam_file)[0] + '.insert_size_mean_stdev.txt'
+    histo_file = os.path.splitext(bam_file)[0] + '.insert_size_histogram.txt'
+    mean_stdev_file = (os.path.splitext(bam_file)[0] +
+            '.insert_size_mean_stdev.txt')
 
     # First, we analyze the bam distribution.
     read_bam_cmd = [

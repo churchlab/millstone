@@ -207,6 +207,7 @@ class TestSNPCallers(TestCase):
         self.assertEqual(set(EXPECTED_VARIANT_POSITIONS),
                 set([v.position for v in variants]))
 
+
 class TestSVCallers(TestCase):
 
     def setUp(self):
@@ -240,7 +241,6 @@ class TestSVCallers(TestCase):
         bwa_dataset.filesystem_location = clean_filesystem_location(
                 TEST_DISC_SPLIT_BAM)
         bwa_dataset.save()
-
 
         sample_alignment.dataset_set.add(bwa_dataset)
         sample_alignment.save()
@@ -289,4 +289,11 @@ class TestSVCallers(TestCase):
         va_offset = [25000 - va_pos for va_pos in va_positions]
         self.assertTrue(any([v < 50 for v in va_offset]))
 
-
+        # Clean up.
+        remove_dataset_types = [
+            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM
+        ]
+        for dataset_type in remove_dataset_types:
+            dataset = get_dataset_with_type(self.sample_alignment, dataset_type)
+            os.remove(dataset.get_absolute_location())
