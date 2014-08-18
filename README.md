@@ -27,10 +27,9 @@ packages.
 2. Create a new virtual environment for this project. This virtual environment isn't part of the project so just put it somewhere on your machine.  I keep all of my virtual environments in the directory ~/pyenvs/.
 
         $ virtualenv ~/pyenvs/genome-designer-env
-
-    If you want to use a version of python different from the OS default you can specify the python binary with the '-p' option:
-
-        $ virtualenv -p /usr/local/bin/python2.7 ~/pyenvs/genome-designer-env
+>If you want to use a version of python different from the OS default you can specify the python binary with the '-p' option:
+>
+>        $ virtualenv -p /usr/local/bin/python2.7 ~/pyenvs/genome-designer-env
 
 3. Activate the environment in the shell. This will use `python` and other binaries like `pip` that are located your pyenv. You should do this whenever running any python/django scripts.
 
