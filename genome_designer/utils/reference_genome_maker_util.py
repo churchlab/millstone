@@ -88,8 +88,6 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
         with open(vcf_path, 'w') as vcf_fh:
             export_variant_set_as_vcf(variant_set, vcf_fh)
 
-        sample_id = PLACEHOLDER_SAMPLE_NAME
-
         dataset.status = Dataset.STATUS.COMPUTING
         dataset.save(update_fields=['status'])
 
