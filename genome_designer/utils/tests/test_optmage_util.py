@@ -19,6 +19,7 @@ from main.models import VariantToVariantSet
 from main.testing_util import create_common_entities
 from utils.import_util import import_reference_genome_from_local_file
 from utils.optmage_util import print_mage_oligos
+from utils.optmage_util import ReplicationOriginParams
 
 
 TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
@@ -62,7 +63,8 @@ class TestOptmageUtil(TestCase):
                     variant_set=var_set_1)
         output = StringIO()
         target_id_prefix = 'o_'
-        print_mage_oligos(var_set_1, output, target_id_prefix)
+        print_mage_oligos(var_set_1, output, target_id_prefix,
+                ReplicationOriginParams.from_defaults())
 
         reader = csv.DictReader(StringIO(output.getvalue()))
         all_rows = [row for row in reader]

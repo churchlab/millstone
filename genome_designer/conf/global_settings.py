@@ -392,7 +392,7 @@ SNPEFF_SUMMARY_FILES = ['snpEff_genes.txt', 'snpEff_summary.html']
 # Feature Flags
 ###############################################################################
 
-FLAG__PRINT_MAGE_OLIGOS_ENABLED = False
+FLAG__PRINT_MAGE_OLIGOS_ENABLED = True
 
 FLAG__GENERATE_NEW_REFERENCE_GENOME_ENABLED = False
 

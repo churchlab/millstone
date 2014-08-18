@@ -11,6 +11,28 @@
             action="/_/sets/print_mage_oligos">
           <input type="hidden" name="variantSetUid" value="{{variant_set.uid}}">
 
+          This form allows you to design MAGE[1] oligos corresponding to the
+          variant set. Please specify the replicaction origin and terminus
+          so that the oligo sense is optimized, as well as the experiment direction - whether you are introducing or reverting changes.
+
+          <br><br>
+
+          [1] <i>Wang, Harris H., et al. "Programming cells by multiplex genome engineering and accelerated evolution." Nature 460.7257 (2009): 894-898.</i>
+
+          <hr>
+
+          <h4>origin of replication</h4>
+
+          <input name="repOriginStart" type="text" autocomplete="off" value=3923767>
+          <input name="repOriginEnd" type="text" autocomplete="off" value=3923998>
+
+          <h4>replication terminus</h4>
+
+          <input name="repTerminusStart" type="text" autocomplete="off" value=1588774>
+          <input name="repTerminusEnd" type="text" autocomplete="off" value=1588801>
+
+          <hr>
+
           <h4>Experiment Direction</h4>
 
           <div class="form-group">
@@ -23,6 +45,20 @@
               Reverse (oligos that would revert these changes)
             </label>
           </div>
+
+          <hr>
+
+          <h4>Disclaimers</h4>
+          <ul>
+            <li>
+              All oligos are printed on the reference genome context. That means
+              that other new alleles in your strain may be reverted.
+            </li>
+            <li>
+              Variants within 90 bp of each other may toggle each other back
+              and forth. For now, we just flag such variants in the output.
+            </li>
+          </ul>
         </form>
       </div><!-- modal-body -->
 

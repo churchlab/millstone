@@ -1,6 +1,8 @@
 """Utils for connecting Millstone to optMAGE.
 """
 
+from optmage.oligo_designer import DEFAULT_REPLICATION_ORIGIN
+from optmage.oligo_designer import DEFAULT_REPLICATION_TERMINUS
 from optmage.oligo_designer import OligoGenerator
 from optmage.oligo_designer import OligoTarget
 from optmage.oligo_designer import OligoWriter
@@ -21,7 +23,39 @@ OPT_MAGE_VALID_EXPERIMENT_DIRS = (
 )
 
 
+class ReplicationOriginParams(object):
+    """Param object passed to print_mage_oligos.
+    """
+
+    def __init__(self, origin_start, origin_end, terminus_start, terminus_end):
+        self.origin_start = int(origin_start)
+        self.origin_end = int(origin_end)
+        self.terminus_start = int(terminus_start)
+        self.terminus_end = int(terminus_end)
+
+    @classmethod
+    def from_defaults(cls):
+        """Factory method to create params from default.
+        """
+        return cls(
+                DEFAULT_REPLICATION_ORIGIN[0],
+                DEFAULT_REPLICATION_ORIGIN[1],
+                DEFAULT_REPLICATION_TERMINUS[0],
+                DEFAULT_REPLICATION_TERMINUS[1])
+
+    def get_origin_interval(self):
+        """Returns tuple pair.
+        """
+        return (self.origin_start, self.origin_end)
+
+    def get_terminus_interval(self):
+        """Returns tuple pair.
+        """
+        return (self.terminus_start, self.terminus_end)
+
+
 def print_mage_oligos(variant_set, output_filehandle, target_id_prefix,
+        replication_origin_params,
         experiment_dir=OPT_MAGE_EXPERIMENT_DIR__FORWARD):
     """Prints MAGE oligos for Variants in variant_set.
 
@@ -29,6 +63,7 @@ def print_mage_oligos(variant_set, output_filehandle, target_id_prefix,
         variant_set: A VariantSet.
         output_filehandle: Target for writing the designed oligos.
         target_id_prefix: String prefix used for target id string in output.
+        replication_origin_params: ReplicationOriginParams object.
         experiment_dir: Direction to print oligos. Choose from VALID_PRINT_OLIGOS_DIR.
 
     Raises:
@@ -41,6 +76,9 @@ def print_mage_oligos(variant_set, output_filehandle, target_id_prefix,
             variant_set)
 
     config = OptMAGEConfig()
+    config.replication_origin = replication_origin_params.get_origin_interval()
+    config.replication_terminus = (
+            replication_origin_params.get_terminus_interval())
 
     oligo_target_list = []
     for variant in passing_variants:

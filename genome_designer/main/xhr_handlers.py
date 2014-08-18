@@ -51,6 +51,7 @@ from utils.import_util import import_reference_genome_from_local_file
 from utils.import_util import import_reference_genome_from_ncbi
 from utils.import_util import import_samples_from_targets_file
 from utils.import_util import import_variant_set_from_vcf
+from utils.optmage_util import ReplicationOriginParams
 from utils.optmage_util import print_mage_oligos
 from utils.reference_genome_maker_util import generate_new_reference_genome
 from variants.common import determine_visible_field_names
@@ -939,7 +940,6 @@ def _create_variant_set_empty(ref_genome, variant_set_name):
         'error': error_string,
         'variant_set_uid': empty_variant_set.uid
     }
-    
     return result
 
 
@@ -951,7 +951,12 @@ def print_mage_oligos_for_variant_set(request):
             uid=variant_set_uid)
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="oligos.csv"'
-    print_mage_oligos(variant_set, response, 'o_',
+    repliation_origin_params = ReplicationOriginParams(
+            request.GET.get('repOriginStart'),
+            request.GET.get('repOriginEnd'),
+            request.GET.get('repTerminusStart'),
+            request.GET.get('repTerminusEnd'))
+    print_mage_oligos(variant_set, response, 'o_', repliation_origin_params,
             experiment_dir=request.GET.get('experimentDir'))
     return response
 
