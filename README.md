@@ -6,14 +6,9 @@ Millstone is a distributed bioinformatics software platform designed to facilita
 ## Dependencies
 
 * Postgresql 9.3 (only this version has been tested)
+* R (for Picard)
 * Unafold (http://dinamelt.rit.albany.edu/download.php)
 * Python deps: See requirements.txt / instructions below
-* unafold, specifically hybrid-ss-min (http://dinamelt.rit.albany.edu/download.php)
-
-
-### No longer required (but need to confirm)
-
-* R (for Picard)
 
 ## Installation
 
