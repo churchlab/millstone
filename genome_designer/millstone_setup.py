@@ -12,8 +12,6 @@ import sys
 import urllib
 import zipfile
 
-from bs4 import BeautifulSoup
-
 from settings import JBROWSE_DATA_SYMLINK_PATH
 from settings import MEDIA_ROOT
 from settings import PWD as GD_ROOT
@@ -189,19 +187,10 @@ def download_tools(tools=TOOLS_URLS.keys()):
 
 
 def _get_file_url_from_dropbox(dropbox_url, filename):
+    """Dropbox now supports modifying the shareable url with a simple
+    param that will allow the tool to start downloading immediately.
     """
-    Dropbox takes you to a download page when you share a link, so to get
-    past that, we use BeautifulSoup to get the file, as per goo.gl/EeOGjC
-    """
-    try:
-        url_text = urllib.urlopen(dropbox_url).read()
-        url_soup = BeautifulSoup(url_text)
-    except:
-        raise Exception(
-            'Could not get file %s from Dropbox URL %s. Check settings.' % (
-                filename, dropbox_url))
-
-    return url_soup.find_all(id='default_content_download_button')[0]['href']
+    return dropbox_url + '?dl=1'
 
 
 def setup_jbrowse():

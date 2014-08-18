@@ -5,7 +5,6 @@ amqp==1.0.12
 anyjson==0.3.3
 argparse==1.2.1
 bcbio-gff==0.4
-beautifulsoup4==4.2.0
 billiard==2.7.3.31
 biopython==1.63
 boto==2.15.0
