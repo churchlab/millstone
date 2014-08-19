@@ -177,6 +177,23 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     ref_value = raw_data_dict.pop('REF')
     alt_values = raw_data_dict.pop('ALT')
 
+
+    # Make sure the chromosome cited in the VCF exists for
+    # the reference genome variant is being added to
+    if not chromosome_label in [chrom.label for chrom in
+            Chromosome.objects.filter(reference_genome=reference_genome)]:
+
+        variant_string = ('TYPE: ' + str(type) + '   CHROM: ' + str(chromosome_label) +
+        '   POS: ' + str(position) + '   REF: ' + str(ref_value) +
+        '   ALT: ' + str(alt_values if len(alt_values)-1 else alt_values[0]))
+
+        raise Exception(('The CHROM field of the following variant does not match any of '
+                'the chromosomes belonging to its reference genome:' + variant_string + '\n'
+                'Chromosomes belonging to reference genome ' + str(reference_genome.label) +
+                ' are: ' + str([str(chrom.label) for chrom in 
+                        Chromosome.objects.filter(reference_genome=reference_genome)]).strip('[]')))
+
+
     # Try to find an existing Variant, or create it.
     variant, created = Variant.objects.get_or_create(
             reference_genome=reference_genome,
