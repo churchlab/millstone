@@ -5,12 +5,25 @@ Millstone is a distributed bioinformatics software platform designed to facilita
 
 ## Dependencies
 
-* Postgresql 9.3 (only this version has been tested)
+* Postgresql 9.3 (only this version has been tested; on Mac we recommend [Postgres.app](http://postgresapp.com/))
 * R (for Picard)
 * Unafold (http://dinamelt.rit.albany.edu/download.php)
 * Python deps: See requirements.txt / instructions below
+* CRLibM (http://lipforge.ens-lyon.fr/www/crlibm/download.html)
+* RabbitMQ (not required to pass tests, see below)
 
 ## Installation
+
+These are directions for installing Millstone on your own machine, and is **meant for advanced users who want a custom installation**. If you want to deploy a pre-configured Millstone instance to the cloud, then read [Getting Started with Millstone](https://github.com/churchlab/millstone/wiki/Getting-Started-with-Millstone) on the wiki.
+
+**NOTE: Before continuing, make sure all above dependencies are installed.** On Mac, we prefer [Homebrew](http://brew.sh/) on Mac OSX) for package management, and use it in the instructions below.
+
+### Cloning the repository
+
+Before installing, you must install `git` and clone the latest version of Millstone from GitHub. GitHub has [information on setting up git](https://help.github.com/articles/set-up-git#setting-up-git). Once Git is installed, you can clone the repository with:
+
+        $ git clone https://github.com/churchlab/millstone.git <millstone_installation dir>
+        $ cd <millstone_installation dir>
 
 ### Python environment
 
@@ -70,25 +83,28 @@ need to do the following to get JBrowse up and running:
 
 1. Run the JBrowse setup script inside the `jbrowse` dir.
 
+        $ cd jbrowse
         $ ./setup.sh
+        $ cd ..
 
 
-2. Install nginx if it's not already installed (use brew on Mac OSX) and copy
+2. Install nginx if it's not already installed and copy
    or symlink the config file to nginx sites-enabled dir.
 
-   NOTE: This might be different for different OSX versions, and you might need to 
-   additionally modify `/usr/local/etc/nginx/nginx.conf`, since in 1.4.2 on
-   OSX 10.6.8, it thinks `/usr/local/etc/nginx/sites-enabled` is a directory,
-   not a file.
+   > NOTE: On Mac, the sites-enabled dir is not present on the nginx version installed 
+   > with brew, so the directory has to be added and included into the
 
    Unix:
-
+        
+        $ sed -i.orig "s:/path/to/millstone:$(pwd):g" config/jbrowse.local.nginx
         $ ln -s config/jbrowse.local.nginx /etc/nginx/sites-enabled
 
    Mac (run these commands from the project root):
 
+        $ sed -i.orig "s:/path/to/millstone:$(pwd):g" config/jbrowse.local.nginx
+        $ perl -pi.orig -e '$_ .= "    include /usr/local/etc/nginx/sites-enabled/*;\n" if /^http/' /usr/local/etc/nginx/nginx.conf
         $ sudo mkdir -p /usr/local/etc/nginx/sites-enabled
-        $ sudo ln -s `pwd`/config/jbrowse.local.nginx /usr/local/etc/nginx/sites-enabled/genome-designer-v2
+        $ sudo ln -s `pwd`/config/jbrowse.local.nginx /usr/local/etc/nginx/sites-enabled/millstone
         
 
 3. Restart nginx.
@@ -101,12 +117,13 @@ need to do the following to get JBrowse up and running:
 
         $ ln -sfv /usr/local/opt/nginx/*.plist ~/Library/LaunchAgents
         $ launchctl load ~/Library/LaunchAgents/homebrew.mxcl.nginx.plist
+        $ # to reload: sudo nginx -s reload
 
 4. Check that JBrowse is working locally by visiting:
 
       <http://localhost/jbrowse/index.html?data=sample_data/json/volvox>
 
-If upon running the Genome Designer application or its tests you observe errors
+If upon running the Millstone application or its tests you observe errors
 related to missing perl modules, you can install them with `cpanm`, e.g.:
 
         $ cpanm local::lib
@@ -135,7 +152,7 @@ message broker, for which we use RabbitMQ which is the default for Celery.
 
     On Mac, homebrew can be used:
 
-        $ sudo brew install rabbitmq
+        $ brew install rabbitmq
 
     After install, you can run the server with:
 
@@ -143,36 +160,16 @@ message broker, for which we use RabbitMQ which is the default for Celery.
 
     Further Mac instructions are [here](http://www.rabbitmq.com/install-homebrew.html).
 
-
-
-### Run the Millstone setup script.
-
-The following installs various third-party bioinformatics tools and sets up
-JBrowse.
-
-    ./millstone_setup.py.
-
-
-## Running the application
-
-0. Activate your virtualenv, e.g.:
-
-        $ source ~/pyenvs/genome-designer-env/bin/activate .
-
-1. Navigate to the the `genome_designer/` dir.
-
-2. From one terminal, start the celery server.
-
-        (venv)$ ./scripts/run_celery.sh
-
-3. Open another terminal and start the django server.
-
-        (venv)$ python manage.py runserver
-
-4. Visit the url <http://localhost:8000/> to see the demo.
-
-
 ## Configuring PostgreSQL database.
+
+*On Mac*: 
+
+1. If you are using a fresh Postgres install, you may need to initialize the database:
+
+        $ initdb /usr/local/var/postgres -E utf8
+        $ pg_ctl -D /usr/local/var/postgres -l logfile start 
+
+2. Since most new postgres mac installations (both via brew and Postgres.app) do not have a `postgres` admin user, you will need to [modify your DATABASES variable](https://github.com/churchlab/millstone/issues/433) in `genome_designer/conf/local_settings.py`.
 
 See instructions for setting up PostgresSQL database:
 <https://overlappingminds.com/thoughts/069accf7-ccb4-4b7a-bd40-022c49a053cd>
@@ -188,11 +185,39 @@ You can grant these by logging into the Posgres shell:
 and then running:
 
     ALTER USER django CREATEDB;
-    
-## Gotchas
 
-crlibm missing (required by pyinterval).  This is how we automate installation of crlibm:
-<https://github.com/churchlab/cloudbiolinux/blob/millstone/cloudbio/custom/millstone.py>
+
+### Run the Millstone setup script.
+
+The following installs various third-party bioinformatics tools and sets up
+JBrowse.
+
+    $ cd genome_designer
+    $ ./millstone_setup.py
+
+
+## Running the application
+
+0. Activate your virtualenv, e.g.:
+
+        $ source ~/pyenvs/genome-designer-env/bin/activate .
+
+1. Navigate to the the `genome_designer/` dir.
+
+2. Boostrap the database with blank data.
+
+        $ python scripts/bootstrap_data.py -q blank
+
+
+2. From one terminal, start the celery server.
+
+        (venv)$ ./scripts/run_celery.sh
+
+3. Open another terminal and start the django server.
+
+        (venv)$ python manage.py runserver
+
+4. Visit the url <http://localhost:8000/> to see the demo.
 
 
 ## Tests
