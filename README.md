@@ -10,7 +10,7 @@ Millstone is a distributed bioinformatics software platform designed to facilita
 * Java 1.7
 * Postgresql 9.3 (only this version has been tested; on Mac we recommend [Postgres.app](http://postgresapp.com/))
 * R (for Picard)
-* Unafold (http://dinamelt.rit.albany.edu/download.php)
+* Unafold (http://dinamelt.rit.albany.edu/downlroad.php)
 * Python deps: See requirements.txt / instructions below
 * CRLibM (http://lipforge.ens-lyon.fr/www/crlibm/download.html)
 * RabbitMQ (not required to pass tests, see below)
@@ -263,7 +263,7 @@ add notes shortly about how to add new integration tests.
 To run integration tests, use this command. This uses nose so you can use
 the same options and features as before.
 
-    (venv)$ ./scripts/run_integration_tests.py
+    (venv)$ ./scripts/run_integration_tests.sh
 
 HINT: When debugging integration tests, it may be necessary to manually clean
 up previously stared `celerytestworker`s. There is a script to do this for you:
