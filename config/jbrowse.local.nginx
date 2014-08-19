@@ -2,11 +2,11 @@ server {
   server_name localhost;
 
   location /jbrowse {
-    alias /home/glebk/Projects/churchlab/genome-designer-v2/jbrowse;
+    alias /Users/dbgoodman/software/millstone/jbrowse;
   }
 
   location / {
-    proxy_pass http://localhost:8000;
+    proxy_pass http://localhost:8080;
   }
 }
 
