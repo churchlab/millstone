@@ -2,11 +2,11 @@ server {
   server_name localhost;
 
   location /jbrowse {
-    alias /Users/dbgoodman/software/millstone/jbrowse;
+    alias /path/to/millstone/jbrowse;
   }
 
   location / {
-    proxy_pass http://localhost:8080;
+    proxy_pass http://localhost:8000;
   }
 }
 
