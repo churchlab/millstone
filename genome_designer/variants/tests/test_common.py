@@ -29,7 +29,7 @@ class TestCommon(TestCase):
         self.project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(project=self.project,
-                label='refgenome', num_chromosomes=1, num_bases=1000)
+                label='refgenome')
 
         # Make sure the reference genome has the required vcf keys.
         update_filter_key_map(self.ref_genome, TEST_ANNOTATED_VCF)

@@ -20,6 +20,7 @@ from django.db import transaction
 
 from main.celery_util import assert_celery_running
 from main.exceptions import ValidationException
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ReferenceGenome
@@ -145,10 +146,8 @@ def import_reference_genome_from_local_file(project, label, file_location,
 
     # Validate the input by parsing it with BioPython, while also
     # counting the number of chromosomes.
-    num_chromosomes = 0
     num_bases = 0
     for genome_record in SeqIO.parse(file_location, import_format):
-        num_chromosomes += 1
         num_bases += len(genome_record)
 
     # Make sure sequence exists.
@@ -158,9 +157,7 @@ def import_reference_genome_from_local_file(project, label, file_location,
     # Create the ReferenceGenome object.
     reference_genome = ReferenceGenome.objects.create(
             project=project,
-            label=label,
-            num_chromosomes=num_chromosomes,
-            num_bases=num_bases)
+            label=label)
 
     # Copy the source file to the ReferenceGenome data location.
     dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE[import_format]
@@ -168,6 +165,30 @@ def import_reference_genome_from_local_file(project, label, file_location,
             dataset_type, file_location)
 
     return reference_genome
+
+
+def add_chromosomes(reference_genome, dataset):
+    """ Makes a Chromosome for each unique SeqRecord.name in the dataset
+    """
+    
+    chromosomes = [chrom.label for chrom \
+            in Chromosome.objects.filter(reference_genome=reference_genome)]
+
+    def _make_chromosome(seq_rec_iter):
+        for seq_record in seq_rec_iter:
+            if seq_record.name and seq_record.name not in chromosomes:
+                Chromosome.objects.create(reference_genome=reference_genome,
+                        label=seq_record.name, num_bases=len(seq_record))
+
+    # Add chromosome ids
+    dataset_path = dataset.get_absolute_location()
+
+    if dataset.TYPE.REFERENCE_GENOME_FASTA:
+        _make_chromosome(SeqIO.parse(dataset_path, "fasta"))
+    elif dataset.TYPE.REFERENCE_GENOME_GENBANK:
+        _make_chromosome(SeqIO.parse(dataset_path, "genbank"))     
+    else:
+        raise AssertionError("Unexpected Dataset type")
 
 
 def generate_fasta_from_genbank(ref_genome):
@@ -563,7 +584,7 @@ def parse_experiment_sample_targets_file(project,
         temp_file_location = targets_filehandle_or_filename
     else:
         # It's an open File object.
-	if not os.path.exists(settings.TEMP_FILE_ROOT):
+        if not os.path.exists(settings.TEMP_FILE_ROOT):
             os.mkdir(settings.TEMP_FILE_ROOT)
         _, temp_file_location = mkstemp(dir=settings.TEMP_FILE_ROOT)
         with open(temp_file_location, 'w') as temp_fh:

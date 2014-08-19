@@ -8,6 +8,7 @@ from django.test import Client
 from django.test import TestCase
 
 from main.models import AlignmentGroup
+from main.models import Chromosome
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
@@ -34,8 +35,12 @@ class TestViews(TestCase):
         self.test_project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(
-                project=self.test_project, label='refgenome', num_chromosomes=1,
-                num_bases=1000)
+                project=self.test_project, label='refgenome')
+
+        self.chromosome = Chromosome.objects.create(
+            reference_genome=self.ref_genome,
+            label='Chromosome',
+            num_bases=9001)
 
         alignment_group = AlignmentGroup.objects.create(
                 label='Alignment 1',
@@ -44,7 +49,7 @@ class TestViews(TestCase):
         variant = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=self.ref_genome,
-                chromosome='chrom',
+                chromosome=self.chromosome,
                 position=10,
                 ref_value='A')
 

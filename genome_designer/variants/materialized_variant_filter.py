@@ -55,6 +55,7 @@ class VariantFilterEvaluator(object):
         """
         # Manager for making queries to the materialized view table
         # for this ReferenceGenome.
+
         self.materialized_view_manager = MeltedVariantMaterializedViewManager(
                 ref_genome)
         self.materialized_view_manager.create_if_not_exists_or_invalid()
@@ -138,6 +139,7 @@ class VariantFilterEvaluator(object):
             symbol_str = symbol
         else:
             symbol_str = str(symbol)
+        
         return self.symbol_to_expression_map[symbol_str]
 
 

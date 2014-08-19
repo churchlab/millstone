@@ -10,6 +10,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.test import TestCase
 
 from main.exceptions import ValidationException
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -350,7 +351,11 @@ class TestImportVariantSetFromVCFFile(TestCase):
         test_project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(project=test_project,
-                label='refgenome', num_chromosomes=1, num_bases=1000)
+                label='refgenome')
+        Chromosome.objects.create(
+            reference_genome=self.ref_genome,
+            label='Chromosome',
+            num_bases=9001)
 
 
 

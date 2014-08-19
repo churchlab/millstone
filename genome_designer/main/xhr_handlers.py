@@ -24,7 +24,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 
-# from debug.debug_util import FakeException
+#from debug.debug_util import FakeException
 from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.adapters import adapt_experiment_samples_to_frontend
@@ -510,7 +510,7 @@ def get_variant_list(request):
         variant_list_json = adapt_variant_to_frontend(variant_list,
                 reference_genome, query_args['visible_key_names'],
                 melted=query_args['is_melted'])
-
+        
         # Get all VariantSets that exist for this ReferenceGenome.
         variant_set_list = VariantSet.objects.filter(
                 reference_genome=reference_genome)

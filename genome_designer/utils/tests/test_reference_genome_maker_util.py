@@ -8,6 +8,7 @@ from django.conf import settings
 from django.test import TestCase
 
 from main.model_utils import get_dataset_with_type
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import Variant
 from main.models import VariantAlternate
@@ -51,7 +52,7 @@ class TestReferenceGenomeMakerUtil(TestCase):
             var = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=self.reference_genome,
-                    chromosome='chrom',
+                    chromosome=Chromosome.objects.get(reference_genome=self.reference_genome),
                     position=position,
                     ref_value=ref_value)
 

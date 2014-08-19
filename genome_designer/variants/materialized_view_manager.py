@@ -121,7 +121,7 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
     def create_internal(self):
         """Override.
         """
-        # Query all columsn except the catch-all key value fields first,
+        # Query all columns except the catch-all key value fields first,
         # then join with the key-value columns.
         create_sql_statement = (
             'CREATE MATERIALIZED VIEW %s AS ('
@@ -135,6 +135,8 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                             # VariantSets
                             # We do an inner select which only gets rows associated with an ExperimentSample.
                             # Then LEFT JOIN on whatever weot.
+                            'INNER JOIN main_chromosome ON (main_variant.chromosome_id = main_chromosome.id) '
+
                             'LEFT JOIN '
                                 '(SELECT main_varianttovariantset.variant_id, '
                                         'main_variantset.uid, '
@@ -163,6 +165,7 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                             'INNER JOIN main_variantalternate ON main_variantalternate.variant_id = main_variant.id '
                             'INNER JOIN main_varianttovariantset ON main_variant.id = main_varianttovariantset.variant_id '
                             'INNER JOIN main_variantset ON main_varianttovariantset.variant_set_id = main_variantset.id '
+                            'INNER JOIN main_chromosome ON (main_variant.chromosome_id = main_chromosome.id) '
                         'WHERE (main_variant.reference_genome_id = %d) '
                         'GROUP BY %s'
                     ') '
@@ -198,6 +201,7 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
                     self.reference_genome.id,
                     MATERIALIZED_TABLE_VTVS_GROUP_BY_CLAUSE)
             )
+
         self.cursor.execute(create_sql_statement)
         transaction.commit_unless_managed()
 

@@ -27,6 +27,7 @@ from django.core.management import call_command
 from django.conf import settings
 
 from main.models import AlignmentGroup
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
@@ -97,14 +98,17 @@ class FullVCFTestSet:
 
 
 def create_fake_variants_and_variant_sets(ref_genome):
+
+    chrom_0 = Chromosome.objects.get(reference_genome=ref_genome)
+
     @transaction.commit_on_success
     def _create_fake_variants():
         for var_count in range(100):
             variant = Variant.objects.create(
                     type=Variant.TYPE.TRANSITION,
                     reference_genome=ref_genome,
-                    chromosome='chrom',
-                    position=random.randint(1,ref_genome.num_bases),
+                    chromosome=chrom_0,
+                    position=random.randint(1, chrom_0.num_bases),
                     ref_value='A')
 
             variant.variantalternate_set.add(VariantAlternate.objects.create(
@@ -157,7 +161,8 @@ def create_fake_variants_and_variant_sets(ref_genome):
         guaranteed_var = Variant.objects.create(
                 type=Variant.TYPE.TRANSITION,
                 reference_genome=ref_genome,
-                chromosome='chrom',
+                chromosome=Chromosome.objects.get(
+                    reference_genome=ref_genome),
                 position=22,
                 ref_value='A',
                 alt_value='G')
@@ -174,8 +179,10 @@ def create_fake_variants_and_variant_sets(ref_genome):
 
 def get_or_create_user():
     try:
+        print "trying to create user"
         return User.objects.get(username=TEST_USERNAME)
     except User.DoesNotExist:
+        print "user did not exist"
         return User.objects.create_user(
                 TEST_USERNAME, password=TEST_PASSWORD, email=TEST_EMAIL)
 
@@ -390,7 +397,7 @@ def reset_database():
             'user': settings.DATABASES['default']['USER'],
             'password': settings.DATABASES['default']['PASSWORD']
             }
-    
+
     proc = subprocess.Popen(script_string, shell=True, stderr=subprocess.PIPE)
     output = proc.stderr.read()
 
@@ -404,7 +411,9 @@ def reset_database():
     migrate --fake: note that migrate has been performed in syncdb
     """
     call_command('syncdb', migrate_all=True, interactive=False)
+    print "\n\n\n\n---------------ABOUT TO MIGRATE"
     call_command('migrate', fake=True, interactive=False)
+    print "\n\n\n\n----------------MIGRATION FINISHED"
 
     ### Recreate the media root.
     if os.path.exists(settings.MEDIA_ROOT):

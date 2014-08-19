@@ -10,6 +10,7 @@ from django.test import TestCase
 
 from utils.import_util import import_reference_genome_from_local_file
 from main.models import AlignmentGroup
+from main.models import Chromosome
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
@@ -65,9 +66,7 @@ class TestAlignmentGroup(TestCase):
                 owner=user.get_profile())
         self.test_ref_genome = ReferenceGenome.objects.create(
                 project=self.test_project,
-                label='blah',
-                num_chromosomes=1,
-                num_bases=1000)
+                label='blah')
         alignment_group = AlignmentGroup.objects.create(
             label='Alignment 1',
             reference_genome=self.test_ref_genome,
@@ -101,9 +100,7 @@ class TestDataset(TestCase):
                 owner=user.get_profile())
         self.test_ref_genome = ReferenceGenome.objects.create(
                 project=self.test_project,
-                label='blah',
-                num_chromosomes=1,
-                num_bases=1000)
+                label='blah')
         alignment_group = AlignmentGroup.objects.create(
             label='Alignment 1',
             reference_genome=self.test_ref_genome,
@@ -229,14 +226,17 @@ class TestVariantCallerCommonData(TestCase):
 
         reference_genome = ReferenceGenome.objects.create(
             project=test_project,
-            label='ref1',
-            num_chromosomes=1,
-            num_bases=1000)
+            label='ref1')
+
+        chromosome = Chromosome.objects.create(
+            reference_genome=reference_genome,
+            label='Chromosome',
+            num_bases=9001)
 
         variant = Variant.objects.create(
             reference_genome=reference_genome,
             type='UNKNOWN',
-            chromosome='c1',
+            chromosome=chromosome,
             position=100,
             ref_value='A'
         )

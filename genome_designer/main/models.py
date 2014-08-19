@@ -429,6 +429,32 @@ class Project(UniqueUidModelMixin):
         return [{'field':'uid'},
                 {'field':'title'}]
 
+class Chromosome(UniqueUidModelMixin):
+    """A locus belonging to a reference genome which Variants 
+    hold foreign keys to.  May be a literal chromosome,
+    bacterial genome, or plasmid.
+    """
+
+    # A chromosome belongs to a single ReferenceGenome
+    reference_genome = models.ForeignKey('ReferenceGenome')
+
+    # Chromosome label
+    label = models.CharField(verbose_name="Name", max_length=256)
+
+    # Number of bases on the Chromosome
+    num_bases = models.BigIntegerField()
+
+    @classmethod
+    def get_field_order(clazz, **kwargs):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
+        """
+        return [
+            {'field': 'reference_genome'},
+            {'field': 'label'},
+            {'field': 'num_bases', 'verbose':'Bases'},
+            {'field': 'uid'}
+        ]
 
 class ReferenceGenome(UniqueUidModelMixin):
     """A reference genome relative to which alignments and analysis are
@@ -440,12 +466,6 @@ class ReferenceGenome(UniqueUidModelMixin):
 
     # A human-readable label for this genome.
     label = models.CharField(verbose_name="Name", max_length=256)
-
-    # Number of chromosomes.
-    num_chromosomes = models.IntegerField(verbose_name="# Chromosomes")
-
-    # Number of chromosomes.
-    num_bases = models.BigIntegerField(verbose_name="Total Size")
 
     # Datasets pointing to files on the system (e.g. .fasta files, etc.)
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
@@ -463,6 +483,19 @@ class ReferenceGenome(UniqueUidModelMixin):
 
     def __unicode__(self):
         return self.label
+
+    @property
+    def num_chromosomes(self):
+        """Number of Chromosomes belonging to the ReferenceGenome
+        """
+        return len(Chromosome.objects.filter(reference_genome = self))
+
+    @property
+    def num_bases(self):
+        """Total number of bases of all Chromosomes belonging to
+        the ReferenceGenome
+        """
+        return sum([chrom.num_bases for chrom in Chromosome.objects.filter(reference_genome = self)])
 
     @property
     def href(self):
@@ -574,9 +607,11 @@ class ReferenceGenome(UniqueUidModelMixin):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
-        return [{'field':'label'},
-                {'field':'num_chromosomes', 'verbose':'# Chromosomes'},
-                {'field':'num_bases', 'verbose':'Total Size'}]
+        return [
+            {'field': 'label'},
+            {'field': 'num_chromosomes', 'verbose': '# Chromosomes'},
+            {'field': 'num_bases', 'verbose': 'Total Size'}
+        ]
 
     def invalidate_materialized_view(self):
         self.is_materialized_variant_view_valid = False
@@ -931,7 +966,7 @@ class Variant(UniqueUidModelMixin):
     reference_genome = models.ForeignKey('ReferenceGenome',
         verbose_name='Reference Genome')
 
-    chromosome = models.CharField('Chromosome', max_length=256, blank=True)
+    chromosome = models.ForeignKey('Chromosome')
 
     position = models.BigIntegerField('Position')
 
