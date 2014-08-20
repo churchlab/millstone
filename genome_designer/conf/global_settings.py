@@ -44,6 +44,7 @@ DATABASES = {
         'PASSWORD': 'g3n3d3z',
         'HOST': 'localhost',
         'PORT': '',
+        'OS_USER': 'postgres'
     }
 
     # Uncomment to debug with Sqlite.
@@ -447,7 +448,7 @@ TEST_FILESYSTEM_DIR = os.path.join(PWD, 'temp_test_data')
 
 TEST_S3 = False
 
-# Don'w show south DEBUG logs.
+# Don't show south DEBUG logs.
 south_logger = logging.getLogger('south')
 south_logger.setLevel(logging.INFO)
 

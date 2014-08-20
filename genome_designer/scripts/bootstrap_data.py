@@ -385,25 +385,34 @@ def reset_database():
     print 'Deleting old database ...'
 
     script_string = """
-    sudo -u postgres psql -c "DROP DATABASE IF EXISTS %(db)s;"
-    sudo -u postgres psql -c "DROP USER IF EXISTS %(user)s;"
-    sudo -u postgres psql -c "CREATE USER %(user)s WITH PASSWORD '%(password)s';"
-    sudo -u postgres psql -c "CREATE DATABASE %(db)s;"
-    sudo -u postgres psql -c 'GRANT ALL PRIVILEGES ON DATABASE %(db)s to %(user)s;'
-    sudo -u postgres psql -c "ALTER USER %(user)s CREATEDB;"
+    sudo -u %(os_user)s psql -c "DROP DATABASE IF EXISTS %(db)s;"
+    sudo -u %(os_user)s psql -c "DROP USER IF EXISTS %(user)s;"
+    sudo -u %(os_user)s psql -c "CREATE USER %(user)s WITH PASSWORD '%(password)s';"
+    sudo -u %(os_user)s psql -c "CREATE DATABASE %(db)s;"
+    sudo -u %(os_user)s psql -c 'GRANT ALL PRIVILEGES ON DATABASE %(db)s to %(user)s;'
+    sudo -u %(os_user)s psql -c "ALTER USER %(user)s CREATEDB;"
 
     """ % {
-            'db': settings.DATABASES['default']['NAME'],
-            'user': settings.DATABASES['default']['USER'],
-            'password': settings.DATABASES['default']['PASSWORD']
-            }
+        'db': settings.DATABASES['default']['NAME'],
+        'user': settings.DATABASES['default']['USER'],
+        'password': settings.DATABASES['default']['PASSWORD'],
+        'os_user': settings.DATABASES['default']['OS_USER']
+    }
 
     proc = subprocess.Popen(script_string, shell=True, stderr=subprocess.PIPE)
-    output = proc.stderr.read()
 
-    if output:
-        raise Exception('Error while reseting databse.  Celery will have to be restarted.'
-                '\nOffending postgres error:\n' + str(output))
+    # parse script stderr for errors.
+    error_lines = []
+    for output_line in proc.stderr.read():
+        # Skip 'NOTICE' stderr lines, they are not bugs.
+        if not 'NOTICE' in output_line:
+            error_lines.append(output_line)
+
+    if error_lines:
+        raise Exception(
+                'Error while reseting database.'
+                'Celery will have to be restarted.'
+                '\nOffending postgres error:\n' + '\n'.join(error_lines))
 
     """
     flush: removes all rows in the database.
@@ -423,6 +432,7 @@ def reset_database():
 
 def confirm_bootstrap():
     if len(sys.argv) > 1 and sys.argv[1] in ["-q",]:
+        sys.argv.pop(1)
         return True
     confirm_text = raw_input(
             "This will wipe any current database. Are you sure? y/n\n")
