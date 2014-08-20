@@ -9,7 +9,6 @@ Millstone is a distributed bioinformatics software platform designed to facilita
 * Perl 5 (for JBrowse)
 * Java 1.7
 * Postgresql 9.3 (only this version has been tested; on Mac we recommend [Postgres.app](http://postgresapp.com/))
-* R (for Picard)
 * Unafold (http://dinamelt.rit.albany.edu/downlroad.php)
 * Python deps: See requirements.txt / instructions below
 * CRLibM (http://lipforge.ens-lyon.fr/www/crlibm/download.html)
