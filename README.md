@@ -11,7 +11,6 @@ Millstone is a distributed bioinformatics software platform designed to facilita
 * Postgresql 9.3 (only this version has been tested; on Mac we recommend [Postgres.app](http://postgresapp.com/))
 * Unafold (http://dinamelt.rit.albany.edu/downlroad.php)
 * Python deps: See requirements.txt / instructions below
-* CRLibM (http://lipforge.ens-lyon.fr/www/crlibm/download.html)
 * RabbitMQ (not required to pass tests, see below)
 
 
