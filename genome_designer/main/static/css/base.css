@@ -434,3 +434,38 @@ div.dataTables_paginate ul.pagination {
   overflow: auto;
 }
 
+.gd-arrow-down {
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid purple;
+  height: 0;
+  width: 0;
+}
+
+.gd-snp-filter-arrow-container {
+  cursor: pointer;
+  display: inline-block;
+  margin-left: -25px;
+  margin-right: 10px;
+}
+
+.gd-snp-filter-advanced-dropdown-box {
+  background: white;
+  border: solid 1px #dddddd;
+  display: none;
+  max-height: 300px;
+  overflow-y: scroll;
+  padding: 10px;
+  position: absolute;
+  width: 100%;
+  z-index: 1000;
+}
+
+.gd-snp-filter-advanced-dropdown-box-close-btn {
+  float: right;
+}
+
+.gd-snp-filter-advanced-saved-filter-container:hover {
+  background-color: yellow;
+  cursor: pointer;
+}

@@ -8,6 +8,9 @@
           value="{{manual_filter_string}}"
         {% endif %}
         >
+        <div id='gd-snp-filter-advanced-dropdown-button' class='gd-snp-filter-arrow-container'>
+          <div class='gd-arrow-down'></div>
+        </div>
         <button class="btn btn-success" id="gd-filter-box-apply-btn" type="button">Apply</button>
       </div><!-- dialog /input-group -->
       <div class="form-group">
@@ -29,8 +32,44 @@
               Fields...
             </button>
           </div>
-        </div> 
+        </div>
       </div>
+    </div>
+    <div id='gd-snp-filter-advanced-dropdown-box'
+        class='gd-snp-filter-advanced-dropdown-box'>
+        <button id='gd-snp-filter-advanced-dropdown-box-save-btn' class='btn'>
+          Save Current Filter
+        </button>
+        <hr>
+        <h4>Saved Queries</h4>
+        <div id="gd-snp-filter-advanced-saved-filter-list">
+          {% for sq in saved_query_list %}
+            <div class="gd-snp-filter-advanced-saved-filter-container"
+                data-uid={{sq.uid}}>
+              <button class="gd-snp-filter-advanced-saved-filter-delete">
+                x
+              </button>
+              <div class="gd-snp-filter-advanced-saved-filter-text"
+                  style="display: inline-block">
+                {{sq.text}}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <h4>Example Queries</h4>
+        {% for example_sq in example_saved_query_list %}
+          <div class="gd-snp-filter-advanced-saved-filter-container">
+            <div class="gd-snp-filter-advanced-saved-filter-text"
+                style="display: inline-block">
+              {{example_sq}}
+            </div>
+          </div>
+        {% endfor %}
+        <hr>
+        <button id='gd-snp-filter-advanced-dropdown-box-close-btn'
+            class='btn gd-snp-filter-advanced-dropdown-box-close-btn'>
+          Close
+        </button>
     </div>
   </div>
   <div id="gd-snp-filter-error" class="alert alert-warn" style="display:none">

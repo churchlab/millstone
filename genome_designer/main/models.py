@@ -1365,6 +1365,14 @@ class RegionInterval(Model):
     end = models.BigIntegerField()
 
 
+class SavedVariantFilterQuery(UniqueUidModelMixin):
+    """Saved query belonging to the user.
+    """
+    owner = models.ForeignKey('UserProfile')
+
+    text = models.TextField()
+
+
 class S3File(Model):
     """Model for keeping track of all files in S3 bucket.
     """

@@ -59,6 +59,18 @@ gd.VariantsTableComponent = Backbone.View.extend({
           _.bind(this.handleFilterInputKeypress, this));
     }
 
+    // Advanced filter dropdown box.
+    $('#gd-snp-filter-advanced-dropdown-button').click(
+        this.handleAdvancedDropdownClick);
+    $('#gd-snp-filter-advanced-dropdown-box-close-btn').click(
+        this.handleCloseAdvancedDropdown);
+    $('.gd-snp-filter-advanced-saved-filter-text').click(
+        _.bind(this.handleSavedFilterSelect, this));
+    $('#gd-snp-filter-advanced-dropdown-box-save-btn').click(
+        _.bind(this.handleSaveCurrentFilter, this));
+    $('.gd-snp-filter-advanced-saved-filter-delete').click(
+        _.bind(this.handleSavedFilterDelete, this));
+
     // Decorate the cast/melt toggle.
     if (this.model.get('isMelted')) {
       $('#gd-snp-filter-melt-toggle-melt').addClass('active');
@@ -197,6 +209,81 @@ gd.VariantsTableComponent = Backbone.View.extend({
     if(code == 13) {
       this.handleApplyFilterClick();
     }
+  },
+
+  /** Opens the advanced filter box dropdown. */
+  handleAdvancedDropdownClick: function() {
+    $('#gd-snp-filter-advanced-dropdown-box').show();
+  },
+
+  /** Opens the advanced filter box dropdown. */
+  handleCloseAdvancedDropdown: function() {
+    $('#gd-snp-filter-advanced-dropdown-box').hide();
+  },
+
+  /**
+   * Handles a click on a saved filter, placing the query text into
+   * the active search field.
+   */
+  handleSavedFilterSelect: function(e) {
+    var newFilterText = $.trim($(e.target).text());
+    this.model.set('filterString', newFilterText);
+    $('#gd-new-filter-input').val(newFilterText);
+  },
+
+  /** Saves the current filter. */
+  handleSaveCurrentFilter: function() {
+    var requestData = {
+      'projectUid': this.model.get('project').uid,
+      'filterText': $('#gd-new-filter-input').val()
+    };
+
+    $.post('/_/variants/save_filter', requestData,
+        _.bind(function(responseData) {
+          if ('savedFilter' in responseData) {
+            var newSavedFilterEl = $(
+              '<div class="gd-snp-filter-advanced-saved-filter-container"' +
+                  ' data-uid=' + responseData.savedFilter.uid+ '>' +
+
+                '<button class="gd-snp-filter-advanced-saved-filter-delete">' +
+                  'x' +
+                '</button>' +
+                '<div class="gd-snp-filter-advanced-saved-filter-text"' +
+                    'style="display: inline-block">' +
+                  responseData.savedFilter.text +
+                '</span>' +
+              '</div>'
+              ).appendTo('#gd-snp-filter-advanced-saved-filter-list');
+
+            newSavedFilterEl
+                  .children('.gd-snp-filter-advanced-saved-filter-text')
+                      .click(_.bind(this.handleSavedFilterSelect, this));
+
+            newSavedFilterEl
+                  .children('.gd-snp-filter-advanced-saved-filter-delete')
+                      .click(_.bind(this.handleSavedFilterDelete, this));
+          }
+        }, this));
+  },
+
+  /** Handles deleting the saved filter. */
+  handleSavedFilterDelete: function(e) {
+    var is_confirmed = confirm("Are you sure?");
+    if (!is_confirmed) {
+      return;
+    }
+
+    var container = $(e.target).parents(
+        '.gd-snp-filter-advanced-saved-filter-container');
+    var uid = container.data('uid');
+    var requestData = {
+      'projectUid': this.model.get('project').uid,
+      'uid': uid
+    };
+
+    $.post('/_/variants/delete_filter', requestData, function() {
+      container.remove();
+    });
   },
 
   /**

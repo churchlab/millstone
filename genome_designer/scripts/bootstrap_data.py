@@ -35,6 +35,7 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Region
 from main.models import RegionInterval
+from main.models import SavedVariantFilterQuery
 from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantSet
@@ -83,6 +84,11 @@ SAMPLE_1_LABEL = 'sample1'
 VARIANTSET_1_LABEL = 'Set A'
 
 VARIANTSET_2_LABEL = 'Set B'
+
+CUSTOM_SAVED_QUERY_LIST = [
+    'GT_TYPE = 2 & DP > 10',
+    'INFO_EFF_IMPACT = HIGH',
+]
 
 # A set of data consisting of a small annotated genome, many samples, and some
 # designed SNPs which are each in some of the samples.
@@ -207,6 +213,12 @@ def bootstrap_fake_data():
 
     ref_genome_3 = import_reference_genome_from_local_file(
             test_project, 'test_genome', TEST_FASTA, 'fasta')
+
+    ### Create some saved queries.
+    for saved_query_text in CUSTOM_SAVED_QUERY_LIST:
+        SavedVariantFilterQuery.objects.get_or_create(
+                owner=user.get_profile(),
+                text=saved_query_text)
 
     ### Create some ExperimentSamples.
 
