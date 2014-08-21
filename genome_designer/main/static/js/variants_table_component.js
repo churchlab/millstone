@@ -213,7 +213,7 @@ gd.VariantsTableComponent = Backbone.View.extend({
 
   /** Opens the advanced filter box dropdown. */
   handleAdvancedDropdownClick: function() {
-    $('#gd-snp-filter-advanced-dropdown-box').show();
+    $('#gd-snp-filter-advanced-dropdown-box').toggle();
   },
 
   /** Opens the advanced filter box dropdown. */
