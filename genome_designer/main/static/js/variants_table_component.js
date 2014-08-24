@@ -586,6 +586,15 @@ gd.VariantsTableComponent = Backbone.View.extend({
 
   /** Creates a new empty variant set **/
   handleCreateNewEmptyVariantSet: function() {
+    // Make sure at least one variant selected.
+    var isAtLeastOneVariantSelected =
+        this.datatableComponent.isAllMatchingFilterSelected() ||
+        this.datatableComponent.getCheckedRowUids().length;
+    if (!isAtLeastOneVariantSelected) {
+      alert('Please select at least one variant.');
+      return;
+    }
+
     var requestData = {
       'refGenomeUid': this.model.get('refGenomeUid'),
     }

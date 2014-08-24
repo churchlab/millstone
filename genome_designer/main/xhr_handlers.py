@@ -983,7 +983,7 @@ def _create_variant_set_empty(ref_genome, variant_set_name):
 
     result = {
         'error': error_string,
-        'variant_set_uid': empty_variant_set.uid
+        'variantSetUid': empty_variant_set.uid
     }
     return result
 
