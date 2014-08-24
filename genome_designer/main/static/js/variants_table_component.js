@@ -193,6 +193,23 @@ gd.VariantsTableComponent = Backbone.View.extend({
     $('#gd-snp-filter-error').show();
   },
 
+  /** Returns request data object for making a request for variants. */
+  _prepareVariantListRequestData: function() {
+    var requestData = {
+      'projectUid': this.model.get('project').uid,
+      'refGenomeUid': this.model.get('refGenomeUid'),
+      'alignmentGroupUid': this.model.get('alignmentGroupUid'),
+      'variantFilterString': this.model.get('filterString'),
+      'melt': this.model.get('isMelted') ? 1 : 0
+    };
+
+    if (this.visibleKeyNames) {
+      requestData['visibleKeyNames'] = JSON.stringify(this.visibleKeyNames);
+    }
+
+    return requestData;
+  },
+
   /**
    * Updates the array of data representing GET params to be sent to the
    * server by DataTables. See jquery.dataTables.js.
@@ -202,13 +219,7 @@ gd.VariantsTableComponent = Backbone.View.extend({
    *      must mutate this array.
    */
   addFilterDataServerSideRequest: function(aoData) {
-    var requestData = {
-      'projectUid': this.model.get('project').uid,
-      'refGenomeUid': this.model.get('refGenomeUid'),
-      'alignmentGroupUid': this.model.get('alignmentGroupUid'),
-      'variantFilterString': this.model.get('filterString'),
-      'melt': this.model.get('isMelted') ? 1 : 0
-    };
+    var requestData = this._prepareVariantListRequestData();
 
     _.each(_.pairs(requestData), function(pair) {
       aoData.push({'name': pair[0], 'value': pair[1]});
@@ -370,17 +381,7 @@ gd.VariantsTableComponent = Backbone.View.extend({
     // Update the UI to show that the new Variant list is loading.
     this.setUIStartLoadingState();
 
-    var requestData = {
-      'projectUid': this.model.get('project').uid,
-      'refGenomeUid': this.model.get('refGenomeUid'),
-      'alignmentGroupUid': this.model.get('alignmentGroupUid'),
-      'variantFilterString': this.model.get('filterString'),
-      'melt': this.model.get('isMelted') ? 1 : 0
-    };
-
-    if (this.visibleKeyNames) {
-      requestData['visibleKeyNames'] = JSON.stringify(this.visibleKeyNames);
-    }
+    var requestData = this._prepareVariantListRequestData();
 
     $.get('/_/variants', requestData,
         _.bind(this.handleGetVariantListResponse, this));
