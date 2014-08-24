@@ -63,15 +63,18 @@ gd.VariantFieldSelectComponent = Backbone.View.extend({
         maybeChecked = ' checked';
       }
 
+      var desc = 'desc' in value ? value.desc : '';
+
       var rowHtmlString =
-          '<tr>' +
-            '<td>' + key + '</td>' +
-            '<td>' +
+          '<div>' +
+            '<div class="gd-filter-key-modal-checkbox">' +
               '<input class="gd-id-filter-key-modal-checkbox" ' +
                   'type="checkbox" value="' + key + '"' +
                   maybeChecked + '>' +
-            '</td>' +
-          '</tr>';
+            '</div>' +
+            '<div class="gd-filter-key-modal-key">' + key + '</div>' +
+            '<div class="gd-filter-key-modal-desc">' + desc + '</div>' +
+          '</div>';
       $('#' + targetElId).append(rowHtmlString);
     });
   },

@@ -469,3 +469,17 @@ div.dataTables_paginate ul.pagination {
   background-color: yellow;
   cursor: pointer;
 }
+
+.gd-filter-key-modal-key {
+  display: inline-block;
+  font-weight: bold;
+}
+
+.gd-filter-key-modal-checkbox {
+  display: inline-block;
+  margin-right: 10px;
+}
+
+.gd-filter-key-modal-desc {
+  margin-bottom: 5px;
+}
