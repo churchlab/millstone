@@ -337,7 +337,7 @@ gd.VariantsTableComponent = Backbone.View.extend({
     var updatedPath = gd.Util.updateQueryStringParameter(
         gd.Util.getFullPath(), 'filter', this.model.get('filterString'));
     updatedPath = gd.Util.updateQueryStringParameter(
-        updatedPath, 'melt', this.model.get('is_melted') ? '1' : '0');
+        updatedPath, 'melt', this.model.get('isMelted') ? '1' : '0');
     this.trigger('NAVIGATE', {'path': updatedPath});
 
     // Hide any alert.
@@ -472,7 +472,7 @@ gd.VariantsTableComponent = Backbone.View.extend({
     if (this.datatableComponent.isAllMatchingFilterSelected()) {
       postData.isAllMatchingFilterSelected = true;
       postData.filterString = this.model.get('filterString');
-      postData.isMelted = this.model.get('is_melted');
+      postData.isMelted = this.model.get('isMelted');
     } else {
       postData.isAllMatchingFilterSelected = false;
       postData.variantUidList = this.datatableComponent.getCheckedRowUids();
