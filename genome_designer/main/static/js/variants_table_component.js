@@ -303,7 +303,9 @@ gd.VariantsTableComponent = Backbone.View.extend({
   /** Handles an update event from the field select component. */
   handleUpdateSelectedFields: function(selectedKeyNames) {
     // Hide the modal.
-    this.variantFieldSelect.hide();
+    this.variantFieldSelect.hide(_.bind(function() {
+      this.variantFieldSelect.remove();
+    }, this));
 
     // Update the attribute that stores the visible field names.
     this.visibleKeyNames = selectedKeyNames;

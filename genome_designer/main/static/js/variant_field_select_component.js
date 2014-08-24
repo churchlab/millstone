@@ -87,8 +87,16 @@ gd.VariantFieldSelectComponent = Backbone.View.extend({
 
 
   /** Hides the modal. */
-  hide: function() {
-    $('#gd-filter-key-modal').modal('hide');
+  hide: function(opt_callback) {
+    var modalElement = $('#gd-filter-key-modal');
+
+    if (opt_callback) {
+      modalElement.on('hidden.bs.modal', function () {
+        opt_callback();
+      });
+    }
+
+    modalElement.modal('hide');
   },
 
 
