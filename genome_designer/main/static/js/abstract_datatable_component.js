@@ -137,7 +137,7 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
     this.$el.find(".gd-dt-cb.master").empty();
     this.$el.find(".gd-dt-cb.master").append(
       '<div class="gd-dt-cb-div master pull-left btn-group">' +
-        '<button class="btn btn-default gd-master-cb-button">' +
+        '<button id="gd-master-cb-button" class="btn btn-default gd-master-cb-button">' +
           '<input type="checkbox" class="gd-dt-cb master" ' +
               'id=' + masterCheckboxElId  + '>' +
         '</button>' +
@@ -148,6 +148,16 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
         '<ul class="dropdown-menu" id="' + this.datatableId + '-dropdown">' +
         '</ul>' +
       '</div>');
+
+    // Expands the "size" of the checkbox, so that the user can click the area
+    // surrounding the checkbox, rather than aim for small checkbox target.
+    $('#gd-master-cb-button').click(function(e) {
+      $(e.target).children('.gd-dt-cb').
+          prop('checked', function (i, value) {
+            return !value;
+          }).
+          trigger('change');
+    });
 
     /**
      * If the master checkbox is changed, toggle all checkboxes in the
