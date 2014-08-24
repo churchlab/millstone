@@ -122,7 +122,9 @@ gd.VariantsTableComponent = Backbone.View.extend({
         el: $('#gd-datatable-hook'),
         serverTarget: '/_/variants',
         controlsTemplate: '/_/templates/variant_filter_controls',
-        requestData: {'refGenomeUid': this.model.get('refGenomeUid')}
+        requestData: {'refGenomeUid': this.model.get('refGenomeUid')},
+        serverParamsInjector: _.bind(
+            this.addFilterDataServerSideRequest, this)
     });
 
     // Listen to events from the DataTable to provide appropriate UI affordance.
@@ -189,6 +191,28 @@ gd.VariantsTableComponent = Backbone.View.extend({
     this.setUIDoneLoadingState();
     $('#gd-snp-filter-error-msg').text(errorMsg);
     $('#gd-snp-filter-error').show();
+  },
+
+  /**
+   * Updates the array of data representing GET params to be sent to the
+   * server by DataTables. See jquery.dataTables.js.
+   *
+   * @param {Array.<Object.<string, string>>} aoData Array of objects with keys
+   *     'name' and 'value'. The array is passed by reference so this method
+   *      must mutate this array.
+   */
+  addFilterDataServerSideRequest: function(aoData) {
+    var requestData = {
+      'projectUid': this.model.get('project').uid,
+      'refGenomeUid': this.model.get('refGenomeUid'),
+      'alignmentGroupUid': this.model.get('alignmentGroupUid'),
+      'variantFilterString': this.model.get('filterString'),
+      'melt': this.model.get('isMelted') ? 1 : 0
+    };
+
+    _.each(_.pairs(requestData), function(pair) {
+      aoData.push({'name': pair[0], 'value': pair[1]});
+    })
   },
 
   /**
