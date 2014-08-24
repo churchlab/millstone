@@ -483,3 +483,9 @@ div.dataTables_paginate ul.pagination {
 .gd-filter-key-modal-desc {
   margin-bottom: 5px;
 }
+
+.gd-alignment-create-new-project-text {
+  background-color: yellow;
+  font-weight: bold;
+  margin-bottom: 5px;
+}

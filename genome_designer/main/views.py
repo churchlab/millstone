@@ -87,9 +87,11 @@ def project_create_view(request):
                     owner=request.user.get_profile(),
                     title=project_name)
 
-            return HttpResponseRedirect(
-                    reverse('main.views.alignment_create_view',
-                            args=(project.uid,)))
+            # Redirect to "Create Alignment" page.
+            redirect_url = '%s?is_new_project=1' % reverse(
+                    'main.views.alignment_create_view',
+                    args=(project.uid,))
+            return HttpResponseRedirect(redirect_url)
 
         except Exception as e:
             context['error_string'] = str(e)
@@ -341,10 +343,13 @@ def alignment_create_view(request, project_uid):
         'entity': adapt_model_instance_to_frontend(project)
     })
 
+    is_new_project = bool(request.GET.get('is_new_project', False))
+
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
-        'init_js_data': init_js_data
+        'init_js_data': init_js_data,
+        'is_new_project': is_new_project
     }
     return render(request, 'alignment_create.html', context)
 

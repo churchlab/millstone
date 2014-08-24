@@ -4,6 +4,11 @@
 <div class="gd-header h1">
   Create Alignment
 </div>
+{% if is_new_project %}
+  <div class="gd-alignment-create-new-project-text">
+    Welcome to Millstone. Kick off your project by running an alignment. Follow the steps below to upload a reference genome from fasta or genbank, samples as raw sequencing data (.fastq), and start your alignment.
+  </div>
+{% endif %}
 <div class="panel panel-default">
   <div class="panel-body">
     <ul id="createAlignmentTabs" class="nav nav-pills">
