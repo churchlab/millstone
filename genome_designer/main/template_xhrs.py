@@ -15,6 +15,7 @@ from django.template.loader import render_to_string
 from main.models import AlignmentGroup
 from main.models import ReferenceGenome
 from main.models import Project
+from main.models import SavedVariantFilterQuery
 
 
 # Controls ====================================================================
@@ -29,11 +30,19 @@ def variant_filter_controls(request):
             project__owner=request.user.get_profile(),
             uid=ref_genome_uid)
 
-    csrf = request.GET.get('csrf')
+    saved_query_list = SavedVariantFilterQuery.objects.filter(
+            owner=request.user.get_profile())
+
+    example_saved_query_list = [
+        'GT_TYPE = 2',
+        'INFO_EFF_IMPACT = HIGH'
+    ]
 
     context = {
         'ref_genome': ref_genome,
-        'is_melted': True
+        'is_melted': True,
+        'saved_query_list': saved_query_list,
+        'example_saved_query_list': example_saved_query_list
     }
 
     context['table_id'] = request.GET.get('tableId', 'sample-list-datatable')

@@ -39,6 +39,7 @@ from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Region
+from main.models import SavedVariantFilterQuery
 from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
@@ -189,6 +190,8 @@ def ref_genomes_delete(request):
 
     # Return success response.
     return HttpResponse(json.dumps({}), content_type='application/json')
+
+
 @login_required
 @require_POST
 def variant_sets_delete(request):
@@ -209,6 +212,48 @@ def variant_sets_delete(request):
     variant_sets_to_delete.delete()
 
     #Return success response
+    return HttpResponse(json.dumps({}), content_type='application/json')
+
+
+@login_required
+@require_POST
+def save_variant_filter(request):
+    # Read params / validate.
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.POST['projectUid'])
+    filter_text = request.POST.get('filterText', '')
+    if not filter_text:
+        raise Http404("Nothing to save.")
+
+    # Get or create the new filter.
+    svfq, _ = SavedVariantFilterQuery.objects.get_or_create(
+            owner=project.owner,
+            text=filter_text)
+
+    # Return new element in response so it can be rendered.
+    return HttpResponse(json.dumps({
+        'savedFilter': {
+            'uid': svfq.uid,
+            'text': svfq.text
+        }
+    }), content_type='application/json')
+
+
+@login_required
+@require_POST
+def delete_variant_filter(request):
+    # Read params / validate.
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=request.POST['projectUid'])
+    filter_uid = request.POST.get('uid')
+    if not filter_uid:
+        return HttpResponseBadRequest();
+
+    # Get or create the new filter.
+    SavedVariantFilterQuery.objects.get(
+            owner=project.owner, uid=filter_uid).delete()
+
+    # Return new element in response so it can be rendered.
     return HttpResponse(json.dumps({}), content_type='application/json')
 
 
@@ -938,7 +983,7 @@ def _create_variant_set_empty(ref_genome, variant_set_name):
 
     result = {
         'error': error_string,
-        'variant_set_uid': empty_variant_set.uid
+        'variantSetUid': empty_variant_set.uid
     }
     return result
 

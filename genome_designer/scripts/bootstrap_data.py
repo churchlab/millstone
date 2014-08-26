@@ -35,6 +35,7 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Region
 from main.models import RegionInterval
+from main.models import SavedVariantFilterQuery
 from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantSet
@@ -83,6 +84,11 @@ SAMPLE_1_LABEL = 'sample1'
 VARIANTSET_1_LABEL = 'Set A'
 
 VARIANTSET_2_LABEL = 'Set B'
+
+CUSTOM_SAVED_QUERY_LIST = [
+    'GT_TYPE = 2 & DP > 10',
+    'INFO_EFF_IMPACT = HIGH',
+]
 
 # A set of data consisting of a small annotated genome, many samples, and some
 # designed SNPs which are each in some of the samples.
@@ -207,6 +213,12 @@ def bootstrap_fake_data():
 
     ref_genome_3 = import_reference_genome_from_local_file(
             test_project, 'test_genome', TEST_FASTA, 'fasta')
+
+    ### Create some saved queries.
+    for saved_query_text in CUSTOM_SAVED_QUERY_LIST:
+        SavedVariantFilterQuery.objects.get_or_create(
+                owner=user.get_profile(),
+                text=saved_query_text)
 
     ### Create some ExperimentSamples.
 
@@ -385,26 +397,45 @@ def reset_database():
     print 'Deleting old database ...'
 
     script_string = """
-    sudo -u postgres psql -c "DROP DATABASE IF EXISTS %(db)s;"
-    sudo -u postgres psql -c "DROP USER IF EXISTS %(user)s;"
-    sudo -u postgres psql -c "CREATE USER %(user)s WITH PASSWORD '%(password)s';"
-    sudo -u postgres psql -c "CREATE DATABASE %(db)s;"
-    sudo -u postgres psql -c 'GRANT ALL PRIVILEGES ON DATABASE %(db)s to %(user)s;'
-    sudo -u postgres psql -c "ALTER USER %(user)s CREATEDB;"
-
+    sudo -u %(os_user)s psql -c "
+    DO
+    \$body\$
+    BEGIN
+       IF NOT EXISTS (
+          SELECT *
+          FROM   pg_catalog.pg_user
+          WHERE  usename = '%(user)s') THEN
+          CREATE USER %(user)s WITH PASSWORD '%(password)s';
+       END IF;
+    END;
+    \$body\$"
+    sudo -u %(os_user)s psql -c "DROP DATABASE IF EXISTS %(db)s;"
+    sudo -u %(os_user)s psql -c "CREATE DATABASE %(db)s;"
+    sudo -u %(os_user)s psql -c 'GRANT ALL PRIVILEGES ON DATABASE %(db)s to %(user)s;'
+    sudo -u %(os_user)s psql -c "ALTER USER %(user)s CREATEDB;"
     """ % {
-            'db': settings.DATABASES['default']['NAME'],
-            'user': settings.DATABASES['default']['USER'],
-            'password': settings.DATABASES['default']['PASSWORD']
-            }
+        'db': settings.DATABASES['default']['NAME'],
+        'user': settings.DATABASES['default']['USER'],
+        'password': settings.DATABASES['default']['PASSWORD'],
+        'os_user': settings.DATABASES['default']['OS_USER']
+    }
 
     proc = subprocess.Popen(script_string, shell=True, stderr=subprocess.PIPE)
-    output = proc.stderr.read()
 
-    if output:
-        raise Exception('Error while reseting databse.  Celery will have to be restarted.'
-                '\nOffending postgres error:\n' + str(output))
+    # parse script stderr for errors.
+    error_lines = []
+    for output_line in proc.stderr.readline():
+        # Skip 'NOTICE' stderr lines, they are not errors.
+        if not output_line or 'NOTICE' in output_line:
+            continue
+        error_lines.append(output_line)
 
+    if len(error_lines):
+        raise Exception(
+                'Error while reseting database. Possible reasons:\n '
+                '\t* Celery is running\n'
+                '\t* Postgres session is open\n'
+                '\nOffending postgres errors:\n' + ''.join(error_lines))
     """
     flush: removes all rows in the database.
     syncdb --all: performs syncdb on non-South apps and migrate on South apps
@@ -423,6 +454,7 @@ def reset_database():
 
 def confirm_bootstrap():
     if len(sys.argv) > 1 and sys.argv[1] in ["-q",]:
+        sys.argv.pop(1)
         return True
     confirm_text = raw_input(
             "This will wipe any current database. Are you sure? y/n\n")

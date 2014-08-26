@@ -659,6 +659,7 @@ def adapt_melted_object_field(val, fdict):
         val = titlecase_spaces(val)
     return val
 
+
 def adapt_cast_object_list_field(cast_object_dict_list, fdict):
     """Converts a Cast object's field as a list into a string where values
     have been bucketed by unique type, with counts in parens.
@@ -681,7 +682,8 @@ def adapt_cast_object_list_field(cast_object_dict_list, fdict):
     # Using ordered dicts with None as an ordered set
     buckets = OrderedDict()
     for val in value_list:
-        buckets[val] = buckets.get(val, 0) + 1
+        key = str(val)
+        buckets[key] = buckets.get(key, 0) + 1
 
     # If gathering, just list all values, maintaining order.
     if fdict.get('format','bucket') is 'gather':

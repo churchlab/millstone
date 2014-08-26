@@ -6,7 +6,7 @@ from collections import defaultdict
 import re
 
 from django.core.exceptions import ObjectDoesNotExist
-from interval import interval
+import pyinter
 
 from main.constants import UNDEFINED_STRING
 from main.models import ExperimentSample
@@ -139,14 +139,14 @@ def add_variants_to_set_from_bed(sample_alignment, bed_dataset):
     Add variants in 223751-224756 and 223514-223534 to POOR_MAPPING_QUALITY
     """
 
-    # Read in the bed file 
+    # Read in the bed file
     bed_dataset_fn = bed_dataset.get_absolute_location()
     reference_genome = sample_alignment.alignment_group.reference_genome
     experiment_sample = sample_alignment.experiment_sample
 
     # 1. Create a dictionary of disjoint intervals, recursive defaultdict
-    f = lambda: defaultdict(f)
-    feature_disj_intervals = defaultdict(lambda: defaultdict(interval))
+    feature_disj_intervals = defaultdict(
+            lambda: defaultdict(pyinter.IntervalSet))
     variants_to_add = defaultdict(list)
 
     with open(bed_dataset_fn) as bed_dataset_fh:
@@ -155,27 +155,30 @@ def add_variants_to_set_from_bed(sample_alignment, bed_dataset):
             try:
                 chrom, start, end, feature = line.strip().split('\t')
                 # make a new interval from start to end
-                new_ivl = interval([start, end])
+                new_ivl = pyinter.closedopen(int(start), int(end))
 
                 # add new ivl to old ivls
-                curr_ivl = feature_disj_intervals[feature][chrom] 
-                feature_disj_intervals[feature][chrom] = curr_ivl | new_ivl
+                feature_disj_intervals[feature][chrom].add(new_ivl)
             except:
-                print ('WARNING: Callable Loci line ' + 
+                print ('WARNING: Callable Loci line ' +
                         '%d: (%s) couldnt be parsed.') % (i, line)
 
-    # 2. Associate variants with these intervals 
+    # 2. Associate variants with these intervals
     variants = Variant.objects.filter(
             variantcallercommondata__alignment_group=\
                     sample_alignment.alignment_group)
 
     for v in variants:
         for feat, chrom_ivls in feature_disj_intervals.items():
+
+            # Skip if there is no interval in this chromosome
             if v.chromosome.label not in chrom_ivls: continue
+            if not chrom_ivls[v.chromosome.label]: continue
+
             if v.position in chrom_ivls[v.chromosome.label]:
                 variants_to_add[feat].append(v)
 
-    # 3. Make new variant sets for any features with variants, 
+    # 3. Make new variant sets for any features with variants,
     # and add the variants to them.
 
     variant_set_to_variant_map = {}
@@ -187,13 +190,13 @@ def add_variants_to_set_from_bed(sample_alignment, bed_dataset):
                 label=feat)
 
         grouped_uid_dict_list = [{
-                'sample_uid': experiment_sample.uid, 
+                'sample_uid': experiment_sample.uid,
                 'variant_uid': v.uid} for v in variants]
 
         variant_uid_to_obj_map = dict([(v.uid,v) for v in variants])
         sample_uid_to_obj_map = {experiment_sample.uid: experiment_sample}
 
-        _perform_add(grouped_uid_dict_list, feat_variant_set, 
+        _perform_add(grouped_uid_dict_list, feat_variant_set,
                 variant_uid_to_obj_map, sample_uid_to_obj_map)
 
         variant_set_to_variant_map[feat_variant_set] = variants
@@ -287,13 +290,13 @@ def _get_cached_uid_to_object_maps(ref_genome, grouped_uid_dict_list):
 def _perform_add(grouped_uid_dict_list, variant_set, variant_uid_to_obj_map,
         sample_uid_to_obj_map):
     """
-    TODO: Instead of looping through variants individually, 
+    TODO: Instead of looping through variants individually,
     create them in one fell swoop, which will be faster.
 
     Args:
-        grouped_uid_dict_list: 
+        grouped_uid_dict_list:
             [ {
-                sample_uid: <SOME_SAMPLE_UID>, 
+                sample_uid: <SOME_SAMPLE_UID>,
                 variant_uid: <SOME_VARIANT_UID>}, ...]
 
         variant_set:
@@ -306,7 +309,7 @@ def _perform_add(grouped_uid_dict_list, variant_set, variant_uid_to_obj_map,
             { <SOME_SAMPLE_UID>: <ExperimentSample object>, ...}
 
     """
-        
+
     for group in grouped_uid_dict_list:
         variant = variant_uid_to_obj_map[group['variant_uid']]
         vtvs, created = VariantToVariantSet.objects.get_or_create(

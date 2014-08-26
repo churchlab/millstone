@@ -88,11 +88,10 @@ def update_sample_filter_key_map(ref_genome, experiment_sample):
             MAP_KEY__EXPERIMENT_SAMPLE, {}))
 
     for key, value in experiment_sample.data.iteritems():
-        inner_map = {}
-        inner_map['type'] = 'String'
-        inner_map['num'] = 1
-
-        sample_map[key]=inner_map
+        sample_map[key] = {
+            'type': 'String',
+            'num': 1
+        }
 
     ref_genome.variant_key_map[MAP_KEY__EXPERIMENT_SAMPLE] = sample_map
 
@@ -117,15 +116,14 @@ def update_filter_key_map(ref_genome, source_vcf):
     Note about 'num': it's handled by pyvcf in a dict called `field_counts`, and
     'A' is stored as -1, which means that a single value is held for every
     ALTERATE allele. 'G' is stored as -2, which means there is a different value
-    for every possible  genotype combination of alleles (which would be a choose
-    n where n is the called  ploidy and a is the number of alleles).
+    for every possible genotype combination of alleles, which would mean there
+    are (a choose n) values where a is number of alleles and n is ploidy.
 
     All of the -1 fields are stored in a subdict corresponding to
     MAP_KEY__ALTERNATE, and the JSONField data in the VariantEvidence object
     stores the per-alt data after doing the equivalent of 'zip()ing' it per
     object.
     """
-
     # Get an updated representation of the reference genome, in case
     # other tasks have already updated the filter_key_map
     # https://github.com/churchlab/millstone/issues/254
@@ -151,6 +149,7 @@ def update_filter_key_map(ref_genome, source_vcf):
         inner_map = {}
         inner_map['type'] = value.type
         inner_map['num'] = value.num
+        inner_map['desc'] = value.desc
 
         # If a field is per-alternate, then put it in a separate dictionary.
         if value.num == -1:
@@ -172,6 +171,7 @@ def update_filter_key_map(ref_genome, source_vcf):
         inner_map = {}
         inner_map['type'] = value.type
         inner_map['num'] = value.num
+        inner_map['desc'] = value.desc
         evidence_data_map[key] = inner_map
 
     ref_genome.variant_key_map.get(MAP_KEY__EVIDENCE, {}).update(

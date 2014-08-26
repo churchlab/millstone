@@ -32,6 +32,7 @@ Implementation Notes:
 from contextlib import contextmanager
 from datetime import datetime
 import os
+import re
 import shutil
 import subprocess
 
@@ -835,7 +836,8 @@ class AlignmentGroup(UniqueUidModelMixin):
             return 'Not running'
 
         # If here, return time elapsed since start.
-        return datetime.now() - self.start_time
+        return re.match('(.*:.*:.*)\.',
+                str(datetime.now() - self.start_time)).group(1)
 
     @classmethod
     def get_field_order(clazz, **kwargs):
@@ -1363,6 +1365,14 @@ class RegionInterval(Model):
 
     # One-indexed.
     end = models.BigIntegerField()
+
+
+class SavedVariantFilterQuery(UniqueUidModelMixin):
+    """Saved query belonging to the user.
+    """
+    owner = models.ForeignKey('UserProfile')
+
+    text = models.TextField()
 
 
 class S3File(Model):

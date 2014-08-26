@@ -5,12 +5,14 @@ Millstone is a distributed bioinformatics software platform designed to facilita
 
 ## Dependencies
 
+* Python 2.7.3
+* Perl 5 (for JBrowse)
+* Java 1.7
 * Postgresql 9.3 (only this version has been tested; on Mac we recommend [Postgres.app](http://postgresapp.com/))
-* R (for Picard)
-* Unafold (http://dinamelt.rit.albany.edu/download.php)
+* Unafold (http://dinamelt.rit.albany.edu/downlroad.php)
 * Python deps: See requirements.txt / instructions below
-* CRLibM (http://lipforge.ens-lyon.fr/www/crlibm/download.html)
 * RabbitMQ (not required to pass tests, see below)
+
 
 ## Installation
 
@@ -118,20 +120,21 @@ need to do the following to get JBrowse up and running:
         $ ln -sfv /usr/local/opt/nginx/*.plist ~/Library/LaunchAgents
         $ launchctl load ~/Library/LaunchAgents/homebrew.mxcl.nginx.plist
         $ # to reload: sudo nginx -s reload
+        
+3. Install Perl local::lib module from CPAN for Jbrowse:
+
+        $ sudo cpan install local::lib
 
 4. Check that JBrowse is working locally by visiting:
 
       <http://localhost/jbrowse/index.html?data=sample_data/json/volvox>
 
-If upon running the Millstone application or its tests you observe errors
-related to missing perl modules, you can install them with `cpanm`, e.g.:
-
-        $ cpanm local::lib
-
+*NOTE:* If upon running the Millstone application or its tests you observe errors
+related to missing perl modules, you should also install them with `cpan`.
 
 ### Async Queue - RabbitMQ backend for Celery (optional for dev)
 
-*NOTE:* Tests sould pass without RabbitMQ setup so okay to skip this at first.
+*NOTE:* Tests should pass without RabbitMQ setup so okay to skip this at first.
 
 Asynchronous processing is necessary for many of the analysis tasks in this
 application.  We use the open source project celery since it is being actively
@@ -159,34 +162,7 @@ message broker, for which we use RabbitMQ which is the default for Celery.
         $ sudo /usr/local/sbin/rabbitmq-server
 
     Further Mac instructions are [here](http://www.rabbitmq.com/install-homebrew.html).
-
-## Configuring PostgreSQL database.
-
-*On Mac*: 
-
-1. If you are using a fresh Postgres install, you may need to initialize the database:
-
-        $ initdb /usr/local/var/postgres -E utf8
-        $ pg_ctl -D /usr/local/var/postgres -l logfile start 
-
-2. Since most new postgres mac installations (both via brew and Postgres.app) do not have a `postgres` admin user, you will need to [modify your DATABASES variable](https://github.com/churchlab/millstone/issues/433) in `genome_designer/conf/local_settings.py`.
-
-See instructions for setting up PostgresSQL database:
-<https://overlappingminds.com/thoughts/069accf7-ccb4-4b7a-bd40-022c49a053cd>
-
-*NOTE:* Be sure to make local db config changes in `genome_designer/conf/local_settings.py`.
-
-In order to run tests with Postgres, your user will need CREATE permissions.
-Otherwise you might get an error creating a database.
-You can grant these by logging into the Posgres shell:
-
-    sudo -u postgres psql
-
-and then running:
-
-    ALTER USER django CREATEDB;
-
-
+    
 ### Run the Millstone setup script.
 
 The following installs various third-party bioinformatics tools and sets up
@@ -195,30 +171,23 @@ JBrowse.
     $ cd genome_designer
     $ ./millstone_setup.py
 
+### Configuring PostgreSQL database for Millstone.
 
-## Running the application
+*NOTE:* Be sure to make local db config changes in `genome_designer/conf/local_settings.py`.
 
-0. Activate your virtualenv, e.g.:
+1. _(Mac Only)_ If you are using a fresh Postgres install, you may need to initialize the database:
 
-        $ source ~/pyenvs/genome-designer-env/bin/activate .
+        $ initdb /usr/local/var/postgres -E utf8
+        $ pg_ctl -D /usr/local/var/postgres -l logfile start 
 
-1. Navigate to the the `genome_designer/` dir.
+2. _(Mac Only)_ Since most new postgres Mac installations (both via brew and Postgres.app) do not have a `postgres` admin user, you will need to [modify your DATABASES variable](https://github.com/churchlab/millstone/issues/433) in `genome_designer/conf/local_settings.py`.
 
-2. Boostrap the database with blank data.
+3. Navigate to the the `genome_designer/` dir.
 
-        $ python scripts/bootstrap_data.py -q blank
+4. Bootstrapping the database will automatically add the user, db, and permissions:
 
-
-2. From one terminal, start the celery server.
-
-        (venv)$ ./scripts/run_celery.sh
-
-3. Open another terminal and start the django server.
-
-        (venv)$ python manage.py runserver
-
-4. Visit the url <http://localhost:8000/> to see the demo.
-
+        
+        $ python scripts/bootstrap_data.py -q
 
 ## Tests
 
@@ -292,12 +261,13 @@ add notes shortly about how to add new integration tests.
 To run integration tests, use this command. This uses nose so you can use
 the same options and features as before.
 
-    (venv)$ ./scripts/run_integration_tests.py
+    (venv)$ ./scripts/run_integration_tests.sh
 
 HINT: When debugging integration tests, it may be necessary to manually clean
 up previously stared `celerytestworker`s. There is a script to do this for you:
 
     $ ./scripts/kill_celerytestworkers.sh
+ 
 
 ### Debugging Tests / Dealing with Craziness
 
@@ -348,6 +318,24 @@ integration tests is coming soon.)
 
 Nose automatically discovers files with names of the form `test_*.py` as test
 files.
+
+## Running the application
+
+0. Activate your virtualenv, e.g.:
+
+        $ source ~/pyenvs/genome-designer-env/bin/activate .
+
+1. Navigate to the the `genome_designer/` dir.
+
+2. From one terminal, start the celery server.
+
+        (venv)$ ./scripts/run_celery.sh
+
+3. Open another terminal and start the django server.
+
+        (venv)$ python manage.py runserver
+
+4. Visit the url <http://localhost:8000/> to see the demo.
 
 ## Bootstrapping Test Data
 

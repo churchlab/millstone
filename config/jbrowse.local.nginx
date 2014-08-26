@@ -2,7 +2,7 @@ server {
   server_name localhost;
 
   location /jbrowse {
-    alias /home/glebk/Projects/churchlab/genome-designer-v2/jbrowse;
+    alias /path/to/millstone/jbrowse;
   }
 
   location / {

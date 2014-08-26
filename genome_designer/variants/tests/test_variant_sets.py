@@ -7,7 +7,7 @@ import random
 
 from django.conf import settings
 from django.test import TestCase
-from interval import interval
+import pyinter
 
 from main.models import AlignmentGroup
 from main.models import Chromosome
@@ -106,10 +106,10 @@ class TestAddVariantsToSetFromBed(TestCase):
             )
 
         new_bed_path = copy_dataset_to_entity_data_dir(
-                entity= sample_alignment, 
+                entity= sample_alignment,
                 original_source_location= TEST_BED)
 
-        bed_dataset = add_dataset_to_entity(sample_alignment, 
+        bed_dataset = add_dataset_to_entity(sample_alignment,
                 dataset_label= Dataset.TYPE.BED_CALLABLE_LOCI,
                 dataset_type= Dataset.TYPE.BED_CALLABLE_LOCI,
                 filesystem_location= new_bed_path)
@@ -125,12 +125,13 @@ class TestAddVariantsToSetFromBed(TestCase):
             for v in variants:
                 # POOR MAPPING QUAL should be from 101 to 200
                 if variant_set.label == 'POOR_MAPPING_QUALITY':
-                    self.assertTrue(v.position in interval(
-                            [101, 200]))
+                    self.assertTrue(v.position in pyinter.closedopen(
+                            101, 200))
                 # NO COVERAGE should be from 301 to 400, 501 to 600
                 elif variant_set.label == 'NO_COVERAGE':
-                    self.assertTrue(v.position in interval(
-                            [301,400],[501,600]))
+                    self.assertTrue(v.position in pyinter.IntervalSet([
+                                    pyinter.closedopen(301,400),
+                                    pyinter.closedopen(501,600)]))
                 else:
                     raise AssertionError(
                             'bad variant set %s made.' % variant_set.label)
