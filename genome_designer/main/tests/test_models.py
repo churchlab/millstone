@@ -9,6 +9,7 @@ from django.conf import settings
 from django.test import TestCase
 
 from utils.import_util import import_reference_genome_from_local_file
+from utils.import_util import copy_dataset_to_entity_data_dir
 from main.models import AlignmentGroup
 from main.models import Chromosome
 from main.models import Dataset
@@ -315,3 +316,42 @@ class TestExperimentSample(TestCase):
         es.delete()
 
         self.assertFalse(os.path.exists(es_data_dir))
+
+
+class TestChromosome(TestCase):
+
+    def test_multiple_chromosome_dataset_import(self):
+        user = User.objects.create_user(
+            TEST_USERNAME, password=TEST_PASSWORD, email=TEST_EMAIL)
+
+        project = Project.objects.create(
+            title=TEST_PROJECT_NAME, owner=user.get_profile())
+
+        test_yeast_genome = ReferenceGenome.objects.create(
+            project=project,
+            label='superbrewer2000')
+
+        test_dataset_path = os.path.join(settings.PWD, 'test_data/yeast_chrom_jkl.fasta')
+        dataset_path = copy_dataset_to_entity_data_dir(test_yeast_genome, test_dataset_path)
+
+        test_chroms_dataset  = Dataset.objects.create(
+            label='jkl_chroms',
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA,
+            filesystem_location=clean_filesystem_location(dataset_path))
+
+        test_yeast_genome.dataset_set.add(test_chroms_dataset)
+
+        # Assert correct number of chromosomes
+        assert(test_yeast_genome.num_chromosomes == 3)
+
+        # Assert correct number of bases
+        assert(test_yeast_genome.num_bases == sum([chrom.num_bases for chrom in 
+                Chromosome.objects.filter(reference_genome=test_yeast_genome)]))
+
+        # Assert correct chromosome labels
+        expected_chrom_names = [
+                'gi|448092123|ref|NC_020215.1|', 
+                'gi|448096713|ref|NC_020216.1|', 
+                'gi|448100869|ref|NC_020217.1|']
+
+        assert([chrom.label for chrom in Chromosome.objects.filter(reference_genome=test_yeast_genome)] == expected_chrom_names)
