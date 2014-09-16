@@ -123,8 +123,6 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     pipeline_completion = pipeline_completion_tasks.s(
             alignment_group=alignment_group)
 
-
-
     # Put together the whole pipeline.
     # Since this method might be called after alignments have already been
     # complete and only variant calling needs to be done, it's possible

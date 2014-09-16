@@ -55,6 +55,15 @@ STATUS_CODE__NOT_FOUND = 404
 STATUS_CODE__NOT_LOGGED_IN = 302
 STATUS_CODE__SUCCESS = 200
 
+TEST_FQ_DIR = os.path.join(
+        GD_ROOT,
+        'test_data',
+        'fake_genome_and_reads',
+        '9b19e708')
+TEST_FQ1_FILE = os.path.join(TEST_FQ_DIR,
+        'test_genome_2.snps.simLibrary.1.fq')
+TEST_FQ2_FILE = os.path.join(TEST_FQ_DIR,
+        'test_genome_2.snps.simLibrary.2.fq')
 
 class TestGetVariantList(TestCase):
 
@@ -316,10 +325,10 @@ class TestUploadSingleSample(TestCase):
         request.POST['sampleLabel'] = EXPERIMENT_SAMPLE_LABEL
 
         request.FILES['fastq1'] = UploadedFile(
-                file=StringIO.StringIO(),
+                file=open(TEST_FQ1_FILE),
                 name='read1.fq')
         request.FILES['fastq2'] = UploadedFile(
-                file=StringIO.StringIO(),
+                file=open(TEST_FQ2_FILE),
                 name='read2.fq')
 
         response = upload_single_sample(request)
@@ -330,7 +339,8 @@ class TestUploadSingleSample(TestCase):
         self.assertTrue(sample)
 
         datasets = sample.dataset_set.all()
-        self.assertEqual(2, len(datasets))
+        # num_datasets: 2 * fastq plus 2 * fastqc = 4
+        self.assertEqual(4, len(datasets))
         for dataset in datasets:
             self.assertEqual(Dataset.STATUS.READY, dataset.status)
 

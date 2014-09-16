@@ -7,6 +7,7 @@ import csv
 import os
 import shutil
 import re
+import subprocess
 from tempfile import mkdtemp
 from tempfile import mkstemp
 from tempfile import NamedTemporaryFile
@@ -36,6 +37,8 @@ from utils import uppercase_underscore
 from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from utils.jbrowse_util import add_genbank_file_track
 from variants.vcf_parser import get_or_create_variant
+from settings import FASTQC_BINARY
+from settings import TEMP_FILE_ROOT
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
@@ -443,32 +446,33 @@ def _create_fastq_dataset(experiment_sample, fastq_source, dataset_type,
     return reads_dataset
 
 
+def _copy_dataset_data(experiment_sample, fastq_source, dataset_type,
+            move=False, set_status=Dataset.STATUS.VERIFYING):
+    """Helper to copy data and set status.
+    """
+    dataset = experiment_sample.dataset_set.get(type=dataset_type)
+    dataset.status = Dataset.STATUS.COPYING
+    dataset.save()
+    copy_dataset_to_entity_data_dir(experiment_sample, fastq_source, move=move)
+    dataset.status = set_status
+    dataset.save()
+    return dataset
+
 @task
 @project_files_needed
 def copy_experiment_sample_data(project, experiment_sample, data, move=False):
     """Celery task that wraps the process of copying the data for an
     ExperimentSample.
     """
-    def _copy_dataset_data(fastq_source, dataset_type):
-        """Helper to copy data and set status to VERIFYING.
-        """
-        reads_dataset = experiment_sample.dataset_set.get(type=dataset_type)
-        reads_dataset.status = Dataset.STATUS.COPYING
-        reads_dataset.save()
-        copy_dataset_to_entity_data_dir(experiment_sample, fastq_source,
-                move=move)
-        reads_dataset.status = Dataset.STATUS.VERIFYING
-        reads_dataset.save()
-        return reads_dataset
 
     # Copy read1.
-    read1_dataset = _copy_dataset_data(data['Read_1_Path'],
-            Dataset.TYPE.FASTQ1)
+    read1_dataset = _copy_dataset_data(experiment_sample, data['Read_1_Path'],
+            Dataset.TYPE.FASTQ1, move=move)
     # Copy read2.
     maybe_read2_path = data.get('Read_2_Path', '')
     if maybe_read2_path:
-        read2_dataset = _copy_dataset_data(maybe_read2_path,
-                Dataset.TYPE.FASTQ2)
+        read2_dataset = _copy_dataset_data(experiment_sample, maybe_read2_path,
+                Dataset.TYPE.FASTQ2, move=move)
     else:
         read2_dataset = None
 
@@ -491,9 +495,55 @@ def copy_experiment_sample_data(project, experiment_sample, data, move=False):
         read1_dataset.status = Dataset.STATUS.READY
         read2_dataset.status = Dataset.STATUS.READY
 
-    # Save the status.
+    # Quality Control via FASTQC and save.
+    read1_dataset.status = Dataset.STATUS.QC
+    run_fastqc_on_sample_fastq(experiment_sample, read1_dataset)
+    read1_dataset.status = Dataset.STATUS.READY
     read1_dataset.save()
+
+    read2_dataset.status = Dataset.STATUS.QC
+    run_fastqc_on_sample_fastq(experiment_sample, read2_dataset, rev=True)
+    read2_dataset.status = Dataset.STATUS.READY
     read2_dataset.save()
+
+
+def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):
+    """
+    Runs FASTQC on a fastq dataset object, generating an html file
+    linked to a new FASTQC dataset object, which is returned.
+    """
+    fastq_filename = fastq_dataset.get_absolute_location()
+    fastqc_filename = fastq_filename + '_fastqc.html'
+
+    if rev:
+        dataset_type = Dataset.TYPE.FASTQC2_HTML
+    else:
+        dataset_type = Dataset.TYPE.FASTQC1_HTML
+
+    command = [
+            FASTQC_BINARY,
+            fastq_filename,
+            '-o', experiment_sample.get_model_data_dir(),
+            '-d', TEMP_FILE_ROOT]
+
+    fastqc_output = subprocess.check_output(
+            command, stderr=subprocess.STDOUT)
+
+    # Check that fastqc file has been made
+    # TODO: We need proper error checking and logging probably, so that this
+    # non-essential step doesn't destroy the whole import process.
+    if not os.path.exists(fastqc_filename):
+        print 'FastQC Failed for {}:\n{}'.format(
+                    fastq_filename, fastqc_output)
+        import pdb
+        pdb.set_trace()
+
+    fastqc_dataset = add_dataset_to_entity(experiment_sample,
+            dataset_type, dataset_type, fastqc_filename)
+    fastqc_dataset.status = Dataset.STATUS.READY
+    fastqc_dataset.save()
+
+    return fastqc_dataset
 
 
 def create_sample_models_for_eventual_upload(project, targets_file):

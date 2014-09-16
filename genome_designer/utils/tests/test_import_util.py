@@ -122,7 +122,8 @@ class TestImportSamplesFromTargetsFile(TestCase):
 
         # Make sure the right amount of models were added.
         self.assertEqual(NUM_SAMPLES_IN_TEMPLATE, num_experiment_samples_after)
-        self.assertEqual(2 * NUM_SAMPLES_IN_TEMPLATE, num_datasets_after)
+        # num_datasets: 2 * fastq plus 2 * fastqc = 4 * num_samples
+        self.assertEqual(4 * NUM_SAMPLES_IN_TEMPLATE, num_datasets_after)
 
         # Make sure all have READY status.
         observed_status_type_set = set([
@@ -132,8 +133,10 @@ class TestImportSamplesFromTargetsFile(TestCase):
 
         # Check the specifics of the Datasets, especially filepaths.
         for sample in new_samples:
-            fwd_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ1)
-            rev_reads_dataset = sample.dataset_set.get(type=Dataset.TYPE.FASTQ2)
+            fwd_reads_dataset = sample.dataset_set.get(
+                    type=Dataset.TYPE.FASTQ1)
+            rev_reads_dataset = sample.dataset_set.get(
+                    type=Dataset.TYPE.FASTQ2)
             self.assertNotEqual(fwd_reads_dataset.filesystem_location,
                     rev_reads_dataset.filesystem_location,
                     "Must have different filesystem locations.")
@@ -209,8 +212,9 @@ class TestImportSamplesFromTargetsFile(TestCase):
         num_datasets_after = len(Dataset.objects.all())
 
         # Make sure the right amount of models were added.
+        # num_datasets: 2 * fastq plus 2 * fastqc = 4 * num_samples
         self.assertEqual(NUM_SAMPLES_IN_TEMPLATE, num_experiment_samples_after)
-        self.assertEqual(2 * NUM_SAMPLES_IN_TEMPLATE, num_datasets_after)
+        self.assertEqual(4 * NUM_SAMPLES_IN_TEMPLATE, num_datasets_after)
 
         # Make sure all have READY status.
         observed_status_type_set = set([

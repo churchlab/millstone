@@ -91,7 +91,10 @@ TOOLS_URLS = {
         'Linux' : [
             'https://www.dropbox.com/s/xl8honqq7gnh5yi/lumpy-0.2.1-linux.zip'
         ]
-    }
+    },
+    # 'fastqc' : {
+    #     fastqc_v0.11.2_source.zip
+    # }
 }
 
 

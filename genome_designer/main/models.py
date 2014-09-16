@@ -117,7 +117,8 @@ class Dataset(UniqueUidModelMixin):
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
         LUMPY_INSERT_METRICS_HISTOGRAM = 'Lumpy Insert Metrics Histogram'
         LUMPY_INSERT_METRICS_MEAN_STDEV = 'Lumpy Insert Metrics Mean Stdev'
-
+        FASTQC1_HTML = 'FASTQC Forward HTML Output'
+        FASTQC2_HTML = 'FASTQC Reverse HTML Output'
 
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
@@ -141,7 +142,9 @@ class Dataset(UniqueUidModelMixin):
         TYPE.VCF_DELLY : 'alignmentgroup_set',
         TYPE.VCF_LUMPY : 'alignmentgroup_set',
         TYPE.VCF_USERINPUT : 'variantset_set',
-        TYPE.VCF_FREEBAYES_SNPEFF : 'alignmentgroup_set'
+        TYPE.VCF_FREEBAYES_SNPEFF : 'alignmentgroup_set',
+        TYPE.FASTQC1_HTML: 'experimentsample_set',
+        TYPE.FASTQC2_HTML: 'experimentsample_set',
     }
 
     # Human-readable identifier. Also used for JBrowse.
@@ -172,6 +175,7 @@ class Dataset(UniqueUidModelMixin):
         COPYING = 'COPYING'
         QUEUED_TO_COPY = 'QUEUED_TO_COPY'
         VERIFYING = 'VERIFYING'
+        QC = 'RUNNING_QC'
         AWAITING_UPLOAD = 'AWAITING_UPLOAD'
     STATUS_CHOICES = make_choices_tuple(STATUS)
     status = models.CharField(max_length=40, choices=STATUS_CHOICES,

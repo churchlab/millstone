@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+    #!/usr/bin/env python
 
 """
 Script to setup some test data.
@@ -410,14 +410,18 @@ def reset_database():
     END;
     \$body\$"
     sudo -u %(os_user)s psql -c "DROP DATABASE IF EXISTS %(db)s;"
+    sudo -u %(os_user)s psql -c "DROP USER IF EXISTS %(user)s;"
+    sudo -u %(os_user)s psql -c "CREATE USER %(user)s WITH PASSWORD \
+            '%(password)s';"
     sudo -u %(os_user)s psql -c "CREATE DATABASE %(db)s;"
-    sudo -u %(os_user)s psql -c 'GRANT ALL PRIVILEGES ON DATABASE %(db)s to %(user)s;'
+    sudo -u %(os_user)s psql -c 'GRANT ALL PRIVILEGES ON DATABASE \
+            %(db)s to %(user)s;'
     sudo -u %(os_user)s psql -c "ALTER USER %(user)s CREATEDB;"
     """ % {
-        'db': settings.DATABASES['default']['NAME'],
-        'user': settings.DATABASES['default']['USER'],
-        'password': settings.DATABASES['default']['PASSWORD'],
-        'os_user': settings.DATABASES['default']['OS_USER']
+            'db': settings.DATABASES['default']['NAME'],
+            'user': settings.DATABASES['default']['USER'],
+            'password': settings.DATABASES['default']['PASSWORD'],
+            'os_user': settings.DATABASES['default']['OS_USER']
     }
 
     proc = subprocess.Popen(script_string, shell=True, stderr=subprocess.PIPE)
@@ -436,6 +440,7 @@ def reset_database():
                 '\t* Celery is running\n'
                 '\t* Postgres session is open\n'
                 '\nOffending postgres errors:\n' + ''.join(error_lines))
+
     """
     flush: removes all rows in the database.
     syncdb --all: performs syncdb on non-South apps and migrate on South apps
