@@ -1,12 +1,14 @@
 """
 Miscellaneous utility functions.
 """
-
+import sys
+import os
 import re
 import shutil
 import tempfile
 import urllib2
 import string
+from Bio import SeqIO
 
 # Number of characters that snpeff requires per line of the genbank file
 SNPEFF_MIN_LINE_LEN = 20
@@ -98,3 +100,11 @@ def generate_safe_filename_prefix_from_label(label):
     """Generates safe filename prefix by avoiding non-alphanumeric chars.
     """
     return re.sub('\W', '_', label.lower())
+   
+def convert_fasta_to_fastq(fa_path, fq_path):  
+    """Generates a fasta file from a fastq file
+    """
+    with open(fa_path, "r") as fasta, open(fq_path, "w") as fastq:
+        for record in SeqIO.parse(fasta, "fasta"):
+            record.letter_annotations["phred_quality"] = [40] * len(record)
+            SeqIO.write(record, fastq, "fastq")

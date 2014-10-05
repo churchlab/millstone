@@ -6,6 +6,7 @@ in both python and javascript.  Front-end views request the template and get
 the html string as the response.
 """
 
+from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_list_or_404
 from django.shortcuts import get_object_or_404
@@ -135,6 +136,7 @@ def alignment_controls(request):
             uid=alignment_group_uid)
 
     context = {
+        'FLAG__GENOME_FINISHING_ENABLED': settings.FLAG__GENOME_FINISHING_ENABLED,
         'project': project,
         'table_id': request.GET.get('tableId'),
         'alignment_group': alignment_group

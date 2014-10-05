@@ -6,6 +6,7 @@ reasonable separation point is to separate page actions from Ajax actions.
 """
 
 import copy
+import csv
 import json
 import os
 from StringIO import StringIO
@@ -15,6 +16,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.core.servers.basehttp import FileWrapper
 from django.core.urlresolvers import reverse
 from django.http import Http404
 from django.http import HttpResponse
@@ -43,6 +45,7 @@ from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
+from genome_finish import assembly
 from utils.data_export_util import export_melted_variant_view
 from utils.import_util import create_samples_from_row_data
 from utils.import_util import create_sample_models_for_eventual_upload
@@ -1041,6 +1044,32 @@ def generate_new_ref_genome_for_variant_set(request):
     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
+@require_GET
+@login_required
+def generate_contigs(request):
+    """
+    Generates and begins download of a fasta file of contigs assembled from
+    unmapped and split reads of the passed ExperimentSampleToAlignment
+    """
+
+    # Retrieve ExperimentSampleToAlignment
+    experiment_sample_uid = request.GET.get('experiment_sample_uid')
+    experiment_sample_to_alignment = get_object_or_404(ExperimentSampleToAlignment,
+            alignment_group__reference_genome__project__owner=request.user.get_profile(),
+            uid=experiment_sample_uid)
+
+    contig_files = assembly.generate_contigs(experiment_sample_to_alignment)
+
+    # Select only element in list
+    contig_file = contig_files[0]
+
+    wrapper = FileWrapper(file(contig_file))
+    response = StreamingHttpResponse(wrapper, content_type='text/plain')
+    response['Content-Disposition'] = 'attachment; filename="contigs.fa"'
+    response['Content-Length'] = os.path.getsize(contig_file)
+    return response
+
+
 if settings.S3_ENABLED:
     @login_required
     def import_reference_genome_s3(request, project_uid):
@@ -1110,3 +1139,4 @@ if settings.S3_ENABLED:
                 'targets_file_rows': data['targets_file_rows'],
                 'sample_files': data['sample_files']
             }), content_type='application/json')
+

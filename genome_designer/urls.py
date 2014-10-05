@@ -28,6 +28,10 @@ urlpatterns = patterns('',
     url(r'^projects/([\w-]+)/analyze/([\w-]+)/([\w-]+)$',
             'main.views.tab_root_analyze'),
 
+    # Genome finishing
+    url(r'^projects/([\w-]+)/genomefinishing$',
+            'main.views.genome_finish_view'),
+
     # Reference genomes
     url(r'^projects/([\w-]+)/refgenomes$',
             'main.views.reference_genome_list_view'),
@@ -110,6 +114,9 @@ urlpatterns = patterns('',
             'main.xhr_handlers.get_alignment_groups'),
     url(r'^_/alignmentgroups/delete$',
             'main.xhr_handlers.alignment_groups_delete'),
+
+    url(r'^_/alignments/generate_contigs$',
+            'main.xhr_handlers.generate_contigs'),
 
     url(r'^_/samples$',
             'main.xhr_handlers.get_samples'),

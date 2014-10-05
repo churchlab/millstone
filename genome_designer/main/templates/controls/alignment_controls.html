@@ -1,5 +1,14 @@
 <!-- Controls -->
 <div id='{{table_id}}-control' class="gd-datatable-control">
   <div id="gd-ag-controls-toolbar" class="btn-toolbar">
+    {% if FLAG__GENOME_FINISHING_ENABLED %}
+    <a id="gd-generate-contigs-btn" class="btn btn-primary">
+        Generate Contigs
+    </a>
+    {% endif %}
   </div>
+  <form id="gd-contig-export-form" action="/_/alignments/generate_contigs"
+  method="GET">
+  <!-- NOTE: Populated dynamically in js. -->
+  </form>
 </div>
