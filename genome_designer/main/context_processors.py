@@ -16,7 +16,8 @@ def common_data(request):
     if not hasattr(request, 'user') or not request.user.is_authenticated():
         return {}
     return {
-        'project_list': Project.objects.filter(owner=request.user)
+        'project_list': Project.objects.filter(owner=request.user),
+        'FLAG__GENOME_FINISHING_ENABLED': settings.FLAG__GENOME_FINISHING_ENABLED
     }
 
 

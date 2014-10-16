@@ -11,4 +11,9 @@
   <a id="gd-sidenav-link-variant-sets" href="{% url 'main.views.variant_set_list_view' project.uid %}" class="list-group-item">
     Variant Sets
   </a>
+  {% if FLAG__GENOME_FINISHING_ENABLED %}
+    <a id="gd-sidenav-link-genome-finish" href="#" class="list-group-item">
+      Genome Finishing
+    </a>
+  {% endif %}
 </div>
