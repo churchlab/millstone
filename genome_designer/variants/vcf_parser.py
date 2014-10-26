@@ -4,7 +4,8 @@ Methods for reading vcf files and importing it in our database representation.
 We leverage pyvcf as much as possible.
 """
 
-from django.db import transaction
+from django.db import reset_queries
+
 import vcf
 
 from main.model_utils import get_dataset_with_type
@@ -52,7 +53,6 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     parse_vcf(vcf_dataset, alignment_group)
 
 
-# @transaction.commit_on_success
 def parse_vcf(vcf_dataset, alignment_group):
     """Parses the VCF and creates Variant models relative to ReferenceGenome.
     """
@@ -70,9 +70,9 @@ def parse_vcf(vcf_dataset, alignment_group):
         for record in vcf_reader:
             record_count += 1
 
-    # Now iterate through the vcf file again and parse the data, finally
-    # returning all variants created.
-    variants = []
+    # Now iterate through the vcf file again and parse the data.
+    # NOTE: Do not save handles to the Variants, else suffer the wrath of a
+    # memory leak when parsing a large vcf file.
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
 
@@ -99,11 +99,13 @@ def parse_vcf(vcf_dataset, alignment_group):
             # Get or create the Variant for this record. This step
             # also generates the alternate objects and assigns their
             # data fields as well.
-            variant, alts = get_or_create_variant(reference_genome,
+            get_or_create_variant(reference_genome,
                     record, vcf_dataset, alignment_group, query_cache)
-            variants.append(variant)
 
-    return variants
+            # For large VCFs, the cached SQL object references can exhaust memory
+            # so we explicitly clear them here. Our efficiency doesn't really suffer.
+            reset_queries()
+
 
 def extract_raw_data_dict(vcf_record):
     """Extract a dictionary of raw data from the Record.
