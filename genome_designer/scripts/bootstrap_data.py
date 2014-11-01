@@ -439,6 +439,8 @@ def reset_database():
                 'Error while reseting database. Possible reasons:\n '
                 '\t* Celery is running\n'
                 '\t* Postgres session is open\n'
+                '\t* No postgres user; change OS_USER in default database'
+                        ' in local_settings.py\n'
                 '\nOffending postgres errors:\n' + ''.join(error_lines))
 
     """
