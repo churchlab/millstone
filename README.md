@@ -18,7 +18,7 @@ Millstone is a distributed bioinformatics software platform designed to facilita
 
 These are directions for installing Millstone on your own machine, and is **meant for advanced users who want a custom installation**. If you want to deploy a pre-configured Millstone instance to the cloud, then read [Getting Started with Millstone](https://github.com/churchlab/millstone/wiki/Getting-Started-with-Millstone) on the wiki.
 
-**NOTE: Before continuing, make sure all above dependencies are installed.** On Mac, we prefer [Homebrew](http://brew.sh/) on Mac OSX) for package management, and use it in the instructions below.
+**Before continuing, make sure all above dependencies are installed.** On Mac, we prefer [Homebrew](http://brew.sh/) for package management, and use it in the instructions below.
 
 ### Cloning the repository
 
