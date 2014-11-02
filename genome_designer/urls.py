@@ -53,6 +53,9 @@ urlpatterns = patterns('',
     # Samples
     url(r'^projects/([\w-]+)/samples$',
             'main.views.sample_list_view'),
+    url(r'^projects/([\w-]+)/samples/([\w-]+)/fastqc/read([\d+])$',
+            'main.views.fastqc_view'),
+
 
     # Demo Splash
     url(r'^demo_splash$',

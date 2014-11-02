@@ -520,6 +520,10 @@ def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):
     else:
         dataset_type = Dataset.TYPE.FASTQC1_HTML
 
+    # create the tmp dir if it doesn't exist
+    if not os.path.exists(settings.TEMP_FILE_ROOT):
+        os.mkdir(settings.TEMP_FILE_ROOT)
+
     command = [
             FASTQC_BINARY,
             fastq_filename,
@@ -535,8 +539,6 @@ def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):
     if not os.path.exists(fastqc_filename):
         print 'FastQC Failed for {}:\n{}'.format(
                     fastq_filename, fastqc_output)
-        import pdb
-        pdb.set_trace()
 
     fastqc_dataset = add_dataset_to_entity(experiment_sample,
             dataset_type, dataset_type, fastqc_filename)

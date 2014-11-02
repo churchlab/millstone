@@ -693,6 +693,34 @@ class ExperimentSample(UniqueUidModelMixin):
     def __unicode__(self):
         return self.label
 
+    @property
+    def fastqc_links(self):
+        """
+        Links to the FASTQC output files.
+        First checks if datasets are present, skips if missing.
+        """
+
+        links = []
+
+        fqc_dataset_types = enumerate([
+                Dataset.TYPE.FASTQC1_HTML,
+                Dataset.TYPE.FASTQC2_HTML], start=1)
+
+        for read_num, fqc_dataset_type in fqc_dataset_types:
+
+            fastqc_dataset = get_dataset_with_type(self, fqc_dataset_type)
+
+            if not fastqc_dataset:
+                continue
+
+            links.append('<a href="{}">Read {}</a>'.format(
+                    reverse('main.views.fastqc_view',
+                            args=(self.project.uid, self.uid, read_num)),
+                    read_num))
+
+        return ', '.join(links)
+
+
     def get_model_data_root(self):
         """Get the root location for all data of this type in the project.
         """
@@ -730,7 +758,9 @@ class ExperimentSample(UniqueUidModelMixin):
         return [
             {'field': 'label'},
             {'field': 'status'},
-            {'field': 'uid', 'verbose':'Internal ID'}]
+            {'field': 'uid', 'verbose': 'Internal ID'},
+            {'field': 'fastqc_links', 'verbose': 'FastQC'},
+        ]
 
 
 class AlignmentGroup(UniqueUidModelMixin):

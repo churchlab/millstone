@@ -82,8 +82,9 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
         alignment_group.save(update_fields=['status','start_time','end_time'])
 
     error_output.write(
-            "==START OF ALIGNMENT PIPELINE FOR %s, (%s) ==" % (
+            "==START OF ALIGNMENT PIPELINE FOR %s, (%s) ==\n" % (
             sample_alignment.experiment_sample.label, sample_alignment.uid))
+
 
     # We wrap the alignment logic in a try-except so that if an error occurs,
     # we record it and update the status of the Dataset to FAILED if anything
@@ -140,6 +141,9 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
                 'bwa_align.bam')
 
         error_output.write(align_input_args)
+
+        # Flush the output here so it gets written before the alignments.
+        error_output.flush()
 
         with open(output_bam, 'w') as fh:
             subprocess.check_call(align_input_args,

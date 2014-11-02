@@ -26,11 +26,13 @@ from registration.backends.simple.views import RegistrationView
 from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.models import AlignmentGroup
+from main.models import Dataset
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import VariantSet
+from main.model_utils import get_dataset_with_type
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import import_variant_set_from_vcf
 from utils.jbrowse_util import compile_tracklist_json
@@ -226,6 +228,28 @@ def sample_list_view(request, project_uid):
     }
     return render(request, 'sample_list.html', context)
 
+@login_required
+def fastqc_view(request, project_uid, sample_uid, read_num):
+
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+
+    sample = get_object_or_404(ExperimentSample, project=project,
+            uid=sample_uid)
+
+    if int(read_num) == 1:
+        dataset_type = Dataset.TYPE.FASTQC1_HTML
+    elif int(read_num) == 2:
+        dataset_type = Dataset.TYPE.FASTQC2_HTML
+    else:
+        raise Exception('Read number must be 1 or 2')
+
+    fastqc_dataset = get_dataset_with_type(sample, dataset_type)
+
+    response = HttpResponse(mimetype="text/html")
+    for line in open(fastqc_dataset.get_absolute_location()):
+        response.write(line)
+    return response
 
 @login_required
 def alignment_list_view(request, project_uid):

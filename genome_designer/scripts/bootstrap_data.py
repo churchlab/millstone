@@ -46,6 +46,7 @@ from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import copy_dataset_to_entity_data_dir
 from utils.import_util import import_reference_genome_from_local_file
 from utils.import_util import import_variant_set_from_vcf
+from utils.import_util import run_fastqc_on_sample_fastq
 
 from settings import PWD as GD_ROOT
 
@@ -293,10 +294,18 @@ def bootstrap_fake_data():
         sample_obj.save()
 
         # Add raw reads to each sample.
-        copy_and_add_dataset_source(sample_obj, Dataset.TYPE.FASTQ1,
-                Dataset.TYPE.FASTQ1, FullVCFTestSet.FASTQ1[i])
-        copy_and_add_dataset_source(sample_obj, Dataset.TYPE.FASTQ2,
-                Dataset.TYPE.FASTQ2, FullVCFTestSet.FASTQ2[i])
+        fastq1_dataset = copy_and_add_dataset_source(sample_obj,
+                Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1,
+                FullVCFTestSet.FASTQ1[i])
+        fastq2_dataset = copy_and_add_dataset_source(sample_obj,
+                Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2,
+                FullVCFTestSet.FASTQ2[i])
+
+        # Run FASTQC on sample reads.
+        run_fastqc_on_sample_fastq(sample_obj, fastq1_dataset)
+        run_fastqc_on_sample_fastq(sample_obj, fastq2_dataset, rev=True)
 
         full_vcf_samples.append(sample_obj)
 
