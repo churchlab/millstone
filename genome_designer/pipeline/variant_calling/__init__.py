@@ -181,7 +181,9 @@ def find_variants_with_tool(alignment_group, variant_params):
         vcf_dataset_type)
 
     # Parse the resulting vcf, grab variant objects
-    parse_alignment_group_vcf(alignment_group, vcf_dataset_type)
+    skip_het_only = (tool_name == 'freebayes')
+    parse_alignment_group_vcf(alignment_group, vcf_dataset_type,
+        skip_het_only=skip_het_only)
 
     flag_variants_from_bed(alignment_group, Dataset.TYPE.BED_CALLABLE_LOCI)
 

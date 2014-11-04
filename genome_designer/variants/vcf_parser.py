@@ -46,15 +46,23 @@ class QueryCache(object):
         self.uid_to_experiment_sample_map = {}
 
 
-def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
+def parse_alignment_group_vcf(alignment_group, vcf_dataset_type, **kwargs):
     """Parses the VCF associated with the AlignmentGroup and saves data there.
+
+        **kwargs are passed to the parse_vcf function.
     """
     vcf_dataset = get_dataset_with_type(alignment_group, vcf_dataset_type)
-    parse_vcf(vcf_dataset, alignment_group)
+    parse_vcf(vcf_dataset, alignment_group, **kwargs)
 
 
-def parse_vcf(vcf_dataset, alignment_group):
-    """Parses the VCF and creates Variant models relative to ReferenceGenome.
+def parse_vcf(vcf_dataset, alignment_group, skip_het_only=False):
+    """
+    Parses the VCF and creates Variant models relative to ReferenceGenome.
+
+    skip_het_only: throw out variants that are het only - if organism is not
+    diploid, these variants are likely to be just poorly mapped reads, so
+    discard the variants created by them. In the future, this option will
+    be moved to an alignment_group options dictionary.
     """
 
     reference_genome = alignment_group.reference_genome
@@ -69,6 +77,9 @@ def parse_vcf(vcf_dataset, alignment_group):
         vcf_reader = vcf.Reader(fh)
         for record in vcf_reader:
             record_count += 1
+
+    # Comment this out until we add the aligment options field
+    # alignment_group_options = alignment_group.options
 
     # Now iterate through the vcf file again and parse the data.
     # NOTE: Do not save handles to the Variants, else suffer the wrath of a
@@ -86,15 +97,23 @@ def parse_vcf(vcf_dataset, alignment_group):
         for record_idx, record in enumerate(vcf_reader):
             print 'vcf_parser: Parsing %d out of %d' % (
                     record_idx + 1, record_count)
+
             # Make sure the QueryCache object has experiment samples populated.
             # Assumes every row has same samples. (Pretty sure this is true
             # for well-formatted vcf file.)
             if (len(query_cache.uid_to_experiment_sample_map) == 0 and
                     len(record.samples) > 0):
+
                 for sample in record.samples:
                     sample_uid = sample.sample
                     query_cache.uid_to_experiment_sample_map[sample_uid] = (
                             ExperimentSample.objects.get(uid=sample_uid))
+
+            # If the record has no GT_TYPE = 2 samples, then skip by default
+            if skip_het_only:
+                if sum([s.gt_type == 2 for s in record.samples]) == 0:
+                    print 'HET only, skipping record %d' % (record_idx + 1)
+                    continue
 
             # Get or create the Variant for this record. This step
             # also generates the alternate objects and assigns their
@@ -209,7 +228,7 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     # We don't want to search by type above, but we do want to save
     # the type here. There are weird cases where we might be overwriting
     # the type (i.e. two SNVs with identical ref/alt but different types),
-    # but I think this is OK for now. 
+    # but I think this is OK for now.
     if type:
         variant.type = type
         variant.save()

@@ -80,7 +80,8 @@ class TestVCFParser(TestCase):
                 record_count += 1
 
         # Parse the vcf
-        parse_alignment_group_vcf(alignment_group, VCF_DATATYPE)
+        parse_alignment_group_vcf(alignment_group, VCF_DATATYPE,
+                skip_het_only=False)
 
 
         variant_list = Variant.objects.filter(
@@ -124,3 +125,49 @@ class TestVCFParser(TestCase):
         v_1330_gc = VariantAlternate.objects.get(variant=v_1330, alt_value='GC')
         self.assertTrue(len(v_1330_gc.variantevidence_set.all()))
         self.assertEqual(v_1330_c.data['INFO_ABP'], v_1330_gc.data['INFO_ABP'])
+
+    def test_parser_skip_het(self):
+        """Test that skipping het_only variants works.
+        """
+        VCF_DATATYPE = Dataset.TYPE.VCF_FREEBAYES
+        alignment_group = AlignmentGroup.objects.create(
+                label='test alignment', reference_genome=self.reference_genome)
+        copy_and_add_dataset_source(alignment_group, VCF_DATATYPE,
+                VCF_DATATYPE, TEST_GENOME_SNPS)
+
+        Chromosome.objects.create(
+            reference_genome=self.reference_genome,
+            label='Chromosome',
+            num_bases=9001)
+
+        # Create experiment sample objects having UIDs that correspond to those
+        # in the vcf file. This is a bit "fake" in that the actual pipeline we
+        # will be generating the vcf file from the samples (see add_groups()
+        # stage of pipeline.
+        with open(TEST_GENOME_SNPS) as fh:
+            reader = vcf.Reader(fh)
+            experiment_sample_uids = reader.samples
+        num_experiment_samples = len(experiment_sample_uids)
+        for sample_uid in experiment_sample_uids:
+            ExperimentSample.objects.create(
+                uid=sample_uid,
+                project=self.project,
+                label='fakename:' + sample_uid
+            )
+
+        # Count the number of records in the vcf file for testing.
+        record_count = 0
+        with open(TEST_GENOME_SNPS) as fh:
+            for record in vcf.Reader(fh):
+                if sum([s.gt_type == 2 for s in record.samples]) > 0:
+                    record_count += 1
+
+        # Parse the vcf
+        parse_alignment_group_vcf(alignment_group, VCF_DATATYPE, skip_het_only=True)
+
+
+        variant_list = Variant.objects.filter(
+                reference_genome=self.reference_genome)
+
+        # There should be one Variant object for each record that is not het.
+        self.assertEqual(record_count, len(variant_list))
