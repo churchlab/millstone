@@ -173,7 +173,7 @@ JBrowse.
 
 ### Configuring PostgreSQL database for Millstone.
 
-*NOTE:* Be sure to make local db config changes in `genome_designer/conf/local_settings.py`.
+**NOTE:** If you make local changes, be sure to put them in a file called `genome_designer/conf/local_settings.py`.  You should not modify `global_settings.py`.
 
 1. _(Mac Only)_ If you are using a fresh Postgres install, you may need to initialize the database:
 
