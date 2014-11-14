@@ -29,6 +29,7 @@ from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.adapters import adapt_experiment_samples_to_frontend
 from main.exceptions import ValidationException
+from main.model_views import adapt_gene_list_to_frontend
 from main.model_views import get_all_fields
 from main.model_views import adapt_variant_to_frontend
 from main.model_views import GeneView
@@ -59,6 +60,7 @@ from variants.common import determine_visible_field_names
 from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
 from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
 from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
+from variants.gene_query import lookup_genes
 from variants.materialized_variant_filter import lookup_variants
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.variant_sets import update_variant_in_set_memberships
@@ -730,19 +732,18 @@ def get_samples(request):
 
 @login_required
 def get_gene_list(request):
-    ref_genome_uid = request.GET.get('refGenomeUid')
+    """Returns the Gene view data, showing Genes and aggregated counts.
+    """
+    ag_uid = request.GET.get('alignmentGroupUid')
 
-    reference_genome = get_object_or_404(ReferenceGenome,
-            project__owner=request.user.get_profile(),
-            uid=ref_genome_uid)
+    alignment_group = get_object_or_404(AlignmentGroup,
+            reference_genome__project__owner=request.user.get_profile(),
+            uid=ag_uid)
 
-    region_list = Region.objects.filter(
-            reference_genome=reference_genome,
-            type=Region.TYPE.GENE).order_by('regioninterval__start')
-    gene_view_list = [GeneView(region) for region in region_list]
+    gene_view_list = lookup_genes(alignment_group)
 
     response_data = {
-        'geneList': adapt_model_or_modelview_list_to_frontend(gene_view_list)
+        'geneList': adapt_gene_list_to_frontend(gene_view_list)
     }
 
     return HttpResponse(json.dumps(response_data),

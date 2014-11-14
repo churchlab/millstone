@@ -23,9 +23,9 @@
 
   <select id="gd-analyze-select-search-entity" class="selectpicker">
     <option value="VARIANTS" selected>Variants</option>
+    <option value="GENES" {% if sub_view == 'genes' %}selected{% endif %}>Genes</option>
     <!-- Uncomment when working.
     <option value="SETS" {% if sub_view == 'sets' %}selected{% endif %}>Variant Sets</option>
-    <option value="GENES" {% if sub_view == 'genes' %}selected{% endif %}>Genes</option>
     -->
   </select>
 </div>

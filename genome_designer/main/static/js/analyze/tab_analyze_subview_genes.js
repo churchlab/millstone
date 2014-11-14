@@ -23,7 +23,7 @@ gd.TabAnalyzeSubviewGenes = gd.TabAnalyzeSubviewAbstractBase.extend({
   /** Redraws the datatable based on the selection. */
   createDatatableComponent: function() {
     var requestData = {
-      'refGenomeUid': this.model.get('refGenomeUid'),
+      'alignmentGroupUid': this.model.get('alignmentGroupUid'),
     };
 
     $.get('/_/genes', requestData,

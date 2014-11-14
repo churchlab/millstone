@@ -695,3 +695,25 @@ def adapt_cast_object_list_field(cast_object_dict_list, fdict):
         # Create string.
         return (' | '.join(['%s (%d)' % (key, count)
                 for key, count in buckets.iteritems()]))
+
+
+def adapt_gene_list_to_frontend(obj_list):
+    """
+    Returns:
+        JSON string with the objects in the form that can be drawn by the
+        Datatables component.
+    """
+    # TODO: This is an initial implementation. It can be made prettier.
+    gene_view_fields = ['gene', 'num_variants']
+
+    obj_field_config = [{
+        'mData': field.upper(),
+        'sTitle': field
+    } for field in gene_view_fields]
+
+    fe_obj_list = obj_list
+
+    return json.dumps({
+        'obj_list': fe_obj_list,
+        'field_config': obj_field_config
+    })
