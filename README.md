@@ -352,6 +352,22 @@ hard-coded test models only.
 
 ## Debugging
 
+### Logging
+
+Right now we use logging for just-in-time debugging. Eventually, it would be nice to have logging for more robust debugging.
+
+Add the following lines in the file you want to log in. We use the logger `debug_logger`,
+which is already configured in `global_settings.py.`
+
+        import logging
+        LOGGER = logging.getLogger('debug_logger')
+
+Then, to log something (instead of using print statements), do:
+
+        LOGGER.debug('string or variable you want to log')
+        
+By default, logs are written to `genome_designer/default.log`, as specified in `global_settings.py`.
+
 ### Accessing the Postgresql database
 
 On Ubuntu, if your database is called `gdv2db`:
