@@ -476,7 +476,11 @@ VARIANT_LIST_RESPONSE_KEY__SET_LIST = 'variant_set_list_json'
 VARIANT_LIST_RESPONSE_KEY__KEY_MAP = 'variant_key_filter_map_json'
 VARIANT_LIST_RESPONSE_KEY__ERROR = 'error'
 
-
+# Uncomment this and @profile statement to profile. This is the entry point
+# to a monster SQL call so leaving this debugging code here commented out is
+# useful.
+#from debug.profiler import profile
+#@profile('profile.log')
 @login_required
 @require_GET
 def get_variant_list(request):
