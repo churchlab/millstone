@@ -697,7 +697,7 @@ def adapt_cast_object_list_field(cast_object_dict_list, fdict):
                 for key, count in buckets.iteritems()]))
 
 
-def adapt_gene_list_to_frontend(obj_list):
+def adapt_gene_list_to_frontend(obj_list, alignment_group):
     """
     Returns:
         JSON string with the objects in the form that can be drawn by the
@@ -711,9 +711,28 @@ def adapt_gene_list_to_frontend(obj_list):
         'sTitle': field
     } for field in gene_view_fields]
 
-    fe_obj_list = obj_list
+
+    fe_obj_list = []
+    for obj in obj_list:
+        gene_href = get_href_for_gene(alignment_group, obj['GENE'])
+        fe_obj_list.append({
+            'GENE': '<a href="' + gene_href + '">' + obj['GENE'] + '</a>',
+            'NUM_VARIANTS': obj['NUM_VARIANTS']
+        })
 
     return json.dumps({
         'obj_list': fe_obj_list,
         'field_config': obj_field_config
     })
+
+
+def get_href_for_gene(alignment_group, gene):
+    """Generates href to analyze variants view filtered by this gene.
+    """
+    analyze_tab_part = reverse(
+            'main.views.tab_root_analyze',
+            args=(alignment_group.reference_genome.project.uid,
+                    alignment_group.uid,
+                    'variants'))
+    gene_filter_part = '?filter=INFO_EFF_GENE=' + gene
+    return analyze_tab_part + gene_filter_part

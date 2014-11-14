@@ -743,7 +743,7 @@ def get_gene_list(request):
     gene_view_list = lookup_genes(alignment_group)
 
     response_data = {
-        'geneList': adapt_gene_list_to_frontend(gene_view_list)
+        'geneList': adapt_gene_list_to_frontend(gene_view_list, alignment_group)
     }
 
     return HttpResponse(json.dumps(response_data),
