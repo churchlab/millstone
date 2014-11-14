@@ -382,13 +382,16 @@ To debug tests with pdb, add `pdb.set_trace()` checkpoints and use a command sim
 
 The `debug.profiler` module contains a `profile` decorator that can be added to a function. For example, to debug a view:
 
-1. Update local_settings.py with your profiler logs destination by setting the PROFILE_LOG_BASE attribute, e.g.:
+1. Update local_settings.py with your profiler logs destination folder by setting the PROFILE_LOG_BASE attribute, e.g.:
 
         PROFILE_LOG_BASE = '/path/to/logs'
+        
+Make sure this directory exists before proceeding.
 
-2. Add @profile('log_file_name') in front of the method you want to profile, e.g.:
-
-        @profile('mylog')
+2. Import the profile decorator and add @profile('log_file_name') in front of the method you want to profile, e.g.:
+        from debug.profiler import profile
+        ...
+        @profile('mylog.log')
         def my_view(request):
             ...
 
