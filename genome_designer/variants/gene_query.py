@@ -45,6 +45,9 @@ def lookup_genes(alignment_group):
 	# Finally group by gene.
 	sql_statement += 'GROUP BY gene '
 
+	# Order by num_variants count.
+	sql_statement += 'ORDER BY num_variants DESC '
+
 	# Execute the query.
 	cursor = connection.cursor()
 	cursor.execute(sql_statement)
