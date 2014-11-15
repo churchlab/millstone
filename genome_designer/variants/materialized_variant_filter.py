@@ -30,6 +30,11 @@ from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
 from variants.filter_scope import FilterScope
 
 
+# Uncomment for DEBUG
+# import logging
+# LOGGER = logging.getLogger('debug_logger')
+
+
 class VariantFilterEvaluator(object):
     """Evaluator for a single scoped expression, e.g. of the form:
         '(position > 5) in ALL(sample1, sample2)'
@@ -74,6 +79,9 @@ class VariantFilterEvaluator(object):
         self.pagination_len = query_args.get('pagination_len', -1)
         self.visible_key_names = query_args.get('visible_key_names', [])
         self.act_as_generator = query_args.get('act_as_generator', False)
+        self.get_uids_only = query_args.get('get_uids_only', False)
+        self.optimization_uid_list = query_args.get('optimization_uid_list',
+                None)
 
         # If True, SELECT *. It's up to the caller to prevent returning
         # unintended data (e.g. native ids) to the frontend.
@@ -139,7 +147,6 @@ class VariantFilterEvaluator(object):
             symbol_str = symbol
         else:
             symbol_str = str(symbol)
-        
         return self.symbol_to_expression_map[symbol_str]
 
 
@@ -149,7 +156,12 @@ class VariantFilterEvaluator(object):
         Returns:
             A FilterEvalResult object.
         """
-        if self.select_all:
+        if self.get_uids_only:
+            if self.is_melted:
+                select_clause = 'uid, ag_id, position '
+            else:
+                select_clause = 'uid, MIN(ag_id) AS AG_ID, MIN(POSITION) AS POSITION '
+        elif self.select_all:
             select_clause = '*'
         else:
             select_clause = self._select_clause()
@@ -164,6 +176,18 @@ class VariantFilterEvaluator(object):
         else:
             where_clause = None
             where_clause_args = []
+
+        # Optimization UID part.
+        if self.optimization_uid_list is not None:
+            opt_uid_part = '(uid in ('
+            for v_uid in self.optimization_uid_list:
+                opt_uid_part += '\'' + v_uid + '\','
+            # Chop off last comma and close parens.
+            opt_uid_part = opt_uid_part[:-1] + ')) '
+            if where_clause:
+                where_clause += ' AND ' + opt_uid_part
+            else:
+                where_clause = opt_uid_part
 
         # Maybe add AlignmentGroup filter.
         where_clause_alignment_group_part = None
@@ -197,14 +221,18 @@ class VariantFilterEvaluator(object):
         if self.sort_by_direction == 'desc':
             sql_statement += 'DESC '
 
-        # Add limit and offset clause.
-        if self.pagination_len != -1:
-            sql_statement += 'LIMIT %d ' % self.pagination_len
-        sql_statement += 'OFFSET %d ' % self.pagination_start
+        # Add limit and offset clause. Only if no optimization limit.
+        if self.optimization_uid_list is None:
+            if self.pagination_len != -1:
+                sql_statement += 'LIMIT %d ' % self.pagination_len
+            sql_statement += 'OFFSET %d ' % self.pagination_start
 
         if self.count_only:
             sql_statement = (
                     'SELECT count(*) FROM (' + sql_statement + ') subresult')
+
+        # DEBUG
+        # LOGGER.debug(sql_statement)
 
         # Execute the query and store the results in hashable representation
         # so that they can be combined through boolean operators with other
@@ -445,6 +473,30 @@ def lookup_variants(query_args, reference_genome, alignment_group=None):
         LookupVariantsResult object which contains the list of matching
         Variant objects as dictionaries and a count of total results.
     """
+    # We perform at least 2 different queries:
+    #       1) Get the current page of results.
+    #       2) Count all matches for the filter.
+
+    # If the request is for cast data, the first call is further broken up
+    # into 2 separate SQL calls. The first applies the filter and only gets
+    # back the UIDs. The 2nd requests all the data, appending the UIDs
+    # as an additional filter. This significantly improves performance. This is
+    # necessary because the combination of GROUP BY and ARRAY_AGGs are
+    # very inefficient if performed on the entire dataset.
+
+    assert not query_args.get('get_uids_only', False)
+
+    optimization_uid_list = None
+    if not query_args.get('is_melted', True):
+        query_args['get_uids_only'] = True
+        uid_only_results = get_variants_that_pass_filter(
+                query_args, reference_genome, alignment_group=alignment_group)
+        query_args['optimization_uid_list'] = [
+                r['UID'] for r in uid_only_results]
+
+    # Reset.
+    query_args['get_uids_only'] = False
+
     # Get a page of Variants that pass the filter.
     page_results = get_variants_that_pass_filter(query_args, reference_genome,
             alignment_group=alignment_group)
@@ -454,6 +506,8 @@ def lookup_variants(query_args, reference_genome, alignment_group=None):
     query_args['count_only'] = True
     query_args['pagination_start'] = 0
     query_args['pagination_len'] = -1  # for no limit
+    query_args['get_uids_only'] = True
+    query_args['optimization_uid_list'] = None
     num_total_variants = get_variants_that_pass_filter(query_args,
             reference_genome, alignment_group=alignment_group)[0]['COUNT']
 
