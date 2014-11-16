@@ -49,7 +49,6 @@ class VariantFilterEvaluator(object):
                 filter_string: String representing the raw filter.
                 is_melted: True if melted view, false if cast view.
                 sort_by_column: A column name to sort by, or an empty string otherwise.
-                count_only: True if only want to return a count
                 pagination_start: Offset of the returned query
                 pagination_len: Maximum number of returned variants, or -1 for no limit
             ref_genome: ReferenceGenome these variants are relative to.
@@ -74,7 +73,6 @@ class VariantFilterEvaluator(object):
         self.is_melted = query_args.get('is_melted', True)
         self.sort_by_column = query_args.get('sort_by_column', None)
         self.sort_by_direction = query_args.get('sort_by_direction', True)
-        self.count_only = query_args.get('count_only', False)
         self.pagination_start = query_args.get('pagination_start', 0)
         self.pagination_len = query_args.get('pagination_len', -1)
         self.visible_key_names = query_args.get('visible_key_names', [])
@@ -170,6 +168,10 @@ class VariantFilterEvaluator(object):
         else:
             select_clause = self._select_clause()
 
+        # We also need the full count of results for pagination purposes, so
+        # we use something called window functions.
+        select_clause += ', count(*) OVER() AS full_count '
+
         # Minimal sql_statement has select clause.
         sql_statement = 'SELECT %s FROM %s ' % (select_clause,
                 self.materialized_view_manager.get_table_name())
@@ -230,10 +232,6 @@ class VariantFilterEvaluator(object):
             if self.pagination_len != -1:
                 sql_statement += 'LIMIT %d ' % self.pagination_len
             sql_statement += 'OFFSET %d ' % self.pagination_start
-
-        if self.count_only:
-            sql_statement = (
-                    'SELECT count(*) FROM (' + sql_statement + ') subresult')
 
         # DEBUG
         # LOGGER.debug(sql_statement)
@@ -477,17 +475,15 @@ def lookup_variants(query_args, reference_genome, alignment_group=None):
         LookupVariantsResult object which contains the list of matching
         Variant objects as dictionaries and a count of total results.
     """
-    # We perform at least 2 different queries:
-    #       1) Get the current page of results.
-    #       2) Count all matches for the filter.
-
-    # If the request is for cast data, the first call is further broken up
-    # into 2 separate SQL calls. The first applies the filter and only gets
+    # If the request is for cast data, we lookup variants in 2 separate SQL
+    # calls. The first applies the filter and only gets
     # back the UIDs. The 2nd requests all the data, appending the UIDs
     # as an additional filter. This significantly improves performance. This is
     # necessary because the combination of GROUP BY and ARRAY_AGGs are
     # very inefficient if performed on the entire dataset.
 
+    # We don't expect a case for other callers to pass get_uids_only.
+    # Future devs can remove this line if we are being safe about it.
     assert not query_args.get('get_uids_only', False)
 
     optimization_uid_list = None
@@ -498,22 +494,20 @@ def lookup_variants(query_args, reference_genome, alignment_group=None):
         query_args['optimization_uid_list'] = [
                 r['UID'] for r in uid_only_results]
 
-    # Reset.
+    # The following sql call must get all data. Make sure of that by resetting
+    # param.
     query_args['get_uids_only'] = False
 
     # Get a page of Variants that pass the filter.
     page_results = get_variants_that_pass_filter(query_args, reference_genome,
             alignment_group=alignment_group)
 
-    # Now count how many results total pass the filter. Remove limit clause
-    # and perform COUNT only.
-    query_args['count_only'] = True
-    query_args['pagination_start'] = 0
-    query_args['pagination_len'] = -1  # for no limit
-    query_args['get_uids_only'] = True
-    query_args['optimization_uid_list'] = None
-    num_total_variants = get_variants_that_pass_filter(query_args,
-            reference_genome, alignment_group=alignment_group)[0]['COUNT']
+    # Figure out number of total variants by parsing one of the above results,
+    # if there are any.
+    if len(page_results):
+        num_total_variants = page_results[0]['FULL_COUNT']
+    else:
+        num_total_variants = 0
 
     return LookupVariantsResult(page_results, num_total_variants)
 
@@ -533,7 +527,6 @@ def get_variants_that_pass_filter(query_args, ref_genome, alignment_group=None):
             filter_string: String representing the raw filter.
             is_melted: True if melted view, false if cast view.
             sort_by_column: A column name to sort by, or an empty string otherwise.
-            count_only: True if only want to return a count
             pagination_start: Offset of the returned query
             pagination_len: Maximum number of returned variants
         ref_genome: The ReferenceGenome this is limited to. This is a hard-coded
