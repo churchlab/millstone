@@ -486,6 +486,10 @@ def lookup_variants(query_args, reference_genome, alignment_group=None):
     # Future devs can remove this line if we are being safe about it.
     assert not query_args.get('get_uids_only', False)
 
+    # If cast view, set num_total_variants after initial uids-only call.
+    # If melted, set num_total_variants after full data call.
+    num_total_variants = None
+
     optimization_uid_list = None
     if not query_args.get('is_melted', True):
         query_args['get_uids_only'] = True
@@ -493,6 +497,10 @@ def lookup_variants(query_args, reference_genome, alignment_group=None):
                 query_args, reference_genome, alignment_group=alignment_group)
         query_args['optimization_uid_list'] = [
                 r['UID'] for r in uid_only_results]
+        if len(uid_only_results):
+            num_total_variants = uid_only_results[0]['FULL_COUNT']
+        else:
+            num_total_variants = 0
 
     # The following sql call must get all data. Make sure of that by resetting
     # param.
@@ -503,11 +511,12 @@ def lookup_variants(query_args, reference_genome, alignment_group=None):
             alignment_group=alignment_group)
 
     # Figure out number of total variants by parsing one of the above results,
-    # if there are any.
-    if len(page_results):
-        num_total_variants = page_results[0]['FULL_COUNT']
-    else:
-        num_total_variants = 0
+    # Only if not set in 1st call. This code should only run for melted results.
+    if num_total_variants is None:
+        if len(page_results):
+            num_total_variants = page_results[0]['FULL_COUNT']
+        else:
+            num_total_variants = 0
 
     return LookupVariantsResult(page_results, num_total_variants)
 
