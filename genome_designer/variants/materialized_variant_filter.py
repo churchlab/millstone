@@ -160,7 +160,11 @@ class VariantFilterEvaluator(object):
             if self.is_melted:
                 select_clause = 'uid, ag_id, position '
             else:
-                select_clause = 'uid, MIN(ag_id) AS AG_ID, MIN(POSITION) AS POSITION '
+                select_clause = (
+                        'uid, '
+                        'MIN(ag_id) AS AG_ID, '
+                        'MIN(POSITION) AS POSITION, '
+                        'count(*) as SAMPLE_COUNT ')
         elif self.select_all:
             select_clause = '*'
         else:
