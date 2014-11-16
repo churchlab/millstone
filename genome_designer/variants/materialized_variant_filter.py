@@ -484,13 +484,13 @@ def lookup_variants(query_args, reference_genome, alignment_group=None):
 
     # We don't expect a case for other callers to pass get_uids_only.
     # Future devs can remove this line if we are being safe about it.
-    assert not query_args.get('get_uids_only', False)
+    assert not 'get_uids_only' in query_args
+    assert not 'optimization_uid_list' in query_args
 
     # If cast view, set num_total_variants after initial uids-only call.
     # If melted, set num_total_variants after full data call.
     num_total_variants = None
 
-    optimization_uid_list = None
     if not query_args.get('is_melted', True):
         query_args['get_uids_only'] = True
         uid_only_results = get_variants_that_pass_filter(
@@ -502,21 +502,23 @@ def lookup_variants(query_args, reference_genome, alignment_group=None):
         else:
             num_total_variants = 0
 
-    # The following sql call must get all data. Make sure of that by resetting
-    # param.
-    query_args['get_uids_only'] = False
+    # If we did a first uids-only call, only do the second call if there were
+    # any results.
+    if num_total_variants is None or num_total_variants > 0:
+        # Query full data.
+        query_args['get_uids_only'] = False
+        page_results = get_variants_that_pass_filter(query_args, reference_genome,
+                alignment_group=alignment_group)
 
-    # Get a page of Variants that pass the filter.
-    page_results = get_variants_that_pass_filter(query_args, reference_genome,
-            alignment_group=alignment_group)
-
-    # Figure out number of total variants by parsing one of the above results,
-    # Only if not set in 1st call. This code should only run for melted results.
-    if num_total_variants is None:
-        if len(page_results):
-            num_total_variants = page_results[0]['FULL_COUNT']
-        else:
-            num_total_variants = 0
+        # Figure out number of total variants by parsing one of the above results,
+        # Only if not set in 1st call. This code should only run for melted results.
+        if num_total_variants is None:
+            if len(page_results):
+                num_total_variants = page_results[0]['FULL_COUNT']
+            else:
+                num_total_variants = 0
+    else:
+        page_results = []
 
     return LookupVariantsResult(page_results, num_total_variants)
 
