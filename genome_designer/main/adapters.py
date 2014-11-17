@@ -108,11 +108,12 @@ def adapt_model_to_frontend(model, filters={}, obj_list=None, **kwargs):
         'field_config': obj_field_config
     })
 
+
 def adapt_experiment_samples_to_frontend(filters={}, obj_list=None, **kwargs):
     """ The sample metadata fields require their own custom adapter. """
     # Get all objects that pass the filter.
     if obj_list is None:
-        obj_list = ExperimentSample.objects.filter(**filters)
+        obj_list = ExperimentSample.objects.filter(**filters).order_by('label')
 
     json_fields = {}
     for obj in obj_list:

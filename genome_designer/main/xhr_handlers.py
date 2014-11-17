@@ -728,7 +728,7 @@ def get_samples(request):
             owner=request.user.get_profile(),
             uid=project_uid)
 
-    response_data = adapt_experiment_samples_to_frontend({'project' :project})
+    response_data = adapt_experiment_samples_to_frontend({'project': project})
 
     return HttpResponse(response_data,
             content_type='application/json')
@@ -819,7 +819,7 @@ def get_alignment_groups(request):
                 uid=ref_genome_uid)
 
         alignment_group_list = AlignmentGroup.objects.filter(
-                reference_genome=reference_genome)
+                reference_genome=reference_genome).order_by('label')
 
         response_data = [{
             'label': ag.label,
