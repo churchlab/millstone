@@ -17,7 +17,7 @@ class PostgresJsonField(models.Field):
 
     The most popular implementation of a library that provides json support
     for Django, django-jsonfield (https://pypi.python.org/pypi/jsonfield), is
-    actulaly currently avaiable in pypi was designed to give a json
+    actually currently available in pypi was designed to give a json
     abstraction in the Python code, but store the underlying value as a
     TextField equivalent. We specifically need the Postgresql 9.3
     json field so we implement it our own way here.
@@ -54,7 +54,7 @@ class PostgresJsonField(models.Field):
         return value
 
     def south_field_triple(self):
-        """Required for sout to work.
+        """Required for south to work.
         """
         from south.modelsinspector import introspector
         name = '%s.%s' % (self.__class__.__module__, self.__class__.__name__)

@@ -31,6 +31,7 @@ Implementation Notes:
 
 from contextlib import contextmanager
 from datetime import datetime
+import json
 import os
 import re
 import shutil
@@ -798,6 +799,27 @@ class AlignmentGroup(UniqueUidModelMixin):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
             verbose_name="Datasets")
 
+    def default_alignment_options():
+        """
+        Return the default alignment options.
+
+        Includes currently:
+        call_as_haploid : haploid calling mode (defaults to diploid)
+        skip_het_only : remove het-only calls in diploid mode (default false)
+
+        To do at some point:
+        * custom arguments to bwa, gatk, freebayes, etc
+        * enabling/changing of proecssing steps?
+
+        """
+        return json.dumps({
+            'call_as_haploid': False,
+            'skip_het_only': False
+        })
+
+    # see default_alignment_options()
+    alignment_options = PostgresJsonField(default=default_alignment_options)
+
     class STATUS:
         """
         The status of running this Dataset.
@@ -811,8 +833,8 @@ class AlignmentGroup(UniqueUidModelMixin):
         FAILED = 'FAILED'
         UNKNOWN = 'UNKNOWN'
     STATUS_CHOICES = make_choices_tuple(STATUS)
-    
-    status = models.CharField('Alignment Status', 
+
+    status = models.CharField('Alignment Status',
             max_length=40, choices=STATUS_CHOICES, default=STATUS.NOT_STARTED)
 
     def __unicode__(self):

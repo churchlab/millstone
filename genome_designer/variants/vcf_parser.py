@@ -46,16 +46,16 @@ class QueryCache(object):
         self.uid_to_experiment_sample_map = {}
 
 
-def parse_alignment_group_vcf(alignment_group, vcf_dataset_type, **kwargs):
+def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     """Parses the VCF associated with the AlignmentGroup and saves data there.
 
         **kwargs are passed to the parse_vcf function.
     """
     vcf_dataset = get_dataset_with_type(alignment_group, vcf_dataset_type)
-    parse_vcf(vcf_dataset, alignment_group, **kwargs)
+    parse_vcf(vcf_dataset, alignment_group)
 
 
-def parse_vcf(vcf_dataset, alignment_group, skip_het_only=False):
+def parse_vcf(vcf_dataset, alignment_group):
     """
     Parses the VCF and creates Variant models relative to ReferenceGenome.
 
@@ -110,7 +110,7 @@ def parse_vcf(vcf_dataset, alignment_group, skip_het_only=False):
                             ExperimentSample.objects.get(uid=sample_uid))
 
             # If the record has no GT_TYPE = 2 samples, then skip by default
-            if skip_het_only:
+            if alignment_group.alignment_options['skip_het_only']:
                 if sum([s.gt_type == 2 for s in record.samples]) == 0:
                     print 'HET only, skipping record %d' % (record_idx + 1)
                     continue
@@ -211,7 +211,7 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
         raise Exception(('The CHROM field of the following variant does not match any of '
                 'the chromosomes belonging to its reference genome:' + variant_string + '\n'
                 'Chromosomes belonging to reference genome ' + str(reference_genome.label) +
-                ' are: ' + str([str(chrom.label) for chrom in 
+                ' are: ' + str([str(chrom.label) for chrom in
                         Chromosome.objects.filter(reference_genome=reference_genome)]).strip('[]')))
 
 

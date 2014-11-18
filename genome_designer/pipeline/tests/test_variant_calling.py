@@ -121,7 +121,7 @@ class TestSNPCallers(TestCase):
             except:
                 self.fail("Not valid vcf")
 
-    def test_default_freebayes(self):
+    def test_default_freebayes(self, haploid=False):
         """Test that freebayes with the default settings works for control
         input data.
 
@@ -167,6 +167,9 @@ class TestSNPCallers(TestCase):
         alignment_group = AlignmentGroup.objects.create(
                 label='test alignment', reference_genome=REFERENCE_GENOME)
 
+        if haploid:
+            alignment_group.alignment_options['call_as_haploid'] = True
+
         # Create a sample.
         sample_1 = ExperimentSample.objects.create(
                 uid=FAKE_READS_SAMPLE_UID,
@@ -206,6 +209,13 @@ class TestSNPCallers(TestCase):
         # Check that each variant is accounted for.
         self.assertEqual(set(EXPECTED_VARIANT_POSITIONS),
                 set([v.position for v in variants]))
+
+    def test_haploid_freebayes(self):
+        """
+        Perform the freebayes_test with haploid calling enabled.
+        """
+
+        self.test_default_freebayes(haploid=True)
 
 
 class TestSVCallers(TestCase):
