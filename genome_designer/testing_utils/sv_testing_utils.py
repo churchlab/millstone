@@ -7,7 +7,6 @@ from django.conf import settings
 import vcf
 
 from main.model_utils import get_dataset_with_type
-from pipeline.variant_calling import get_variant_tool_params
 from variants.vcf_parser import extract_raw_data_dict
 
 
@@ -46,8 +45,8 @@ def get_vcf_files(alignment_group):
         Dict mapping from vcf type to file location.
     """
     vcf_files = {}
-    vcf_types = [t[1] for t in get_variant_tool_params()
-            if t[0] in settings.ENABLED_VARIANT_CALLERS]
+    vcf_types = [VARIANT_TOOL_PARAMS_MAP[tool]['dataset_type']
+            for tool in settings.ENABLED_VARIANT_CALLERS]
     for vcf_type in vcf_types:
         vcf_dataset = get_dataset_with_type(alignment_group, vcf_type)
         if vcf_dataset is None:

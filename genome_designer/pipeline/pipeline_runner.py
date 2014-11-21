@@ -19,8 +19,8 @@ from main.models import ReferenceGenome
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from pipeline.read_alignment import align_with_bwa_mem
-from pipeline.variant_calling import get_variant_tool_params
 from pipeline.variant_calling import find_variants_with_tool
+from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 
 
 def run_pipeline(alignment_group_label, ref_genome, sample_list,
@@ -99,12 +99,14 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
         if not bwa_dataset.status == Dataset.STATUS.READY:
             sample_alignments_to_run.append(sample_alignment)
 
+    # Before we continue, let's update the ref genome object. This is code
+    # left over from when we were fighting a concurrency bug.
+    # TODO: Revisit such calls and see if we can clean them up.
+    ref_genome = ReferenceGenome.objects.get(uid=ref_genome.uid)
+
     # Now we aggregate the alignments that need to be run, collecting their
     # signatures in a Celery group so that these alignments can be run in
     # parallel.
-    # Before we do so, let's update the ref genome object.
-    ref_genome = ReferenceGenome.objects.get(uid=ref_genome.uid)
-
     alignment_task_signatures = [align_with_bwa_mem.si(
                     alignment_group, sample_alignment,
                     project=ref_genome.project)
@@ -114,14 +116,17 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     # Aggregate variant callers, which run in parallel once all alignments
     # are done.
     if perform_variant_calling:
-        variant_caller_group = group([find_variants_with_tool.si(
+        variant_param_list = [VARIANT_TOOL_PARAMS_MAP[tool]
+                for tool in settings.ENABLED_VARIANT_CALLERS]
+        variant_caller_group = group([
+                find_variants_with_tool.si(
                         alignment_group, variant_params,
                         project=ref_genome.project)
-                for variant_params in get_variant_tool_params() if
-                        variant_params[0] in settings.ENABLED_VARIANT_CALLERS])
+                for variant_params in variant_param_list])
     else:
         variant_caller_group = None
 
+    # We add a final task which runs only after all previous tasks are complete.
     pipeline_completion = pipeline_completion_tasks.s(
             alignment_group=alignment_group)
 

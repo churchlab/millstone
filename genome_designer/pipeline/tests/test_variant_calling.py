@@ -18,9 +18,9 @@ from main.models import Variant
 from main.model_utils import clean_filesystem_location
 from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
-from pipeline.variant_calling import get_variant_tool_params
 from pipeline.variant_calling import find_variants_with_tool
 from pipeline.variant_calling import run_lumpy
+from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from settings import PWD as GD_ROOT
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
@@ -101,7 +101,7 @@ class TestSNPCallers(TestCase):
                 Dataset.TYPE.BWA_ALIGN, copy_dest)
 
         # Run the pipeline.
-        variant_params = get_variant_tool_params()[0]  # first one is freebayes
+        variant_params = VARIANT_TOOL_PARAMS_MAP['freebayes']
         find_variants_with_tool(alignment_group, variant_params, project=self.project)
 
         # Check that the alignment group has a freebayes vcf dataset associated
@@ -196,8 +196,8 @@ class TestSNPCallers(TestCase):
                 reference_genome=REFERENCE_GENOME)))
 
         # Run the pipeline.
-        variant_params = get_variant_tool_params()[0]  # first one is freebayes
-        assert variant_params[0] == 'freebayes'
+        variant_params = VARIANT_TOOL_PARAMS_MAP['freebayes']
+        assert variant_params['tool_name'] == 'freebayes'
         find_variants_with_tool(alignment_group, variant_params, project=self.project)
 
         # Grab the resulting variants.

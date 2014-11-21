@@ -1,5 +1,6 @@
 """
-Tests for sv_calling.py
+These tests cover the individual code pieces related to structural variant
+calling.
 """
 
 import os
@@ -18,7 +19,6 @@ from main.models import User
 from main.models import Variant
 from main.models import VariantAlternate
 from pipeline.variant_calling import find_variants_with_tool
-from pipeline.variant_calling import get_variant_tool_params
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
@@ -61,15 +61,15 @@ class TestSVCallers(TestCase):
         self.reference_genome = import_reference_genome_from_local_file(
                 self.project, 'ref_genome', TEST_FASTA, 'fasta')
 
-    def test_call_svs(self):
-        """Test running the pipeline that finds structural variants.
+    def test_end_to_end(self):
+        """Test running full pipline on small-ish data.
 
         The data file consists of 20,000 bases. At 5,000 bases there is
         a 400 base deletion. At 10,000 bases there is a 400 base inversion.
         At 15,000 bases there is a 400 base tandem duplication.
 
         It seems that Pindel cannot find the inversion. Fortunately,
-        delly can usually find inversions; unfortunately, delly only
+        delly can usually find inversions. Unfortunately, delly only
         works well on large data, so we will not test it here.
         """
         # Create a new alignment group.
@@ -105,9 +105,10 @@ class TestSVCallers(TestCase):
         self.assertEqual(0, len(Variant.objects.filter(
                 reference_genome=self.reference_genome)))
 
-        # Run the pipeline.
-        for variant_params in get_variant_tool_params()[1:3]:  # pindel & delly
-            find_variants_with_tool(alignment_group, variant_params, project=self.project)
+        # Test with Pindel and Delly for now.
+        for tool in ['pindel', 'delly']:
+            find_variants_with_tool(alignment_group,
+                    VARIANT_TOOL_PARAMS_MAP[tool], project=self.project)
 
         # Check that the alignment group has a freebayes vcf dataset associated
         # with it.

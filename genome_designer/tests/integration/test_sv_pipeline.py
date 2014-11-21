@@ -15,7 +15,7 @@ from main.models import get_dataset_with_type
 from main.models import Project
 from main.models import User
 from pipeline.pipeline_runner import run_pipeline
-from pipeline.variant_calling import get_variant_tool_params
+from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
 from variants.vcf_parser import extract_raw_data_dict
@@ -76,8 +76,9 @@ class TestSVPipeline(CeleryWorkerTestCase):
                 'indiv_tracks')))
 
         vcf_files = {}
-        vcf_types = [t[1] for t in get_variant_tool_params()
-                if t[0] in settings.ENABLED_VARIANT_CALLERS]
+
+        vcf_types = [VARIANT_TOOL_PARAMS_MAP[tool]['dataset_type']
+                for tool in settings.ENABLED_VARIANT_CALLERS]
 
         for vcf_type in vcf_types:
             vcf_dataset = get_dataset_with_type(alignment_group_obj, vcf_type)

@@ -9,6 +9,7 @@ import os
 import re
 import urllib
 
+from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -36,7 +37,7 @@ from main.model_utils import get_dataset_with_type
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import import_variant_set_from_vcf
 from utils.jbrowse_util import compile_tracklist_json
-import settings
+
 
 # Tags used to indicate which tab we are on.
 TAB_ROOT__DATA = 'DATA'
@@ -303,84 +304,18 @@ def alignment_view(request, project_uid, alignment_group_uid):
 
 @login_required
 def alignment_create_view(request, project_uid):
+    """Displays the view for creating a new alignment.
+
+    Also handles POST request to actually creating the alignment.
+    """
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
 
+    # Validate and kick off new alignment.
     if request.POST:
-        # Parse the data from the request body.
-        request_data = json.loads(request.body)
+        return _start_new_alignment(request, project)
 
-        # Make sure the required keys are present.
-        REQUIRED_KEYS = [
-                'name', 'refGenomeUidList', 'sampleUidList', 'skipHetOnly',
-                'callAsHaploid']
-
-        print request_data
-
-        if not all(key in request_data for key in REQUIRED_KEYS):
-            return HttpResponseBadRequest("Invalid request. Missing keys.")
-
-        try:
-            # Parse the data and look up the relevant model instances.
-            alignment_group_name = request_data['name']
-            assert len(alignment_group_name), "Name required."
-
-            ref_genome_list = ReferenceGenome.objects.filter(
-                    project=project,
-                    uid__in=request_data['refGenomeUidList'])
-            assert (len(ref_genome_list) ==
-                    len(request_data['refGenomeUidList'])), (
-                            "Invalid reference genome uid(s).")
-            assert len(ref_genome_list) == 1, (
-                "Exactly one reference genome must be provided.")
-            ref_genome = ref_genome_list[0]
-
-            # Make sure AlignmentGroup has a unique name, because run_pipeline
-            # will re-use an alignment based on label, reference genome,
-            # aligner. We are currently hard-coding the aligner to BWA.
-            assert AlignmentGroup.objects.filter(
-                    label=alignment_group_name,
-                    reference_genome=ref_genome).count() == 0, (
-                            "Please pick unique alignment name.")
-
-            sample_list = ExperimentSample.objects.filter(
-                    project=project,
-                    uid__in=request_data['sampleUidList'])
-            assert len(sample_list) == len(request_data['sampleUidList']), (
-                    "Invalid expeirment sample uid(s).")
-            assert len(sample_list) > 0, "At least one sample required."
-
-            # Populate alignment options.
-            alignment_options = dict()
-            if request_data['skipHetOnly']:
-                alignment_options['skip_het_only'] = True
-
-            if request_data['callAsHaploid']:
-                alignment_options['call_as_haploid'] = True
-
-            print "LOADED ALIGNMENT OPTIONS"
-            print alignment_options
-
-            # Kick off alignments.
-            run_pipeline(
-                    alignment_group_name,
-                    ref_genome, sample_list, 
-                    alignment_options=alignment_options)
-
-            # Success. Return a redirect response.
-            response_data = {
-                'redirect': reverse(
-                        'main.views.alignment_list_view',
-                        args=(project.uid,)),
-            }
-        except Exception as e:
-            response_data = {
-                'error': str(e)
-            }
-
-        return HttpResponse(json.dumps(response_data),
-                content_type='application/json')
-
+    # Show the data that renders the create view.
     init_js_data = json.dumps({
         'entity': adapt_model_instance_to_frontend(project)
     })
@@ -394,6 +329,80 @@ def alignment_create_view(request, project_uid):
         'is_new_project': is_new_project
     }
     return render(request, 'alignment_create.html', context)
+
+
+def _start_new_alignment(request, project):
+    """Delegate function that handles logic of kicking off alignment.
+    """
+    # Parse the data from the request body.
+    request_data = json.loads(request.body)
+
+    # Make sure the required keys are present.
+    REQUIRED_KEYS = [
+            'name', 'refGenomeUidList', 'sampleUidList', 'skipHetOnly',
+            'callAsHaploid']
+
+    if not all(key in request_data for key in REQUIRED_KEYS):
+        return HttpResponseBadRequest("Invalid request. Missing keys.")
+
+    try:
+        # Parse the data and look up the relevant model instances.
+        alignment_group_name = request_data['name']
+        assert len(alignment_group_name), "Name required."
+
+        ref_genome_list = ReferenceGenome.objects.filter(
+                project=project,
+                uid__in=request_data['refGenomeUidList'])
+        assert (len(ref_genome_list) ==
+                len(request_data['refGenomeUidList'])), (
+                        "Invalid reference genome uid(s).")
+        assert len(ref_genome_list) == 1, (
+            "Exactly one reference genome must be provided.")
+        ref_genome = ref_genome_list[0]
+
+        # Make sure AlignmentGroup has a unique name, because run_pipeline
+        # will re-use an alignment based on label, reference genome,
+        # aligner. We are currently hard-coding the aligner to BWA.
+        assert AlignmentGroup.objects.filter(
+                label=alignment_group_name,
+                reference_genome=ref_genome).count() == 0, (
+                        "Please pick unique alignment name.")
+
+        sample_list = ExperimentSample.objects.filter(
+                project=project,
+                uid__in=request_data['sampleUidList'])
+        assert len(sample_list) == len(request_data['sampleUidList']), (
+                "Invalid expeirment sample uid(s).")
+        assert len(sample_list) > 0, "At least one sample required."
+
+        # Populate alignment options.
+        alignment_options = dict()
+        if request_data['skipHetOnly']:
+            alignment_options['skip_het_only'] = True
+
+        if request_data['callAsHaploid']:
+            alignment_options['call_as_haploid'] = True
+
+        # Kick off alignments.
+        run_pipeline(
+                alignment_group_name,
+                ref_genome, sample_list,
+                alignment_options=alignment_options)
+
+        # Success. Return a redirect response.
+        response_data = {
+            'redirect': reverse(
+                    'main.views.alignment_list_view',
+                    args=(project.uid,)),
+        }
+    except Exception as e:
+        response_data = {
+            'error': str(e)
+        }
+
+    return HttpResponse(json.dumps(response_data),
+            content_type='application/json')
+
 
 @login_required
 def sample_alignment_error_view(request, project_uid, alignment_group_uid,
