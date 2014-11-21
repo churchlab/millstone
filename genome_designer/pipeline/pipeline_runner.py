@@ -24,7 +24,7 @@ from pipeline.variant_calling import find_variants_with_tool
 
 
 def run_pipeline(alignment_group_label, ref_genome, sample_list,
-        perform_variant_calling=True):
+        perform_variant_calling=True, alignment_options={}):
     """Runs the entire bioinformatics pipeline, including alignment and
     variant calling.
 
@@ -61,6 +61,8 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
             label=alignment_group_label,
             reference_genome=ref_genome,
             aligner=AlignmentGroup.ALIGNER.BWA)
+
+    alignment_group.alignment_options.update(alignment_options)
 
     # The pipeline has two synchronous phases, each of whose components
     # maybe run in parallel:

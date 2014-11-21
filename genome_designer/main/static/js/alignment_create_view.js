@@ -16,6 +16,8 @@ gd.AlignmentCreateView = Backbone.View.extend({
     $('#gd-sidenav-link-alignments').addClass('active');
 
     this.nameInput = $('#gd-alignment-create-name-input');
+    this.skipHetOnly = $('#gd-alignment-options-skip-het-only')[0];
+    this.callAsHaploid = $('#gd-alignment-options-call-as-haploid')[0];
 
     this.redrawRefGenomeDatatable();
     this.redrawSampleControlsDatatable();
@@ -102,7 +104,9 @@ gd.AlignmentCreateView = Backbone.View.extend({
     var postData = {
         name: this.nameInput.val(),
         refGenomeUidList: this.refGenomeDataTable.getCheckedRowUids(),
-        sampleUidList: this.samplesDatatable.getCheckedRowUids()
+        sampleUidList: this.samplesDatatable.getCheckedRowUids(),
+        skipHetOnly: this.skipHetOnly.checked,
+        callAsHaploid: this.callAsHaploid.checked
     };
 
     // Validate the data.
@@ -140,6 +144,7 @@ gd.AlignmentCreateView = Backbone.View.extend({
    *     * error_msg {string} Human-readable description of the error.
    */
   validatePostData: function(postData) {
+
     if (!postData.name) {
       return {
           is_success: false,

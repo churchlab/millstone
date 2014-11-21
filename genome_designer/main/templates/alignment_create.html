@@ -5,8 +5,9 @@
   Create Alignment
 </div>
 {% if is_new_project %}
-  <div class="gd-alignment-create-new-project-text">
-    Welcome to Millstone. Kick off your project by running an alignment. Follow the steps below to upload a reference genome from fasta or genbank, samples as raw sequencing data (.fastq), and start your alignment.
+  <div class="bs-callout bs-callout-success">
+    <h4>Welcome to Millstone.</h4>
+    Kick off your project by running an alignment. Follow the steps below to upload a reference genome from FASTA or Genbank, samples as raw sequencing data (.fastq), and start your alignment.
   </div>
 {% endif %}
 <div class="panel panel-default">
@@ -50,7 +51,29 @@
   <div class="tab-pane fade in" id="alignCreateTab_options">
     <h3>4. Choose Alignment Options</h3>
     <p class="lead">Select aligner to use and set the aligner's options.</p>
-    <h4>(Coming soon ...)</h4>
+    <div class="panel panel-default">
+      <div class="panel-heading">Ambiguous Single Nucleotide Variants</div>
+      <div class="panel-body">
+        <div class="radio">
+          <label>
+            <input type="radio" name="alignment_options" id="gd-alignment-options-keep-all" value="" checked>
+            Keep all variants, including ambiguous (het) calls
+          </label>
+        </div>
+        <div class="radio">
+          <label>
+            <input type="radio" name="alignment_options" id="gd-alignment-options-skip-het-only" value="skip_het_only">
+            Discard variants with only ambiguous (het) calls
+          </label>
+        </div>
+        <div class="radio">
+          <label>
+            <input type="radio" name="alignment_options" id="gd-alignment-options-call-as-haploid" value="call_as_haploid">
+            Call variants as haploid (no ambiguous calls)
+          </label>
+        </div>
+      </div>
+    </div>
   </div>
   <!-- submit -->
   <div class="tab-pane fade in" id="alignCreateTab_submit">

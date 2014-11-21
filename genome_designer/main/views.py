@@ -311,7 +311,12 @@ def alignment_create_view(request, project_uid):
         request_data = json.loads(request.body)
 
         # Make sure the required keys are present.
-        REQUIRED_KEYS = ['name', 'refGenomeUidList', 'sampleUidList']
+        REQUIRED_KEYS = [
+                'name', 'refGenomeUidList', 'sampleUidList', 'skipHetOnly',
+                'callAsHaploid']
+
+        print request_data
+
         if not all(key in request_data for key in REQUIRED_KEYS):
             return HttpResponseBadRequest("Invalid request. Missing keys.")
 
@@ -345,9 +350,22 @@ def alignment_create_view(request, project_uid):
                     "Invalid expeirment sample uid(s).")
             assert len(sample_list) > 0, "At least one sample required."
 
+            # Populate alignment options.
+            alignment_options = dict()
+            if request_data['skipHetOnly']:
+                alignment_options['skip_het_only'] = True
+
+            if request_data['callAsHaploid']:
+                alignment_options['call_as_haploid'] = True
+
+            print "LOADED ALIGNMENT OPTIONS"
+            print alignment_options
+
             # Kick off alignments.
-            run_pipeline(alignment_group_name,
-                    ref_genome, sample_list)
+            run_pipeline(
+                    alignment_group_name,
+                    ref_genome, sample_list, 
+                    alignment_options=alignment_options)
 
             # Success. Return a redirect response.
             response_data = {
