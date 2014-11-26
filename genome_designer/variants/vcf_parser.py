@@ -8,6 +8,7 @@ from django.db import reset_queries
 
 import vcf
 
+from main.consistency import ensure_all_ref_genome_variant_set_consistency
 from main.model_utils import get_dataset_with_type
 from main.models import Chromosome
 from main.models import ExperimentSample
@@ -77,9 +78,6 @@ def parse_vcf(vcf_dataset, alignment_group):
         vcf_reader = vcf.Reader(fh)
         for record in vcf_reader:
             record_count += 1
-
-    # Comment this out until we add the aligment options field
-    # alignment_group_options = alignment_group.options
 
     # Now iterate through the vcf file again and parse the data.
     # NOTE: Do not save handles to the Variants, else suffer the wrath of a
