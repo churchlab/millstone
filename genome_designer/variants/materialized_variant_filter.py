@@ -6,6 +6,8 @@ code than the original implementation; thus it makes sense to re-implement
 from scratch.
 """
 
+import re
+
 from django.db import connection
 from sympy.logic import boolalg
 
@@ -111,6 +113,9 @@ class VariantFilterEvaluator(object):
                 GENE_REGEX]:
             symbolified_string = self._symbolify_string_for_regex(
                     symbolified_string, regex)
+
+        symbolified_string = re.sub('AND|and', '&', symbolified_string)
+        symbolified_string = re.sub('OR|or', '|', symbolified_string)
 
         self.sympy_representation = boolalg.to_dnf(symbolified_string)
 
