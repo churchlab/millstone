@@ -36,6 +36,16 @@ gd.TabAnalyzeSubviewVariants = gd.TabAnalyzeSubviewAbstractBase.extend(
     this.variantsTableComponent = new gd.VariantsTableComponent({
       model: this.model
     });
+
+    this.setupListeners();
+  },
+
+  setupListeners: function() {
+    // Propagate NAVIGATE event.
+    // TODO: Is there more elegant way to do this?
+    this.listenTo(this.variantsTableComponent, 'NAVIGATE', function (e) {
+      this.trigger('NAVIGATE', e);
+    });
   },
 
   /** @override */
