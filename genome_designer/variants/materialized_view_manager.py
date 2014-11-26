@@ -5,6 +5,7 @@ Manages the Materialized view of the Variant data for filtering.
 from django.db import connection
 from django.db import transaction
 
+from main.consistency import ensure_all_ref_genome_variant_set_consistency
 from melted_variant_schema import *
 
 
@@ -121,6 +122,8 @@ class MeltedVariantMaterializedViewManager(AbstractMaterializedViewManager):
     def create_internal(self):
         """Override.
         """
+        ensure_all_ref_genome_variant_set_consistency(self.reference_genome)
+
         # Query all columns except the catch-all key value fields first,
         # then join with the key-value columns.
         create_sql_statement = (

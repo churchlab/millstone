@@ -1,17 +1,13 @@
 """Functions that enforce consistency.
 """
 
-from main.models import VariantToVariantSet
-
 
 def ensure_variant_set_consistency(variant_set):
     """For all Variants in a VariantSet, makes an association to samples
     having GT_TYPE = 2.
     """
     for variant in variant_set.variants.all():
-        vtvs = VariantToVariantSet.objects.get(
-                variant=variant,
-                variant_set=variant_set)
+        vtvs = variant.varianttovariantset_set.get(variant_set=variant_set)
         for vccd in variant.variantcallercommondata_set.all():
             for ve in vccd.variantevidence_set.all():
                 if 'GT_TYPE' in ve.data and ve.data['GT_TYPE'] == 2:
