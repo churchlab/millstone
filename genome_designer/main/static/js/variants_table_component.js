@@ -376,7 +376,8 @@ gd.VariantsTableComponent = Backbone.View.extend({
   updateVariantList: function() {
     // Update the url with the filter.
     var updatedPath = gd.Util.updateQueryStringParameter(
-        gd.Util.getFullPath(), 'filter', this.model.get('filterString'));
+        gd.Util.getFullPath(), 'filter',
+        encodeURIComponent(this.model.get('filterString')));
     updatedPath = gd.Util.updateQueryStringParameter(
         updatedPath, 'melt', this.model.get('isMelted') ? '1' : '0');
     this.trigger('NAVIGATE', {'path': updatedPath});
