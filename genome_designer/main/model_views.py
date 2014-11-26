@@ -34,48 +34,6 @@ ALL_VS_LABEL_KEY = 'all_variant_set_label'
 ALL_VS_UID_KEY = 'all_variant_set_uid'
 
 
-class GeneView(object):
-    """View of a Gene.
-    """
-
-    def __init__(self, region):
-        self.region = region
-        self.label = region.label
-        self.uid = region.uid
-
-        # Assume that GENE region is composed of single interval.
-        gene_interval = region.regioninterval_set.all()[0]
-        self.start = gene_interval.start
-        self.end = gene_interval.end
-
-        # Count of Variants that occur in region.
-        self.variants = Variant.objects.filter(
-                reference_genome=region.reference_genome,
-                position__gte=self.start,
-                position__lt=self.end).count()
-
-    @property
-    def href(self):
-        analyze_tab_part = reverse(
-                'main.views.tab_root_analyze',
-                args=(self.region.reference_genome.project.uid,
-                        self.region.reference_genome.uid,
-                        'variants'))
-        gene_filter_part = '?filter=IN_GENE(' + self.label + ')'
-        return analyze_tab_part + gene_filter_part
-
-
-    @classmethod
-    def get_field_order(clazz, **kwargs):
-        return [
-            {'field':MELTED_SCHEMA_KEY__UID},
-            {'field':'label'},
-            {'field':'start'},
-            {'field':'end'},
-            {'field':'variants'},
-        ]
-
-
 def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
     """Adapts of list of objects that doesn't require recursive calling.
 

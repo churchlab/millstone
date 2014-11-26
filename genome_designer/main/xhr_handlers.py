@@ -32,7 +32,6 @@ from main.exceptions import ValidationException
 from main.model_views import adapt_gene_list_to_frontend
 from main.model_views import get_all_fields
 from main.model_views import adapt_variant_to_frontend
-from main.model_views import GeneView
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSample
