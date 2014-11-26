@@ -415,6 +415,10 @@ class VariantFilterEvaluator(object):
         (delim, key, value) = get_delim_key_value_triple(condition_string,
                 self.all_key_map)
 
+        # Clean up value.
+        value = value.replace('\'', '')
+        value = value.replace('\"', '')
+
         # Rewrite the key if it is in a json field of the materialized view
         rewritten_key = self._rewrite_arg_if_json_field(key)
 

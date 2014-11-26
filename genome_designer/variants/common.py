@@ -82,7 +82,8 @@ SAMPLE_SCOPE_REGEX_NAMED = re.compile(
         SAMPLE_LIST_PART_NAMED + ')')
 
 # Recognizes a pattern of the form 'key op value'.
-EXPRESSION_REGEX = re.compile('(\w+\s*[=><!]{1}[=]{0,1}\s*\w+)')
+EXPRESSION_REGEX = re.compile(
+        '(\w+\s*[=><!]{1}[=]{0,1}\s*\"{0,1}\'{0,1}[\w\s]+\"{0,1}\'{0,1})')
 
 # Recognizes statements about set.
 SET_REGEX = re.compile('((?:NOT_){0,1}IN_SET\([\w]+\))')
@@ -135,9 +136,6 @@ def SymbolGenerator():
 
 def get_delim_key_value_triple(raw_string, all_key_map):
     """Attempt to parse a (delim, key, value) triple out of raw_string."""
-    # Remove spaces from the string.
-    raw_string = raw_string.replace(' ', '')
-
     # Try the possible delimiters in order until we find one, or fail.
     for raw_delim in DELIM_TO_Q_POSTFIX.iterkeys():
         split_result = raw_string.split(raw_delim)
@@ -145,6 +143,8 @@ def get_delim_key_value_triple(raw_string, all_key_map):
         if len(split_result) == 2:
             key, value = split_result
             key = key.upper()
+            key = key.strip()
+            value = value.strip()
             for data_map in all_key_map:
                 # Make sure this is a valid key and valid delimeter.
                 if key in data_map:
