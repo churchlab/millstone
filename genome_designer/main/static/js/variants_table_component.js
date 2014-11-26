@@ -153,7 +153,9 @@ gd.VariantsTableComponent = Backbone.View.extend({
 
     // HACK: Reset master checkbox.
     // Is there a better place to do this?
-    this.datatableComponent.resetAllSelectedState();
+    if (this.datatableComponent) {
+      this.datatableComponent.resetAllSelectedState();
+    }
   },
 
   /** Handles the server response containing Variants data. */
