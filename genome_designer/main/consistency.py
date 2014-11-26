@@ -28,3 +28,4 @@ def ensure_all_ref_genome_variant_set_consistency(reference_genome):
     """
     for vs in reference_genome.variantset_set.all():
         ensure_variant_set_consistency(vs)
+    reference_genome.invalidate_materialized_view()
