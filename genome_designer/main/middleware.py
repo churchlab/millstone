@@ -15,6 +15,8 @@ from conf import demo_settings
 
 class DisabledInDemoModeMiddleware(object):
     """Disable all views except those that are explicitly allowed.
+
+    Safe views are listed in conf/demo_settings.py.
     """
 
     def __init__(self):
