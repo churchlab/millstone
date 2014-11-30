@@ -179,6 +179,8 @@ JBrowse.
 
         $ initdb /usr/local/var/postgres -E utf8
         $ pg_ctl -D /usr/local/var/postgres -l logfile start 
+        $ #dbg: I had to do this on 10.10 after installing w/ brew:
+        $ createdb 
 
 2. _(Mac Only)_ Since most new postgres Mac installations (both via brew and Postgres.app) do not have a `postgres` admin user, you will need to [modify your DATABASES variable](https://github.com/churchlab/millstone/issues/433) in `genome_designer/conf/local_settings.py`.
 
