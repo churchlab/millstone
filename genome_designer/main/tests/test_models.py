@@ -118,7 +118,7 @@ class TestDataset(TestCase):
         Make sure data set compression behaves correctly.
         """
         dataset = Dataset.objects.create(
-                label='test_dataset', 
+                label='test_dataset',
                 type=Dataset.TYPE.FASTQ1)
 
         GZIPPED_FASTQ_FILEPATH = os.path.join(settings.PWD, 'test_data',
@@ -130,7 +130,7 @@ class TestDataset(TestCase):
         assert dataset.is_compressed()
 
         process = subprocess.Popen(
-                ('head '+dataset.wrap_if_compressed()+' | wc -l'), 
+                ('head '+dataset.wrap_if_compressed()+' | wc -l'),
                 shell=True, executable=settings.BASH_PATH, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
 
@@ -147,7 +147,7 @@ class TestDataset(TestCase):
     def test_compress_dataset(self):
         """
         Make sure that compressing a dataset and putting a new dataset
-        entry into the db works correctly. 
+        entry into the db works correctly.
         """
         user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
                 email=TEST_EMAIL)
@@ -168,10 +168,10 @@ class TestDataset(TestCase):
         # All the magic happens here
         compressed_dataset = dataset.make_compressed('.gz')
 
-        # Grab the new compressed dataset through the ref genome to 
+        # Grab the new compressed dataset through the ref genome to
         # make sure that it got added
         compressed_dataset_through_ref_genome = get_dataset_with_type(
-                entity= self.test_ref_genome, 
+                entity= self.test_ref_genome,
                 type= Dataset.TYPE.REFERENCE_GENOME_GENBANK,
                 compressed= True)
         assert compressed_dataset == compressed_dataset_through_ref_genome
@@ -196,7 +196,7 @@ class TestDataset(TestCase):
 
         self.assertEquals(
                 dataset.internal_string(self.test_ref_genome),
-                (str(self.test_ref_genome.uid) + 
+                (str(self.test_ref_genome.uid) +
                         '_' + uppercase_underscore(Dataset.TYPE.REFERENCE_GENOME_GENBANK)))
 
 
@@ -300,8 +300,8 @@ class TestExperimentSample(TestCase):
     def setUp(self):
         """Override.
         """
-        common_entities = create_common_entities()
-        self.ref_genome = common_entities['reference_genome']
+        self.common_entities = create_common_entities()
+        self.ref_genome = self.common_entities['reference_genome']
 
     def test_data_dir_create_and_delete(self):
         """Make sure data directory gets deleted.
@@ -316,6 +316,23 @@ class TestExperimentSample(TestCase):
         es.delete()
 
         self.assertFalse(os.path.exists(es_data_dir))
+
+    def test_add_child(self):
+        """
+        Make sure parent/child relationships work.
+        """
+
+        assert len(self.common_entities['sample_1'].get_children()) == 0
+        assert len(self.common_entities['sample_1'].get_parents()) == 0
+
+        self.common_entities['sample_1'].add_child(
+            self.common_entities['sample_2'])
+
+        assert len(self.common_entities['sample_1'].get_children()) == 1
+        assert len(self.common_entities['sample_2'].get_parents()) == 1
+
+        assert(self.common_entities['sample_1'].get_children()[0].uid == (
+        self.common_entities['sample_2'].uid))
 
 
 class TestChromosome(TestCase):
@@ -345,13 +362,13 @@ class TestChromosome(TestCase):
         assert(test_yeast_genome.num_chromosomes == 3)
 
         # Assert correct number of bases
-        assert(test_yeast_genome.num_bases == sum([chrom.num_bases for chrom in 
+        assert(test_yeast_genome.num_bases == sum([chrom.num_bases for chrom in
                 Chromosome.objects.filter(reference_genome=test_yeast_genome)]))
 
         # Assert correct chromosome labels
         expected_chrom_names = [
-                'gi|448092123|ref|NC_020215.1|', 
-                'gi|448096713|ref|NC_020216.1|', 
+                'gi|448092123|ref|NC_020215.1|',
+                'gi|448096713|ref|NC_020216.1|',
                 'gi|448100869|ref|NC_020217.1|']
 
         assert([chrom.label for chrom in Chromosome.objects.filter(reference_genome=test_yeast_genome)] == expected_chrom_names)

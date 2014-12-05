@@ -647,9 +647,15 @@ class ExperimentSample(UniqueUidModelMixin):
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
         verbose_name="Datasets")
 
-    # User speciified data fields corresponding to the sample.
+    # User specified data fields corresponding to the sample.
     # Examples: Growth rate, GFP amount, phenotype, # of mage cycles, etc.
     data = PostgresJsonField()
+
+    # parent/child relations to other samples
+    children = models.ManyToManyField('self',
+        through='ExperimentSampleRelation',
+        symmetrical=False,
+        related_name='parents')
 
     def __getattr__(self, name):
         """Automatically called if an attribute is not found in the typical
@@ -668,6 +674,47 @@ class ExperimentSample(UniqueUidModelMixin):
             return self.data[name]
         except:
             raise AttributeError
+
+    def add_child(self, sample):
+        """
+        Create a relationship with another sample as as child.
+
+        TODO: For now, don't complain if this is a parent sample as well,
+        since we aren't doing anything fancy.
+
+        Return True if successful.
+        """
+        return ExperimentSampleRelation.objects.get_or_create(
+            parent= self,
+            child= sample)
+
+    def remove_child(self, sample):
+        """
+        Remove a parent/child relationship with another sample.
+
+        Return True if present and removed.
+        """
+        child_relation = ExperimentSampleRelation.objects.filter(
+            parent=self,
+            child=sample)
+
+        if child_relation:
+            child_relation.delete()
+            return True
+        else:
+            return False
+
+    def get_children(self):
+        """
+        Use relationship table to get all children.
+        """
+        return self.children.all()
+
+    def get_parents(self):
+        """
+        Use relationship table to get all parents.
+        """
+        return self.parents.all()
 
     @property
     def status(self):
@@ -762,6 +809,12 @@ class ExperimentSample(UniqueUidModelMixin):
             {'field': 'fastqc_links', 'verbose': 'FastQC'},
         ]
 
+class ExperimentSampleRelation(UniqueUidModelMixin):
+    """
+    Explicit table linking parent and child samples.
+    """
+    parent = models.ForeignKey(ExperimentSample, related_name='parent_relationships')
+    child = models.ForeignKey(ExperimentSample, related_name='child_relationships')
 
 class AlignmentGroup(UniqueUidModelMixin):
     """Collection of alignments of several related ExperimentSamples to the
