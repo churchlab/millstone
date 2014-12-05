@@ -202,8 +202,13 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
 DEFAULT_PROCESSING_MASK = {
     'make_bam': True,
     'sort': True,
+    'rmdup': True,
     'add_groups': True,
-    'indel_realigner': True,
+    # Disabling GATK indel realignment by default;
+    # freebayes does it locally while calling, and it's slower;
+    # 27 sec vs 38 seconds on pipeline tests on my MBP.
+    # see further: http://goo.gl/COm53O (bcbio article)
+    'indel_realigner': False,
     'compute_insert_metrics': True,
     'index': True,
     'compute_callable_loci': True,
@@ -260,7 +265,34 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     # 2. Sort
     sorted_output_name = os.path.splitext(bam_file_location)[0] + '.sorted'
     sorted_bam_file_location = sorted_output_name + '.bam'
-    if effective_mask['sort']:
+
+    # We are only performing rmdup if we are sorting - if no sorting, then
+    # skip this even if it is flagged. We probably should expose this to
+    # the user, but for now let's just throw an error.
+    if not effective_mask['sort'] and not effective_mask['rmdup']:
+        raise Exception('Cannot remove duplicates without sorting!'
+                ' Contents of processing mask: \n'+str(effective_mask))
+
+    elif effective_mask['sort'] and effective_mask['rmdup']:
+        # 2a. Perform the actual sorting and rmdup on stream.
+        sort_rmdup_cmd = '|'.join([
+                ' '.join([
+                        SAMTOOLS_BINARY,
+                        'sort','-o',
+                        bam_file_location,
+                        '-']),
+                ' '.join([
+                        SAMTOOLS_BINARY,
+                        'rmdup',
+                        '-',
+                        sorted_bam_file_location])])
+
+        subprocess.check_call(sort_rmdup_cmd, shell=True, stderr=error_output)
+
+        # 2b. Index the sorted result.
+        index_bam_file(sorted_bam_file_location, error_output)
+
+    elif effective_mask['sort']:
         # 2a. Perform the actual sorting.
         subprocess.check_call([
             SAMTOOLS_BINARY,
@@ -276,7 +308,8 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     # Subsequent steps screw up pairing info so this has to
     # be done here.
     if effective_mask['compute_insert_metrics']:
-        compute_insert_metrics(sorted_bam_file_location, sample_alignment, error_output)
+        compute_insert_metrics(sorted_bam_file_location,
+                sample_alignment, error_output)
 
     # 4. Add groups
     grouped_output_name= (
@@ -284,7 +317,8 @@ def process_sam_bam_file(sample_alignment, reference_genome,
             '.grouped')
     grouped_bam_file_location = grouped_output_name + '.bam'
     if effective_mask['add_groups']:
-        add_groups(experiment_sample, sorted_bam_file_location, grouped_bam_file_location,
+        add_groups(experiment_sample, sorted_bam_file_location,
+                grouped_bam_file_location,
                 error_output)
 
     # 5. Perform realignment accounting for indels.
@@ -292,6 +326,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
             os.path.splitext(grouped_bam_file_location)[0] +
             '.realigned.bam'
     )
+
     if effective_mask['indel_realigner']:
         # Make sure the previous result is indexed.
         index_bam_file(grouped_bam_file_location, error_output)
@@ -303,6 +338,10 @@ def process_sam_bam_file(sample_alignment, reference_genome,
                 realigned_bam_file_location,
                 error_output
         )
+    # if we are not realigning indels, then point at the grouped file
+    # for the next step.
+    else:
+        realigned_bam_file_location = grouped_bam_file_location
 
     # 6. Add back MD tags for visualization of mismatches by Jbrowse
     if effective_mask['withmd']:

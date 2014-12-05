@@ -808,8 +808,7 @@ class AlignmentGroup(UniqueUidModelMixin):
 
         To do at some point:
         * custom arguments to bwa, gatk, freebayes, etc
-        * enabling/changing of proecssing steps?
-
+        * enabling/changing of proecssing steps (DEFAULT_PROCESSING_MASK)
         """
         return json.dumps({
             'call_as_haploid': False,
