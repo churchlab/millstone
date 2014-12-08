@@ -36,6 +36,8 @@ gd.VariantSetListView = Backbone.View.extend({
    * containing a list of Variants.
    */
   handleFormSubmitFromFile: function() {
+    $('#gd-variant-set-form-from-file-submit').addClass('disabled');
+
     // We validate by parsing the input elements, but then use the HTML5
     // FormData API to actually send the data to the server. FormData
     // makes the file upload "just work".
