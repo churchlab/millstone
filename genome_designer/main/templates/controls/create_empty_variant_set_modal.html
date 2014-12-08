@@ -29,7 +29,10 @@
 
     <div class="modal-footer">
       <button class="btn" data-dismiss="modal">Cancel</button>
-      <button class="btn btn-primary" id="gd-variant-set-form-empty-submit">Submit</button>
+      <button id="gd-variant-set-form-empty-submit"
+          class="btn btn-primary {% if not ref_genome_list %}disabled{% endif %}">
+        Submit
+      </button>
     </div>
   </div></div>
 </div>

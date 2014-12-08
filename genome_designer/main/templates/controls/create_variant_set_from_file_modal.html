@@ -68,7 +68,8 @@
     </div>
     <div class="modal-footer">
       <button class="btn" data-dismiss="modal">Cancel</button>
-      <button id="gd-variant-set-form-from-file-submit" class="btn btn-primary">
+      <button id="gd-variant-set-form-from-file-submit"
+          class="btn btn-primary {% if not ref_genome_list %}disabled{% endif %}">
         Submit
       </button>
     </div>
