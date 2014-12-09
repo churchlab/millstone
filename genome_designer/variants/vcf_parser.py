@@ -17,6 +17,7 @@ from main.models import Variant
 from main.models import VariantCallerCommonData
 from main.models import VariantAlternate
 from main.models import VariantEvidence
+from variants.common import update_parent_child_variant_fields
 from variants.dynamic_snp_filter_key_map import update_filter_key_map
 
 
@@ -123,6 +124,9 @@ def parse_vcf(vcf_dataset, alignment_group):
             # so we explicitly clear them here. Our efficiency doesn't really suffer.
             reset_queries()
 
+    # Finally, update the parent/child relationships for these new
+    # created variants.
+    update_parent_child_variant_fields(alignment_group)
 
 def extract_raw_data_dict(vcf_record):
     """Extract a dictionary of raw data from the Record.

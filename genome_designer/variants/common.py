@@ -5,6 +5,8 @@ Helpers and utils for working with Variants.
 from collections import OrderedDict
 import re
 
+from main.models import VariantCallerCommonData
+
 from materialized_view_manager import MATERIALIZED_TABLE_QUERYABLE_FIELDS_MAP
 from variants.filter_key_map_constants import MAP_KEY__VARIANT
 from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
@@ -328,3 +330,52 @@ def determine_visible_field_names(hard_coded_keys, filter_string,
     """
     fields_from_filter_string = extract_filter_keys(filter_string, ref_genome)
     return list(set(hard_coded_keys) | set(fields_from_filter_string))
+
+
+def update_parent_child_variant_fields(alignment_group):
+    """
+
+    Update all variant evidence objects with the correct parent/child
+    relationships.
+
+    Add/update a data field called IN_PARENTS to the variant evidence data
+    json, which will check to see if the GT_TYPE is >= 0 in any of the
+    parents, and another called IN_CHILDREN, which will check to see if
+    GT_TYPE >= 0 in any of the children.
+
+    Ideally this is done before making the materialized view.
+    """
+
+    #1. Get parent-child pairs for all experiment_samples in alignment_group.
+    samples = alignment_group.get_samples()
+    relations = {}
+    for sample in samples:
+        child_uids = [child.uid for child in sample.get_children()]
+        relations[sample.uid] = child_uids
+
+    #2. Grab all variants and update the variant_evidence fields with data from
+    #   each pair.
+    for vcc in alignment_group.variantcallercommondata_set.all():
+        ve_set = vcc.variantevidence_set.all()
+        sample_to_ve = {}
+        ve_to_gt = {}
+        for ve in ve_set:
+            sample_to_ve[ve.experiment_sample.uid] = ve
+            ve_to_gt[ve.uid] = (
+                    0 if ve.data['GT_TYPE'] is None else ve.data['GT_TYPE'])
+
+        for parent, children in relations.items():
+            parent_ve = sample_to_ve[parent]
+            chldrn_ve = [sample_to_ve[child] for child in children]
+
+            in_parent = int(ve_to_gt[parent_ve.uid] > 0)
+            in_children = 0
+
+            for child_ve in chldrn_ve:
+                child_ve.data['IN_PARENTS'] = in_parent
+                in_children += int(child_ve.data['GT_TYPE'] > 0)
+                child_ve.save(update_fields=['data'])
+
+            sample_to_ve[parent].data['IN_CHILDREN'] = in_children
+            sample_to_ve[parent].save(update_fields=['data'])
+

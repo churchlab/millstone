@@ -10,11 +10,16 @@ from django.test import TestCase
 from main.models import Dataset
 from main.models import Project
 from main.models import ReferenceGenome
+from main.models import Variant
+from main.models import VariantAlternate
+from main.testing_util import create_common_entities_w_variants
 from variants.dynamic_snp_filter_key_map import update_filter_key_map
 from settings import PWD as GD_ROOT
 from variants.common import determine_visible_field_names
 from variants.common import extract_filter_keys
 from variants.common import SymbolGenerator
+from variants.common import update_parent_child_variant_fields
+
 
 TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
 
@@ -58,6 +63,42 @@ class TestCommon(TestCase):
         self.assertEqual(EXPECTED_VISIBLE_KEYS,
                 determine_visible_field_names(EXPECTED_VISIBLE_KEYS, '',
                         self.ref_genome))
+
+
+    def test_update_parent_child_variant_fields(self):
+        self.common_entities = create_common_entities_w_variants()
+
+        self.common_entities['samples'][0].add_child(
+            self.common_entities['samples'][1])
+
+        self.common_entities['samples'][0].add_child(
+            self.common_entities['samples'][2])
+
+        self.common_entities['samples'][2].add_child(
+            self.common_entities['samples'][3])
+
+        self.common_entities['samples'][4].add_child(
+            self.common_entities['samples'][5])
+
+        self.common_entities['samples'][5].add_child(
+            self.common_entities['samples'][6])
+
+        update_parent_child_variant_fields(
+                self.common_entities['alignment_group'])
+
+        v_1808 = Variant.objects.get(
+                reference_genome=self.common_entities['reference_genome'],
+                position=1808)
+        self.assertEqual(set(v_1808.get_alternates()), set(['A']))
+
+        vcc_1808 = v_1808.variantcallercommondata_set.get()
+        ve_for_uid = lambda uid: (
+            vcc_1808.variantevidence_set.get(experiment_sample__uid=uid))
+        ve_sample_3 = ve_for_uid(u'9dd7a7a1')
+        ve_sample_2 = ve_for_uid(u'9b19e708')
+
+        self.assertEqual(ve_sample_3.data['GT_TYPE'],2)
+        self.assertEqual(ve_sample_2.data['IN_CHILDREN'],1)
 
 
 class TestSymbolGenerator(TestCase):

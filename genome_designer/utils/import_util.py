@@ -428,6 +428,8 @@ def create_samples_from_row_data(project, data_source_list, move=False):
 
         experiment_samples.append(experiment_sample)
 
+    _update_experiment_sample_parentage(experiment_samples)
+
     return experiment_samples
 
 
@@ -606,10 +608,38 @@ def _update_experiment_sample_data_for_row(experiment_sample, row, known_cols):
     """
     for field, value in row.iteritems():
         if field not in known_cols:
-            clean_field = 'SAMPLE_' + uppercase_underscore(field)
+            clean_field = uppercase_underscore(field)
+            if not clean_field.startswith('SAMPLE_'):
+                clean_field = 'SAMPLE_' + clean_field
             experiment_sample.data[clean_field] = str(value)
+
     experiment_sample.save(update_fields=['data'])
 
+
+def _update_experiment_sample_parentage(experiment_samples):
+    """
+    Adds children/parent relations to ExperimentSamples according to a
+    dictionary of parents parsed out of the targets file.
+    """
+
+    es_label_dict = dict([(es.label, es) for es in experiment_samples])
+
+    # make a dict of child to parent labels.
+    parent_dict = {}
+    for es in experiment_samples:
+        if 'SAMPLE_PARENTS' in es.data:
+            parents = es.data['SAMPLE_PARENTS'].split('|')
+            parent_dict[es.label] = parents
+
+    # add the children of each parent to the model.
+    for child, parents in parent_dict.items():
+        assert child in es_label_dict.keys(), (
+                'Child {} missing from ExperimentSamples'.format(child))
+        for parent in parents:
+            if not parent: continue #skip blank strings
+            assert parent in es_label_dict.keys(), (
+                   'Parent {} missing from ExperimentSamples'.format(parent))
+            es_label_dict[parent].add_child(es_label_dict[child])
 
 def parse_experiment_sample_targets_file(project,
         targets_filehandle_or_filename, required_header, sample_name_key,

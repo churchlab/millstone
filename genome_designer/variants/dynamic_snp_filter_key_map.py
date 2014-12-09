@@ -93,6 +93,18 @@ def update_sample_filter_key_map(ref_genome, experiment_sample):
             'num': 1
         }
 
+    # If parent/child relationships were included in the sample data,
+    # then initialize the IN_PARENTS and IN_CHILDREN keys as well.
+    if 'SAMPLE_PARENTS' in experiment_sample.data.keys():
+        sample_map['IN_CHILDREN'] = {
+            'type': 'Int',
+            'num': 1
+        }
+        sample_map['IN_PARENTS'] = {
+            'type': 'Int',
+            'num': 1
+        }
+
     ref_genome.variant_key_map[MAP_KEY__EXPERIMENT_SAMPLE] = sample_map
 
     _assert_unique_keys(ref_genome.variant_key_map)
