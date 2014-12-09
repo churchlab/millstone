@@ -85,27 +85,30 @@ def update_sample_filter_key_map(ref_genome, experiment_sample):
 
     sample_map = copy.deepcopy(
             ref_genome.variant_key_map.get(
-            MAP_KEY__EXPERIMENT_SAMPLE, {}))
+                    MAP_KEY__EXPERIMENT_SAMPLE, {}))
 
     for key, value in experiment_sample.data.iteritems():
         sample_map[key] = {
             'type': 'String',
             'num': 1
         }
+    ref_genome.variant_key_map[MAP_KEY__EXPERIMENT_SAMPLE] = sample_map
 
     # If parent/child relationships were included in the sample data,
     # then initialize the IN_PARENTS and IN_CHILDREN keys as well.
+    # These go in VariantEvidence.
+    # TODO(dbg): Is this correct?
+    evidence_data_map = ref_genome.variant_key_map.get(MAP_KEY__EVIDENCE, {})
     if 'SAMPLE_PARENTS' in experiment_sample.data.keys():
-        sample_map['IN_CHILDREN'] = {
+        evidence_data_map['IN_CHILDREN'] = {
             'type': 'Int',
             'num': 1
         }
-        sample_map['IN_PARENTS'] = {
+        evidence_data_map['IN_PARENTS'] = {
             'type': 'Int',
             'num': 1
         }
-
-    ref_genome.variant_key_map[MAP_KEY__EXPERIMENT_SAMPLE] = sample_map
+    ref_genome.variant_key_map[MAP_KEY__EVIDENCE] = evidence_data_map
 
     _assert_unique_keys(ref_genome.variant_key_map)
     ref_genome.save(update_fields=['variant_key_map'])
