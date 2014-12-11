@@ -25,7 +25,6 @@ from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 
 #from debug.debug_util import FakeException
-from main.adapters import adapt_model_or_modelview_list_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.adapters import adapt_experiment_samples_to_frontend
 from main.exceptions import ValidationException
@@ -38,7 +37,6 @@ from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from main.models import ReferenceGenome
-from main.models import Region
 from main.models import SavedVariantFilterQuery
 from main.models import VariantCallerCommonData
 from main.models import VariantAlternate

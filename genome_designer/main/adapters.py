@@ -8,7 +8,6 @@
 import json
 import string
 
-from django.db.models import ManyToManyField
 from django.db.models import Model
 from django.db.models.query import QuerySet
 
@@ -24,25 +23,6 @@ HIDDEN_PAIR_FIELDS = [
     'href',
     'uid',
 ]
-
-
-def adapt_model_or_modelview_list_to_frontend(instance_list, **kwargs):
-    """Adapts a list of model instances to the frontend representation.
-
-    All instances in the list must be of the same type.
-
-    Returns:
-        JSON string.
-    """
-    if len(instance_list) == 0:
-        return json.dumps({
-            OBJ_LIST: [],
-            'field_config': []
-        })
-
-    instance_type = type(instance_list[0])
-    return adapt_model_to_frontend(instance_type, obj_list=instance_list,
-            **kwargs)
 
 
 def adapt_model_to_frontend(model, filters={}, obj_list=None, **kwargs):
