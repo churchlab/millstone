@@ -26,3 +26,12 @@ MAP_KEY__COMMON_DATA = 'snp_caller_common_data'
 MAP_KEY__EVIDENCE = 'snp_evidence_data'
 
 MAP_KEY__EXPERIMENT_SAMPLE = 'experiment_sample_data'
+
+# Valid types for key map.
+VARIANT_KEY_MAP_TYPE__BOOLEAN = 'Boolean'
+
+VARIANT_KEY_MAP_TYPE__FLOAT = 'Float'
+
+VARIANT_KEY_MAP_TYPE__INTEGER = 'Integer'
+
+VARIANT_KEY_MAP_TYPE__STRING = 'String'

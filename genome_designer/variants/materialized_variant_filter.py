@@ -20,6 +20,10 @@ from variants.common import generate_key_to_materialized_view_parent_col
 from variants.common import get_all_key_map
 from variants.common import get_delim_key_value_triple
 from variants.common import SymbolGenerator
+from variants.filter_key_map_constants import VARIANT_KEY_MAP_TYPE__BOOLEAN
+from variants.filter_key_map_constants import VARIANT_KEY_MAP_TYPE__FLOAT
+from variants.filter_key_map_constants import VARIANT_KEY_MAP_TYPE__INTEGER
+from variants.filter_key_map_constants import VARIANT_KEY_MAP_TYPE__STRING
 from variants.materialized_view_manager import MATERIALIZED_TABLE_QUERY_SELECT_CLAUSE_COMPONENTS
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 from variants.melted_variant_schema import CAST_SCHEMA_KEY__TOTAL_SAMPLE_COUNT
@@ -446,10 +450,10 @@ class VariantFilterEvaluator(object):
             # support these data types
             # string doesn't need to be cast
             field_type_expanded = {
-                    'Integer': '::Integer',
-                    'Float': '::Float',
-                    'Boolean': '::Boolean',
-                    'String': ''}.get(field_type, None)
+                    VARIANT_KEY_MAP_TYPE__INTEGER: '::Integer',
+                    VARIANT_KEY_MAP_TYPE__FLOAT: '::Float',
+                    VARIANT_KEY_MAP_TYPE__BOOLEAN: '::Boolean',
+                    VARIANT_KEY_MAP_TYPE__STRING: ''}.get(field_type, None)
 
             if field_type_expanded is not None:
                 return "(%s->>'%s')%s" % (
