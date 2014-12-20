@@ -125,18 +125,17 @@ class TestImportSamplesFromTargetsFile(TestCase):
         self.assertEqual(0, num_datasets_before)
 
         # Perform the import.
+        OPTIONS = {'skip_fastqc': True}
         with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
             import_samples_from_targets_file(self.project,
-                    UploadedFile(targets_file_fh))
+                    UploadedFile(targets_file_fh), OPTIONS)
 
         new_samples = ExperimentSample.objects.all()
-        num_experiment_samples_after = len(new_samples)
-        num_datasets_after = len(Dataset.objects.all())
 
-        # Make sure the right amount of models were added.
-        self.assertEqual(NUM_SAMPLES_IN_TEMPLATE, num_experiment_samples_after)
-        # num_datasets: 2 * fastq plus 2 * fastqc = 4 * num_samples
-        self.assertEqual(4 * NUM_SAMPLES_IN_TEMPLATE, num_datasets_after)
+        # Make sure the right number of models were added.
+        self.assertEqual(NUM_SAMPLES_IN_TEMPLATE, len(new_samples))
+        # num_datasets_after: 2 * fastq plus
+        self.assertEqual(2 * NUM_SAMPLES_IN_TEMPLATE, Dataset.objects.count())
 
         # Make sure all have READY status.
         observed_status_type_set = set([
@@ -165,9 +164,10 @@ class TestImportSamplesFromTargetsFile(TestCase):
         project = Project.objects.all()[0]
 
         # Perform the import.
+        OPTIONS = {'skip_fastqc': True}
         with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
             import_samples_from_targets_file(project,
-                    UploadedFile(targets_file_fh))
+                    UploadedFile(targets_file_fh), OPTIONS)
 
     def test_import_samples__extra_cols(self):
         """Tests importing samples from a template file that has
@@ -180,9 +180,10 @@ class TestImportSamplesFromTargetsFile(TestCase):
         project = Project.objects.all()[0]
 
         # Perform the import.
+        OPTIONS = {'skip_fastqc': True}
         with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
             samples = import_samples_from_targets_file(project,
-                    UploadedFile(targets_file_fh))
+                    UploadedFile(targets_file_fh), OPTIONS)
 
         # Check that the metadata was inserted successfully.
         for s in samples:
@@ -196,10 +197,11 @@ class TestImportSamplesFromTargetsFile(TestCase):
         TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,
                 'sample_list_targets_with_duplicates.tsv')
 
+        OPTIONS = {'skip_fastqc': True}
         with self.assertRaises(AssertionError):
             with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
                 import_samples_from_targets_file(self.project,
-                        UploadedFile(targets_file_fh))
+                        UploadedFile(targets_file_fh), OPTIONS)
 
     def test_import_samples__nonstandard_linebreaks(self):
         TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,
@@ -216,18 +218,17 @@ class TestImportSamplesFromTargetsFile(TestCase):
         # Perform the import.
         # NOTE: Intentionally open as non-universal to simulate what would
         # be passed in through a browser upload.
+        OPTIONS = {'skip_fastqc': True}
         with open(TARGETS_TEMPLATE_FILEPATH) as targets_file_fh:
             import_samples_from_targets_file(self.project,
-                    UploadedFile(targets_file_fh))
+                    UploadedFile(targets_file_fh), OPTIONS)
 
         new_samples = ExperimentSample.objects.all()
-        num_experiment_samples_after = len(new_samples)
-        num_datasets_after = len(Dataset.objects.all())
 
-        # Make sure the right amount of models were added.
-        # num_datasets: 2 * fastq plus 2 * fastqc = 4 * num_samples
-        self.assertEqual(NUM_SAMPLES_IN_TEMPLATE, num_experiment_samples_after)
-        self.assertEqual(4 * NUM_SAMPLES_IN_TEMPLATE, num_datasets_after)
+        # Make sure the right number of models were added.
+        self.assertEqual(NUM_SAMPLES_IN_TEMPLATE, len(new_samples))
+        # num_datasets_after: 2 * fastq
+        self.assertEqual(2 * NUM_SAMPLES_IN_TEMPLATE, Dataset.objects.count())
 
         # Make sure all have READY status.
         observed_status_type_set = set([
@@ -431,6 +432,9 @@ class TestFastQC(TestCase):
         run_fastqc_on_sample_fastq(gz_backed_sample, gz_fastq1_dataset)
         run_fastqc_on_sample_fastq(gz_backed_sample, gz_fastq2_dataset,
                 rev=True)
+
+        # We expect 2 Dataset per Fastq so 4 total.
+        self.assertEqual(4, Dataset.objects.count())
 
         # Check link matches file extension.
         FASTQC_DATASET_TYPES = [

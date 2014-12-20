@@ -336,7 +336,7 @@ def _assert_sample_targets_file_size(targets_file):
 
 
 @project_files_needed
-def import_samples_from_targets_file(project, targets_file):
+def import_samples_from_targets_file(project, targets_file, options={}):
     """Uses the uploaded targets file to add a set of samples to the project.
     We need to check each line of the targets file for consistency before we
     do anything, however. Checking is moved to parse_targets_file() which parses
@@ -349,6 +349,8 @@ def import_samples_from_targets_file(project, targets_file):
         project: The project we're storing everything relative to>
         targets_file: The UploadedFile django object that holds the targets
             in .tsv format.
+        options: Dictionary of options. Currently a hack to allow different
+            parts of the pipeline to not run during tests (e.g. FastQC).
     """
     assert_celery_running()
 
@@ -378,22 +380,28 @@ def import_samples_from_targets_file(project, targets_file):
                 updated_row[field] = updated_value
         valid_rows.append(updated_row)
 
-    return create_samples_from_row_data(project, valid_rows, move=False)
+    return create_samples_from_row_data(project, valid_rows, move=False,
+            options=options)
 
 
-def create_samples_from_row_data(project, data_source_list, move=False):
+def create_samples_from_row_data(
+        project, data_source_list, move=False, options={}):
     """Creates ExperimentSample objects along with their respective Datasets.
 
     The data is copied to the entity location. We block until we've created the
     models, and then go async for actual copying.
 
     Args:
+        project: Project these Samples should be added to.
         data_source_list: List of objects with keys:
             * Sample_Name
             * Read_1_Path
             * Read_2_Path (optional)
             * other metadata keys (optional)
             * ...
+        move: Whether to move the source data. Else copy.
+        options: Dictionary of options. Currently a hack to allow different
+            parts of the pipeline to not run during tests (e.g. FastQC).
 
     Returns:
         List of ExperimentSamples.
@@ -423,8 +431,8 @@ def create_samples_from_row_data(project, data_source_list, move=False):
                 PRE_DEFINED_SAMPLE_SERVER_COPY_HEADER_PARTS)
 
         # Start the async job of copying.
-        copy_experiment_sample_data.delay(project, experiment_sample, row,
-                move=move)
+        copy_experiment_sample_data.delay(
+                project, experiment_sample, row, move=move, options=options)
 
         experiment_samples.append(experiment_sample)
 
@@ -458,9 +466,12 @@ def _copy_dataset_data(experiment_sample, fastq_source, dataset_type,
     dataset.save()
     return dataset
 
+
 @task
 @project_files_needed
-def copy_experiment_sample_data(project, experiment_sample, data, move=False):
+def copy_experiment_sample_data(
+        project, experiment_sample, data, move=False,
+        options={'skip_fastqc': False}):
     """Celery task that wraps the process of copying the data for an
     ExperimentSample.
     """
@@ -497,12 +508,14 @@ def copy_experiment_sample_data(project, experiment_sample, data, move=False):
 
     # Quality Control via FASTQC and save.
     read1_dataset.status = Dataset.STATUS.QC
-    run_fastqc_on_sample_fastq(experiment_sample, read1_dataset)
+    if not options.get('skip_fastqc', False):
+        run_fastqc_on_sample_fastq(experiment_sample, read1_dataset)
     read1_dataset.status = Dataset.STATUS.READY
     read1_dataset.save()
 
     read2_dataset.status = Dataset.STATUS.QC
-    run_fastqc_on_sample_fastq(experiment_sample, read2_dataset, rev=True)
+    if not options.get('skip_fastqc', False):
+        run_fastqc_on_sample_fastq(experiment_sample, read2_dataset, rev=True)
     read2_dataset.status = Dataset.STATUS.READY
     read2_dataset.save()
 
