@@ -37,8 +37,6 @@ from utils import uppercase_underscore
 from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from utils.jbrowse_util import add_genbank_file_track
 from variants.vcf_parser import get_or_create_variant
-from settings import FASTQC_BINARY
-from settings import TEMP_FILE_ROOT
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
@@ -550,10 +548,10 @@ def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):
         os.mkdir(settings.TEMP_FILE_ROOT)
 
     command = [
-            FASTQC_BINARY,
+            settings.FASTQC_BINARY,
             fastq_filename,
             '-o', experiment_sample.get_model_data_dir(),
-            '-d', TEMP_FILE_ROOT]
+            '-d', settings.TEMP_FILE_ROOT]
 
     fastqc_output = subprocess.check_output(
             command, stderr=subprocess.STDOUT)
