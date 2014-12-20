@@ -57,7 +57,7 @@ TEST_PASSWORD = 'g3n3d3z'
 
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
-TEST_FASTA  = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+TEST_FASTA = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
 
 TEST_FASTQ1 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
@@ -65,6 +65,12 @@ TEST_FASTQ1 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
 
 TEST_FASTQ2 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
+
+TEST_FASTQ_GZ_1 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+        '6057f443', 'test_genome_8.snps.simLibrary.1.fq.gz')
+
+TEST_FASTQ_GZ_2 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+        '6057f443', 'test_genome_8.snps.simLibrary.2.fq.gz')
 
 TEST_BAM = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'bwa_align.sorted.grouped.realigned.bam')
@@ -253,6 +259,19 @@ def bootstrap_fake_data():
     if not sample_1.dataset_set.filter(type=Dataset.TYPE.FASTQ2):
         copy_and_add_dataset_source(sample_1, Dataset.TYPE.FASTQ2,
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
+
+    # Create sample backed by g-zipped data.
+    gz_backed_sample = ExperimentSample.objects.create(
+            project=test_project,
+            label='sample backed by gz data')
+    gz_fastq1_dataset = copy_and_add_dataset_source(
+            gz_backed_sample, Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ1,
+            TEST_FASTQ_GZ_1)
+    gz_fastq2_dataset = copy_and_add_dataset_source(
+            gz_backed_sample, Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ2,
+            TEST_FASTQ_GZ_2)
+    run_fastqc_on_sample_fastq(gz_backed_sample, gz_fastq1_dataset)
+    run_fastqc_on_sample_fastq(gz_backed_sample, gz_fastq2_dataset, rev=True)
 
     ### Create an alignment.
     alignment_group_1 = AlignmentGroup.objects.create(

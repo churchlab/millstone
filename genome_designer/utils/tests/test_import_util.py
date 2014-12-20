@@ -17,13 +17,16 @@ from main.models import Project
 from main.models import ReferenceGenome
 from main.models import Variant
 from main.models import VariantSet
+from main.model_utils import get_dataset_with_type
 from main.testing_util import create_common_entities
 from utils.import_util import DataImportError
+from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import create_sample_models_for_eventual_upload
 from utils.import_util import import_reference_genome_from_local_file
 from utils.import_util import import_samples_from_targets_file
 from utils.import_util import import_variant_set_from_vcf
 from utils.import_util import import_reference_genome_from_ncbi
+from utils.import_util import run_fastqc_on_sample_fastq
 from utils import internet_on
 
 TEST_USERNAME = 'gmcdev'
@@ -32,6 +35,16 @@ TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
 TEST_DATA_ROOT = os.path.join(settings.PWD, 'test_data')
 IMPORT_UTIL_TEST_DATA = os.path.join(TEST_DATA_ROOT, 'import_util_test_data')
+
+TEST_FASTQ1 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
+        '38d786f2', 'test_genome_1.snps.simLibrary.1.fq')
+TEST_FASTQ2 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
+        '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
+
+TEST_FASTQ_GZ_1 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
+        '6057f443', 'test_genome_8.snps.simLibrary.1.fq.gz')
+TEST_FASTQ_GZ_2 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
+        '6057f443', 'test_genome_8.snps.simLibrary.2.fq.gz')
 
 
 class TestImportReferenceGenome(TestCase):
@@ -361,8 +374,6 @@ class TestImportVariantSetFromVCFFile(TestCase):
             label='Chromosome',
             num_bases=9001)
 
-
-
     def test_import_variant_set(self):
         """Tests importing variant sets from a pared-down vcf file
         containing only chromosome, position info, etc.
@@ -395,3 +406,42 @@ class TestImportVariantSetFromVCFFile(TestCase):
         v_553 = Variant.objects.get(reference_genome=self.ref_genome,
                 position=553)
         self.assertEqual(set(['C','G']), set(v_553.get_alternates()))
+
+
+class TestFastQC(TestCase):
+    """Tests running fastqc util.
+    """
+
+    def setUp(self):
+        self.common_entities = create_common_entities()
+
+    def _fastqc_test_runner(self, fastq1_location, fastq2_location):
+        """Helper that takes different fastqs as source.
+
+        This function is a test itself.
+        """
+        # Run FastQC
+        gz_backed_sample = self.common_entities['sample_1']
+        gz_fastq1_dataset = copy_and_add_dataset_source(
+                gz_backed_sample, Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ1,
+                fastq1_location)
+        gz_fastq2_dataset = copy_and_add_dataset_source(
+                gz_backed_sample, Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ2,
+                fastq2_location)
+        run_fastqc_on_sample_fastq(gz_backed_sample, gz_fastq1_dataset)
+        run_fastqc_on_sample_fastq(gz_backed_sample, gz_fastq2_dataset,
+                rev=True)
+
+        # Check link matches file extension.
+        FASTQC_DATASET_TYPES = [
+                Dataset.TYPE.FASTQC1_HTML, Dataset.TYPE.FASTQC2_HTML]
+        for fastqc_dataset_type in FASTQC_DATASET_TYPES:
+            fastqc_1_dataset = get_dataset_with_type(
+                    gz_backed_sample, fastqc_dataset_type)
+            assert os.path.exists(fastqc_1_dataset.get_absolute_location())
+
+    def test_fastqc(self):
+        self._fastqc_test_runner(TEST_FASTQ1, TEST_FASTQ2)
+
+    def test_fastqc_gzipped(self):
+        self._fastqc_test_runner(TEST_FASTQ_GZ_1, TEST_FASTQ_GZ_2)

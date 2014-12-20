@@ -508,12 +508,24 @@ def copy_experiment_sample_data(project, experiment_sample, data, move=False):
 
 
 def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):
-    """
-    Runs FASTQC on a fastq dataset object, generating an html file
-    linked to a new FASTQC dataset object, which is returned.
+    """Runs FASTQC on a fastq dataset object.
+
+    Args:
+        experiment_sample: The ExperimentSample for this fastq.
+        fastq_dataset: Dataset that points to uploaded fastq file.
+
+    Returns:
+        New Dataset pointing to html file of FastQC results.
     """
     fastq_filename = fastq_dataset.get_absolute_location()
-    fastqc_filename = fastq_filename + '_fastqc.html'
+
+    # There's no option to pass the output filename to FastQC so we just
+    # create the name that matches what FastQC outputs.
+    if fastq_dataset.is_compressed():
+        unzipped_fastq_filename = os.path.splitext(fastq_filename)[0]
+    else:
+        unzipped_fastq_filename = fastq_filename
+    fastqc_filename = unzipped_fastq_filename + '_fastqc.html'
 
     if rev:
         dataset_type = Dataset.TYPE.FASTQC2_HTML
