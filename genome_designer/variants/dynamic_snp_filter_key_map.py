@@ -35,6 +35,8 @@ from variants.filter_key_map_constants import MAP_KEY__EXPERIMENT_SAMPLE
 from variants.filter_key_map_constants import SNP_CALLER_COMMON_DATA_HARD_CODED
 from variants.filter_key_map_constants import SNP_EVIDENCE_HARD_CODED
 from variants.filter_key_map_constants import SNP_VARIANT_HARD_CODED
+from variants.filter_key_map_constants import VARIANT_KEY_MAP_TYPE__INTEGER
+from variants.filter_key_map_constants import VARIANT_KEY_MAP_TYPE__STRING
 
 
 def initialize_filter_key_map():
@@ -85,15 +87,30 @@ def update_sample_filter_key_map(ref_genome, experiment_sample):
 
     sample_map = copy.deepcopy(
             ref_genome.variant_key_map.get(
-            MAP_KEY__EXPERIMENT_SAMPLE, {}))
+                    MAP_KEY__EXPERIMENT_SAMPLE, {}))
 
     for key, value in experiment_sample.data.iteritems():
         sample_map[key] = {
-            'type': 'String',
+            'type': VARIANT_KEY_MAP_TYPE__STRING,
             'num': 1
         }
-
     ref_genome.variant_key_map[MAP_KEY__EXPERIMENT_SAMPLE] = sample_map
+
+    # If parent/child relationships were included in the sample data,
+    # then initialize the IN_PARENTS and IN_CHILDREN keys as well.
+    # These go in VariantEvidence.
+    # TODO(dbg): Is this correct?
+    evidence_data_map = ref_genome.variant_key_map.get(MAP_KEY__EVIDENCE, {})
+    if 'SAMPLE_PARENTS' in experiment_sample.data.keys():
+        evidence_data_map['IN_CHILDREN'] = {
+            'type': VARIANT_KEY_MAP_TYPE__INTEGER,
+            'num': 1
+        }
+        evidence_data_map['IN_PARENTS'] = {
+            'type': VARIANT_KEY_MAP_TYPE__INTEGER,
+            'num': 1
+        }
+    ref_genome.variant_key_map[MAP_KEY__EVIDENCE] = evidence_data_map
 
     _assert_unique_keys(ref_genome.variant_key_map)
     ref_genome.save(update_fields=['variant_key_map'])

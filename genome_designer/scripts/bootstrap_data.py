@@ -303,6 +303,7 @@ def bootstrap_fake_data():
                 FullVCFTestSet.TEST_GENBANK, 'genbank')
 
     # Create all samples.
+    parent_obj = None
     full_vcf_samples = []
     for i in range(FullVCFTestSet.NUM_SAMPLES):
         sample_obj = ExperimentSample.objects.create(
@@ -310,6 +311,14 @@ def bootstrap_fake_data():
                 label='Sample %d' % i)
 
         sample_obj.data['SAMPLE_WELL'] = 'A0%d' % (i+1)
+
+        if i == 0:
+            parent_obj = sample_obj
+        if i > 0:
+            sample_obj.data['SAMPLE_PARENTS'] = parent_obj.label
+            parent_obj.add_child(sample_obj)
+            parent_obj.save()
+
         sample_obj.save()
 
         # Add raw reads to each sample.
