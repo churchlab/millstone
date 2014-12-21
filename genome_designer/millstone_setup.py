@@ -43,10 +43,10 @@ TOOLS_URLS = {
         ],
     'samtools' : {
         'Linux' : [
-            'https://www.dropbox.com/s/pjw0h0vzo2ls79t/samtools-0.1.19-linux.zip'
+            'https://www.dropbox.com/s/n3q9lpjgx224eix/samtools-0.1.20-linux.zip'
         ],
         'Darwin' : [
-            'https://www.dropbox.com/s/vjtegtyncmq8a8o/samtools-0.1.19-darwin.zip'
+            'https://www.dropbox.com/s/wvd9iumzq1qi24h/samtools-0.1.20-darwin.zip'
         ]
     },
     'tabix' : {
@@ -162,8 +162,12 @@ def download_tools(tools=TOOLS_URLS.keys()):
             if dest_filename.endswith('.zip'):
                 tmp_path, http_msg = urllib.urlretrieve(tool_url)
                 print '    %s (Unzipping...)' % tmp_path
-                tool_zipped = zipfile.ZipFile(tmp_path)
-                tool_zipped.extractall(dest_dir)
+                try:
+                    tool_zipped = zipfile.ZipFile(tmp_path)
+                    tool_zipped.extractall(dest_dir)
+                except:
+                    'File {} missing or invalid format!'.format(
+                            tool_url)
 
             # Otherwise download files to the correct location.
             else:
