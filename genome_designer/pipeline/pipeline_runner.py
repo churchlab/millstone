@@ -21,6 +21,8 @@ from main.models import ExperimentSampleToAlignment
 from pipeline.read_alignment import align_with_bwa_mem
 from pipeline.variant_calling import find_variants_with_tool
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
+from pipeline.variant_calling.freebayes import merge_freebayes_parallel
+from pipeline.variant_calling.freebayes import freebayes_regions
 
 
 def run_pipeline(alignment_group_label, ref_genome, sample_list,
@@ -116,8 +118,39 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     # Aggregate variant callers, which run in parallel once all alignments
     # are done.
     if perform_variant_calling:
-        variant_param_list = [VARIANT_TOOL_PARAMS_MAP[tool]
-                for tool in settings.ENABLED_VARIANT_CALLERS]
+
+        # If we are parallelizing freebayes, then we need to kick off
+        # several tasks for each parallelized region:
+        if settings.FREEBAYES_PARALLEL:
+
+            # a list of variant callers that we will run in parallel, with
+            # parameters.
+            variant_param_list = []
+
+            # determine the regions to send to each freebayes worker
+            fb_regions = freebayes_regions(ref_genome)
+
+            for tool in settings.ENABLED_VARIANT_CALLERS:
+
+                params = VARIANT_TOOL_PARAMS_MAP[tool]
+
+                #create a variant_param dictionary for each region
+                if tool == 'freebayes':
+                    for region_num, fb_region in enumerate(fb_regions):
+                        this_region_num = region_num
+                        region_params = dict(params)
+                        region_params['tool_kwargs'] = {
+                                    'region':fb_region,
+                                    'region_num':this_region_num}
+                        variant_param_list.append(region_params)
+                else:
+                    variant_param_list.append(params)
+
+        # no freebayes parallel:
+        else:
+            variant_param_list = [VARIANT_TOOL_PARAMS_MAP[tool]
+                    for tool in settings.ENABLED_VARIANT_CALLERS]
+
         variant_caller_group = group([
                 find_variants_with_tool.si(
                         alignment_group, variant_params,
@@ -127,8 +160,10 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
         variant_caller_group = None
 
     # We add a final task which runs only after all previous tasks are complete.
+    merge_fb_parallel = perform_variant_calling and settings.FREEBAYES_PARALLEL
     pipeline_completion = pipeline_completion_tasks.s(
-            alignment_group=alignment_group)
+            alignment_group=alignment_group,
+            merge_fb_parallel=merge_fb_parallel)
 
     # Put together the whole pipeline.
     # Since this method might be called after alignments have already been
@@ -149,11 +184,17 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
 
     return (alignment_group, async_result)
 
-
 @task
-def pipeline_completion_tasks(variant_caller_group_result, alignment_group):
+def pipeline_completion_tasks(variant_caller_group_result, alignment_group,
+        merge_fb_parallel):
     """Final set of synchronous steps after all alignments and variant callers
     are finished.
+
+    If we ran freebayes, see if it was parallelized, and merge and add
+    the resulting vcf.
+
+    Otherwise, just check for completion, timestamp, and save
+    the alignment group.
     """
     if hasattr(variant_caller_group_result, 'join'):
         variant_caller_group_result.join()
@@ -164,6 +205,11 @@ def pipeline_completion_tasks(variant_caller_group_result, alignment_group):
     if alignment_group.status != AlignmentGroup.STATUS.VARIANT_CALLING:
         alignment_group.status = AlignmentGroup.STATUS.FAILED
     else:
+        # if ran freebayes in parallel, merge the partial vcfs and process the
+        # vcf dataset.
+        if merge_fb_parallel:
+            merge_freebayes_parallel(alignment_group)
+
         # The alignment group is now officially complete.
         alignment_group.status = AlignmentGroup.STATUS.COMPLETED
 

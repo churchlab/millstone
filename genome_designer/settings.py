@@ -17,3 +17,6 @@ if 'TEMP_FILE_ROOT' not in locals():
 SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
 BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
 FASTQC_BINARY = '%s/fastqc/fastqc' % TOOLS_DIR
+VCFUNIQ_BINARY = '%s/freebayes/vcfuniq' % TOOLS_DIR
+VCFSTREAMSORT_BINARY = '%s/freebayes/vcfstreamsort' % TOOLS_DIR
+

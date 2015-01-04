@@ -2,12 +2,19 @@
 """
 
 import os
+import shutil
+import subprocess
+from uuid import uuid4
 
 import vcf
 
+from utils.jbrowse_util import add_vcf_track
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
+from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
+from variants.variant_sets import add_variants_to_set_from_bed
+from variants.vcf_parser import parse_alignment_group_vcf
 
 
 def common_postprocess_vcf(vcf_reader):
@@ -40,6 +47,85 @@ def common_postprocess_vcf(vcf_reader):
         key, val = parser.read_info(header_line)
         vcf_reader.infos[key] = val
 
+def add_vcf_dataset(alignment_group, vcf_dataset_type, vcf_output_filename):
+    """
+    Sort the vcf file, and create a vcf dataset, Add it to the alignment group.
+    """
+    sort_vcf(vcf_output_filename)
+
+    # If a Dataset already exists, delete it, might have been a bad run.
+    existing_set = Dataset.objects.filter(
+            type=vcf_dataset_type,
+            label=vcf_dataset_type,
+            filesystem_location=clean_filesystem_location(
+                    vcf_output_filename)
+    )
+
+    if len(existing_set) > 0:
+        existing_set[0].delete()
+
+    vcf_dataset = Dataset.objects.create(
+            type=vcf_dataset_type,
+            label=vcf_dataset_type,
+            filesystem_location=clean_filesystem_location(
+                    vcf_output_filename),
+    )
+    alignment_group.dataset_set.add(vcf_dataset)
+
+    return vcf_dataset
+
+def process_vcf_dataset(alignment_group, vcf_dataset_type):
+    """
+    Tabix index vcf, and parse it into the database, generate variant objects.
+    """
+
+    # Tabix index and add the VCF track to Jbrowse
+    add_vcf_track(alignment_group.reference_genome, alignment_group,
+        vcf_dataset_type)
+
+    # Parse the resulting vcf, grab variant objects
+    parse_alignment_group_vcf(alignment_group, vcf_dataset_type)
+
+    flag_variants_from_bed(alignment_group, Dataset.TYPE.BED_CALLABLE_LOCI)
+
+
+def sort_vcf(input_vcf_filepath):
+    """Sorts a vcf file by chromosome and position.
+
+    Overwrites the input.
+    """
+    temp_vcf = os.path.splitext(input_vcf_filepath)[0] + str(uuid4())[:8]
+    assert not os.path.exists(temp_vcf)
+
+    sort_cmd = (
+            '(grep ^"#" {original_vcf}; grep -v ^"#" {original_vcf} | '
+            'sort -k1,1 -k2,2n) > {sorted_vcf}'
+    ).format(
+            original_vcf=input_vcf_filepath,
+            sorted_vcf=temp_vcf
+    )
+    subprocess.call(sort_cmd, shell=True)
+
+    shutil.move(temp_vcf, input_vcf_filepath)
+
+
+def flag_variants_from_bed(alignment_group, bed_dataset_type):
+    sample_alignments = alignment_group.experimentsampletoalignment_set.all()
+    for sample_alignment in sample_alignments:
+
+        # If there is no callable_loci bed, skip the sample alignment.
+        # TODO: Make this extensible to other BED files we might have
+        callable_loci_bed = get_dataset_with_type(
+                entity=sample_alignment,
+                type=Dataset.TYPE.BED_CALLABLE_LOCI)
+
+        if not callable_loci_bed:
+            continue
+
+        # need to add sample_alignment and bed_dataset here.
+        add_variants_to_set_from_bed(
+                sample_alignment=sample_alignment,
+                bed_dataset=callable_loci_bed)
 
 
 # Returns a dictionary of common parameters required for all variant callers

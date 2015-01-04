@@ -378,6 +378,17 @@ SNPEFF_CFG_TEMPLATE_PATH = os.path.join(PWD, 'main',
 #   be smaller than default for bacterial genomes.
 SNPEFF_UD_INTERVAL_LENGTH = 50
 
+# Run freebayes in parallel across multiple smaller regions, then merge the
+# results.
+FREEBAYES_PARALLEL = True
+
+# Size of regions to split into when using Freebayes in
+# parallel concurrent mode. If your genome is smaller than this number
+# multiplied by the number of CPUs, you will not be using the full
+# capabilities of parallelization.
+# TODO: perhaps this should be determined dynamically based on genome size.
+FREEBAYES_REGION_SIZE = 200000
+
 # SNPEff can be multithreaded; probably makes sense to set this to the same as
 # a more general CPU thread value.
 SNPEFF_THREADS = 2

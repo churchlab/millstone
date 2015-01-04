@@ -33,7 +33,7 @@ TOOLS_URLS = {
         'Darwin' : [
             'https://www.dropbox.com/s/gjpqfr8n2601mfh/bamleftalign',
             'https://www.dropbox.com/s/jx2zdan4ci0mx6w/freebayes',
-            'https://www.dropbox.com/s/f7twxy2r0h5ox20/bamtools',
+            #'https://www.dropbox.com/s/f7twxy2r0h5ox20/bamtools', broken w/o dylibs
             'https://www.dropbox.com/s/kvhkji81l16ukm5/vcfstreamsort',
             'https://www.dropbox.com/s/kaozc20jovxuzmk/vcfuniq'
 
@@ -41,7 +41,7 @@ TOOLS_URLS = {
         'Linux' : [
             'https://www.dropbox.com/s/3qszohowh1gj1u0/bamleftalign',
             'https://www.dropbox.com/s/n2we6c6bmlbyi6f/freebayes',
-            'https://www.dropbox.com/s/5qrdi5prcjbz6js/bamtools',
+            #'https://www.dropbox.com/s/5qrdi5prcjbz6js/bamtools', broken w/o dylibs
             'https://www.dropbox.com/s/o0lpdbns3l94wy5/vcfstreamsort',
             'https://www.dropbox.com/s/j9y8ul4k71f4kx5/vcfuniq'
         ],

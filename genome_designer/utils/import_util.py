@@ -230,6 +230,17 @@ def generate_fasta_from_genbank(ref_genome):
     copy_and_add_dataset_source(ref_genome, dataset_type,
             dataset_type, fasta_filename)
 
+def ensure_fasta_index(ref_genome_fasta):
+    """
+    Check if a fasta index is present w/ extension .fai. If not,
+    use samtools to generate one.
+    """
+    if not os.path.exists(ref_genome_fasta + '.fai'):
+        subprocess.check_call([
+            settings.SAMTOOLS_BINARY,
+            'faidx',
+            ref_genome_fasta])
+
 
 def generate_gff_from_genbank(ref_genome):
     """If this reference genome has a genbank but not a GFF, generate
@@ -985,6 +996,10 @@ def prepare_ref_genome_related_datasets(ref_genome, dataset):
     assert dataset.status != Dataset.STATUS.NOT_STARTED
 
     if dataset.type == Dataset.TYPE.REFERENCE_GENOME_FASTA:
+
+        # make sure the fasta index is generated
+
+
         # Run jbrowse ref genome processing
         prepare_jbrowse_ref_sequence(ref_genome)
 

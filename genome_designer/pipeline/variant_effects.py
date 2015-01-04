@@ -266,15 +266,6 @@ def build_snpeff_db(snpeff_config_path, ref_genome_uid):
 
     snpeff_proc = subprocess.call(snpeff_args)
 
-if __name__ == '__main__':
-    gbk_test_path = ['/scratch/dbg/bw_strains/gbk/BW25113_updated.gbk']
-    render_snpeff_config(
-        generate_snpeff_config(
-            gbk_test_path,
-            ['BW25113_ref_genome'],
-            '/path/to/project'),
-        '/scratch/dbg/bw_strains/gbk/BW25113_updated.snpeff.config')
-
 
 def get_snpeff_vcf_output_path(alignment_group, alignment_type):
     """Returns the path to SnpEff dir, reltaive to the AlignmentGroup data
@@ -298,6 +289,8 @@ def run_snpeff(alignment_group, alignment_type):
     """Run snpeff on an alignment group after creating a vcf with a snpcaller.
 
     We only use the alignment type to store the snpeff file.
+
+    Returns the snpeff vcf output filename.
     """
 
     # Get the reference genome uid to get the config path and snpeff genome name
@@ -345,22 +338,7 @@ def run_snpeff(alignment_group, alignment_type):
             stdout=subprocess.PIPE)
         convert_snpeff_info_fields(snpeff_proc.stdout, fh_out)
 
-    #Add the snpeff VCF file to the dataset_set
-    # If a Dataset already exists, delete it, might have been a bad run.
-    existing_set = Dataset.objects.filter(
-            type=VCF_ANNOTATED_DATASET_TYPE,
-            label=VCF_ANNOTATED_DATASET_TYPE,
-            filesystem_location=clean_filesystem_location(vcf_output_filename),
-    )
-    if len(existing_set) > 0:
-        existing_set[0].delete()
-
-    dataset = Dataset.objects.create(
-            type=VCF_ANNOTATED_DATASET_TYPE,
-            label=VCF_ANNOTATED_DATASET_TYPE,
-            filesystem_location=clean_filesystem_location(vcf_output_filename),
-    )
-    alignment_group.dataset_set.add(dataset)
+    return vcf_output_filename
 
     #clean up the snpEff_genes.txt and snpEff_summary.txt files in the home dir
     for file in settings.SNPEFF_SUMMARY_FILES:

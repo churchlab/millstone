@@ -28,6 +28,7 @@ from pipeline.variant_effects import get_snpeff_config_path
 from pipeline.variant_effects import populate_record_eff
 from pipeline.variant_calling import VCF_DATASET_TYPE
 from pipeline.variant_calling import VCF_ANNOTATED_DATASET_TYPE
+from pipeline.variant_calling.common import add_vcf_dataset
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import copy_dataset_to_entity_data_dir
@@ -100,7 +101,13 @@ class TestSnpeff(TestCase):
         """
 
         # Try running snpeff
-        run_snpeff(self.alignment_group, Dataset.TYPE.BWA_ALIGN)
+        snpeff_vcf_filename = run_snpeff(
+                self.alignment_group, Dataset.TYPE.BWA_ALIGN)
+
+        vcf_dataset = add_vcf_dataset(
+                self.alignment_group,
+                VCF_ANNOTATED_DATASET_TYPE,
+                snpeff_vcf_filename)
 
         # Check that the alignment group has a freebayes vcf dataset associated
         # with it.

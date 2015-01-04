@@ -15,10 +15,10 @@ ImportError: cannot import name ensure_bwa_index
 import os
 import subprocess
 
-from settings import TOOLS_DIR
+from django.conf import settings
 
-SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
-
+SAMTOOLS_BINARY = settings.SAMTOOLS_BINARY
+TOOLS_DIR = settings.TOOLS_DIR
 
 def ensure_bwa_index(ref_genome_fasta, error_output=None):
     """Creates the reference genome index required by bwa, if it doesn't exist
