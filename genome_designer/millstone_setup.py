@@ -56,10 +56,10 @@ TOOLS_URLS = {
         ],
     'samtools' : {
         'Linux' : [
-            'https://www.dropbox.com/s/n3q9lpjgx224eix/samtools-0.1.20-linux.zip'
+            'https://www.dropbox.com/s/s1mtj0crxenhuyv/samtools-1.1-linux.zip'
         ],
         'Darwin' : [
-            'https://www.dropbox.com/s/wvd9iumzq1qi24h/samtools-0.1.20-darwin.zip'
+            'https://www.dropbox.com/s/r8c89ycf3i02dkq/samtools-1.1-darwin.zip'
         ]
     },
     'tabix' : {
