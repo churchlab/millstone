@@ -278,9 +278,10 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         sort_rmdup_cmd = '|'.join([
                 ' '.join([
                         SAMTOOLS_BINARY,
-                        'sort','-o',
+                        'sort',
+                        '-o',
                         bam_file_location,
-                        '-']),
+                        'tempsort_' + sorted_bam_file_location]),
                 ' '.join([
                         SAMTOOLS_BINARY,
                         'rmdup',
