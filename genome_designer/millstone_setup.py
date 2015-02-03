@@ -59,8 +59,7 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/wvd9iumzq1qi24h/samtools-0.1.20-darwin.zip'
         ],
         'Linux' : [
-            # NOTE: In Gleb's Dropbox as of 2/3/15
-            'https://www.dropbox.com/s/4ail4kezuoeb2l6/samtools-0.1.20-linux.zip'
+            'https://www.dropbox.com/s/n3q9lpjgx224eix/samtools-0.1.20-linux.zip'
         ]
     },
     'tabix' : {
