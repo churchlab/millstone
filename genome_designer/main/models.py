@@ -366,6 +366,7 @@ class Dataset(UniqueUidModelMixin):
 # Make sure the Dataset types are unique. This runs once at startup.
 assert_unique_types(Dataset.TYPE)
 
+
 ###############################################################################
 # Project models
 ###############################################################################
@@ -434,6 +435,7 @@ class Project(UniqueUidModelMixin):
         return [{'field':'uid'},
                 {'field':'title'}]
 
+
 class Chromosome(UniqueUidModelMixin):
     """A locus belonging to a reference genome which Variants 
     hold foreign keys to.  May be a literal chromosome,
@@ -460,6 +462,7 @@ class Chromosome(UniqueUidModelMixin):
             {'field': 'num_bases', 'verbose':'Bases'},
             {'field': 'uid'}
         ]
+
 
 class ReferenceGenome(UniqueUidModelMixin):
     """A reference genome relative to which alignments and analysis are
@@ -809,12 +812,14 @@ class ExperimentSample(UniqueUidModelMixin):
             {'field': 'fastqc_links', 'verbose': 'FastQC'},
         ]
 
+
 class ExperimentSampleRelation(UniqueUidModelMixin):
     """
     Explicit table linking parent and child samples.
     """
     parent = models.ForeignKey(ExperimentSample, related_name='parent_relationships')
     child = models.ForeignKey(ExperimentSample, related_name='child_relationships')
+
 
 class AlignmentGroup(UniqueUidModelMixin):
     """Collection of alignments of several related ExperimentSamples to the
@@ -932,19 +937,18 @@ class AlignmentGroup(UniqueUidModelMixin):
     def run_time(self):
         """Time elapsed since alignment start.
         """
-        # Check whether running.
-        NOT_RUNNING_STATUSES = [
-                AlignmentGroup.STATUS.FAILED,
-                AlignmentGroup.STATUS.NOT_STARTED,
-                AlignmentGroup.STATUS.COMPLETED,
-                AlignmentGroup.STATUS.UNKNOWN
-        ]
-        if self.start_time is None or self.status in NOT_RUNNING_STATUSES:
+        if (self.start_time is None or
+                self.status == AlignmentGroup.STATUS.UNKNOWN):
             return 'Not running'
+
+        if self.end_time is None:
+            end_time = datetime.now()
+        else:
+            end_time = self.end_time
 
         # If here, return time elapsed since start.
         return re.match('(.*:.*:.*)\.',
-                str(datetime.now() - self.start_time)).group(1)
+                str(end_time - self.start_time)).group(1)
 
     @classmethod
     def get_field_order(clazz, **kwargs):
