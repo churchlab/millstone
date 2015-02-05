@@ -545,11 +545,7 @@ def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):
 
     # There's no option to pass the output filename to FastQC so we just
     # create the name that matches what FastQC outputs.
-    if fastq_dataset.is_compressed():
-        unzipped_fastq_filename = os.path.splitext(fastq_filename)[0]
-    else:
-        unzipped_fastq_filename = fastq_filename
-    fastqc_filename = unzipped_fastq_filename + '_fastqc.html'
+    fastqc_filename = _get_fastqc_path(fastq_dataset)
 
     if rev:
         dataset_type = Dataset.TYPE.FASTQC2_HTML
@@ -582,6 +578,25 @@ def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):
     fastqc_dataset.save()
 
     return fastqc_dataset
+
+
+def _get_fastqc_path(fastq_dataset):
+    """Returns fastqc filename given Dataset pointing to fastq.
+    """
+    fastq_filename = fastq_dataset.get_absolute_location()
+
+    if fastq_dataset.is_compressed():
+        unzipped_fastq_filename = os.path.splitext(fastq_filename)[0]
+    else:
+        unzipped_fastq_filename = fastq_filename
+
+    # NOTE: FASTQC apparently has slightly different behavior when the file
+    # extension is.fastqc where it chops off the .fastqc part so we have to do
+    # that here manually too.
+    if os.path.splitext(unzipped_fastq_filename)[1] == '.fastq':
+        unzipped_fastq_filename = os.path.splitext(unzipped_fastq_filename)[0]
+
+    return unzipped_fastq_filename + '_fastqc.html'
 
 
 def create_sample_models_for_eventual_upload(project, targets_file):

@@ -19,6 +19,7 @@ from main.models import Variant
 from main.models import VariantSet
 from main.model_utils import get_dataset_with_type
 from main.testing_util import create_common_entities
+from utils.import_util import _get_fastqc_path
 from utils.import_util import DataImportError
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import create_sample_models_for_eventual_upload
@@ -45,6 +46,12 @@ TEST_FASTQ_GZ_1 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
         '6057f443', 'test_genome_8.snps.simLibrary.1.fq.gz')
 TEST_FASTQ_GZ_2 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
         '6057f443', 'test_genome_8.snps.simLibrary.2.fq.gz')
+
+
+TEST_FASTQ_GZ_B_1 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
+        '70e343f5', 'test_genome_5.snps.simLibrary.1.fastq.gz')
+TEST_FASTQ_GZ_B_2 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
+        '70e343f5', 'test_genome_5.snps.simLibrary.2.fastq.gz')
 
 
 class TestImportReferenceGenome(TestCase):
@@ -453,3 +460,31 @@ class TestFastQC(TestCase):
 
     def test_fastqc_gzipped(self):
         self._fastqc_test_runner(TEST_FASTQ_GZ_1, TEST_FASTQ_GZ_2)
+
+    def test_get_fastqc_filename(self):
+        FASTQ_FILENAME = 'R2_001.fq.gz'
+
+        fastq_dataset = Dataset.objects.create(
+                label='irrelevant',
+                type='also irrelevant',
+                filesystem_location=FASTQ_FILENAME)
+
+        actual_fastqc_filename = os.path.split(
+                _get_fastqc_path(fastq_dataset))[1]
+
+        EXPECTED_FASTQC_FILENAME = 'R2_001.fq_fastqc.html'
+        self.assertEqual(EXPECTED_FASTQC_FILENAME, actual_fastqc_filename)
+
+    def test_get_fastqc_filename__extension_is_fastqc(self):
+        FASTQ_FILENAME = 'R2_001.fastq.gz'
+
+        fastq_dataset = Dataset.objects.create(
+                label='irrelevant',
+                type='also irrelevant',
+                filesystem_location=FASTQ_FILENAME)
+
+        actual_fastqc_filename = os.path.split(
+                _get_fastqc_path(fastq_dataset))[1]
+
+        EXPECTED_FASTQC_FILENAME = 'R2_001_fastqc.html'
+        self.assertEqual(EXPECTED_FASTQC_FILENAME, actual_fastqc_filename)
