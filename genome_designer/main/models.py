@@ -938,16 +938,10 @@ class AlignmentGroup(UniqueUidModelMixin):
         """Time elapsed since alignment start.
         """
         if (self.start_time is None or
-                self.status == AlignmentGroup.STATUS.NOT_STARTED or
                 self.status == AlignmentGroup.STATUS.UNKNOWN):
-            return 'NOT RUNNING'
+            return 'Not running'
 
         if self.end_time is None:
-            # Cases due to wonkiness in pipeline.
-            if self.status in [
-                    AlignmentGroup.STATUS.FAILED,
-                    AlignmentGroup.STATUS.COMPLETED]:
-                return 'ERROR'
             end_time = datetime.now()
         else:
             end_time = self.end_time
