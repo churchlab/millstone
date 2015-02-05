@@ -5,6 +5,7 @@
     that dumps the field config and the json data for model/table.
 """
 
+import datetime
 import json
 import string
 
@@ -167,8 +168,10 @@ def adapt_model_instance_to_frontend(model_instance, field_info={}, **kwargs):
     model_type = type(model_instance)
 
     # The visible fields of the model.
-    visible_field_names = [f['field'] for f in model_type.get_field_order(**kwargs)]
-    visible_field_dict = {f['field'] : f for f in model_type.get_field_order(**kwargs)}
+    visible_field_names = [f['field']
+            for f in model_type.get_field_order(**kwargs)]
+    visible_field_dict = {f['field']: f
+            for f in model_type.get_field_order(**kwargs)}
 
     # Get (key, value) pairs for visible fields.
     visible_field_pairs = [
@@ -205,7 +208,6 @@ def get_model_field_fe_representation(model_obj, field, field_info={},
 
     This method allows recursively diving into models.
     """
-
     if hasattr(model_obj, 'custom_getattr'):
         model_field = model_obj.custom_getattr(field)
     else:
@@ -214,12 +216,14 @@ def get_model_field_fe_representation(model_obj, field, field_info={},
     # Maybe special handling if ModelField is of special type.
     if isinstance(model_field, Model):
         return adapt_model_instance_to_frontend(model_field, field_info)
-    elif model_field.__class__.__name__ ==  'ManyRelatedManager':
+    elif model_field.__class__.__name__ == 'ManyRelatedManager':
         return [adapt_model_instance_to_frontend(m, field_info)
                 for m in model_field.all()]
     elif isinstance(model_field, QuerySet):
         return [adapt_model_instance_to_frontend(m, field_info)
                 for m in model_field]
+    elif isinstance(model_field, datetime.datetime):
+        return model_field.strftime("%Y_%m_%d %H:%M:%S")
 
     # Default. No further special handling needed.
     return str(model_field)
