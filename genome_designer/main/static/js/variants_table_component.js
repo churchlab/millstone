@@ -362,12 +362,27 @@ gd.VariantsTableComponent = Backbone.View.extend({
   handleRefreshMaterializedView: function(onSuccess) {
     this.setUIStartLoadingState();
 
+    // Show special message indicating this initial load might be a bit long.
+    $('#gd-datatable-hook').append(
+        '<div id="gd-refresh-materialized-view-msg" ' +
+            'class="bs-callout bs-callout-success">' +
+          '<h4>' +
+            'Please wait while we prepare variants for viewing. ' +
+            'This first load takes a bit longer.' +
+          '</h4>' +
+        '</div>'
+    );
+
     var requestData = {
       'refGenomeUid': this.model.get('refGenomeUid'),
     };
     $.get('/_/variants/refresh_materialized_variant_table', requestData,
         _.bind(function(data) {
+          // Clean up UI.
           this.setUIDoneLoadingState();
+          $('#gd-refresh-materialized-view-msg').remove();
+
+          // Continue with callback.
           onSuccess();
         }, this));
   },
