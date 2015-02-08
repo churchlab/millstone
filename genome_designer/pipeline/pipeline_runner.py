@@ -9,6 +9,7 @@ cleaning, snv calling, and effect prediction.
 from datetime import datetime
 
 from celery import chain
+from celery import chord
 from celery import group
 from celery import task
 from django.conf import settings
@@ -109,10 +110,12 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     # Now we aggregate the alignments that need to be run, collecting their
     # signatures in a Celery group so that these alignments can be run in
     # parallel.
-    alignment_task_signatures = [align_with_bwa_mem.si(
-                    alignment_group, sample_alignment,
-                    project=ref_genome.project)
-            for sample_alignment in sample_alignments_to_run]
+    alignment_task_signatures = []
+    for sample_alignment in sample_alignments_to_run:
+        alignment_task_signatures.append(
+                align_with_bwa_mem.si(
+                        alignment_group, sample_alignment,
+                        project=ref_genome.project))
     align_task_group = group(alignment_task_signatures)
 
     # Aggregate variant callers, which run in parallel once all alignments
@@ -166,23 +169,22 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
             merge_fb_parallel=merge_fb_parallel)
 
     # Put together the whole pipeline.
-    # Since this method might be called after alignments have already been
-    # complete and only variant calling needs to be done, it's possible
-    # for there to be no alignment tasks to do, in which case we skip adding
-    # an empty group to the chain else celery will throw an error.
-    groups = []
+    whole_pipeline = None
     if len(alignment_task_signatures) > 0:
-        groups.append(align_task_group)
+        whole_pipeline = group(alignment_task_signatures)
     if variant_caller_group is not None:
-        groups.append(variant_caller_group)
-    groups.append(pipeline_completion)
-    whole_pipeline = chain(*groups)
+        if whole_pipeline is None:
+            whole_pipeline = variant_caller_group
+        else:
+            whole_pipeline = chord(whole_pipeline, variant_caller_group)
+    whole_pipeline = chord(whole_pipeline, pipeline_completion)
 
     # Run the pipeline.
     ref_genome.save()
     async_result = whole_pipeline.apply_async()
 
     return (alignment_group, async_result)
+
 
 @task
 def pipeline_completion_tasks(variant_caller_group_result, alignment_group,
@@ -196,22 +198,25 @@ def pipeline_completion_tasks(variant_caller_group_result, alignment_group,
     Otherwise, just check for completion, timestamp, and save
     the alignment group.
     """
-    if hasattr(variant_caller_group_result, 'join'):
-        variant_caller_group_result.join()
+    try:
+        # Get fresh copy of alignment_group.
+        alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
 
-    # Get fresh copy of alignment_group.
-    alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
+        if alignment_group.status != AlignmentGroup.STATUS.VARIANT_CALLING:
+            alignment_group.status = AlignmentGroup.STATUS.FAILED
+        else:
+            # if ran freebayes in parallel, merge the partial vcfs and process the
+            # vcf dataset.
+            if merge_fb_parallel:
+                merge_freebayes_parallel(alignment_group)
 
-    if alignment_group.status != AlignmentGroup.STATUS.VARIANT_CALLING:
+            # The alignment group is now officially complete.
+            alignment_group.status = AlignmentGroup.STATUS.COMPLETED
+
+        alignment_group.end_time = datetime.now()
+        alignment_group.save()
+    except:
+        # TODO(gleb): Failure logging.
+        alignment_group.end_time = datetime.now()
         alignment_group.status = AlignmentGroup.STATUS.FAILED
-    else:
-        # if ran freebayes in parallel, merge the partial vcfs and process the
-        # vcf dataset.
-        if merge_fb_parallel:
-            merge_freebayes_parallel(alignment_group)
-
-        # The alignment group is now officially complete.
-        alignment_group.status = AlignmentGroup.STATUS.COMPLETED
-
-    alignment_group.end_time = datetime.now()
-    alignment_group.save()
+        alignment_group.save(update_fields=['end_time', 'status'])
