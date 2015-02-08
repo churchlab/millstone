@@ -163,10 +163,11 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
         variant_caller_group = None
 
     # We add a final task which runs only after all previous tasks are complete.
-    merge_fb_parallel = perform_variant_calling and settings.FREEBAYES_PARALLEL
-    pipeline_completion = pipeline_completion_tasks.s(
-            alignment_group=alignment_group,
-            merge_fb_parallel=merge_fb_parallel)
+    should_merge_fb_parallel = (
+            perform_variant_calling and settings.FREEBAYES_PARALLEL)
+    pipeline_completion = pipeline_completion_tasks.si(
+            alignment_group,
+            should_merge_fb_parallel)
 
     # Put together the whole pipeline.
     whole_pipeline = None
@@ -187,8 +188,7 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
 
 
 @task
-def pipeline_completion_tasks(variant_caller_group_result, alignment_group,
-        merge_fb_parallel):
+def pipeline_completion_tasks(alignment_group, should_merge_fb_parallel):
     """Final set of synchronous steps after all alignments and variant callers
     are finished.
 
@@ -207,7 +207,7 @@ def pipeline_completion_tasks(variant_caller_group_result, alignment_group,
         else:
             # if ran freebayes in parallel, merge the partial vcfs and process the
             # vcf dataset.
-            if merge_fb_parallel:
+            if should_merge_fb_parallel:
                 merge_freebayes_parallel(alignment_group)
 
             # The alignment group is now officially complete.
