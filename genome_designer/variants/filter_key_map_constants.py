@@ -4,6 +4,11 @@
 
 SNP_CALLER_COMMON_DATA_HARD_CODED = {
     'REF': {'type': 'String', 'num': 1},
+    'IS_SV': {
+        'type': 'Boolean',
+        'num': 1,
+        'desc': 'Whether this is a structural variant.'
+    }
 }
 
 SNP_VARIANT_HARD_CODED = {

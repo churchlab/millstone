@@ -232,6 +232,11 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
         variant.type = type
         variant.save()
 
+    # Whether or not this is an (structural variant) SV is determined in
+    # VariantAlternate data. Still, we want to expose this on the Variant
+    # level, so we check whether this is SV internally.
+    is_sv = False
+
     alts = []
     all_alt_keys = reference_genome.get_variant_alternate_map().keys()
     raw_alt_keys = [k for k in raw_data_dict.keys() if k in all_alt_keys]
@@ -253,10 +258,16 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
         var_alt.data.update(alt_data)
         var_alt.save()
 
+        if 'INFO_SVTYPE' in alt_data:
+            is_sv = True
+
         alts.append(var_alt)
 
     # Remove all per-alt keys from raw_data_dict before passing to VCC create.
     [raw_data_dict.pop(k, None) for k in raw_alt_keys]
+
+    # Indicate whether this is SV type, making it queryable.
+    raw_data_dict['IS_SV'] = is_sv
 
     # Create a common data object for this variant.
     # NOTE: raw_data_dict only contains the values that were not popped until
