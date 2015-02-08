@@ -187,45 +187,47 @@ def create_variant_links_field(variant_as_dict, reference_genome,
 
 
 def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
-        """Displasy a small badge if a variant is het.
-        """
-        marginal_set_classes = 'gd-warn-set-badge outline'
+    """Display a small badge if a variant is het.
+    """
+    marginal_set_classes = 'gd-warn-set-badge outline'
 
-        ve_data = variant_as_dict['VE_DATA']
+    ve_data = variant_as_dict['VE_DATA']
 
-        if not melted:
-            hets = []
-            for var in ve_data:
-                try:
-                    hets.append(var.get(MELTED_SCHEMA_KEY__HET, False))
-                except:
-                    hets.append(False)
+    if not melted:
+        hets = []
+        for var in ve_data:
+            try:
+                hets.append(var.get(MELTED_SCHEMA_KEY__HET, False))
+            except:
+                hets.append(False)
 
-            processed_alts = sorted(filter(lambda alt_het: alt_het[0],
-                    zip(variant_as_dict[MELTED_SCHEMA_KEY__ALT], hets)))
-            alt_counts = groupby(
-                    processed_alts, lambda alt_het: alt_het[0])
+        processed_alts = sorted(filter(lambda alt_het: alt_het[0],
+                zip(variant_as_dict[MELTED_SCHEMA_KEY__ALT], hets)))
+        alt_counts = groupby(
+                processed_alts, lambda alt_het: alt_het[0])
 
-            alt_strs = []
-            for alt, group in alt_counts:
-                group = list(group)
-                num_het = sum([alt_het[1] for alt_het in group])
-                alt_string = ' %s (%d)' % (alt, len(list(group)) - maybe_dec)
-                if num_het:
-                    alt_string += (' <span class="%s" ' +
-                            'title="%d Marginal calls (IS_HET=TRUE)">' +
-                            '&frac12;</span>') % (
-                            marginal_set_classes,
-                            num_het)
+        alt_strs = []
+        for alt, group in alt_counts:
+            group = list(group)
+            num_het = sum([alt_het[1] for alt_het in group])
+            alt_string = ' %s (%d)' % (alt, len(list(group)) - maybe_dec)
+            if num_het:
+                alt_string += (
+                        ' <span class="%s" ' +
+                        'title="%d Marginal calls (IS_HET=TRUE)">' +
+                        '&frac12;</span>') % (
+                                marginal_set_classes,
+                                num_het)
 
-                alt_strs.append(alt_string)
+            alt_strs.append(alt_string)
 
-            value = ' | '.join(alt_strs)
+        value = ' | '.join(alt_strs)
 
-        else:
-            value = variant_as_dict[MELTED_SCHEMA_KEY__ALT]
-            if ve_data and ve_data.get(MELTED_SCHEMA_KEY__HET, False):
-                value += (' <span class="%s" ' +
-                        'title="Marginal call (IS_HET=TRUE)">' +
-                        '&frac12;</span>') % marginal_set_classes
-        return value
+    else:
+        value = variant_as_dict[MELTED_SCHEMA_KEY__ALT]
+        if ve_data and ve_data.get(MELTED_SCHEMA_KEY__HET, False):
+            value += (
+                    ' <span class="%s" ' +
+                    'title="Marginal call (IS_HET=TRUE)">' +
+                    '&frac12;</span>') % marginal_set_classes
+    return value
