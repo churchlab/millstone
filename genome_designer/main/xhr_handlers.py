@@ -843,7 +843,7 @@ def get_alignment_groups(request):
                 uid=project_uid)
 
         alignment_group_list = AlignmentGroup.objects.filter(
-                reference_genome__project=project).order_by('start_time')
+                reference_genome__project=project).order_by('-start_time')
 
         response_data = adapt_model_to_frontend(AlignmentGroup,
                 obj_list=alignment_group_list)

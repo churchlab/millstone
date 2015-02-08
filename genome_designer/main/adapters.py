@@ -223,7 +223,7 @@ def get_model_field_fe_representation(model_obj, field, field_info={},
         return [adapt_model_instance_to_frontend(m, field_info)
                 for m in model_field]
     elif isinstance(model_field, datetime.datetime):
-        return model_field.strftime("%Y_%m_%d %H:%M:%S")
+        return model_field.strftime("%Y-%m-%d %H:%M:%S")
 
     # Default. No further special handling needed.
     return str(model_field)
