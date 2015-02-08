@@ -13,6 +13,13 @@ gd.DataTableComponent = gd.AbstractDataTableComponent.extend({
     // Handle that will store the reference to the datatable.
     this.datatable = null;
 
+    // For some views, the data is being updated on the server (e.g. alignment
+    // is running), so we set this boolean to indicate to clients (i.e.
+    // the parent view of this component) that they should consider
+    // refreshing with some regular interval while this variable is true.
+    // The bit is updated on data fetches.
+    this.clientShouldRefresh = false;
+
     if (this.options.hasOwnProperty('serverTarget')) {
       this.initializeFromServerTarget();
     } else {
@@ -42,6 +49,10 @@ gd.DataTableComponent = gd.AbstractDataTableComponent.extend({
 
           this.displayableFieldConfig = this.makeDisplayableFieldConfig(
               this.options.fieldConfig);
+
+          if ('clientShouldRefresh' in response) {
+            this.clientShouldRefresh = response.clientShouldRefresh;
+          }
 
           this.render();
 

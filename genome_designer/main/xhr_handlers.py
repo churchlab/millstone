@@ -803,10 +803,13 @@ def export_variants_as_csv(request):
 def get_alignment_groups(request):
     """Get list of AlignmentGroups for the provided ReferenceGenome uid.
 
-        If the request has a refGenomeUid, only return alignments for that
-        individual reference genome.
-        If the request has a projectUid, return all alignments for that 
-        project.
+    If the request has a refGenomeUid, only return alignments for that
+    individual reference genome.
+
+    If the request has a projectUid, return all alignments for that
+    project.
+
+    TODO(gleb): Clarify in comments why we have these two cases.
     """
     if 'refGenomeUid' in request.GET:
 
@@ -839,11 +842,34 @@ def get_alignment_groups(request):
                 owner=request.user.get_profile(),
                 uid=project_uid)
 
-        response_data = adapt_model_to_frontend(AlignmentGroup, 
-                {'reference_genome__project' : project})
+        alignment_group_list = AlignmentGroup.objects.filter(
+                reference_genome__project=project).order_by('start_time')
+
+        response_data = adapt_model_to_frontend(AlignmentGroup,
+                obj_list=alignment_group_list)
+
+        # Add bit to indicate whether any AlignmentGroups are running.
+        # NOTE: We do this wonky json.loads(), modify, json.dumps() becaause
+        # adapt_model_to_frontend() has the suboptimal interface of returning
+        # a json packaged object. It would be better to change this, but would
+        # require making this change safely everywhere else, but since we are
+        # lacking test coverage I'm not going to do that right now.
+        response_data_dict = json.loads(response_data)
+        response_data_dict['clientShouldRefresh'] = _are_any_alignments_running(
+                alignment_group_list)
+        response_data = json.dumps(response_data_dict)
 
         return HttpResponse(response_data,
                 content_type='application/json')
+
+
+def _are_any_alignments_running(alignment_group_list):
+    """Determines whether any alignments in the list are running.
+    """
+    for ag in alignment_group_list:
+        if ag.status in AlignmentGroup.PIPELINE_IS_RUNNING_STATUSES:
+            return True
+    return False
 
 
 @login_required

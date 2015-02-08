@@ -366,6 +366,7 @@ class Dataset(UniqueUidModelMixin):
 # Make sure the Dataset types are unique. This runs once at startup.
 assert_unique_types(Dataset.TYPE)
 
+
 ###############################################################################
 # Project models
 ###############################################################################
@@ -434,6 +435,7 @@ class Project(UniqueUidModelMixin):
         return [{'field':'uid'},
                 {'field':'title'}]
 
+
 class Chromosome(UniqueUidModelMixin):
     """A locus belonging to a reference genome which Variants 
     hold foreign keys to.  May be a literal chromosome,
@@ -460,6 +462,7 @@ class Chromosome(UniqueUidModelMixin):
             {'field': 'num_bases', 'verbose':'Bases'},
             {'field': 'uid'}
         ]
+
 
 class ReferenceGenome(UniqueUidModelMixin):
     """A reference genome relative to which alignments and analysis are
@@ -809,12 +812,14 @@ class ExperimentSample(UniqueUidModelMixin):
             {'field': 'fastqc_links', 'verbose': 'FastQC'},
         ]
 
+
 class ExperimentSampleRelation(UniqueUidModelMixin):
     """
     Explicit table linking parent and child samples.
     """
     parent = models.ForeignKey(ExperimentSample, related_name='parent_relationships')
     child = models.ForeignKey(ExperimentSample, related_name='child_relationships')
+
 
 class AlignmentGroup(UniqueUidModelMixin):
     """Collection of alignments of several related ExperimentSamples to the
@@ -888,6 +893,12 @@ class AlignmentGroup(UniqueUidModelMixin):
     status = models.CharField('Alignment Status',
             max_length=40, choices=STATUS_CHOICES, default=STATUS.NOT_STARTED)
 
+    # Statuses that indicate the alignment pipeline is running.
+    PIPELINE_IS_RUNNING_STATUSES = [
+        STATUS.ALIGNING,
+        STATUS.VARIANT_CALLING
+    ]
+
     def __unicode__(self):
         return self.label
 
@@ -931,20 +942,38 @@ class AlignmentGroup(UniqueUidModelMixin):
     @property
     def run_time(self):
         """Time elapsed since alignment start.
-        """
-        # Check whether running.
-        NOT_RUNNING_STATUSES = [
-                AlignmentGroup.STATUS.FAILED,
-                AlignmentGroup.STATUS.NOT_STARTED,
-                AlignmentGroup.STATUS.COMPLETED,
-                AlignmentGroup.STATUS.UNKNOWN
-        ]
-        if self.start_time is None or self.status in NOT_RUNNING_STATUSES:
-            return 'Not running'
 
-        # If here, return time elapsed since start.
+        NOTE: This might be complicated by the not-so-clean implementation of
+        the pipeline runner.
+        """
+        # Cases where alignment has not been run before.
+        if (self.start_time is None or
+                self.status == AlignmentGroup.STATUS.NOT_STARTED or
+                self.status == AlignmentGroup.STATUS.UNKNOWN):
+            return 'NOT RUNNING'
+
+        # Determine effective end time to use for calculating running time,
+        # depending on whether pipeline completed or not.
+        if self.end_time is None:
+            # Start time but no end time which typically should mean that
+            # the pipeline is still running.
+
+            # However, we still check for weird states because the pipeline
+            # occasionally has issues.
+            if self.status in [
+                    AlignmentGroup.STATUS.FAILED,
+                    AlignmentGroup.STATUS.COMPLETED]:
+                return 'ERROR'
+
+            effective_end_time = datetime.now()
+        else:
+            # End time exists so pipeline ran to completion or controlled
+            # failure.
+            effective_end_time = self.end_time
+
+        # Return time delta, properly formatted.
         return re.match('(.*:.*:.*)\.',
-                str(datetime.now() - self.start_time)).group(1)
+                str(effective_end_time - self.start_time)).group(1)
 
     @classmethod
     def get_field_order(clazz, **kwargs):
