@@ -8,7 +8,6 @@ cleaning, snv calling, and effect prediction.
 
 from datetime import datetime
 
-from celery import chain
 from celery import chord
 from celery import group
 from celery import task
@@ -116,7 +115,6 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
                 align_with_bwa_mem.si(
                         alignment_group, sample_alignment,
                         project=ref_genome.project))
-    align_task_group = group(alignment_task_signatures)
 
     # Aggregate variant callers, which run in parallel once all alignments
     # are done.
@@ -137,19 +135,20 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
 
                 params = VARIANT_TOOL_PARAMS_MAP[tool]
 
-                #create a variant_param dictionary for each region
+                # Create a variant_param dictionary for each region.
                 if tool == 'freebayes':
                     for region_num, fb_region in enumerate(fb_regions):
                         this_region_num = region_num
                         region_params = dict(params)
                         region_params['tool_kwargs'] = {
-                                    'region':fb_region,
-                                    'region_num':this_region_num}
+                            'region': fb_region,
+                            'region_num': this_region_num
+                        }
                         variant_param_list.append(region_params)
                 else:
                     variant_param_list.append(params)
 
-        # no freebayes parallel:
+        # No freebayes parallel.
         else:
             variant_param_list = [VARIANT_TOOL_PARAMS_MAP[tool]
                     for tool in settings.ENABLED_VARIANT_CALLERS]
@@ -180,8 +179,16 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
             whole_pipeline = chord(whole_pipeline, variant_caller_group)
     whole_pipeline = chord(whole_pipeline, pipeline_completion)
 
-    # Run the pipeline.
+    # TODO(gleb): We had this to deal with race conditions. Do we still need it?
     ref_genome.save()
+
+    # HACK(gleb): Force ALIGNING so that UI starts refreshing. This should be
+    # right, but I'm open to removing if it's not right for some case I
+    # didn't think of.
+    alignment_group.status = AlignmentGroup.STATUS.FAILED
+    alignment_group.save(update_fields=['end_time', 'status'])
+
+    # Run the pipeline.
     async_result = whole_pipeline.apply_async()
 
     return (alignment_group, async_result)
@@ -214,7 +221,7 @@ def pipeline_completion_tasks(alignment_group, should_merge_fb_parallel):
             alignment_group.status = AlignmentGroup.STATUS.COMPLETED
 
         alignment_group.end_time = datetime.now()
-        alignment_group.save()
+        alignment_group.save(update_fields=['end_time', 'status'])
     except:
         # TODO(gleb): Failure logging.
         alignment_group.end_time = datetime.now()
