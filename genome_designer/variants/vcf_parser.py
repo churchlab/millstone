@@ -8,7 +8,6 @@ from django.db import reset_queries
 
 import vcf
 
-from main.consistency import ensure_all_ref_genome_variant_set_consistency
 from main.model_utils import get_dataset_with_type
 from main.models import Chromosome
 from main.models import ExperimentSample
@@ -50,8 +49,6 @@ class QueryCache(object):
 
 def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     """Parses the VCF associated with the AlignmentGroup and saves data there.
-
-        **kwargs are passed to the parse_vcf function.
     """
     vcf_dataset = get_dataset_with_type(alignment_group, vcf_dataset_type)
     parse_vcf(vcf_dataset, alignment_group)
@@ -61,10 +58,11 @@ def parse_vcf(vcf_dataset, alignment_group):
     """
     Parses the VCF and creates Variant models relative to ReferenceGenome.
 
-    skip_het_only: throw out variants that are het only - if organism is not
-    diploid, these variants are likely to be just poorly mapped reads, so
-    discard the variants created by them. In the future, this option will
-    be moved to an alignment_group options dictionary.
+    alignment_group.options may contains:
+        * skip_het_only: throw out variants that are het only - if organism is
+            not diploid, these variants are likely to be just poorly mapped
+            reads, so discard the variants created by them. In the future, this
+            option will be moved to an alignment_group options dictionary.
     """
 
     reference_genome = alignment_group.reference_genome
@@ -127,6 +125,7 @@ def parse_vcf(vcf_dataset, alignment_group):
     # Finally, update the parent/child relationships for these new
     # created variants.
     update_parent_child_variant_fields(alignment_group)
+
 
 def extract_raw_data_dict(vcf_record):
     """Extract a dictionary of raw data from the Record.
@@ -200,7 +199,6 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     ref_value = raw_data_dict.pop('REF')
     alt_values = raw_data_dict.pop('ALT')
 
-
     # Make sure the chromosome cited in the VCF exists for
     # the reference genome variant is being added to
     if not chromosome_label in [chrom.label for chrom in
@@ -215,7 +213,6 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
                 'Chromosomes belonging to reference genome ' + str(reference_genome.label) +
                 ' are: ' + str([str(chrom.label) for chrom in
                         Chromosome.objects.filter(reference_genome=reference_genome)]).strip('[]')))
-
 
     # Try to find an existing Variant, or create it.
     variant, created = Variant.objects.get_or_create(
@@ -267,7 +264,7 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     # Only create a VCCD if there is an associated alignment group.
     if alignment_group:
         common_data_obj = VariantCallerCommonData.objects.create(
-                alignment_group= alignment_group,
+                alignment_group=alignment_group,
                 variant=variant,
                 source_dataset=vcf_dataset,
                 data=raw_data_dict
