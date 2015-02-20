@@ -5,6 +5,7 @@ import os
 import subprocess
 
 from django.conf import settings
+import vcf
 
 from main.model_utils import get_dataset_with_type
 from main.models import Dataset
@@ -211,14 +212,26 @@ def convert_lumpy_output_to_vcf(sample_id_dict, sample_uid_order, lumpy_output,
     lumpy_vcf_col_header = "\t".join(
             LUMPY_VCF_COL_HEADER_COMMON_FIELDS + sample_uid_order)
 
+    # Convert the whole Lumpy output to vcf. We'll filter below.
+    unfiltered_vcf = (os.path.splitext(vcf_output_filename)[0] +
+            '.unfiltered.vcf')
+
     with open(lumpy_output, 'r') as lumpy_in:
-        with open(vcf_output_filename, 'w') as lumpy_out:
-            lumpy_out.write(LUMPY_VCF_HEADER + '\n')
-            lumpy_out.write(lumpy_vcf_col_header + '\n')
+        with open(unfiltered_vcf, 'w') as lumpy_vcf_out:
+            lumpy_vcf_out.write(LUMPY_VCF_HEADER + '\n')
+            lumpy_vcf_out.write(lumpy_vcf_col_header + '\n')
             for line in lumpy_in:
                 fields = dict(zip(LUMPY_FIELD_NAMES, line.split()))
-                lumpy_out.write(_output_lumpy_line_to_vcf(fields,
+                lumpy_vcf_out.write(_output_lumpy_line_to_vcf(fields,
                         sample_id_dict, sample_uid_order) + '\n')
+
+    # Filter the results. The reason we first copy the entire output above and
+    # then filter is so that we can eventually reuse the vcf filtering method at
+    # the expense of a bit of extra writing time. This can be optimized later if
+    # it becomes a bottleneck.
+    # NOTE: This is the first implementation of vcf filtering an at writing only
+    # happens for this lumpy tool. Eventually we want to use with other tools.
+    filter_lumpy_vcf(unfiltered_vcf, vcf_output_filename)
 
     return True # success
 
@@ -267,3 +280,22 @@ def _output_lumpy_line_to_vcf(fields, sample_id_dict, sample_uid_order):
         **fields)
 
     return VCF_FORMAT_STR.format(**fields)
+
+
+def filter_lumpy_vcf(original_vcf_path, new_vcf_path):
+    """Filters lumpy vcf to get rid of noisy values.
+
+    Args:
+        original_vcf_path: Full path to starting vcf.
+        new_vcf_path: Path where new vcf will be written.
+    """
+    with open(original_vcf_path) as orig_vcf_fh:
+        with open(new_vcf_path, 'w') as new_vcf_fh:
+            vcf_reader = vcf.Reader(orig_vcf_fh)
+            vcf_writer = vcf.Writer(new_vcf_fh, vcf_reader)
+            for record in vcf_reader:
+                # If record fails any filter, continue to next record without
+                # writing.
+                if int(record.INFO['DP']) < 10:
+                    continue
+                vcf_writer.write_record(record)

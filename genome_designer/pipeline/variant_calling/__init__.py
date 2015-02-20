@@ -3,15 +3,12 @@ Functions for calling Variants.
 """
 
 import os
-import subprocess
-import sys
 
 from celery import task
 
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
-from main.model_utils import get_dataset_with_type
 from main.s3 import project_files_needed
 from pipeline.variant_effects import run_snpeff
 from pipeline.variant_calling.common import add_vcf_dataset
@@ -146,4 +143,3 @@ def find_variants_with_tool(alignment_group, variant_params_dict):
         process_vcf_dataset(alignment_group, vcf_dataset_type)
 
     return True
-

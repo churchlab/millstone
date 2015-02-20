@@ -4,6 +4,7 @@ Tests for variant_calling.py
 
 import os
 
+from django.conf import settings
 from django.test import TestCase
 import vcf
 
@@ -15,44 +16,39 @@ from main.models import get_dataset_with_type
 from main.models import Project
 from main.models import User
 from main.models import Variant
-from main.model_utils import clean_filesystem_location
-from pipeline.read_alignment import get_discordant_read_pairs
-from pipeline.read_alignment import get_split_reads
 from pipeline.variant_calling import find_variants_with_tool
-from pipeline.variant_calling import run_lumpy
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from pipeline.variant_calling.freebayes import freebayes_regions
 from pipeline.variant_calling.freebayes import merge_freebayes_parallel
-from settings import PWD as GD_ROOT
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import copy_dataset_to_entity_data_dir
 from utils.import_util import import_reference_genome_from_local_file
-from variants.vcf_parser import parse_alignment_group_vcf
 
 
-TEST_FASTA  = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
 
-TEST_FASTQ1 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+TEST_FASTQ1 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.1.fq')
 
-TEST_FASTQ2 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+TEST_FASTQ2 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
 
 TEST_SAMPLE_UID = '38d786f2'
 
-TEST_BAM = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
+TEST_BAM = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'bwa_align.sorted.grouped.realigned.bam')
 
-TEST_BAM_INDEX = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
-        '38d786f2', 'bwa_align.sorted.grouped.realigned.bam.bai')
+TEST_BAM_INDEX = os.path.join(settings.PWD, 'test_data',
+        'fake_genome_and_reads', '38d786f2',
+        'bwa_align.sorted.grouped.realigned.bam.bai')
 
-TEST_DISC_SPLIT_BAM = os.path.join(GD_ROOT, 'test_data',
+TEST_DISC_SPLIT_BAM = os.path.join(settings.PWD, 'test_data',
         'discordant_split_reads',
         'bwa_align.bam')
 
-LUMPY_VCF = os.path.join(GD_ROOT, 'test_data',
+LUMPY_VCF = os.path.join(settings.PWD, 'test_data',
         'discordant_split_reads',
         'lumpy.vcf')
 
@@ -79,7 +75,7 @@ class TestSNPCallers(TestCase):
             self.EXPECTED_VARIANT_POSITIONS.append(
                     self.EXPECTED_VARIANT_POSITIONS[-1] + 20)
 
-        self.KNOWN_SUBSTITUTIONS_ROOT = os.path.join(GD_ROOT, 'test_data',
+        self.KNOWN_SUBSTITUTIONS_ROOT = os.path.join(settings.PWD, 'test_data',
                 'test_genome_known_substitutions')
 
         self.TEST_GENOME_FASTA = os.path.join(self.KNOWN_SUBSTITUTIONS_ROOT,
@@ -242,8 +238,8 @@ class TestSNPCallers(TestCase):
             this_region_num = region_num
             region_params = dict(params)
             region_params['tool_kwargs'] = {
-                        'region':fb_region,
-                        'region_num':this_region_num}
+                        'region': fb_region,
+                        'region_num': this_region_num}
             variant_param_list.append(region_params)
 
         for variant_params in variant_param_list:
@@ -257,94 +253,3 @@ class TestSNPCallers(TestCase):
                 reference_genome=self.REFERENCE_GENOME)
 
         self._freebayes_checker(variants)
-
-
-class TestSVCallers(TestCase):
-
-    def setUp(self):
-        user = User.objects.create_user('test_username', password='password',
-                email='test@example.com')
-        self.project = Project.objects.create(owner=user.get_profile(),
-                title='Test Project')
-
-        # Create a ref genome.
-        self.reference_genome = import_reference_genome_from_local_file(
-                self.project, 'ref_genome', TEST_FASTA, 'fasta')
-
-        # Create a sample.
-        self.experiment_sample = ExperimentSample.objects.create(
-                project=self.project, label='sample1')
-
-        # Create a new alignment group.
-        alignment_group = AlignmentGroup.objects.create(
-                label='test alignment', reference_genome=self.reference_genome)
-
-        self.alignment_group = alignment_group
-
-        # Create the expected models.
-        sample_alignment = ExperimentSampleToAlignment.objects.create(
-                alignment_group=alignment_group,
-                experiment_sample=self.experiment_sample)
-        bwa_dataset = Dataset.objects.create(
-                label=Dataset.TYPE.BWA_ALIGN,
-                type=Dataset.TYPE.BWA_ALIGN,
-                status=Dataset.STATUS.READY)
-        bwa_dataset.filesystem_location = clean_filesystem_location(
-                TEST_DISC_SPLIT_BAM)
-        bwa_dataset.save()
-
-        sample_alignment.dataset_set.add(bwa_dataset)
-        sample_alignment.save()
-
-        self.bwa_dataset = bwa_dataset
-        self.sample_alignment = sample_alignment
-
-    def test_run_lumpy(self):
-        fasta_ref = get_dataset_with_type(
-            self.reference_genome,
-            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-
-        sample_alignments = [self.sample_alignment]
-
-        vcf_output_dir = self.alignment_group.get_model_data_dir()
-
-        vcf_output_filename = os.path.join(vcf_output_dir,'lumpy.vcf')
-
-        alignment_type = 'BWA_ALIGN'
-
-        bwa_disc_dataset = get_discordant_read_pairs(self.sample_alignment)
-        bwa_sr_dataset = get_split_reads(self.sample_alignment)
-
-        run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
-                vcf_output_filename, alignment_type)
-
-        dataset = Dataset.objects.create(
-                type=Dataset.TYPE.VCF_LUMPY,
-                label=Dataset.TYPE.VCF_LUMPY,
-                filesystem_location=vcf_output_filename,
-        )
-
-        self.alignment_group.dataset_set.add(dataset)
-
-        # Parse the resulting vcf, grab variant objects
-        parse_alignment_group_vcf(self.alignment_group, Dataset.TYPE.VCF_LUMPY)
-
-        # Grab the resulting variants.
-        variants = Variant.objects.filter(reference_genome=self.reference_genome)
-
-        # There should be a Variant object for each sv event.
-        self.assertEqual(6, len(variants))
-
-        # One event should be located very close to 25k
-        va_positions = [v.position for v in variants]
-        va_offset = [25000 - va_pos for va_pos in va_positions]
-        self.assertTrue(any([v < 50 for v in va_offset]))
-
-        # Clean up.
-        remove_dataset_types = [
-            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV,
-            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM
-        ]
-        for dataset_type in remove_dataset_types:
-            dataset = get_dataset_with_type(self.sample_alignment, dataset_type)
-            os.remove(dataset.get_absolute_location())
