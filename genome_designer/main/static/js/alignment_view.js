@@ -106,7 +106,9 @@ gd.AlignmentView = Backbone.View.extend({
     }
 
     $('#gd-ag-controls-toolbar').append(
-      '<span class="gd-ag-status-text">' + this.model.get('alignment_group').status + '</span>');
+      '<span id="gd-ag-status-text" class="gd-ag-status-text">' +
+        this.model.get('alignment_group').status +
+      '</span>');
   },
 
   /**
@@ -121,7 +123,10 @@ gd.AlignmentView = Backbone.View.extend({
       return;
     }
 
+    // Disable re-run button and hide status text. Refresh below.
     $('#gd-alignments-rerun-variants-btn').prop('disabled', true);
+    $('#gd-alignments-rerun-variants-btn').text('Re-running...');
+    $('#gd-ag-status-text').hide();
 
     // Disable 'go to variants'. Note that it's an anchor so we disable in a
     // slightly different manner.
@@ -134,10 +139,10 @@ gd.AlignmentView = Backbone.View.extend({
     var postData = {};
 
     var onSuccess = function(data) {
-      $('#gd-alignments-rerun-variants-btn').text('Re-running...');
+      window.location.reload();
     };
 
-    // Execute the post. Should return a redirect response.
+    // // Execute the post. Should return a redirect response.
     $.post(postUrl, JSON.stringify(postData), onSuccess, 'json');
   }
 });

@@ -185,8 +185,8 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     # HACK(gleb): Force ALIGNING so that UI starts refreshing. This should be
     # right, but I'm open to removing if it's not right for some case I
     # didn't think of.
-    alignment_group.status = AlignmentGroup.STATUS.FAILED
-    alignment_group.save(update_fields=['end_time', 'status'])
+    alignment_group.status = AlignmentGroup.STATUS.ALIGNING
+    alignment_group.save(update_fields=['status'])
 
     # Run the pipeline.
     async_result = whole_pipeline.apply_async()
