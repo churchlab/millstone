@@ -138,11 +138,10 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
                 # Create a variant_param dictionary for each region.
                 if tool == 'freebayes':
                     for region_num, fb_region in enumerate(fb_regions):
-                        this_region_num = region_num
                         region_params = dict(params)
                         region_params['tool_kwargs'] = {
                             'region': fb_region,
-                            'region_num': this_region_num
+                            'region_num': region_num
                         }
                         variant_param_list.append(region_params)
                 else:

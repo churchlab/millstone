@@ -24,13 +24,12 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
 
     # Rename bam files, because Delly uses the name of the file as sample uid.
     # Use cp instead of mv, because other sv callers will be reading from the
-    #   original bam file.
+    # original bam file.
+    new_bam_files = []
     bam_files = [
             get_dataset_with_type(sa, alignment_type).get_absolute_location()
             for sa in sample_alignments]
     samples = [sa.experiment_sample for sa in sample_alignments]
-
-    new_bam_files = []
     for bam_file, sample in zip(bam_files, samples):
         new_bam_file = os.path.join(
                 os.path.dirname(bam_file), sample.uid + '.bam')
