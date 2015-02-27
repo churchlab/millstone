@@ -395,8 +395,6 @@ def add_bed_file_track(reference_genome, sample_alignment, dataset):
         '--trackType',"CanvasFeatures"
     ]
 
-    print bed_json_command
-
     subprocess.check_call(bed_json_command)
 
     # Finally, manually update category for json
