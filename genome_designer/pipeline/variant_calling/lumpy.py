@@ -193,14 +193,14 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
     lumpy_output = (os.path.splitext(vcf_output_filename)[0] + '_' +
                     sample_uid + '_' + '.txt')
 
+    lumpy_cmd_list = ['%s/lumpy/lumpy' % settings.TOOLS_DIR] + combined_options
+
     try:
         with open(lumpy_output, 'w') as fh:
-            subprocess.check_call(
-                ['%s/lumpy/lumpy' % settings.TOOLS_DIR] + combined_options,
-                stdout=fh)
+            subprocess.check_call(lumpy_cmd_list, stdout=fh)
     except subprocess.CalledProcessError, e:
         print 'Lumpy failed. Command: {command}'.format(
-            command=['%s/lumpy/lumpy' % settings.TOOLS_DIR] + combined_options)
+                command=' '.join(lumpy_cmd_list))
         raise e
 
     return convert_lumpy_output_to_vcf(sample_id_dict, sample_uid_order,

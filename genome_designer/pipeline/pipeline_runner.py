@@ -45,25 +45,15 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     Returns:
         Tuple pair (alignment_group, async_result).
     """
-    assert len(alignment_group_label) > 0, "Name must be non-trivial string."
-    assert len(sample_list) > 0, (
-            "Must provide at least one ExperimentSample.")
-    assert_celery_running()
+    _assert_pipeline_is_safe_to_run(alignment_group_label, sample_list)
 
-    # Make sure all samples are ready.
-    relevant_datasets = Dataset.objects.filter(
-            experimentsample__in=sample_list)
-    for d in relevant_datasets:
-        assert d.status == Dataset.STATUS.READY, (
-                "Dataset %s for sample %s has status %s. Expected %s." % (
-                        d.label, d.experimentsample_set.all()[0].label,
-                        d.status, Dataset.STATUS.READY))
-
+    # Create AlignmentGroup, the entity which groups together the alignments
+    # of individual samples, and results of variant calling which happens
+    # for all samples together.
     alignment_group, _ = AlignmentGroup.objects.get_or_create(
             label=alignment_group_label,
             reference_genome=ref_genome,
             aligner=AlignmentGroup.ALIGNER.BWA)
-
     alignment_group.alignment_options.update(alignment_options)
 
     # The pipeline has two synchronous phases, each of whose components
@@ -79,6 +69,88 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     # First we create Models so that we can track status from the ui
     # immediately. The ui determines the status of each
     # ExperimentSampleToAlignment by looking at the status of its BWA dataset.
+    sample_alignments_to_run = _get_or_create_sample_alignment_datasets(
+            alignment_group, sample_list)
+
+    # Before we continue, let's update the ref genome object. This is code
+    # left over from when we were fighting a concurrency bug.
+    # TODO: Revisit such calls and see if we can clean them up.
+    ref_genome = ReferenceGenome.objects.get(uid=ref_genome.uid)
+
+    # Now we aggregate the alignments that need to be run, collecting their
+    # signatures in a Celery group so that these alignments can be run in
+    # parallel.
+    alignment_task_signatures = []
+    for sample_alignment in sample_alignments_to_run:
+        alignment_task_signatures.append(
+                align_with_bwa_mem.si(
+                        alignment_group, sample_alignment,
+                        project=ref_genome.project))
+    # Aggregate variant callers, which run in parallel once all alignments
+    # are done.
+    if perform_variant_calling:
+        variant_caller_group = _construct_variant_caller_group(alignment_group)
+    else:
+        variant_caller_group = None
+
+    # We add a final task which runs only after all previous tasks are complete.
+    pipeline_completion = pipeline_completion_tasks.si(alignment_group)
+
+    # Put together the whole pipeline.
+    whole_pipeline = None
+    if len(alignment_task_signatures) > 0:
+        whole_pipeline = group(alignment_task_signatures)
+    if variant_caller_group is not None:
+        if whole_pipeline is None:
+            whole_pipeline = variant_caller_group
+        else:
+            whole_pipeline = whole_pipeline | variant_caller_group
+    whole_pipeline = whole_pipeline | pipeline_completion
+
+    # TODO(gleb): We had this to deal with race conditions. Do we still need it?
+    ref_genome.save()
+
+    # HACK(gleb): Force ALIGNING so that UI starts refreshing. This should be
+    # right, but I'm open to removing if it's not right for some case I
+    # didn't think of.
+    alignment_group.status = AlignmentGroup.STATUS.ALIGNING
+    alignment_group.save(update_fields=['status'])
+
+    # Run the pipeline. This is a non-blocking call when celery is running so
+    # the rest of code proceeds immediately.
+    async_result = whole_pipeline.apply_async()
+
+    return (alignment_group, async_result)
+
+
+def _assert_pipeline_is_safe_to_run(alignment_group_label, sample_list):
+    """Helper that checks that pipeline is ready to run.
+
+    Raises:
+        AssertionError if any problems.
+    """
+    assert len(alignment_group_label) > 0, "Name must be non-trivial string."
+    assert len(sample_list) > 0, (
+            "Must provide at least one ExperimentSample.")
+    assert_celery_running()
+
+    # Make sure all samples are ready.
+    relevant_datasets = Dataset.objects.filter(
+            experimentsample__in=sample_list)
+    for d in relevant_datasets:
+        assert d.status == Dataset.STATUS.READY, (
+                "Dataset %s for sample %s has status %s. Expected %s." % (
+                        d.label, d.experimentsample_set.all()[0].label,
+                        d.status, Dataset.STATUS.READY))
+
+
+def _get_or_create_sample_alignment_datasets(alignment_group, sample_list):
+    """Creates Dataset models that allow tracking status of alignment from ui.
+
+    Does not start alignments.
+
+    Returns list of ExperimentSampleToAlignments.
+    """
     sample_alignments_to_run = []
     for sample in sample_list:
         sample_alignment, _ = ExperimentSampleToAlignment.objects.get_or_create(
@@ -100,129 +172,78 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
         # Add it to the list of alignments to run, unless already done.
         if not bwa_dataset.status == Dataset.STATUS.READY:
             sample_alignments_to_run.append(sample_alignment)
+    return sample_alignments_to_run
 
-    # Before we continue, let's update the ref genome object. This is code
-    # left over from when we were fighting a concurrency bug.
-    # TODO: Revisit such calls and see if we can clean them up.
-    ref_genome = ReferenceGenome.objects.get(uid=ref_genome.uid)
 
-    # Now we aggregate the alignments that need to be run, collecting their
-    # signatures in a Celery group so that these alignments can be run in
-    # parallel.
-    alignment_task_signatures = []
-    for sample_alignment in sample_alignments_to_run:
-        alignment_task_signatures.append(
-                align_with_bwa_mem.si(
-                        alignment_group, sample_alignment,
-                        project=ref_genome.project))
+def _construct_variant_caller_group(alignment_group):
+    """Returns celery Group of variant calling tasks that can be run
+    in parallel.
+    """
+    # Get fresh copy of ReferenceGenome to avoid potential issues with
+    # race conditions.
+    ref_genome = ReferenceGenome.objects.get(
+            uid=alignment_group.reference_genome.uid)
 
-    # Aggregate variant callers, which run in parallel once all alignments
-    # are done.
-    if perform_variant_calling:
+    # List of tasks that can be run in parallel. These will be combined into a
+    # single celery.group.
+    parallel_tasks = []
 
-        # If we are parallelizing freebayes, then we need to kick off
-        # several tasks for each parallelized region:
-        if settings.FREEBAYES_PARALLEL:
+    for tool in settings.ENABLED_VARIANT_CALLERS:
+        # Common params for this tool.
+        tool_params = VARIANT_TOOL_PARAMS_MAP[tool]
 
-            # a list of variant callers that we will run in parallel, with
-            # parameters.
-            variant_param_list = []
+        if settings.FREEBAYES_PARALLEL and tool == 'freebayes':
+            # Special handling for freebayes if running parallel.
+            # Create a chord consisting of the group of freebayes tasks
+            # distributed across the regions of the genome and finally a call
+            # to merge results into single vcf add corresponding Variant
+            # models to db.
+            fb_parallel_tasks = []
 
-            # determine the regions to send to each freebayes worker
+            # Break up ReferenceGenome into regions and create separate
+            # job for each.
             fb_regions = freebayes_regions(ref_genome)
 
-            for tool in settings.ENABLED_VARIANT_CALLERS:
+            for region_num, fb_region in enumerate(fb_regions):
+                region_params = dict(tool_params)
+                region_params['tool_kwargs'] = {
+                    'region': fb_region,
+                    'region_num': region_num
+                }
+                fb_parallel_tasks.append(find_variants_with_tool.si(
+                        alignment_group, region_params,
+                        project=ref_genome.project))
 
-                params = VARIANT_TOOL_PARAMS_MAP[tool]
-
-                # Create a variant_param dictionary for each region.
-                if tool == 'freebayes':
-                    for region_num, fb_region in enumerate(fb_regions):
-                        region_params = dict(params)
-                        region_params['tool_kwargs'] = {
-                            'region': fb_region,
-                            'region_num': region_num
-                        }
-                        variant_param_list.append(region_params)
-                else:
-                    variant_param_list.append(params)
-
-        # No freebayes parallel.
+            # Create chord so that merge task occurs after all freebayes
+            # tasks are complete.
+            freebayes_chord = (group(fb_parallel_tasks) |
+                    merge_freebayes_parallel.si(alignment_group))
+            parallel_tasks.append(freebayes_chord)
         else:
-            variant_param_list = [VARIANT_TOOL_PARAMS_MAP[tool]
-                    for tool in settings.ENABLED_VARIANT_CALLERS]
+            parallel_tasks.append(find_variants_with_tool.si(
+                    alignment_group, tool_params,
+                    project=ref_genome.project))
 
-        variant_caller_group = group([
-                find_variants_with_tool.si(
-                        alignment_group, variant_params,
-                        project=ref_genome.project)
-                for variant_params in variant_param_list])
-    else:
-        variant_caller_group = None
-
-    # We add a final task which runs only after all previous tasks are complete.
-    should_merge_fb_parallel = (
-            perform_variant_calling and settings.FREEBAYES_PARALLEL)
-    pipeline_completion = pipeline_completion_tasks.si(
-            alignment_group,
-            should_merge_fb_parallel)
-
-    # Put together the whole pipeline.
-    whole_pipeline = None
-    if len(alignment_task_signatures) > 0:
-        whole_pipeline = group(alignment_task_signatures)
-    if variant_caller_group is not None:
-        if whole_pipeline is None:
-            whole_pipeline = variant_caller_group
-        else:
-            whole_pipeline = chord(whole_pipeline, variant_caller_group)
-    whole_pipeline = chord(whole_pipeline, pipeline_completion)
-
-    # TODO(gleb): We had this to deal with race conditions. Do we still need it?
-    ref_genome.save()
-
-    # HACK(gleb): Force ALIGNING so that UI starts refreshing. This should be
-    # right, but I'm open to removing if it's not right for some case I
-    # didn't think of.
-    alignment_group.status = AlignmentGroup.STATUS.ALIGNING
-    alignment_group.save(update_fields=['status'])
-
-    # Run the pipeline.
-    async_result = whole_pipeline.apply_async()
-
-    return (alignment_group, async_result)
+    return group(parallel_tasks)
 
 
 @task
-def pipeline_completion_tasks(alignment_group, should_merge_fb_parallel):
+def pipeline_completion_tasks(alignment_group):
     """Final set of synchronous steps after all alignments and variant callers
     are finished.
 
-    If we ran freebayes, see if it was parallelized, and merge and add
-    the resulting vcf.
-
-    Otherwise, just check for completion, timestamp, and save
-    the alignment group.
+    Sets end_time and status on alignment_group.
     """
     try:
         # Get fresh copy of alignment_group.
         alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
+        assert AlignmentGroup.STATUS.VARIANT_CALLING == alignment_group.status
 
-        if alignment_group.status != AlignmentGroup.STATUS.VARIANT_CALLING:
-            alignment_group.status = AlignmentGroup.STATUS.FAILED
-        else:
-            # if ran freebayes in parallel, merge the partial vcfs and process the
-            # vcf dataset.
-            if should_merge_fb_parallel:
-                merge_freebayes_parallel(alignment_group)
-
-            # The alignment group is now officially complete.
-            alignment_group.status = AlignmentGroup.STATUS.COMPLETED
-
-        alignment_group.end_time = datetime.now()
-        alignment_group.save(update_fields=['end_time', 'status'])
+        # The alignment pipeline is now officially complete.
+        alignment_group.status = AlignmentGroup.STATUS.COMPLETED
     except:
         # TODO(gleb): Failure logging.
-        alignment_group.end_time = datetime.now()
         alignment_group.status = AlignmentGroup.STATUS.FAILED
-        alignment_group.save(update_fields=['end_time', 'status'])
+
+    alignment_group.end_time = datetime.now()
+    alignment_group.save(update_fields=['end_time', 'status'])

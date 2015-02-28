@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TransactionTestCase
 
+from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
@@ -58,6 +59,17 @@ class TestAlignmentPipeline(TransactionTestCase):
                 Dataset.TYPE.FASTQ1, TEST_FASTQ1)
         copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ2,
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
+
+    def test_run_pipeline(self):
+        """End-to-end test of pipeline. Fails if any errors.
+        """
+        sample_list = [self.experiment_sample]
+        alignment_group, async_result = run_pipeline('name_placeholder',
+                self.reference_genome, sample_list)
+        async_result.wait()
+        alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
+        self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
+                alignment_group.status)
 
     def test_run_pipeline__samples_not_ready__fastq1(self):
         """Tests that the pipeline raises an AssertionError if samples aren't

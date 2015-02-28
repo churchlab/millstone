@@ -291,6 +291,7 @@ CELERY_IMPORTS = (
         'pipeline.pipeline_runner',
         'pipeline.read_alignment',
         'pipeline.variant_calling',
+        'pipeline.variant_calling.freebayes',
         'utils.import_util',
 )
 

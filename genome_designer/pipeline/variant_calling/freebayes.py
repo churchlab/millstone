@@ -7,6 +7,7 @@ import glob
 import os
 import subprocess
 
+from celery import task
 from django.conf import settings
 
 from main.models import Dataset
@@ -114,6 +115,8 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
 
     return True # success
 
+
+@task
 def merge_freebayes_parallel(alignment_group):
     """
     Merge, sort, and make unique all regional freebayes variant calls after
@@ -121,33 +124,35 @@ def merge_freebayes_parallel(alignment_group):
 
     Returns the path to the merged vcf file.
     """
-
     # First, grab all freebayes parallel vcf files.
     common_params = get_common_tool_params(alignment_group)
-    tool_dir = os.path.join(common_params['output_dir'], 'freebayes')
+    partial_freebayes_vcf_output_dir = os.path.join(
+            common_params['output_dir'], 'freebayes')
 
-    vcfuniq_path = settings.VCFUNIQ_BINARY
-    vcfstreamsort_path = settings.VCFSTREAMSORT_BINARY
-
-    vcf_output_filename_prefix = os.path.join(tool_dir,
+    # Glob all the parial (region-specific) vcf files.
+    # Assert that there is at least one.
+    vcf_output_filename_prefix = os.path.join(partial_freebayes_vcf_output_dir,
             uppercase_underscore(common_params['alignment_type']) +
             '.partial.*.vcf')
+    vcf_files = glob.glob(vcf_output_filename_prefix)
+    assert len(vcf_files), (
+            "No vcf files at freebayes merge step. Did freebayes fail?")
 
-    vcf_ouput_filename_merged = os.path.join(tool_dir,
+    # Generate output filename.
+    vcf_ouput_filename_merged = os.path.join(partial_freebayes_vcf_output_dir,
             uppercase_underscore(common_params['alignment_type']) + '.vcf')
     vcf_ouput_filename_merged_fh = open(vcf_ouput_filename_merged, 'w')
 
     streamsort_cmd = ' '.join([
-            vcfstreamsort_path, '-w 1000 | ', vcfuniq_path])
+            settings.VCFSTREAMSORT_BINARY,
+            '-w 1000 | ',
+            settings.VCFUNIQ_BINARY])
 
     # create a pipe to write to that will sort all the sub-vcfs
     stream_merge_proc = subprocess.Popen(streamsort_cmd,
             stdin=subprocess.PIPE,
             stdout=vcf_ouput_filename_merged_fh,
             shell=True)
-
-    # glob all the vcfs
-    vcf_files = glob.glob(vcf_output_filename_prefix)
 
     # concatenate all the vcf files w/ fileinput and keep all but the first
     # header and write to the stream_merge_proc stdin pipe
@@ -208,5 +213,3 @@ def merge_freebayes_parallel(alignment_group):
         os.remove(filename)
 
     return vcf_dataset
-
-
