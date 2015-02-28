@@ -31,7 +31,7 @@ VARIANT_CALLING_OPTION__CALLER_OVERRIDE = 'enabled_variant_callers_override'
 
 
 def run_pipeline(alignment_group_label, ref_genome, sample_list,
-        skip_alignment=True, perform_variant_calling=True, alignment_options={},
+        skip_alignment=False, perform_variant_calling=True, alignment_options={},
         variant_calling_options={}):
     """Runs the entire bioinformatics pipeline, including alignment and
     variant calling.
