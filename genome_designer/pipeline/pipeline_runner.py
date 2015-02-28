@@ -25,8 +25,14 @@ from pipeline.variant_calling.freebayes import merge_freebayes_parallel
 from pipeline.variant_calling.freebayes import freebayes_regions
 
 
+# List of variant callers to use. At time of writing, this was not hooked
+# up to the ui and only used internally.
+VARIANT_CALLING_OPTION__CALLER_OVERRIDE = 'enabled_variant_callers_override'
+
+
 def run_pipeline(alignment_group_label, ref_genome, sample_list,
-        perform_variant_calling=True, alignment_options={}):
+        skip_alignment=True, perform_variant_calling=True, alignment_options={},
+        variant_calling_options={}):
     """Runs the entire bioinformatics pipeline, including alignment and
     variant calling.
 
@@ -41,11 +47,16 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
         ref_genome: ReferenceGenome instance
         sample_list: List of sample instances. Must belong to same project as
             ReferenceGenomes.
+        skip_alignment: If True, skip alignment.
+        perform_variant_calling: Whether to run variant calling.
+        alignment_options: Control aspects of alignment.
+        variant_calling_options: Control aspects of calling variants.
 
     Returns:
         Tuple pair (alignment_group, async_result).
     """
-    _assert_pipeline_is_safe_to_run(alignment_group_label, sample_list)
+    if not skip_alignment:
+        _assert_pipeline_is_safe_to_run(alignment_group_label, sample_list)
 
     # Create AlignmentGroup, the entity which groups together the alignments
     # of individual samples, and results of variant calling which happens
@@ -89,7 +100,8 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     # Aggregate variant callers, which run in parallel once all alignments
     # are done.
     if perform_variant_calling:
-        variant_caller_group = _construct_variant_caller_group(alignment_group)
+        variant_caller_group = _construct_variant_caller_group(
+                alignment_group, variant_calling_options)
     else:
         variant_caller_group = None
 
@@ -175,7 +187,7 @@ def _get_or_create_sample_alignment_datasets(alignment_group, sample_list):
     return sample_alignments_to_run
 
 
-def _construct_variant_caller_group(alignment_group):
+def _construct_variant_caller_group(alignment_group, variant_calling_options):
     """Returns celery Group of variant calling tasks that can be run
     in parallel.
     """
@@ -188,7 +200,15 @@ def _construct_variant_caller_group(alignment_group):
     # single celery.group.
     parallel_tasks = []
 
-    for tool in settings.ENABLED_VARIANT_CALLERS:
+    # Determine which variant callers to use.
+    if VARIANT_CALLING_OPTION__CALLER_OVERRIDE in variant_calling_options:
+        effective_variant_callers = variant_calling_options[
+                VARIANT_CALLING_OPTION__CALLER_OVERRIDE]
+    else:
+        effective_variant_callers = settings.ENABLED_VARIANT_CALLERS
+
+    # Iterate through tools and kick off tasks.
+    for tool in effective_variant_callers:
         # Common params for this tool.
         tool_params = VARIANT_TOOL_PARAMS_MAP[tool]
 
