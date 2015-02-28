@@ -271,6 +271,7 @@ def fastqc_view(request, project_uid, sample_uid, read_num):
         response.write(line)
     return response
 
+
 @login_required
 def alignment_list_view(request, project_uid):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
@@ -300,9 +301,7 @@ def alignment_view(request, project_uid, alignment_group_uid):
             reference_genome__project=project, uid=alignment_group_uid)
 
     if request.POST:
-        run_pipeline(alignment_group.label, alignment_group.reference_genome,
-                alignment_group.get_samples())
-        return HttpResponse(json.dumps({}), content_type='application/json')
+        return _rerun_alignment(alignment_group)
 
     # Initial javascript data.
     init_js_data = json.dumps({
@@ -319,6 +318,14 @@ def alignment_view(request, project_uid, alignment_group_uid):
         'init_js_data': init_js_data
     }
     return render(request, 'alignment.html', context)
+
+
+def _rerun_alignment(alignment_group):
+    """Re-runs existing alignment.
+    """
+    run_pipeline(alignment_group.label, alignment_group.reference_genome,
+            alignment_group.get_samples())
+    return HttpResponse(json.dumps({}), content_type='application/json')
 
 
 @login_required
