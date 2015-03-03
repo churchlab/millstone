@@ -126,7 +126,9 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     # right, but I'm open to removing if it's not right for some case I
     # didn't think of.
     alignment_group.status = AlignmentGroup.STATUS.ALIGNING
-    alignment_group.save(update_fields=['status'])
+    alignment_group.start_time = datetime.now()
+    alignment_group.end_time = None
+    alignment_group.save(update_fields=['status', 'start_time', 'end_time'])
 
     # Run the pipeline. This is a non-blocking call when celery is running so
     # the rest of code proceeds immediately.
