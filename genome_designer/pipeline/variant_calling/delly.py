@@ -32,8 +32,8 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
     for bam_file, sample in zip(bam_files, samples):
         new_bam_file = os.path.join(
                 os.path.dirname(bam_file), sample.uid + '.bam')
-        os.symlink(bam_file, new_bam_file)
-        os.symlink(bam_file + '.bai', new_bam_file + '.bai')
+        _clean_symlink(bam_file, new_bam_file)
+        _clean_symlink(bam_file + '.bai', new_bam_file + '.bai')
         new_bam_files.append(new_bam_file)
 
     # run delly for each type of transformation
@@ -71,6 +71,14 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
     postprocess_delly_vcf(vcf_output_filename)
 
     return True # success
+
+
+def _clean_symlink(src, dest):
+    """Creates symlink, deleting dest if it already exists.
+    """
+    if os.path.exists(dest):
+        os.remove(dest)
+    os.symlink(src, dest)
 
 
 def postprocess_delly_vcf(vcf_file):
