@@ -709,33 +709,32 @@ def get_discordant_read_pairs(sample_alignment):
 
 
     try:
-      bwa_disc_dataset.status = Dataset.STATUS.COMPUTING
-      bwa_disc_dataset.save(update_fields=['status'])
+        bwa_disc_dataset.status = Dataset.STATUS.COMPUTING
+        bwa_disc_dataset.save(update_fields=['status'])
 
-      # Use bam read alignment flags to pull out discordant pairs only
-      filter_discordant = ' | '.join([
-              '{samtools} view -u -F 0x0002 {bam_filename} ',
-              '{samtools} view -u -F 0x0100 - ',
-              '{samtools} view -u -F 0x0004 - ',
-              '{samtools} view -u -F 0x0008 - ',
-              '{samtools} view -b -F 0x0400 - ']).format(
-                      samtools=SAMTOOLS_BINARY,
-                      bam_filename=bam_filename)
+        # Use bam read alignment flags to pull out discordant pairs only
+        filter_discordant = ' | '.join([
+                '{samtools} view -u -F 0x0002 {bam_filename} ',
+                '{samtools} view -u -F 0x0100 - ',
+                '{samtools} view -u -F 0x0004 - ',
+                '{samtools} view -u -F 0x0008 - ',
+                '{samtools} view -b -F 0x0400 - ']).format(
+                        samtools=SAMTOOLS_BINARY,
+                        bam_filename=bam_filename)
 
-      with open(bam_discordant_filename, 'w') as fh:
-          subprocess.check_call(filter_discordant,
-                  stdout=fh,
-                  shell=True, executable=BASH_PATH)
+        with open(bam_discordant_filename, 'w') as fh:
+            subprocess.check_call(filter_discordant,
+                    stdout=fh, shell=True, executable=BASH_PATH)
 
-      # sort the discordant reads, overwrite the old file
-      subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_filename,
-              os.path.splitext(bam_discordant_filename)[0]])
+        # sort the discordant reads, overwrite the old file
+        subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_filename,
+                os.path.splitext(bam_discordant_filename)[0]])
 
-      _filter_out_interchromosome_reads(bam_discordant_filename)
+        _filter_out_interchromosome_reads(bam_discordant_filename)
 
-      bwa_disc_dataset.filesystem_location = clean_filesystem_location(
-              bam_discordant_filename)
-      bwa_disc_dataset.status = Dataset.STATUS.READY
+        bwa_disc_dataset.filesystem_location = clean_filesystem_location(
+                bam_discordant_filename)
+        bwa_disc_dataset.status = Dataset.STATUS.READY
 
     except subprocess.CalledProcessError:
         bwa_disc_dataset.filesystem_location = ''
