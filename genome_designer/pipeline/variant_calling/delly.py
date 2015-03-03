@@ -63,10 +63,10 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
             '-R', 'name',
             '-d', 'date'])
 
-    # Delete temporary renamed bam files
-    for bam_file in new_bam_files:
-        subprocess.check_call(['rm', bam_file])
-        subprocess.check_call(['rm', bam_file + '.bai'])
+    # Delete temporary bam file symlinks.
+    for f in new_bam_files:
+        os.remove(f)
+        os.remove(f + '.bai')
 
     postprocess_delly_vcf(vcf_output_filename)
 
