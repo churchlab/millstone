@@ -22,9 +22,8 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
     vcf_outputs = map(lambda transformation:
             '%s_%s.vcf' % (delly_root, transformation), transformations)
 
-    # Rename bam files, because Delly uses the name of the file as sample uid.
-    # Use cp instead of mv, because other sv callers will be reading from the
-    # original bam file.
+    # Create symlinks to bam files which use uid because Delly uses the name of
+    # the file as sample uid in the output report.
     new_bam_files = []
     bam_files = [
             get_dataset_with_type(sa, alignment_type).get_absolute_location()
@@ -33,8 +32,8 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
     for bam_file, sample in zip(bam_files, samples):
         new_bam_file = os.path.join(
                 os.path.dirname(bam_file), sample.uid + '.bam')
-        subprocess.check_call(['cp', bam_file, new_bam_file])
-        subprocess.check_call(['cp', bam_file + '.bai', new_bam_file + '.bai'])
+        os.symlink(bam_file, new_bam_file)
+        os.symlink(bam_file + '.bai', new_bam_file + '.bai')
         new_bam_files.append(new_bam_file)
 
     # run delly for each type of transformation
