@@ -137,8 +137,11 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
         if va_data:
             if 'INFO_SVTYPE' in va_data:
                 # is SV: make info of the form "SV [type] [length]"
-                visible_field_pairs.append(('INFO', 'SV %s %d' %
-                    (va_data['INFO_SVTYPE'], va_data.get('INFO_SVLEN', ''))))
+                key = 'INFO'
+                value = 'SV {svtype} {svlen}'.format(
+                        svtype=va_data['INFO_SVTYPE'],
+                        svlen=va_data.get('INFO_SVLEN', ''))
+                visible_field_pairs.append((key, value))
             else:
                 # is SNP: make info equal to the AA field
                 visible_field_pairs.append(('INFO', va_data.get('INFO_EFF_AA', '')))
