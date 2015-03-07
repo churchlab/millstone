@@ -14,8 +14,8 @@ from pipeline.variant_calling.common import common_postprocess_vcf
 def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
         vcf_output_filename, alignment_type, **kwargs):
     """Run delly to find SVs."""
-    if not os.path.isdir('%s/delly' % settings.TOOLS_DIR):
-        raise Exception('Delly is not installed. Aborting.')
+    assert os.path.exists(settings.DELLY_BIN), (
+            'Delly is not installed. Aborting.')
 
     delly_root = vcf_output_filename[:-4]  # get rid of .vcf extension
     transformations = ['DEL', 'DUP', 'INV']
@@ -40,20 +40,24 @@ def run_delly(fasta_ref, sample_alignments, vcf_output_dir,
     for transformation, vcf_output in zip(transformations, vcf_outputs):
 
         # not checked_call, because delly errors if it doesn't find any SVs
-        subprocess.call(['%s/delly/delly' % settings.TOOLS_DIR,
+        subprocess.call([
+            settings.DELLY_BIN,
             '-t', transformation,
             '-o', vcf_output,
             '-g', fasta_ref] + new_bam_files)
 
     # combine the separate vcfs for each transformation
-    vcf_outputs = filter(lambda file: os.path.exists(file), vcf_outputs)
+    vcf_outputs = [f for f in vcf_outputs if os.path.exists(f)]
     if vcf_outputs:
         temp_vcf = os.path.join(vcf_output_dir, 'temp_vcf')
+        os.putenv('PERL5LIB', os.path.join(settings.VCFTOOLS_DIR, 'perl'))
         with open(temp_vcf, 'w') as fh:
-            subprocess.check_call(['vcf-concat'] + vcf_outputs, stdout=fh)
+            subprocess.check_call([settings.VCF_CONCAT_BINARY] + vcf_outputs,
+                    stdout=fh)
         with open(vcf_output_filename, 'w') as fh:
-            subprocess.check_call(['vcf-sort', temp_vcf], stdout=fh)
-        subprocess.check_call(['rm', temp_vcf])
+            subprocess.check_call([settings.VCF_SORT_BINARY, temp_vcf],
+                    stdout=fh)
+        os.remove(temp_vcf)
     else:
         # hack: create empty vcf
         subprocess.check_call(['touch', delly_root])
