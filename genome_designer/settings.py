@@ -20,6 +20,7 @@ BGZIP_BINARY = '%s/tabix/bgzip' % TOOLS_DIR
 FASTQC_BINARY = '%s/fastqc/fastqc' % TOOLS_DIR
 VCFUNIQ_BINARY = '%s/freebayes/vcfuniq' % TOOLS_DIR
 VCFSTREAMSORT_BINARY = '%s/freebayes/vcfstreamsort' % TOOLS_DIR
+DELLY_BIN = '%s/delly/src/delly' % settings.TOOLS_DIR
 
 
 ### vcftools
