@@ -26,6 +26,5 @@ DELLY_BIN = '%s/delly/src/delly' % TOOLS_DIR
 ### vcftools
 
 VCFTOOLS_DIR = os.path.join(TOOLS_DIR, 'vcftools')
-# Required for vcf-concat and vcf-sort
 VCF_CONCAT_BINARY = os.path.join(VCFTOOLS_DIR, 'bin', 'vcf-concat')
 VCF_SORT_BINARY = os.path.join(VCFTOOLS_DIR, 'bin', 'vcf-sort')
