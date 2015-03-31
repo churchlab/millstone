@@ -386,22 +386,15 @@ class TestImportVariantSetFromVCFFile(TestCase):
             label='Chromosome',
             num_bases=9001)
 
-    def test_import_variant_set(self):
-        """Tests importing variant sets from a pared-down vcf file
-        containing only chromosome, position info, etc.
+    def _assert_variants(self, vcf_filepath):
+        """Common assert code used by multiple tests.
         """
-
-        VARIANT_SET_VCF_FILEPATH = os.path.join(settings.PWD,
-                'test_data', 'fake_genome_and_reads',
-                'test_genome_variant_set.vcf')
-
         NUM_VARIANTS_IN_SET = 20
 
         VARIANT_SET_NAME = 'Test Set'
 
         import_variant_set_from_vcf(
-                self.ref_genome, VARIANT_SET_NAME,
-                VARIANT_SET_VCF_FILEPATH)
+                self.ref_genome, VARIANT_SET_NAME, vcf_filepath)
 
         new_variant_set = VariantSet.objects.get(
                 reference_genome=self.ref_genome,
@@ -417,7 +410,25 @@ class TestImportVariantSetFromVCFFile(TestCase):
 
         v_553 = Variant.objects.get(reference_genome=self.ref_genome,
                 position=553)
-        self.assertEqual(set(['C','G']), set(v_553.get_alternates()))
+        self.assertEqual(set(['C', 'G']), set(v_553.get_alternates()))
+
+    def test_import_variant_set(self):
+        """Tests importing variant sets from a pared-down vcf file
+        containing only chromosome, position info, etc.
+        """
+        VARIANT_SET_VCF_FILEPATH = os.path.join(settings.PWD,
+                'test_data', 'fake_genome_and_reads',
+                'test_genome_variant_set.vcf')
+        self._assert_variants(VARIANT_SET_VCF_FILEPATH)
+
+    def test_import_variant_set__nonstandard_linebreaks(self):
+        """Tests importing variant sets from file with nonstandard linebreaks
+        as might happen with a tab-separated file saved in Excel on Mac OS X.
+        """
+        VARIANT_SET_VCF_FILEPATH = os.path.join(settings.PWD,
+                'test_data', 'fake_genome_and_reads',
+                'test_genome_variant_set__mac_linebreaks.vcf')
+        self._assert_variants(VARIANT_SET_VCF_FILEPATH)
 
 
 class TestFastQC(TestCase):
