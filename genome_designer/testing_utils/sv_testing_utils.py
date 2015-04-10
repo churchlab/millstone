@@ -7,6 +7,7 @@ from django.conf import settings
 import vcf
 
 from main.model_utils import get_dataset_with_type
+from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from variants.vcf_parser import extract_raw_data_dict
 
 
