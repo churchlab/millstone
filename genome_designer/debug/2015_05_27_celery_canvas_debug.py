@@ -72,3 +72,14 @@ if __name__ == '__main__':
     addtl_task_2 = t.si('addtl_task_2')
     pipeline = group_1 | group_2 | addtl_task_1 | addtl_task_2
     assert pipeline.delay().get() == 'addtl_task_2'
+
+    # Yet another fail case.
+    # Apparently having a group as a header of any chord is broken.
+    group_2 = group([
+        t.si('group_2_task_1'),
+        t.si('group_2_task_2'),
+    ])
+    addtl_task_1 = t.si('addtl_task_1')
+    addtl_task_2 = t.si('addtl_task_2')
+    pipeline = group_2 | addtl_task_1 | addtl_task_2
+    assert pipeline().get() == 'addtl_task_2', pipeline().get()
