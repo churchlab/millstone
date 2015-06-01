@@ -163,10 +163,14 @@ def tab_root_analyze(request, project_uid, alignment_group_uid=None, sub_view=No
         init_js_data['subView'] = sub_view
         context['sub_view'] = sub_view
 
+    ref_genomes_with_alignments = [rg for rg in ReferenceGenome.objects.all() 
+            if rg.alignmentgroup_set.exists()]
+
     context.update({
         'project': project,
         'init_js_data': json.dumps(init_js_data),
         'tab_root': TAB_ROOT__ANALYZE,
+        'ref_genomes_with_alignments': ref_genomes_with_alignments
     })
 
     return render(request, 'tab_root_analyze.html', context)
@@ -218,13 +222,25 @@ def reference_genome_view(request, project_uid, ref_genome_uid):
     """
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
+
     reference_genome = ReferenceGenome.objects.get(project=project,
             uid=ref_genome_uid)
+
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(reference_genome)
+    })
+
     context = {
         'project': project,
         'tab_root': TAB_ROOT__DATA,
         'reference_genome': reference_genome,
-        'jbrowse_link': reference_genome.get_client_jbrowse_link()
+        'reference_genome_uid': reference_genome.uid,
+        'has_fasta': reference_genome.dataset_set.filter(
+                type=Dataset.TYPE.REFERENCE_GENOME_FASTA).exists(),
+        'has_genbank': reference_genome.dataset_set.filter(
+                type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists(),
+        'jbrowse_link': reference_genome.get_client_jbrowse_link(),
+        'init_js_data': init_js_data
     }
     return render(request, 'reference_genome.html', context)
 

@@ -5,9 +5,35 @@
     Reference Genome: {{reference_genome.label}}
   </div>
 
-  <a href="{{jbrowse_link}}" target="_blank">JBrowse</a>
+  <a href="{{jbrowse_link}}" target="_blank">JBrowse</a><br>
+  {% if has_fasta %}
+    <a href="#" id="gd-ref-genome-download-fasta">Download FASTA</a><br>
+  {% else %}
+    <a style="color:grey;pointer-events:none">Download FASTA</a><br>
+  {% endif %}
+  
+  {% if has_genbank %}
+    <a href="#" id="gd-ref-genome-download-genbank">Download GenBank</a>
+  {% else %}
+    <a style="color:grey;pointer-events:none">Download GenBank</a><br>
+  {% endif %}
+
+  <form id="gd-download-form" action="/_/ref_genomes/download"
+  method="GET">
+  <!-- NOTE: Populated dynamically in js. -->
+  </form>
+
+
+<div id="gd-ref-genome-view-datatable-hook">
+</div>
 
   <script type="text/javascript">
     VIEW_TAG = 'REF_GENOME';
+    var reference_genome_uid = "{{reference_genome_uid}}";
+
+    {% autoescape off %}
+        INIT_JS_DATA = {{init_js_data}};    
+    {% endautoescape %}
+
   </script>
 {% endblock %}
