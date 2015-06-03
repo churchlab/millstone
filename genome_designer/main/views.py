@@ -163,7 +163,8 @@ def tab_root_analyze(request, project_uid, alignment_group_uid=None, sub_view=No
         init_js_data['subView'] = sub_view
         context['sub_view'] = sub_view
 
-    ref_genomes_with_alignments = [rg for rg in ReferenceGenome.objects.all() 
+    ref_genomes_with_alignments = [
+            rg for rg in ReferenceGenome.objects.filter(project=project)
             if rg.alignmentgroup_set.exists()]
 
     context.update({
