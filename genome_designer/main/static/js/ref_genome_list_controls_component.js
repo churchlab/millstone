@@ -20,6 +20,8 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
         _.bind(this.handleCreateFromServerLocation, this));
     $('#gd-ref-genome-create-from-ncbi-submit').click(
         _.bind(this.handleCreateFromNCBI, this));
+    $('#gd-ref-genome-toggle-display-de-novo').click(
+        _.bind(function() {this.trigger('TOGGLE_DE_NOVO');}, this));
 
     this.drawDropdownOptions();
   },
@@ -236,6 +238,12 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
         '<a href="#" class="gd-id-refgenomes-delete">Delete</a>';
     this.addDropdownOption(deleteOptionHtml);
     $('.gd-id-refgenomes-delete').click(_.bind(this.handleDelete, this));
+
+    var concatenateOptionHtml = 
+        '<a href="#" class="gd-id-refgenomes-concatenate">Concatenate</a>';
+    this.addDropdownOption(concatenateOptionHtml);
+    $('.gd-id-refgenomes-concatenate').click(
+        _.bind(this.handleConcatenate, this));
   },
 
   /** Sends request to delete selected samples. */
@@ -244,15 +252,15 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
 
     // If nothing to do, show message.
     if (!refGenomeUidList.length) {
-      alert("Please select reference genomes to delete.");
+      alert('Please select reference genomes to delete.');
       return;
     }
 
     // Get confirmation from user.
     var agree = confirm(
-        "Are you sure you want delete these reference genomes? " +
-        "This will also delete any alignments and variants associated " +
-        "with this reference genome.");
+        'Are you sure you want delete these reference genomes? ' +
+        'This will also delete any alignments and variants associated ' +
+        'with this reference genome.');
     if (!agree) {
       return;
     }
@@ -276,6 +284,50 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
       this.trigger('MODELS_UPDATED');
     }
   },
+
+  handleConcatenate: function() {
+    var refGenomeUidList = this.datatableComponent.getCheckedRowUids();
+
+    // If nothing to do, show message.
+    if (!refGenomeUidList.length) {
+      alert('Please select reference genomes to concatenate.');
+      return;
+    }
+    // If only one selected, show message.
+    if (refGenomeUidList.length == 1) {
+      alert('Please select more than one reference genome to concatenate.');
+      return;
+    }
+
+    // Get new genome name
+    var newGenomeLabel = prompt(
+        'Enter a name for the concatenated genome:','new_genome_name');
+    if (!newGenomeLabel) {
+        alert('Please enter a name for the concatenated genome');
+    }
+
+    this.enterLoadingState();
+
+    var postData = {
+        'newGenomeLabel': newGenomeLabel,
+        'refGenomeUidList': refGenomeUidList,
+    };
+
+    $.post('/_/ref_genomes/concatenate', {data:JSON.stringify(postData)},
+        _.bind(this.handleConcatenateResponse, this));
+
+},
+
+  handleConcatenateResponse: function(response) {
+    this.exitLoadingState();
+
+    if ('error' in response && response.error.length) {
+      alert(response.error);
+    } else {
+      this.trigger('MODELS_UPDATED');
+    }
+},
+
 
   /**
    * Creates the S3 uploader if DOM target is present.

@@ -176,6 +176,12 @@ input.gd-form-tall {
   height: 40px;
 }
 
+.gd-controls-auxiliary-button {
+    border-bottom-left-radius: 4px !important;
+    border-top-left-radius: 4px !important;
+    margin-left: 6px;
+}
+
 /* is this a bootstrap 3 bug?
  * adjacent btn-groups don't get the margin in-between
  * inside a btn-toolbar as expected, because of

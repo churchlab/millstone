@@ -1,7 +1,7 @@
 <div class="btn-group-vertical gd-sidebar-analyze-buttons">
   <select id="gd-analyze-select-ref-genome" class="selectpicker">
     <option selected disabled>Reference Genome</option>
-    {% for ref_genome in project.referencegenome_set.all %}
+    {% for ref_genome in ref_genomes_with_alignments %}
       <option value="{{ref_genome.uid}}"
           {% if ref_genome.uid == active_ref_genome.uid %}selected{% endif %}>
         {{ref_genome.label}}

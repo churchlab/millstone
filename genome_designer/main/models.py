@@ -457,8 +457,7 @@ class Chromosome(UniqueUidModelMixin):
         Called by the adapter.
         """
         return [
-            {'field': 'reference_genome'},
-            {'field': 'label'},
+            {'field': 'label', 'verbose': 'Chromosome Name'},
             {'field': 'num_bases', 'verbose':'Bases'},
             {'field': 'uid'}
         ]
@@ -482,6 +481,10 @@ class ReferenceGenome(UniqueUidModelMixin):
     # a key/value list of all possible VCF and sample metadata fields, stored
     # as a JsonField and dynamically updated by dynamic_snp_filter_key_map.py
     variant_key_map = PostgresJsonField()
+
+    # reference genome metadata field for storing key-value pairs of reference
+    # genome related information e.g. metadata['is_from_de_novo_assembly']=True
+    metadata = PostgresJsonField()
 
     # Bit that indicates whether the materialized view is up to date.
     # This design decision puts a lot on the developer to remember to set this

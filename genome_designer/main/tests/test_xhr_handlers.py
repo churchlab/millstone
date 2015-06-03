@@ -31,6 +31,7 @@ from main.testing_util import TEST_EMAIL
 from main.testing_util import TEST_PASSWORD
 from main.testing_util import TEST_USERNAME
 from main.xhr_handlers import create_variant_set
+from main.xhr_handlers import ref_genomes_concatenate
 from main.xhr_handlers import samples_upload_through_browser_sample_data
 from main.xhr_handlers import upload_single_sample
 from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__FILTER_STRING
@@ -41,6 +42,7 @@ from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__SET_LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__KEY_MAP
 from variants.dynamic_snp_filter_key_map import update_filter_key_map
 from utils.import_util import _create_sample_and_placeholder_dataset
+from utils.import_util import import_reference_genome_from_local_file
 from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_1
 from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_2
 from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME
@@ -50,6 +52,7 @@ from variants.melted_variant_schema import MELTED_SCHEMA_KEY__POSITION
 
 TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
 TEST_ANNOTATED_VCF = os.path.join(TEST_DIR, 'bwa_align_annotated.vcf')
+TEST_MG1655_GENBANK = os.path.join(TEST_DIR, 'mg1655_tolC_through_zupT.gb')
 
 STATUS_CODE__NOT_FOUND = 404
 STATUS_CODE__NOT_LOGGED_IN = 302
@@ -64,6 +67,14 @@ TEST_FQ1_FILE = os.path.join(TEST_FQ_DIR,
         'test_genome_2.snps.simLibrary.1.fq')
 TEST_FQ2_FILE = os.path.join(TEST_FQ_DIR,
         'test_genome_2.snps.simLibrary.2.fq')
+
+TEST_FA_DIR = os.path.join(
+        GD_ROOT,
+        'test_data',
+        'genome_finish_test')
+TEST_FASTA_1_PATH = os.path.join(TEST_FA_DIR, 'random_fasta_1.fa')
+TEST_FASTA_2_PATH = os.path.join(TEST_FA_DIR, 'random_fasta_2.fa')
+TEST_2_CHROM_FASTA_PATH = os.path.join(GD_ROOT, 'test_data', 'two_chromosome.fa')
 
 class TestGetVariantList(TestCase):
 
@@ -433,3 +444,57 @@ class TestVariantSetUploadThroughFile(TestCase):
         self.assertEqual(1, len(variantsets))
         self.assertEqual(VARIANT_SET_NAME, VariantSet.objects.get().label)
         self.assertEqual(refGenome, VariantSet.objects.get().reference_genome)
+
+class TestReferenceGenomeConcatenation(TestCase):
+    def setUp(self):
+        """Override.
+        """
+        self.common_entities = create_common_entities()
+
+    def test_fasta_concatenation(self):
+
+        def _generate_test_instance(rg_files, rg_names=None):
+
+            if rg_names == None:
+                rg_names = [str(i) for i in range(len(rg_files))]
+
+            project = self.common_entities['project']
+            ref_genomes = []
+            for i,rg_file in enumerate(rg_files):
+                file_type = 'fasta' if rg_file.endswith('.fa') else 'genbank'
+                ref_genomes.append(import_reference_genome_from_local_file(
+                    project, rg_names[i], rg_file, file_type, move=False))
+
+            test_label = 'concat_test'
+            request_data = {
+                'newGenomeLabel': test_label,
+                'refGenomeUidList': [rg.uid for rg in ref_genomes]
+            }
+
+            request = HttpRequest()
+            request.POST = {'data':json.dumps(request_data)}
+            request.method = 'POST'
+            request.user = self.common_entities['user']
+
+            authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
+            self.assertTrue(request.user.is_authenticated())
+
+            response = ref_genomes_concatenate(request)
+
+            concat_ref=ReferenceGenome.objects.get(label=test_label)
+
+            # Assert correct number of chromosomes
+            self.assertEqual(concat_ref.num_chromosomes,
+                    sum([rg.num_chromosomes for rg in ref_genomes]))
+
+            # Assert correct number of bases
+            self.assertEqual(concat_ref.num_bases,
+                    sum([rg.num_bases for rg in ref_genomes]))
+
+            # Delete Reference Genome
+            concat_ref.delete()
+
+        _generate_test_instance([TEST_FASTA_1_PATH, TEST_FASTA_1_PATH])
+        _generate_test_instance([TEST_FASTA_1_PATH, TEST_FASTA_2_PATH])
+        _generate_test_instance([TEST_FASTA_1_PATH, TEST_MG1655_GENBANK])
+        _generate_test_instance([TEST_FASTA_1_PATH, TEST_2_CHROM_FASTA_PATH])
