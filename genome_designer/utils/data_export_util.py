@@ -24,7 +24,7 @@ CORE_VARIANT_KEYS = [
 ]
 
 
-def export_melted_variant_view(ref_genome, filter_string):
+def export_melted_variant_view(alignment_group, filter_string):
     """Generator that yields rows of a csv file.
 
     Args:
@@ -32,6 +32,8 @@ def export_melted_variant_view(ref_genome, filter_string):
         filter_string: Limit the returned Variants to those that match this
             filter.
     """
+    ref_genome = alignment_group.reference_genome
+
     mvm = MeltedVariantMaterializedViewManager(ref_genome)
     mvm.create_if_not_exists_or_invalid()
 
@@ -40,7 +42,8 @@ def export_melted_variant_view(ref_genome, filter_string):
     query_args['filter_string'] = filter_string
     query_args['select_all'] = True
     query_args['act_as_generator'] = True
-    variant_iterator = get_variants_that_pass_filter(query_args, ref_genome)
+    variant_iterator = get_variants_that_pass_filter(
+            query_args, ref_genome, alignment_group=alignment_group)
 
     # We write the core keys and key-values specific to this ref_genome.
     ref_genome_specific_data_keys = (

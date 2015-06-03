@@ -677,8 +677,8 @@ gd.VariantsTableComponent = Backbone.View.extend({
     formJqueryObj.empty();
 
     // Append the form fields.
-    this._appendInputFieldToForm(formJqueryObj, 'ref_genome_uid',
-        this.model.get('refGenomeUid'));
+    this._appendInputFieldToForm(formJqueryObj, 'alignment_group_uid',
+        this.model.get('alignmentGroupUid'));
     this._appendInputFieldToForm(formJqueryObj, 'filter_string',
         this.model.get('filterString'));
     if (this.datatableComponent.isAllMatchingFilterSelected()) {
