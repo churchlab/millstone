@@ -12,6 +12,9 @@ gd.SamplesControlsComponent = gd.DataTableControlsComponent.extend({
       throw "SampleControlsComponent requires model.";
     }
 
+    // Modal for uploading single sample.
+    this.uploadSingleSampleModal = null;
+
     // Modal for uploading samples through the browser.
     this.sampleUploadThroughBrowserModal = null;
 
@@ -254,7 +257,6 @@ gd.SamplesControlsComponent = gd.DataTableControlsComponent.extend({
           not_uploaded = _.filter(_.values(this.sample_files), function(val) {
             return val.sid == undefined;
           })
-          console.log("Missing " + not_uploaded.length + " sample files.");
           if (not_uploaded.length == 0) {
             $.post(this.$("#uploadDiv").data("finalize"), 
                 JSON.stringify({
@@ -317,4 +319,17 @@ gd.SamplesControlsComponent = gd.DataTableControlsComponent.extend({
       }, this));
     }
   },
+
+  destroy: function() {
+    if (this.uploadSingleSampleModal) {
+      this.uploadSingleSampleModal.destroy();
+    }
+
+    if (this.sampleUploadThroughBrowserModal) {
+      this.sampleUploadThroughBrowserModal.destroy();
+    }
+
+    this.remove();
+    this.unbind();
+  }
 });

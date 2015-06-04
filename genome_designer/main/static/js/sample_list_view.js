@@ -7,6 +7,10 @@ gd.SampleListView = Backbone.View.extend({
   el: '#gd-page-container',
 
   initialize: function() {
+    this.datatableComponent = null;
+
+    this.samplesControlComponent = null;
+
     this.render();
   },
 
@@ -20,6 +24,10 @@ gd.SampleListView = Backbone.View.extend({
   redrawDatatable: function() {
     if (this.datatableComponent) {
       this.datatableComponent.destroy();
+    }
+
+    if (this.samplesControlComponent) {
+      this.samplesControlComponent.destroy();
     }
 
     this.datatableComponent = new gd.DataTableComponent({

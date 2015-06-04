@@ -184,4 +184,9 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
     var errorEl = $('#gd-samples-upload-through-browser-modal-error');
     errorEl.empty();
   },
+
+  destroy: function() {
+    this.remove();
+    this.unbind();
+  }
 });

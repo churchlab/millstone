@@ -103,4 +103,11 @@ gd.UploadSingleSampleModal= Backbone.View.extend({
 
     return true;
   },
+
+  destroy: function() {
+    // TODO(gleb): Is there a simpler way to unbind all events?
+    $('#gd-samples-upload-single-submit').unbind('click');
+    this.remove();
+    this.unbind();
+  }
 });
