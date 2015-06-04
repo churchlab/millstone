@@ -107,7 +107,16 @@ TOOLS_URLS = {
     },
     'fastqc' : [
             'https://www.dropbox.com/s/6d46rqjxyqi9k31/fastqc_v0.11.2.zip'
-    ]
+    ],
+    'velvet': {
+        'Darwin': [
+            'https://www.dropbox.com/s/6bja2ofeuuba1v5/velvet-darwin.zip'
+        ],
+        'Linux': [
+            'https://www.dropbox.com/s/y83fqsdq73pt1w8/velvet-linux.zip'
+        ]
+    },
+
 }
 
 
@@ -117,7 +126,8 @@ TOOLS_TO_EXECUTABLES = {
     'lumpy': ['*'], # make all executable
     'pindel': ['pindel', 'pindel2vcf'],
     'tabix': ['tabix', 'bgzip'],
-    'freebayes': ['freebayes', 'bamtools', 'vcfstreamsort', 'vcfuniq']
+    'freebayes': ['freebayes', 'bamtools', 'vcfstreamsort', 'vcfuniq'],
+    'velvet': ['velvetg', 'velveth']
 }
 
 
