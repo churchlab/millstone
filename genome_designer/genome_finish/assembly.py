@@ -1,114 +1,120 @@
-import sys
 import os
 
-from genome_finish import de_novo_bam
+from genome_finish.millstone_de_novo_fns import add_paired_mates
+from genome_finish.millstone_de_novo_fns import get_clipped_reads
+from genome_finish.millstone_de_novo_fns import get_unmapped_reads
+from genome_finish.millstone_de_novo_fns import get_split_reads
+from genome_finish.millstone_de_novo_fns import run_velvet
 from main.models import Dataset
-from main.models import ExperimentSampleToAlignment
-from main.models import ExperimentSample
-from main.models import Project
-from main.models import ReferenceGenome
+from main.model_utils import get_dataset_with_type
+from pipeline.read_alignment import align_with_bwa_mem
+from utils.bam_utils import concatenate_bams
+from utils.bam_utils import make_bam
+from utils.bam_utils import make_sam
+from utils.bam_utils import rmdup
+from utils.import_util import add_dataset_to_entity
+from utils.import_util import prepare_ref_genome_related_datasets
 
-def truncate_ext(path, count=1):
-    count = count -1
-    if count == 0:
-        return path[:path.rindex(".")]
-    else:
-        return truncate_ext(path[:path.rindex(".")], count)
+# Default args for velvet assembly
+VELVET_COVERAGE_CUTOFF = 3
+VELVET_KMER_LIST = [21]
 
-def generate_contigs(experimentSampleToAlignment):
 
-    # Get fasta read files
-    experimentSample = experimentSampleToAlignment.experiment_sample
-    fastq1 = experimentSample.dataset_set.get(type=Dataset.TYPE.FASTQ1).get_absolute_location()
-    fastq2 = experimentSample.dataset_set.get(type=Dataset.TYPE.FASTQ2).get_absolute_location()
-    read_fastqs = [fastq1, fastq2]
+def generate_contigs(experiment_sample_to_alignment, contig_ref_genome):
 
-    # Get fasta reference genome file
-    referenceGenome = experimentSampleToAlignment.alignment_group.reference_genome
-    ref_fasta = referenceGenome.dataset_set.get(type = Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-    
+    # Grab reference genome fasta path
+    reference_genome = (
+            experiment_sample_to_alignment.alignment_group.reference_genome)
+    ref_fasta_dataset = reference_genome.dataset_set.get_or_create(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA)[0]
+    prepare_ref_genome_related_datasets(reference_genome, ref_fasta_dataset)
+
     # Make data_dir directory to house genome_finishing files
-    project_dir = referenceGenome.project.get_model_data_dir()
-    data_dir = os.path.join(project_dir, "genome_finishing", experimentSampleToAlignment.uid)
+    contig_dir = contig_ref_genome.get_model_data_dir()
+    data_dir = os.path.join(contig_dir, 'genome_finishing')
 
     # Make data_dir directory if it does not exist
-    if not os.path.exists(os.path.join(project_dir, "genome_finishing")):
-        os.mkdir(os.path.join(project_dir, "genome_finishing"))
-        os.mkdir(data_dir)
-    elif not os.path.exists(data_dir):
+    if not os.path.exists(data_dir):
         os.mkdir(data_dir)
 
+    # Retrieve bwa mem .bam alignment if exists otherwise generate it
+    if not experiment_sample_to_alignment.dataset_set.filter(
+            type=Dataset.TYPE.BWA_ALIGN).exists():
+        add_dataset_to_entity(
+                experiment_sample_to_alignment,
+                'sample_alignment_for_assembly',
+                Dataset.TYPE.BWA_ALIGN)
+        align_with_bwa_mem(
+                experiment_sample_to_alignment.alignment_group,
+                experiment_sample_to_alignment,
+                project=reference_genome.project)
 
-    # ---------- Begin Genome Finishing ---------- #
+    # Grab alignment bam file-path
+    alignment_sorted = get_dataset_with_type(
+                experiment_sample_to_alignment,
+                Dataset.TYPE.BWA_ALIGN).get_absolute_location()
 
-    # Align reads
-    alignment_sorted = de_novo_bam.bwa_align(read_fastqs, ref_fasta, data_dir)
+    alignment_prefix = os.path.join(data_dir, 'bwa_align')
 
-    # Trim 'alignment.sorted.bam' off filename to get bam_prefix
-    bam_prefix = truncate_ext(alignment_sorted, 3)
+    # Extract SV indicating reads
+    unmapped_reads = alignment_prefix + '.unmapped.bam'
+    get_unmapped_reads(alignment_sorted, unmapped_reads)
 
-    # Get split and unmapped reads
-    unmapped_reads = bam_prefix + ".alignment.unmapped.bam"
-    # alignment_sorted = bam_prefix + ".alignment.sorted.bam"
-    de_novo_bam.millstone_de_novo_fns.get_unmapped_reads(bam_prefix + ".alignment.sorted.bam", unmapped_reads)
+    split_reads = alignment_prefix + '.split.bam'
+    get_split_reads(alignment_sorted, split_reads)
 
-    split_reads = bam_prefix + ".alignment.split.bam"
-    de_novo_bam.millstone_de_novo_fns.get_split_reads(bam_prefix + ".alignment.sorted.bam", split_reads)
+    clipped_reads = alignment_prefix + '.clipped.bam'
+    get_clipped_reads(alignment_sorted, clipped_reads)
 
-    # Concatenate split and unmapped reads
-    unmapped_and_split = bam_prefix + ".alignment.unmapped_and_split.bam"
-    de_novo_bam.concatenate_bams(unmapped_reads, split_reads, unmapped_and_split)
+    # Aggregate SV indicants
+    SV_indicants_bam = alignment_prefix + '.SV_indicants.bam'
+    concatenate_bams(
+            [unmapped_reads, split_reads, clipped_reads],
+            SV_indicants_bam)
 
-    #TODO: sort?
+    # Remove duplicates
+    SV_indicants_no_dups_bam = alignment_prefix + '.SV_indicants_no_dups.bam'
+    rmdup(SV_indicants_bam, SV_indicants_no_dups_bam)
 
-    print "Make split_unmapped sam"
-    # Make split_unmapped sam (for add_paired_mates)
-    unmapped_and_split_sam = bam_prefix + ".alignment.unmapped_and_split.sam"
-    de_novo_bam.make_sam(unmapped_and_split, unmapped_and_split_sam)
+    # Convert SV indicants bam to sam
+    SV_indicants_sam = alignment_prefix + '.SV_indicants.sam'
+    make_sam(SV_indicants_no_dups_bam, SV_indicants_sam)
 
-    print "Add mate pairs"
-    # Add mate pairs %%%%%%% samtools header error if try to view unmapped_and_split.sam, but can view bam
-    unmapped_and_split_with_pairs_sam = bam_prefix + ".alignment.unmapped_and_split_with_pairs.sam"
-    de_novo_bam.millstone_de_novo_fns.add_paired_mates(unmapped_and_split_sam, alignment_sorted, unmapped_and_split_with_pairs_sam)
+    # Add mate pairs to SV indicants sam
+    SV_indicants_with_pairs_sam = (
+        alignment_prefix + '.SV_indicants_with_pairs.sam')
+    add_paired_mates(
+            SV_indicants_sam, alignment_sorted, SV_indicants_with_pairs_sam)
 
-    print "Make bam of mate pairs"
-    # Make bam of mate pairs %%%%%%% samtools header error
-    unmapped_and_split_with_pairs_bam = bam_prefix + ".alignment.unmapped_and_split_with_pairs.bam"
-    de_novo_bam.make_bam(unmapped_and_split_with_pairs_sam, unmapped_and_split_with_pairs_bam)
+    # Make bam of SV indicants w/mate pairs
+    SV_indicants_with_pairs_bam = (
+        alignment_prefix + '.SV_indicants_with_pairs.bam')
+    make_bam(SV_indicants_with_pairs_sam, SV_indicants_with_pairs_bam)
 
-    #TODO: sort?
-
-    print "Remove duplicates"
-    # Remove duplicates %%%%%% seems to delete too much
-    #de_novo_bam.rmdup(unmapped_and_split_with_pairs_bam) 
-
-    print "Assemble with velvet"
-    # Assemble with velvet
-
-    # contig_alignment_dir = os.path.join(data_dir, "contig_alignments")
-    # os.mkdir(contig_alignment_dir)
-
-    kmer_list = [21] #range(11,33,2)
+    # Velvet assembly
     contig_files = []
-
+    opt_dict = {
+        'velveth': {
+            'shortPaired': ''
+        },
+        'velvetg': {
+            'cov_cutoff': VELVET_COVERAGE_CUTOFF
+        }
+    }
+    kmer_list = VELVET_KMER_LIST
     for kmer_length in kmer_list:
-        print "assembling with kmer length " + str(kmer_length)
-        velvet_dir = os.path.join(data_dir, "velvet_k" + str(kmer_length))
-        de_novo_bam.run_velvet(
-                unmapped_and_split_with_pairs_bam,
-                output_dir_name = velvet_dir,
-                hash_length = kmer_length,
-                no_defaults = True) #Change back to False when fastq's more realistic
+        # Set hash length argument for velveth
+        opt_dict['velveth']['hash_length'] = kmer_length
 
-        contigs_fasta = os.path.join(velvet_dir,"contigs.fa")
+        # Run velvet assembly on SV indicants
+        velvet_dir = os.path.join(data_dir, 'velvet_k' + str(kmer_length))
+        run_velvet(
+                SV_indicants_with_pairs_bam,
+                velvet_dir,
+                opt_dict)
+
+        # Collect resulting contigs fasta
+        contigs_fasta = os.path.join(velvet_dir, 'contigs.fa')
         contig_files.append(contigs_fasta)
 
     return contig_files
-
-        # # Align contigs
-        # contigs = os.path.join(velvet_dir, "contigs.fa")
-        # de_novo_bam.bwa_align(
-        #         [contigs],
-        #         actual_genome,
-        #         os.path.join(contig_alignment_dir, "k" + str(kmer_length) + ".alignment.bam")
-        # )
