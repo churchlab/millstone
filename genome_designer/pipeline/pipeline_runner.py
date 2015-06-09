@@ -7,8 +7,8 @@ cleaning, snv calling, and effect prediction.
 """
 
 from datetime import datetime
+import time
 
-from celery import chord
 from celery import group
 from celery import task
 from django.conf import settings
@@ -72,6 +72,13 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     #     1) Alignments - run in parallel.
     #     2) Variant calling - each variant caller runs in parallel, but waits
     #         for all alignments to be complete before starting.
+    #
+
+    # NOTE: Nested chords in celery don't work so we need to break up the
+    # pipeline into # two separate pipelines: 1) alignment and 2) variant
+    # calling. This task is the first task in the variant calling pipeline which
+    # polls the database until all alignments are complete before kicking off
+    # parallel variant calling tasks.
 
     # NOTE: Since we don't want results to be passed as arguments in the
     # chain, use .si(...) and not .s(...)
@@ -97,30 +104,12 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
                 align_with_bwa_mem.si(
                         alignment_group, sample_alignment,
                         project=ref_genome.project))
-    # Aggregate variant callers, which run in parallel once all alignments
-    # are done.
-    if perform_variant_calling:
-        variant_caller_group = _construct_variant_caller_group(
-                alignment_group, variant_calling_options)
-    else:
-        variant_caller_group = None
 
-    # We add a final task which runs only after all previous tasks are complete.
-    pipeline_completion = pipeline_completion_tasks.si(alignment_group)
-
-    # Put together the whole pipeline.
-    whole_pipeline = None
     if len(alignment_task_signatures) > 0:
-        whole_pipeline = group(alignment_task_signatures)
-    if variant_caller_group is not None:
-        if whole_pipeline is None:
-            whole_pipeline = variant_caller_group
-        else:
-            whole_pipeline = whole_pipeline | variant_caller_group
-    whole_pipeline = whole_pipeline | pipeline_completion
-
-    # TODO(gleb): We had this to deal with race conditions. Do we still need it?
-    ref_genome.save()
+        alignment_task_group = group(alignment_task_signatures)
+        alignment_task_group_async_result = alignment_task_group.apply_async()
+    else:
+        alignment_task_group_async_result = None
 
     # HACK(gleb): Force ALIGNING so that UI starts refreshing. This should be
     # right, but I'm open to removing if it's not right for some case I
@@ -130,11 +119,36 @@ def run_pipeline(alignment_group_label, ref_genome, sample_list,
     alignment_group.end_time = None
     alignment_group.save(update_fields=['status', 'start_time', 'end_time'])
 
+    # Aggregate variant callers, which run in parallel once all alignments
+    # are done.
+    if perform_variant_calling:
+        variant_caller_group = _construct_variant_caller_group(
+                alignment_group, variant_calling_options)
+    else:
+        variant_caller_group = None
+
+    # Put together the whole pipeline.
+    variant_calling_pipeline = start_variant_calling_pipeline_task.si(
+            alignment_group)
+    if variant_caller_group is not None:
+        variant_calling_pipeline = (variant_calling_pipeline |
+                variant_caller_group)
+
+    # Add a final task which runs only after all previous tasks are complete.
+    pipeline_completion = pipeline_completion_tasks.si(alignment_group)
+    variant_calling_pipeline = variant_calling_pipeline | pipeline_completion
+
+    # TODO(gleb): We had this to deal with race conditions. Do we still need it?
+    ref_genome.save()
+
     # Run the pipeline. This is a non-blocking call when celery is running so
     # the rest of code proceeds immediately.
-    async_result = whole_pipeline.apply_async()
+    variant_calling_async_result = variant_calling_pipeline.apply_async()
 
-    return (alignment_group, async_result)
+    return (
+            alignment_group,
+            alignment_task_group_async_result,
+            variant_calling_async_result)
 
 
 def _assert_pipeline_is_safe_to_run(alignment_group_label, sample_list):
@@ -225,6 +239,7 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
             # Break up ReferenceGenome into regions and create separate
             # job for each.
             fb_regions = freebayes_regions(ref_genome)
+            assert len(fb_regions) >= 0
 
             for region_num, fb_region in enumerate(fb_regions):
                 region_params = dict(tool_params)
@@ -238,8 +253,12 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
 
             # Create chord so that merge task occurs after all freebayes
             # tasks are complete.
-            freebayes_chord = (group(fb_parallel_tasks) |
-                    merge_freebayes_parallel.si(alignment_group))
+            if len(fb_parallel_tasks) == 1:
+                freebayes_chord = (fb_parallel_tasks[0] |
+                        merge_freebayes_parallel.si(alignment_group))
+            else:
+                freebayes_chord = (group(fb_parallel_tasks) |
+                        merge_freebayes_parallel.si(alignment_group))
             parallel_tasks.append(freebayes_chord)
         else:
             parallel_tasks.append(find_variants_with_tool.si(
@@ -250,12 +269,60 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
 
 
 @task
+def start_variant_calling_pipeline_task(alignment_group):
+    """First task in variant calling pipeline.
+
+    Nested chords in celery don't work so we need to break up the pipeline into
+    two separate pipelines: 1) alignment and 2) variant calling. This task is
+    the first task in the variant calling pipeline which polls the database
+    until all alignments are complete.
+    """
+    print 'START VARIANT CALLING PIPELINE'
+
+    POLL_INTERVAL_SEC = 5
+
+    sample_alignment_list = ExperimentSampleToAlignment.objects.filter(
+            alignment_group=alignment_group)
+
+    all_samples_ready = False
+    failed = False
+    while not all_samples_ready:
+        print 'CHECK SAMPLES'
+        all_samples_ready = True
+        for sa in sample_alignment_list:
+            sa_fresh = ExperimentSampleToAlignment.objects.get(id=sa.id)
+            bwa_dataset = sa_fresh.dataset_set.get(label=Dataset.TYPE.BWA_ALIGN)
+            if bwa_dataset.status == Dataset.STATUS.FAILED:
+                failed = True
+                break
+
+            if not bwa_dataset.status == Dataset.STATUS.READY:
+                all_samples_ready = False
+                break
+
+        if failed:
+            alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
+            alignment_group.status = AlignmentGroup.STATUS.FAILED
+            alignment_group.save(update_fields=['status'])
+            return
+
+        if not all_samples_ready:
+            time.sleep(POLL_INTERVAL_SEC)
+
+    # All ready. Set VARIANT_CALLING.
+    alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
+    alignment_group.status = AlignmentGroup.STATUS.VARIANT_CALLING
+    alignment_group.save(update_fields=['status'])
+
+
+@task
 def pipeline_completion_tasks(alignment_group):
     """Final set of synchronous steps after all alignments and variant callers
     are finished.
 
     Sets end_time and status on alignment_group.
     """
+    print 'START PIPELINE COMPLETION'
     try:
         # Get fresh copy of alignment_group.
         alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
