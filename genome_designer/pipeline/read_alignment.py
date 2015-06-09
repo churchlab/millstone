@@ -2,40 +2,32 @@
 Methods for aligning raw fastq reads to a reference genome.
 """
 
-from collections import defaultdict
 import copy
 from datetime import datetime
 import os
-import re
-import shutil
-import string
 import subprocess
 from subprocess import PIPE
 from subprocess import Popen
-import sys
 
 from celery import task
+from django.conf import settings
 
 from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
-from main.models import ReferenceGenome
 from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
 from main.s3 import project_files_needed
 from pipeline.read_alignment_util import ensure_bwa_index
 from pipeline.read_alignment_util import index_bam_file
-
 from utils.bam_utils import filter_bam_file_by_row
 from utils.import_util import add_dataset_to_entity
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import add_bed_file_track
-from settings import TOOLS_DIR
-from settings import BASH_PATH
 from utils import titlecase_spaces
 
-LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/pairend_distro.py' % TOOLS_DIR
-SAMTOOLS_BINARY = '%s/samtools/samtools' % TOOLS_DIR
+LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/pairend_distro.py' % settings.TOOLS_DIR
+SAMTOOLS_BINARY = '%s/samtools/samtools' % settings.TOOLS_DIR
 
 
 @task
@@ -79,12 +71,12 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
         alignment_group.status = AlignmentGroup.STATUS.ALIGNING
         alignment_group.start_time = datetime.now()
         alignment_group.end_time = None
-        alignment_group.save(update_fields=['status','start_time','end_time'])
+        alignment_group.save(update_fields=['status', 'start_time', 'end_time'])
 
     error_output.write(
             "==START OF ALIGNMENT PIPELINE FOR %s, (%s) ==\n" % (
-            sample_alignment.experiment_sample.label, sample_alignment.uid))
-
+                    sample_alignment.experiment_sample.label,
+                    sample_alignment.uid))
 
     # We wrap the alignment logic in a try-except so that if an error occurs,
     # we record it and update the status of the Dataset to FAILED if anything
@@ -120,7 +112,7 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
         read_fq_1_path, read_fq_1_fn = os.path.split(input_reads_1_fq_path)
 
         align_input_args = ' '.join([
-            '%s/bwa/bwa' % TOOLS_DIR,
+            '%s/bwa/bwa' % settings.TOOLS_DIR,
             'mem',
             '-t', '1', # threads
             '-M', # picard compatibility
@@ -148,7 +140,7 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
         with open(output_bam, 'w') as fh:
             subprocess.check_call(align_input_args,
                     stdout=fh, stderr=error_output,
-                    shell=True, executable=BASH_PATH)
+                    shell=True, executable=settings.BASH_PATH)
 
         # Do several layers of processing on top of the initial alignment.
         result_bam_file = process_sam_bam_file(sample_alignment,
@@ -172,11 +164,6 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
 
         delete_redundant_files(sample_alignment.get_model_data_dir())
 
-    # except subprocess.CalledProcessError as e:
-    #     error_output.write(str(e))
-    #     bwa_dataset.status = Dataset.STATUS.FAILED
-    #     bwa_dataset.save()
-    #     return
     except:
         import traceback
         error_output.write(traceback.format_exc())
@@ -313,7 +300,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
                 sample_alignment, error_output)
 
     # 4. Add groups
-    grouped_output_name= (
+    grouped_output_name = (
             os.path.splitext(sorted_bam_file_location)[0] +
             '.grouped')
     grouped_bam_file_location = grouped_output_name + '.bam'
@@ -393,7 +380,7 @@ def add_groups(experiment_sample, input_bam_file, bam_output_file, error_output)
     prefix = experiment_sample.uid
     subprocess.check_call([
         'java', '-Xmx1024M',
-        '-jar', '%s/picard/AddOrReplaceReadGroups.jar' % TOOLS_DIR,
+        '-jar', '%s/picard/AddOrReplaceReadGroups.jar' % settings.TOOLS_DIR,
         'I=' + input_bam_file,
         'O=' + bam_output_file,
         'RGPU=' + prefix,
@@ -425,7 +412,7 @@ def realign_given_indels(
     # Prepare realignment intervals file.
     subprocess.check_call([
         'java', '-Xmx1024M',
-        '-jar', '%s/gatk/GenomeAnalysisTK.jar' % TOOLS_DIR,
+        '-jar', '%s/gatk/GenomeAnalysisTK.jar' % settings.TOOLS_DIR,
         '-T', 'RealignerTargetCreator',
         '-I', input_bam_file,
         '-R', ref_genome_fasta_location,
@@ -435,7 +422,7 @@ def realign_given_indels(
     # Perform realignment.
     subprocess.check_call([
         'java', '-Xmx1024M',
-        '-jar', '%s/gatk/GenomeAnalysisTK.jar' % TOOLS_DIR,
+        '-jar', '%s/gatk/GenomeAnalysisTK.jar' % settings.TOOLS_DIR,
         '-T', 'IndelRealigner',
         '-I', input_bam_file,
         '-R', ref_genome_fasta_location,
@@ -517,7 +504,7 @@ def compute_callable_loci(reference_genome, sample_alignment,
 
         subprocess.check_call([
             'java', '-Xmx1024M',
-            '-jar', '%s/gatk/GenomeAnalysisTK.jar' % TOOLS_DIR,
+            '-jar', '%s/gatk/GenomeAnalysisTK.jar' % settings.TOOLS_DIR,
             '-T', 'CallableLoci',
             '-R', ref_genome_fasta_location,
             '-I', bam_file_location,
@@ -546,7 +533,8 @@ def compute_callable_loci(reference_genome, sample_alignment,
             for i, line in enumerate(output.split('\n')):
                 try:
                     fields = line.split()
-                    if len(fields) == 0: continue
+                    if len(fields) == 0:
+                        continue
                     chrom, start, end, feature = fields
                     if feature == 'CALLABLE':
                         continue
@@ -554,15 +542,15 @@ def compute_callable_loci(reference_genome, sample_alignment,
 
                         feature = titlecase_spaces(feature)
                         # Bed feature can't have spaces =(
-                        feature = feature.replace(' ','_')
+                        feature = feature.replace(' ', '_')
 
                     print >> callable_loci_bed_fh, '\t'.join(
                             [chrom, start, end, feature])
                 except Exception as e:
-                   print >> stderr, (
-                            'WARNING: Callable Loci line' +
-                            '%d: (%s) couldn\'t be parsed: %s') % (
-                                    i, line, str(e))
+                    print >> stderr, (
+                        'WARNING: Callable Loci line' +
+                        '%d: (%s) couldn\'t be parsed: %s') % (
+                                i, line, str(e))
         # add it as a jbrowse track
         add_bed_file_track(reference_genome, sample_alignment, callable_loci_bed)
 
@@ -724,7 +712,7 @@ def get_discordant_read_pairs(sample_alignment):
 
         with open(bam_discordant_filename, 'w') as fh:
             subprocess.check_call(filter_discordant,
-                    stdout=fh, shell=True, executable=BASH_PATH)
+                    stdout=fh, shell=True, executable=settings.BASH_PATH)
 
         # sort the discordant reads, overwrite the old file
         subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_filename,
@@ -791,8 +779,9 @@ def get_split_reads(sample_alignment):
             '{samtools} view -Sb -']).format(
                     samtools=SAMTOOLS_BINARY,
                     bam_filename=bam_filename,
-                    lumpy_bwa_mem_sr_script= os.path.join(
-                            TOOLS_DIR, 'lumpy','extractSplitReads_BwaMem'))
+                    lumpy_bwa_mem_sr_script=os.path.join(
+                            settings.TOOLS_DIR, 'lumpy',
+                            'extractSplitReads_BwaMem'))
 
     try:
         bwa_split_dataset.status = Dataset.STATUS.COMPUTING
@@ -802,7 +791,7 @@ def get_split_reads(sample_alignment):
             subprocess.check_call(filter_split_reads,
                     stdout=fh,
                     shell=True,
-                    executable=BASH_PATH)
+                    executable=settings.BASH_PATH)
 
         # sort the split reads, overwrite the old file
         subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_filename,
