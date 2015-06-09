@@ -301,9 +301,14 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
 
     // Get new genome name
     var newGenomeLabel = prompt(
-        'Enter a name for the concatenated genome:','new_genome_name');
-    if (!newGenomeLabel) {
-        alert('Please enter a name for the concatenated genome');
+        'Enter a name for the concatenated genome:', 'new_genome_name');
+    while (newGenomeLabel == '') {
+      var newGenomeLabel = prompt(
+          'Please enter a non-zero length name for the concatenated genome',
+          'new_genome_name');
+    }
+    if (newGenomeLabel == null) {
+      return;
     }
 
     this.enterLoadingState();
@@ -374,8 +379,10 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
       $.post(this.$("#uploadDiv").data("import"), 
             {
               's3file_id': sid,
-              'refGenomeLabel': this.$("#uploadDiv").find("#refGenomeLabel").val(),
-              'importFileFormat': $("#uploadDiv").find("input[name=importFileFormat]:checked").val(),
+              'refGenomeLabel': this.$("#uploadDiv").find(
+                  "#refGenomeLabel").val(),
+              'importFileFormat': $("#uploadDiv").find(
+                  "input[name=importFileFormat]:checked").val(),
             },
             function(data) {
             }

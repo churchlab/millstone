@@ -35,26 +35,30 @@ gd.AlignmentView = Backbone.View.extend({
 
     // If nothing to do, show message.
     if (!experimentSampleUidList.length) {
-      alert("Please select Experiment Samples to use for contig generation.");
+      alert('Please select Experiment Samples to use for contig generation.');
       return;
     }
 
     if(experimentSampleUidList.length > 1) {
-      alert("Please select only one Experiment Sample to use for contig generation.");
+      alert('Please select only one Experiment Sample to use for contig ' +
+          'generation.');
       return;
     }
 
-    var formJqueryObj = $('#gd-contig-export-form');
+    var postData = {
+        experimentSampleUid: experimentSampleUidList[0]
+    };
 
-    // Reset the form html
-    formJqueryObj.empty();
+    $.get('/_/alignments/generate_contigs', postData,
+        _.bind(this.handleGenerateContigsResponse, this));
+  },
 
-    // Append the form fields.
-    this._appendInputFieldToForm(formJqueryObj, 'experiment_sample_uid',
-        experimentSampleUidList[0]);
-
-    // Submit the form. This cause a download to start.
-    formJqueryObj.submit();
+  handleGenerateContigsResponse: function(response) {
+    if (response.is_contig_file_empty == 1) {
+      alert('No evidence for structural variants in this alignment');
+    } else {
+      window.location.href = response.redirect;
+    };
   },
 
  /** Helper method to append input value to form. */
@@ -72,9 +76,10 @@ gd.AlignmentView = Backbone.View.extend({
 
   /** Create component to wrap samples controls, and listen for events. */
   decorateAlignmentControls: function() {
-    // Draw 'Generate contigs' button only if the feature is enabled and button exists
+    // Draw 'Generate contigs' button only if the feature is enabled
     if($('#gd-generate-contigs-btn').length) {
-      $('#gd-generate-contigs-btn').click(_.bind(this.handleGenerateContigs, this));
+      $('#gd-generate-contigs-btn').click(_.bind(
+          this.handleGenerateContigs, this));
     }
 
     // Draw 'Go to variants' button only if AlignmentGroup is COMPLETED.

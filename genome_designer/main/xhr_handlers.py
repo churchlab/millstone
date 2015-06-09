@@ -220,7 +220,7 @@ def ref_genomes_concatenate(request):
 
     # Validation successful, concatenate.
     project = ref_genomes_to_concatenate[0].project
-    return_data = combine_list_allformats(
+    combine_list_allformats(
             ref_genomes_to_concatenate, new_genome_label, project)
 
     # Return success response.
@@ -233,8 +233,8 @@ def ref_genomes_download(request):
     """Downloads requested fasta/genbank file
     """
     file_format = request.GET['file_format']
-    reference_genome = get_object_or_404(ReferenceGenome,
-            uid=request.GET['reference_genome_uid'])
+    reference_genome = get_object_or_404(
+            ReferenceGenome, uid=request.GET['reference_genome_uid'])
     if file_format == 'fasta':
         file_path = reference_genome.dataset_set.get(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
@@ -981,11 +981,12 @@ def get_ref_genomes(request):
     project_uid = request.GET.get('projectUid')
 
     # Lookup the model and verify the owner is the user
-    project = get_object_or_404(Project,
+    project = get_object_or_404(
+            Project,
             owner=request.user.get_profile(),
             uid=project_uid)
 
-    filters = {'project' : project}
+    filters = {'project': project}
 
     # If hiding de_novo_assemblies, generate a list of uids from non-assemblies
     # from the metadata json field of a ReferenceGenome to use as a filter
@@ -997,22 +998,20 @@ def get_ref_genomes(request):
             if not rg.metadata.get('is_from_de_novo_assembly', False):
                 uid_list.append(rg.uid)
         filters['uid__in'] = uid_list
-    
+
     response_data = adapt_model_to_frontend(ReferenceGenome, filters)
 
-    return HttpResponse(response_data,
-            content_type='application/json')
+    return HttpResponse(response_data, content_type='application/json')
 
 
 @login_required
 @require_GET
 def get_single_ref_genome(request):
     reference_genome_uid = request.GET.get('referenceGenomeUid')
-    response_data = adapt_model_to_frontend(Chromosome,
-        {'reference_genome__uid' : reference_genome_uid})
+    response_data = adapt_model_to_frontend(
+        Chromosome, {'reference_genome__uid': reference_genome_uid})
 
-    return HttpResponse(response_data,
-        content_type='application/json')
+    return HttpResponse(response_data, content_type='application/json')
 
 
 @login_required
@@ -1032,14 +1031,15 @@ def create_variant_set(request):
         return HttpResponseBadRequest(str(e))
 
     # Model lookup / validation.
-    ref_genome = get_object_or_404(ReferenceGenome,
+    ref_genome = get_object_or_404(
+            ReferenceGenome,
             project__owner=request.user.get_profile(),
             uid=ref_genome_uid)
 
     # Create new variant set, depending on type of form submitted.
     if create_set_type == 'from-file':
-        result = _create_variant_set_from_file(request, ref_genome,
-                variant_set_name)
+        result = _create_variant_set_from_file(
+                request, ref_genome, variant_set_name)
     else:
         result = _create_variant_set_empty(ref_genome, variant_set_name)
 
@@ -1163,22 +1163,63 @@ def generate_contigs(request):
     """
 
     # Retrieve ExperimentSampleToAlignment
-    experiment_sample_uid = request.GET.get('experiment_sample_uid')
-    experiment_sample_to_alignment = get_object_or_404(ExperimentSampleToAlignment,
-            alignment_group__reference_genome__project__owner=request.user.get_profile(),
+    experiment_sample_uid = request.GET.get('experimentSampleUid')
+    experiment_sample_to_alignment = get_object_or_404(
+            ExperimentSampleToAlignment,
+            alignment_group__reference_genome__project__owner=(
+                    request.user.get_profile()),
             uid=experiment_sample_uid)
 
-    contig_files = assembly.generate_contigs(experiment_sample_to_alignment)
+    # Get reference genome
+    reference_genome = (
+            experiment_sample_to_alignment.alignment_group.reference_genome)
+
+    # Generate name for contigs
+    sample_label = experiment_sample_to_alignment.experiment_sample.label
+    ref_label = reference_genome.label
+    contig_ref_genome_label = '_'.join(
+            [ref_label, sample_label, 'de_novo_contigs'])
+
+    # Create a reference genome for the contigs
+    contig_ref_genome = ReferenceGenome.objects.create(
+            project=reference_genome.project,
+            label=contig_ref_genome_label)
+    contig_ref_genome.metadata['is_from_de_novo_assembly'] = True
+
+    # Generate a list of fasta file paths to the contigs
+    contig_files = assembly.generate_contigs(
+            experiment_sample_to_alignment, contig_ref_genome)
 
     # Select only element in list
     contig_file = contig_files[0]
 
-    # Start download of contigs fasta file
-    wrapper = FileWrapper(file(contig_file))
-    response = StreamingHttpResponse(wrapper, content_type='text/plain')
-    response['Content-Disposition'] = 'attachment; filename="contigs.fa"'
-    response['Content-Length'] = os.path.getsize(contig_file)
-    return response
+    # Check if contigs exist
+    is_contig_file_empty = os.stat(contig_file).st_size == 0
+    if is_contig_file_empty:
+        contig_ref_genome.delete()
+        result = {
+            'is_contig_file_empty': True
+        }
+        return HttpResponse(
+            json.dumps(result), content_type='application/json')
+
+    # Create a dataset which will point to the file
+    add_dataset_to_entity(
+            contig_ref_genome, 'raw_contigs',
+            Dataset.TYPE.REFERENCE_GENOME_FASTA, contig_file)
+
+    # Get url for contig reference genome page for redirect
+    contig_ref_genome_url = reverse(
+            'main.views.reference_genome_view',
+            args=(contig_ref_genome.project.uid, contig_ref_genome.uid,))
+
+    result = {
+        'is_contig_file_empty': False,
+        'redirect': contig_ref_genome_url
+    }
+
+    return HttpResponse(
+        json.dumps(result), content_type='application/json')
 
 
 if settings.S3_ENABLED:
@@ -1250,4 +1291,3 @@ if settings.S3_ENABLED:
                 'targets_file_rows': data['targets_file_rows'],
                 'sample_files': data['sample_files']
             }), content_type='application/json')
-

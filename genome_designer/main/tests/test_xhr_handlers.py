@@ -445,56 +445,72 @@ class TestVariantSetUploadThroughFile(TestCase):
         self.assertEqual(VARIANT_SET_NAME, VariantSet.objects.get().label)
         self.assertEqual(refGenome, VariantSet.objects.get().reference_genome)
 
+
 class TestReferenceGenomeConcatenation(TestCase):
+
     def setUp(self):
         """Override.
         """
         self.common_entities = create_common_entities()
 
+    def _generate_test_instance(self, rg_files, rg_names=None):
+
+        if rg_names is None:
+            rg_names = [str(i) for i in range(len(rg_files))]
+
+        project = self.common_entities['project']
+        ref_genomes = []
+        for i, rg_file in enumerate(rg_files):
+            file_type = 'fasta' if rg_file.endswith('.fa') else 'genbank'
+            ref_genomes.append(import_reference_genome_from_local_file(
+                project, rg_names[i], rg_file, file_type, move=False))
+
+        test_label = 'concat_test'
+        request_data = {
+            'newGenomeLabel': test_label,
+            'refGenomeUidList': [rg.uid for rg in ref_genomes]
+        }
+
+        request = HttpRequest()
+        request.POST = {'data': json.dumps(request_data)}
+        request.method = 'POST'
+        request.user = self.common_entities['user']
+
+        authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
+        self.assertTrue(request.user.is_authenticated())
+
+        ref_genomes_concatenate(request)
+
+        concat_ref = ReferenceGenome.objects.get(label=test_label)
+
+        # Assert correct number of chromosomes
+        self.assertEqual(
+                concat_ref.num_chromosomes,
+                sum([rg.num_chromosomes for rg in ref_genomes]))
+
+        # Assert correct number of bases
+        self.assertEqual(
+                concat_ref.num_bases,
+                sum([rg.num_bases for rg in ref_genomes]))
+
     def test_fasta_concatenation(self):
+        """ Basic test of concatenating two short fastas
+        """
+        self._generate_test_instance([TEST_FASTA_1_PATH, TEST_FASTA_2_PATH])
 
-        def _generate_test_instance(rg_files, rg_names=None):
+    def test_identical_fasta_concatenation(self):
+        """ Test concatenating two identical fastas
+        """
+        self._generate_test_instance([TEST_FASTA_1_PATH, TEST_FASTA_1_PATH])
 
-            if rg_names == None:
-                rg_names = [str(i) for i in range(len(rg_files))]
+    def test_fasta_genbank_concatenation(self):
+        """ Test concatenating a fasta with a genbank
+        """
+        self._generate_test_instance([TEST_FASTA_1_PATH, TEST_MG1655_GENBANK])
 
-            project = self.common_entities['project']
-            ref_genomes = []
-            for i,rg_file in enumerate(rg_files):
-                file_type = 'fasta' if rg_file.endswith('.fa') else 'genbank'
-                ref_genomes.append(import_reference_genome_from_local_file(
-                    project, rg_names[i], rg_file, file_type, move=False))
-
-            test_label = 'concat_test'
-            request_data = {
-                'newGenomeLabel': test_label,
-                'refGenomeUidList': [rg.uid for rg in ref_genomes]
-            }
-
-            request = HttpRequest()
-            request.POST = {'data':json.dumps(request_data)}
-            request.method = 'POST'
-            request.user = self.common_entities['user']
-
-            authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
-            self.assertTrue(request.user.is_authenticated())
-
-            response = ref_genomes_concatenate(request)
-
-            concat_ref=ReferenceGenome.objects.get(label=test_label)
-
-            # Assert correct number of chromosomes
-            self.assertEqual(concat_ref.num_chromosomes,
-                    sum([rg.num_chromosomes for rg in ref_genomes]))
-
-            # Assert correct number of bases
-            self.assertEqual(concat_ref.num_bases,
-                    sum([rg.num_bases for rg in ref_genomes]))
-
-            # Delete Reference Genome
-            concat_ref.delete()
-
-        _generate_test_instance([TEST_FASTA_1_PATH, TEST_FASTA_1_PATH])
-        _generate_test_instance([TEST_FASTA_1_PATH, TEST_FASTA_2_PATH])
-        _generate_test_instance([TEST_FASTA_1_PATH, TEST_MG1655_GENBANK])
-        _generate_test_instance([TEST_FASTA_1_PATH, TEST_2_CHROM_FASTA_PATH])
+    def test_multichromosome_concatenation(self):
+        """ Test concatenating a fasta containing a single chromosome with
+        a fasta containing two chromosomes
+        """
+        self._generate_test_instance([TEST_FASTA_1_PATH,
+                                      TEST_2_CHROM_FASTA_PATH])
