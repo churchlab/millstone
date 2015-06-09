@@ -304,7 +304,7 @@ def start_variant_calling_pipeline_task(alignment_group):
             alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
             alignment_group.status = AlignmentGroup.STATUS.FAILED
             alignment_group.save(update_fields=['status'])
-            return
+            raise Exception("Alignment failed.")
 
         if not all_samples_ready:
             time.sleep(POLL_INTERVAL_SEC)
