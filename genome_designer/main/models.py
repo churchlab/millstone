@@ -448,6 +448,21 @@ class Chromosome(UniqueUidModelMixin):
     # Chromosome label
     label = models.CharField(verbose_name="Name", max_length=256)
 
+    # The unique id of the SeqRecord object corresponding to this Chromosome.
+    # In a genbank/multi-fasta file, the sequence belonging to each chromosome
+    # carries a unique identifier which is parsed by BioPython's SeqIO module
+    # as the .id attribute of the SeqRecord object.  This field ties our
+    # Chromosome model to a specific chromosome in a reference genome
+    # fasta/genbank dataset.  The seqrecord_id field does not necesarilly
+    # carry any comprehensible information about the Chromosome, it is only an
+    # identifier, and the description of the Chromosome is given by the
+    # label field.
+    # Ex: A reporter plasmid Chromosome:
+    #       seqrecord_id: pl1839
+    #       label: Reporter plasmid carrying RFP on a lac promoter
+    seqrecord_id = models.CharField(
+            verbose_name="SeqRecord ID", max_length=256, default="chrom_1")
+
     # Number of bases on the Chromosome
     num_bases = models.BigIntegerField()
 

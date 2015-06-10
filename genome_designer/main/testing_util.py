@@ -99,6 +99,7 @@ def create_common_entities_w_variants():
     chromosome = Chromosome.objects.create(
             reference_genome=reference_genome,
             label='Chromosome',
+            seqrecord_id='Chromosome',
             num_bases=9001)
 
     alignment_group = AlignmentGroup.objects.create(

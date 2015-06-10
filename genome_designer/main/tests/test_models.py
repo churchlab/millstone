@@ -371,4 +371,6 @@ class TestChromosome(TestCase):
                 'gi|448096713|ref|NC_020216.1|',
                 'gi|448100869|ref|NC_020217.1|']
 
-        assert([chrom.label for chrom in Chromosome.objects.filter(reference_genome=test_yeast_genome)] == expected_chrom_names)
+        assert(set([chrom.seqrecord_id for chrom in Chromosome.objects.filter(
+                        reference_genome=test_yeast_genome)])
+               == set(expected_chrom_names))

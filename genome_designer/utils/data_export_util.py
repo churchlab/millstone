@@ -128,7 +128,7 @@ def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):
         alt_value = alts[0].alt_value
 
         record = vcf.model._Record(
-                variant.chromosome.label,
+                variant.chromosome.seqrecord_id,
                 variant.position,
                 variant.uid,
                 variant.ref_value,

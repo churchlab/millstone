@@ -171,23 +171,27 @@ def import_reference_genome_from_local_file(project, label, file_location,
 def add_chromosomes(reference_genome, dataset):
     """ Makes a Chromosome for each unique SeqRecord.name in the dataset
     """
-    
-    chromosomes = [chrom.label for chrom \
-            in Chromosome.objects.filter(reference_genome=reference_genome)]
 
-    def _make_chromosome(seq_rec_iter):
-        for seq_record in seq_rec_iter:
-            if seq_record.name and seq_record.name not in chromosomes:
-                Chromosome.objects.create(reference_genome=reference_genome,
-                        label=seq_record.name, num_bases=len(seq_record))
+    seqrecord_ids = [
+            chrom.seqrecord_id for chrom in
+            Chromosome.objects.filter(reference_genome=reference_genome)]
 
-    # Add chromosome ids
+    def _make_chromosome(seqrecord_iter):
+        for seqrecord in seqrecord_iter:
+            if seqrecord.id not in seqrecord_ids:
+                Chromosome.objects.create(
+                        reference_genome=reference_genome,
+                        label=seqrecord.description,
+                        seqrecord_id=seqrecord.id,
+                        num_bases=len(seqrecord))
+
     dataset_path = dataset.get_absolute_location()
 
+    # Add chromosome labels and ids
     if dataset.TYPE.REFERENCE_GENOME_FASTA:
         _make_chromosome(SeqIO.parse(dataset_path, "fasta"))
     elif dataset.TYPE.REFERENCE_GENOME_GENBANK:
-        _make_chromosome(SeqIO.parse(dataset_path, "genbank"))     
+        _make_chromosome(SeqIO.parse(dataset_path, "genbank"))
     else:
         raise AssertionError("Unexpected Dataset type")
 

@@ -384,6 +384,7 @@ class TestImportVariantSetFromVCFFile(TestCase):
         Chromosome.objects.create(
             reference_genome=self.ref_genome,
             label='Chromosome',
+            seqrecord_id='Chromosome',
             num_bases=9001)
 
     def _assert_variants(self, vcf_filepath):
