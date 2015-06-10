@@ -263,7 +263,7 @@ def variant_sets_delete(request):
     request_data = json.loads(request.body)
     variant_set_uid_list = request_data.get('variantSetUidList')
 
-    #First make sure all the sets belong to this user.
+    # First make sure all the sets belong to this user.
     variant_sets_to_delete = VariantSet.objects.filter(
         reference_genome__project__owner=request.user.get_profile(),
         uid__in=variant_set_uid_list)
@@ -271,10 +271,10 @@ def variant_sets_delete(request):
     if not len(variant_sets_to_delete) == len(variant_set_uid_list):
         raise Http404
 
-    #Validation succcessful, delete
+    # Validation succcessful, delete
     variant_sets_to_delete.delete()
 
-    #Return success response
+    # Return success response
     return HttpResponse(json.dumps({}), content_type='application/json')
 
 
@@ -1087,19 +1087,22 @@ def _create_variant_set_empty(ref_genome, variant_set_name):
     exists_set_with_same_name = bool(VariantSet.objects.filter(
         reference_genome=ref_genome,
         label=variant_set_name).count())
+
     if exists_set_with_same_name:
         error_string = 'Variant set %s exists' % variant_set_name
+        result = {
+            'error': error_string,
+        }
     else:
         error_string = ''
+        empty_variant_set = VariantSet.objects.create(
+                reference_genome=ref_genome,
+                label=variant_set_name)
+        result = {
+            'error': error_string,
+            'variantSetUid': empty_variant_set.uid
+        }
 
-    empty_variant_set = VariantSet.objects.create(
-            reference_genome=ref_genome,
-            label=variant_set_name)
-
-    result = {
-        'error': error_string,
-        'variantSetUid': empty_variant_set.uid
-    }
     return result
 
 
