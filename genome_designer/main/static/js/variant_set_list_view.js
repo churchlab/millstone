@@ -12,6 +12,38 @@ gd.VariantSetListView = Backbone.View.extend({
 
   render: function() {
     $('#gd-sidenav-link-variant-sets').addClass('active');
+    this.redrawDatatable();
+  },
+
+  listenToControls: function() {
+    $('#gd-variant-set-form-from-file-submit').click(
+        _.bind(this.handleFormSubmitFromFile, this));
+    $('#gd-variant-set-form-empty-submit').click(
+        _.bind(this.handleFormSubmitEmpty, this));
+  },
+
+  decorateControls: function() {
+    this.variantsetsControlsComponent = new gd.VariantsetsControlsComponent({
+      el: '#gd-variant_set_list_view-datatable-hook-control',
+      model: this.model,
+      datatableComponent: this.datatableComponent
+    });
+
+    this.listenTo(this.variantsetsControlsComponent, 'MODELS_UPDATED',
+        _.bind(this.redrawDatatable, this));
+
+    this.listenToControls();
+  },
+
+  /** Draws or redraws the table. */
+  redrawDatatable: function() {
+    if (this.datatableComponent) {
+      this.datatableComponent.destroy();
+    }
+
+    if (this.variantsetsControlsComponent) {
+      this.variantsetsControlsComponent.destroy();
+    }
 
     this.datatableComponent = new gd.DataTableComponent({
         el: $('#gd-variant_set_list_view-datatable-hook'),
@@ -21,14 +53,7 @@ gd.VariantSetListView = Backbone.View.extend({
     });
 
     this.listenTo(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
-        _.bind(this.listenToControls, this));
-  },
-
-  listenToControls: function() {
-    $('#gd-variant-set-form-from-file-submit').click(
-        _.bind(this.handleFormSubmitFromFile, this));
-    $('#gd-variant-set-form-empty-submit').click(
-        _.bind(this.handleFormSubmitEmpty, this));
+        _.bind(this.decorateControls, this));
   },
 
   /**
