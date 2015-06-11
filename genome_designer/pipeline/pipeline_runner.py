@@ -279,7 +279,7 @@ def start_variant_calling_pipeline_task(alignment_group):
     the first task in the variant calling pipeline which polls the database
     until all alignments are complete.
     """
-    print 'START VARIANT CALLING PIPELINE'
+    print 'START VARIANT CALLING PIPELINE. WAITING FOR ALIGNMENTS TO COMPLETE.'
 
     POLL_INTERVAL_SEC = 5
 
@@ -289,7 +289,6 @@ def start_variant_calling_pipeline_task(alignment_group):
     all_samples_ready = False
     failed = False
     while not all_samples_ready:
-        print 'CHECK SAMPLES'
         all_samples_ready = True
         for sa in sample_alignment_list:
             sa_fresh = ExperimentSampleToAlignment.objects.get(id=sa.id)
