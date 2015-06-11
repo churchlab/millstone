@@ -21,6 +21,8 @@ from main.models import ExperimentSampleToAlignment
 from pipeline.read_alignment import align_with_bwa_mem
 from pipeline.variant_calling import find_variants_with_tool
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
+from pipeline.variant_calling import TOOL_FREEBAYES
+from pipeline.variant_calling import TOOL_LUMPY
 from pipeline.variant_calling.freebayes import merge_freebayes_parallel
 from pipeline.variant_calling.freebayes import freebayes_regions
 
@@ -212,10 +214,6 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
     ref_genome = ReferenceGenome.objects.get(
             uid=alignment_group.reference_genome.uid)
 
-    # List of tasks that can be run in parallel. These will be combined into a
-    # single celery.group.
-    parallel_tasks = []
-
     # Determine which variant callers to use.
     if VARIANT_CALLING_OPTION__CALLER_OVERRIDE in variant_calling_options:
         effective_variant_callers = variant_calling_options[
@@ -223,21 +221,20 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
     else:
         effective_variant_callers = settings.ENABLED_VARIANT_CALLERS
 
+    # List of tasks that can be run in parallel. These will be combined into a
+    # single celery.group.
+    parallel_tasks = []
+
     # Iterate through tools and kick off tasks.
     for tool in effective_variant_callers:
         # Common params for this tool.
         tool_params = VARIANT_TOOL_PARAMS_MAP[tool]
 
-        if settings.FREEBAYES_PARALLEL and tool == 'freebayes':
-            # Special handling for freebayes if running parallel.
-            # Create a chord consisting of the group of freebayes tasks
-            # distributed across the regions of the genome and finally a call
-            # to merge results into single vcf add corresponding Variant
-            # models to db.
-            fb_parallel_tasks = []
+        parallel_tasks = []
 
-            # Break up ReferenceGenome into regions and create separate
-            # job for each.
+        if settings.FREEBAYES_PARALLEL and tool == TOOL_FREEBAYES:
+            # Special handling for freebayes if running parallel. Break up
+            # ReferenceGenome into regions and create separate job for each.
             fb_regions = freebayes_regions(ref_genome)
             assert len(fb_regions) >= 0
 
@@ -247,25 +244,30 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
                     'region': fb_region,
                     'region_num': region_num
                 }
-                fb_parallel_tasks.append(find_variants_with_tool.si(
+                parallel_tasks.append(find_variants_with_tool.si(
                         alignment_group, region_params,
                         project=ref_genome.project))
-
-            # Create chord so that merge task occurs after all freebayes
-            # tasks are complete.
-            if len(fb_parallel_tasks) == 1:
-                freebayes_chord = (fb_parallel_tasks[0] |
-                        merge_freebayes_parallel.si(alignment_group))
-            else:
-                freebayes_chord = (group(fb_parallel_tasks) |
-                        merge_freebayes_parallel.si(alignment_group))
-            parallel_tasks.append(freebayes_chord)
+        elif tool == TOOL_LUMPY:
+            sample_alignment_list = (
+                    alignment_group.experimentsampletoalignment_set.all())
+            # TODO: What if some alignments failed?
+            for sa in sample_alignment_list:
+                # Create separate lumpy task for each sample.
+                per_sample_params = dict(tool_params)
+                per_sample_params['tool_kwargs'] = {
+                    'region_num': sa.id,
+                    'sample_alignment': sa
+                }
+                parallel_tasks.append(find_variants_with_tool.si(
+                        alignment_group, per_sample_params,
+                        project=ref_genome.project))
         else:
             parallel_tasks.append(find_variants_with_tool.si(
-                    alignment_group, tool_params,
-                    project=ref_genome.project))
+                    alignment_group, tool_params, project=ref_genome.project))
 
-    return group(parallel_tasks)
+    variant_calling_pipeline = (group(parallel_tasks) |
+            merge_variant_data.si(alignment_group))
+    return variant_calling_pipeline
 
 
 @task
@@ -320,6 +322,13 @@ def start_variant_calling_pipeline_task(alignment_group):
     alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
     alignment_group.status = AlignmentGroup.STATUS.VARIANT_CALLING
     alignment_group.save(update_fields=['status'])
+
+
+@task
+def merge_variant_data(alignment_group):
+    """Merges results of variant caller data after pipeline is complete.
+    """
+    merge_freebayes_parallel(alignment_group)
 
 
 @task

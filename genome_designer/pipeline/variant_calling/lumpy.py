@@ -98,11 +98,15 @@ INFO_FORMAT_STR = (
 
 
 def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
-              vcf_output_filename, alignment_type, **kwargs):
-    """Runs lumpy on the alignments.
+              vcf_output_filename, alignment_type, sample_alignment, **kwargs):
+    """Runs lumpy on single alignment.
 
     See: https://github.com/arq5x/lumpy-sv
     """
+    # NOTE: Ignoring sample_alignments but keeping the variable
+    # in the signature to match rest of pipeline. We probably need to
+    # revamp the framework.
+
     # TODO, look for these three in kwargs before setting?
     global_lumpy_options = ['-mw', 1, '-tt', 0.0]
 
@@ -128,63 +132,63 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
     sample_uid_order = []
 
     # build up the option strings for each sample
-    for i, sa in enumerate(sample_alignments):
+    i = 0
+    sa = sample_alignment
+    sample_uid = sa.experiment_sample.uid
+    sample_uid_order.append(sample_uid)
+    sample_id_dict[i] = sample_uid
 
-        sample_uid = sa.experiment_sample.uid
-        sample_uid_order.append(sample_uid)
-        sample_id_dict[i] = sample_uid
+    bam_pe_dataset = get_discordant_read_pairs(sa)
+    bam_pe_file = bam_pe_dataset.get_absolute_location()
 
-        bam_pe_dataset = get_discordant_read_pairs(sa)
-        bam_pe_file = bam_pe_dataset.get_absolute_location()
+    bam_sr_dataset = get_split_reads(sa)
+    bam_sr_file = bam_sr_dataset.get_absolute_location()
 
-        bam_sr_dataset = get_split_reads(sa)
-        bam_sr_file = bam_sr_dataset.get_absolute_location()
+    ins_size, ins_stdev = get_insert_size_mean_and_stdev(sa)
+    histo_dataset = get_dataset_with_type(sa,
+            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM)
+    assert histo_dataset, "Histogram could not be computed."
+    histo_file = histo_dataset.get_absolute_location()
 
-        ins_size, ins_stdev = get_insert_size_mean_and_stdev(sa)
-        histo_dataset = get_dataset_with_type(sa,
-                Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM)
-        assert histo_dataset, "Histogram could not be computed."
-        histo_file = histo_dataset.get_absolute_location()
+    sa_bam_file = get_dataset_with_type(sa,
+            Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+    read_length = get_read_length(sa_bam_file)
 
-        sa_bam_file = get_dataset_with_type(sa,
-                Dataset.TYPE.BWA_ALIGN).get_absolute_location()
-        read_length = get_read_length(sa_bam_file)
+    # Build up paired end part of command.
+    if bam_pe_dataset.status != Dataset.STATUS.FAILED and bam_pe_file:
+        assert os.path.isfile(bam_pe_file), (
+            '{file} is not empty but is not a file!'.format(
+                file=bam_sr_file))
+        pe_sample_str = ','.join([
+            'bam_file:' + bam_pe_file,
+            'histo_file:' + histo_file,
+            'mean:' + str(ins_size),
+            'stdev:' + str(ins_stdev),
+            'read_length:' + str(read_length),
+            'min_non_overlap:' + str(read_length),
+            'id:' + str(i),
+        ] + ['%s:%d' % (k, v) for k, v in shared_pe_options.items()])
+        pe_sample_options.extend(['-pe', pe_sample_str])
+    else:
+        pe_sample_str = ''
 
-        # Build up paired end part of command.
-        if bam_pe_dataset.status != Dataset.STATUS.FAILED and bam_pe_file:
-            assert os.path.isfile(bam_pe_file), (
-                '{file} is not empty but is not a file!'.format(
-                    file=bam_sr_file))
-            pe_sample_str = ','.join([
-                'bam_file:' + bam_pe_file,
-                'histo_file:' + histo_file,
-                'mean:' + str(ins_size),
-                'stdev:' + str(ins_stdev),
-                'read_length:' + str(read_length),
-                'min_non_overlap:' + str(read_length),
-                'id:' + str(i),
-            ] + ['%s:%d' % (k, v) for k, v in shared_pe_options.items()])
-            pe_sample_options.extend(['-pe', pe_sample_str])
-        else:
-            pe_sample_str = ''
+    # Build split-read part of data.
+    if bam_sr_dataset.status != Dataset.STATUS.FAILED and bam_sr_file:
+        assert os.path.isfile(bam_sr_file), (
+            '{file} is not empty but is not a file!'.format(
+                file=bam_sr_file))
 
-        # Build split-read part of data.
-        if bam_sr_dataset.status != Dataset.STATUS.FAILED and bam_sr_file:
-            assert os.path.isfile(bam_sr_file), (
-                '{file} is not empty but is not a file!'.format(
-                    file=bam_sr_file))
+        sr_sample_str = ','.join([
+            'bam_file:' + bam_sr_file,
+            'id:' + str(i),
+        ] + ['%s:%d' % (k, v) for k, v in shared_sr_options.items()])
+    else:
+        sr_sample_str = ''
 
-            sr_sample_str = ','.join([
-                'bam_file:' + bam_sr_file,
-                'id:' + str(i),
-            ] + ['%s:%d' % (k, v) for k, v in shared_sr_options.items()])
-        else:
-            sr_sample_str = ''
-
-        if bam_pe_dataset.status != Dataset.STATUS.FAILED and bam_pe_file:
-            pe_sample_options.extend(['-pe', pe_sample_str])
-        if bam_sr_dataset.status != Dataset.STATUS.FAILED and bam_sr_file:
-            sr_sample_options.extend(['-sr', sr_sample_str])
+    if bam_pe_dataset.status != Dataset.STATUS.FAILED and bam_pe_file:
+        pe_sample_options.extend(['-pe', pe_sample_str])
+    if bam_sr_dataset.status != Dataset.STATUS.FAILED and bam_sr_file:
+        sr_sample_options.extend(['-sr', sr_sample_str])
 
     # combine the options and call lumpy
     combined_options = [str(o) for o in (global_lumpy_options +
