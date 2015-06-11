@@ -125,21 +125,23 @@ def find_variants_with_tool(alignment_group, variant_params_dict):
     if not tool_succeeded:
         return False
 
-    # Process vcf for non-parallelized tools. Parallelized tools do this
-    # separately, as in the case of merge_freebayes_parallel().
-    if not parallel_tool:
+    # Freebayes in parallel mode handles own merging so we are done here.
+    if parallel_tool and tool_name == TOOL_FREEBAYES:
+        return True
 
-        # add unannotated vcf dataset first
+    # Otherwise proceed with processing vcf dataset.
+
+    # add unannotated vcf dataset first
+    add_vcf_dataset(alignment_group, vcf_dataset_type, vcf_output_filename)
+
+    # If freebayes is not parallelized, then run snpeff now,
+    # then update the vcf_output_filename and vcf_dataset_type.
+    if tool_name == TOOL_FREEBAYES and alignment_group.reference_genome.is_annotated():
+        vcf_output_filename = run_snpeff(alignment_group, Dataset.TYPE.BWA_ALIGN)
+        vcf_dataset_type = VCF_ANNOTATED_DATASET_TYPE
         add_vcf_dataset(alignment_group, vcf_dataset_type, vcf_output_filename)
 
-        # If freebayes is not parallelized, then run snpeff now,
-        # then update the vcf_output_filename and vcf_dataset_type.
-        if tool_name == TOOL_FREEBAYES and alignment_group.reference_genome.is_annotated():
-            vcf_output_filename = run_snpeff(alignment_group, Dataset.TYPE.BWA_ALIGN)
-            vcf_dataset_type = VCF_ANNOTATED_DATASET_TYPE
-            add_vcf_dataset(alignment_group, vcf_dataset_type, vcf_output_filename)
+    # Finally, generate variants on the potentially annotated vcf.
+    process_vcf_dataset(alignment_group, vcf_dataset_type)
 
-        # Finally, generate variants on the potentially annotated vcf.
-        process_vcf_dataset(alignment_group, vcf_dataset_type)
-
-    return True
+    return True  # success

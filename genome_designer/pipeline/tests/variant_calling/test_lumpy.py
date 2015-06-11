@@ -99,7 +99,7 @@ class TestLumpy(TestCase):
         get_split_reads(self.sample_alignment)
 
         run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
-                vcf_output_filename, alignment_type)
+                vcf_output_filename, alignment_type, sample_alignment)
 
         dataset = Dataset.objects.create(
                 type=Dataset.TYPE.VCF_LUMPY,
@@ -181,7 +181,11 @@ class TestLumpy(TestCase):
                 Dataset.TYPE.BWA_ALIGN, BWA_ALIGNMENT)
 
         # Run lumpy.
-        lumpy_params = VARIANT_TOOL_PARAMS_MAP[TOOL_LUMPY]
+        lumpy_params = dict(VARIANT_TOOL_PARAMS_MAP[TOOL_LUMPY])
+        lumpy_params['tool_kwargs'] = {
+            'region_num': sample_alignment.id,
+            'sample_alignment': sample_alignment
+        }
         find_variants_with_tool(
                 self.alignment_group, lumpy_params, project=self.project)
 
