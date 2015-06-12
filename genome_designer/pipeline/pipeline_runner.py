@@ -294,6 +294,13 @@ def start_variant_calling_pipeline_task(alignment_group):
             bwa_dataset = sa_fresh.dataset_set.get(label=Dataset.TYPE.BWA_ALIGN)
             if bwa_dataset.status == Dataset.STATUS.FAILED:
                 failed = True
+                # # DEBUG: Uncomment to see alignment error output
+                # print '---------------ALIGNMENT ERROR OUTPUT---------------\n'
+                # error_dataset = sa_fresh.dataset_set.get(
+                #         label=Dataset.TYPE.BWA_ALIGN_ERROR)
+                # with open(error_dataset.get_absolute_location(),'r') as fh:
+                #     for line in fh:
+                #         print line
                 break
 
             if not bwa_dataset.status == Dataset.STATUS.READY:

@@ -89,17 +89,24 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
         ensure_bwa_index(ref_genome_fasta)
 
         # Grab the fastq sources, and determine whether we are doing paired ends.
+        # First, grab fastq1, which must exist
+        fq1_queryset = experiment_sample.dataset_set.filter(
+                type=Dataset.TYPE.FASTQ1)
+        assert fq1_queryset, "Must have at least one .fastq file"
+        fq1_dataset = fq1_queryset[0]
+        input_reads_1_fq = fq1_dataset.wrap_if_compressed()
+        input_reads_1_fq_path = fq1_dataset.get_absolute_location()
 
-        for dataset in experiment_sample.dataset_set.all():
-            if dataset.type == Dataset.TYPE.FASTQ1:
-                input_reads_1_fq = dataset.wrap_if_compressed()
-                input_reads_1_fq_path = dataset.get_absolute_location()
-            elif dataset.type == Dataset.TYPE.FASTQ2:
-                input_reads_2_fq = dataset.wrap_if_compressed()
-                input_reads_2_fq_path = dataset.get_absolute_location()
-
-        assert input_reads_1_fq, "Must have at least one .fastq file."
-        is_paired_end = not input_reads_2_fq is None
+        # Second, check if fastq2 exists and set is_paired_end
+        fq2_queryset = experiment_sample.dataset_set.filter(
+                type=Dataset.TYPE.FASTQ2)
+        if fq2_queryset:
+            is_paired_end = True
+            fq2_dataset = fq2_queryset[0]
+            input_reads_2_fq = fq2_dataset.wrap_if_compressed()
+            input_reads_2_fq_path = fq2_dataset.get_absolute_location()
+        else:
+            is_paired_end = False
 
         # There are two steps to alignment with bwa.
         #     1. Call 'bwa aln' to generate SA coordinate indices. Note that
@@ -142,9 +149,16 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
                     stdout=fh, stderr=error_output,
                     shell=True, executable=settings.BASH_PATH)
 
+        # Set processing mask to not compute insert metrics if reads are
+        # not paired end, as the lumpy script only works on paired end reads
+        opt_processing_mask = {}
+        if not is_paired_end:
+            opt_processing_mask['compute_insert_metrics'] = False
+
         # Do several layers of processing on top of the initial alignment.
         result_bam_file = process_sam_bam_file(sample_alignment,
-                alignment_group.reference_genome, output_bam, error_output)
+                alignment_group.reference_genome, output_bam, error_output,
+                opt_processing_mask=opt_processing_mask)
 
         # Add the resulting file to the dataset.
         bwa_dataset.filesystem_location = clean_filesystem_location(
