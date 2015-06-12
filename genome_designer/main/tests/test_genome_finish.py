@@ -1,9 +1,10 @@
 """
 Tests for genome finishing features
 """
-
 import os
+import tempfile
 
+from Bio import SeqIO
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
@@ -11,6 +12,8 @@ from django.http.request import HttpRequest
 from django.test import Client
 from django.test import TestCase
 
+from genome_finish.insertion_placement import place_contig
+from genome_finish.millstone_de_novo_fns import get_local_contig_placement
 from genome_finish.millstone_de_novo_fns import get_match_counts
 from main.model_utils import get_dataset_with_type
 from main.models import AlignmentGroup
@@ -19,13 +22,14 @@ from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
-from main.models import ReferenceGenome
 import main.xhr_handlers as xhr_handlers
 from pipeline.pipeline_runner import run_pipeline
 from utils import convert_fasta_to_fastq
+from utils import generate_safe_filename_prefix_from_label
 from utils.bam_utils import minimal_bwa_align
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import import_reference_genome_from_local_file
+
 
 
 TEST_USERNAME = 'testuser'
@@ -52,6 +56,12 @@ INS_1KB_FQ_2_PATH = os.path.join(
 INS_1KB_INSERTION_SEQUENCE_PATH = os.path.join(
         settings.PWD,
         'test_data/genome_finish_test/ins_1kb_insertion.fa')
+INS_1KB_CONTIG_FASTA_PATH = os.path.join(
+        settings.PWD,
+        'test_data/genome_finish_test/ins_1kb_contig.fa')
+INS_1KB_TRANSFORMED_FASTA_PATH = os.path.join(
+        settings.PWD,
+        'test_data/genome_finish_test/ins_1kb_transformed.fa')
 INSERTION_LENGTH = 1000
 
 
@@ -257,3 +267,79 @@ class TestContigAssembly(TestCase):
                 'The maximum fraction of the insertion captured by any ' +
                 'contig was: %.3f, less than the passing cutoff: %.3f ' % (
                         max_cov_fraction, INSERTION_COVERAGE_CUTOFF))
+
+
+class TestContigPlacement(TestCase):
+
+    def setUp(self):
+        # Useful models.
+        self.user = User.objects.create_user(
+            TEST_USERNAME, password=TEST_PASSWORD, email=TEST_EMAIL)
+        self.project = Project.objects.create(
+            owner=self.user.get_profile(), title='Test Project')
+
+        # Fake web browser client used to make requests.
+        self.client = Client()
+        self.client.login(username=TEST_USERNAME, password=TEST_PASSWORD)
+
+    def _make_temp_file(self, label, extension):
+        if not os.path.exists(settings.TEMP_FILE_ROOT):
+            os.mkdir(settings.TEMP_FILE_ROOT)
+        _, temp_file_path = tempfile.mkstemp(
+                suffix=('_' + generate_safe_filename_prefix_from_label(label) +
+                        extension),
+                dir=settings.TEMP_FILE_ROOT)
+        return temp_file_path
+
+    def _seqan_place_contig_string_input(self, ref_string, contig_string):
+
+        ref_temp_fasta = self._make_temp_file('ref', '.fa')
+        contig_temp_fasta = self._make_temp_file('contig', '.fa')
+
+        with open(ref_temp_fasta, 'w') as fh:
+            fh.write('\n'.join(['>ref', ref_string]))
+
+        with open(contig_temp_fasta, 'w') as fh:
+            fh.write('\n'.join(['>contig', contig_string]))
+
+        return get_local_contig_placement(
+                ref_temp_fasta, contig_temp_fasta)
+
+    def test_seqan_place_contig(self):
+
+        ref_string =    'AGCATGTTAGATAAGATAG'    +    'CTGTGCTAGTAGGCAGTCAGCGCCAT'
+        contig_string = 'AGCATGTTAGATAAGATAGCCCCCCCCCCCCTGTGCTAGTAGGCAGTCAGCGCCAT'
+
+        local_contig_placement = self._seqan_place_contig_string_input(
+                ref_string, contig_string)
+
+        self.assertEqual(local_contig_placement['contig_start_pos'], 19)
+        self.assertEqual(local_contig_placement['contig_end_pos'], 30)
+
+    def test_1kb_insertion_placement(self):
+        new_reference_genome_label = 'insertion_incorporated'
+
+        reference_genome = import_reference_genome_from_local_file(
+                self.project, 'test_ref',
+                INS_1KB_REF_GENOME_PATH, 'fasta')
+
+        with open(INS_1KB_CONTIG_FASTA_PATH, 'r') as fh:
+            contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+        placed_contig_ref_genome = place_contig(
+                reference_genome, contig_seqrecord,
+                new_reference_genome_label)
+
+        # Verify expected transformation
+        placed_contig_fasta = get_dataset_with_type(
+                placed_contig_ref_genome,
+                Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
+        with open(placed_contig_fasta, 'r') as fh:
+            placed_contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+        with open(INS_1KB_TRANSFORMED_FASTA_PATH, 'r') as fh:
+            transformed_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+        self.assertEqual(str(placed_contig_seqrecord.seq),
+                str(transformed_seqrecord.seq))

@@ -116,7 +116,14 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/y83fqsdq73pt1w8/velvet-linux.zip'
         ]
     },
-
+    'seqan': {
+        'Linux': [
+            'https://www.dropbox.com/s/4vel0v42cmh5nqk/place_contig'
+        ],
+        'Darwin': [
+            'https://www.dropbox.com/s/5q49fy7w1j5u4bg/place_contig'
+        ]
+    }
 }
 
 
@@ -127,7 +134,8 @@ TOOLS_TO_EXECUTABLES = {
     'pindel': ['pindel', 'pindel2vcf'],
     'tabix': ['tabix', 'bgzip'],
     'freebayes': ['freebayes', 'bamtools', 'vcfstreamsort', 'vcfuniq'],
-    'velvet': ['velvetg', 'velveth']
+    'velvet': ['velvetg', 'velveth'],
+    'seqan': ['place_contig']
 }
 
 

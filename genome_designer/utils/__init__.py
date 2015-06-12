@@ -100,11 +100,20 @@ def generate_safe_filename_prefix_from_label(label):
     """Generates safe filename prefix by avoiding non-alphanumeric chars.
     """
     return re.sub('\W', '_', label.lower())
-   
-def convert_fasta_to_fastq(fa_path, fq_path):  
+
+
+def convert_fasta_to_fastq(fa_path, fq_path):
     """Generates a fasta file from a fastq file
     """
     with open(fa_path, "r") as fasta, open(fq_path, "w") as fastq:
         for record in SeqIO.parse(fasta, "fasta"):
             record.letter_annotations["phred_quality"] = [40] * len(record)
             SeqIO.write(record, fastq, "fastq")
+
+
+def convert_seqrecord_to_fastq(seqrecord, fq_path):
+    """Generates a fasta file from a Biopython seqrecord object
+    """
+    with open(fq_path, "w") as fastq:
+        seqrecord.letter_annotations["phred_quality"] = [40] * len(seqrecord)
+        SeqIO.write(seqrecord, fastq, "fastq")
