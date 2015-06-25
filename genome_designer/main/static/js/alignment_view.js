@@ -31,33 +31,34 @@ gd.AlignmentView = Backbone.View.extend({
   },
 
   handleGenerateContigs: function() {
-    var experimentSampleUidList = this.datatable.getCheckedRowUids();
+    var sampleAlignmentUidList = this.datatable.getCheckedRowUids();
 
     // If nothing to do, show message.
-    if (!experimentSampleUidList.length) {
+    if (!sampleAlignmentUidList.length) {
       alert('Please select Experiment Samples to use for contig generation.');
       return;
     }
 
-    if(experimentSampleUidList.length > 1) {
+    if(sampleAlignmentUidList.length > 1) {
       alert('Please select only one Experiment Sample to use for contig ' +
           'generation.');
       return;
     }
 
     var postData = {
-        experimentSampleUid: experimentSampleUidList[0]
+        sampleAlignmentUid: sampleAlignmentUidList[0]
     };
+
+    this.enterLoadingState();
 
     $.get('/_/alignments/generate_contigs', postData,
         _.bind(this.handleGenerateContigsResponse, this));
   },
 
   handleGenerateContigsResponse: function(response) {
+    this.exitLoadingState();
     if (response.is_contig_file_empty == 1) {
       alert('No evidence for structural variants in this alignment');
-    } else {
-      window.location.href = response.redirect;
     };
   },
 
@@ -149,5 +150,16 @@ gd.AlignmentView = Backbone.View.extend({
 
     // // Execute the post. Should return a redirect response.
     $.post(postUrl, JSON.stringify(postData), onSuccess, 'json');
+  },
+
+    /** Puts UI in the loading state. */
+  enterLoadingState: function() {
+    this.loadingSpinner = new gd.Spinner();
+    this.loadingSpinner.spin();
+  },
+
+  /** Puts UI in the loading state. */
+  exitLoadingState: function() {
+    this.loadingSpinner.stop();
   }
 });

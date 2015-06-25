@@ -66,6 +66,17 @@ def reference_genome_list_controls(request):
         'project': project,
     }
 
+    # If there are no de novo assemblies, pass flag to context to hide the
+    # toggle de novo assemblies button
+    project_has_de_novo_assemblies = False
+    for rg in ReferenceGenome.objects.filter(project=project):
+        if rg.metadata.get('is_from_de_novo_assembly', False):
+            project_has_de_novo_assemblies = True
+            break
+    context['project_has_de_novo_assemblies'] = project_has_de_novo_assemblies
+
+    context['show_de_novo'] = int(request.GET.get('showDeNovo'))
+
     # If the request passed a tableId, then give it to Django to decorate the
     # controls.
     context['table_id'] = request.GET.get('tableId',
@@ -74,6 +85,32 @@ def reference_genome_list_controls(request):
     return HttpResponse(
             render_to_string('controls/reference_genome_list_controls.html',
                     context))
+
+
+def contig_list_controls(request):
+    """Returns the Contig List control box.
+    """
+
+    # TODO: Find out if below line is important
+    # csrf = request.GET.get('csrf')
+
+    alignment_group = get_object_or_404(
+            AlignmentGroup,
+            uid=request.GET.get('alignmentGroupUid'))
+
+    # If the request passed a tableId, then give it to Django to decorate the
+    # controls.
+    context = {
+            'table_id': request.GET.get('tableId',
+                    'reference-genome-list-datatable'),
+            'alignment_group_uid': alignment_group.uid,
+            'samples_uid_tuples': [
+                    (esta.experiment_sample.label, esta.uid) for esta in
+                    alignment_group.experimentsampletoalignment_set.all()]
+    }
+
+    return HttpResponse(
+            render_to_string('controls/contig_list_controls.html', context))
 
 
 def sample_list_controls(request):

@@ -1,10 +1,14 @@
+import datetime
 import os
+
+from Bio import SeqIO
 
 from genome_finish.millstone_de_novo_fns import add_paired_mates
 from genome_finish.millstone_de_novo_fns import get_clipped_reads
 from genome_finish.millstone_de_novo_fns import get_unmapped_reads
 from genome_finish.millstone_de_novo_fns import get_split_reads
 from genome_finish.millstone_de_novo_fns import run_velvet
+from main.models import Contig
 from main.models import Dataset
 from main.model_utils import get_dataset_with_type
 from pipeline.read_alignment import align_with_bwa_mem
@@ -20,7 +24,9 @@ VELVET_COVERAGE_CUTOFF = 3
 VELVET_KMER_LIST = [21]
 
 
-def generate_contigs(experiment_sample_to_alignment, contig_ref_genome):
+def generate_contigs(experiment_sample_to_alignment, contig_label_base):
+
+    timestamp = str(datetime.datetime.now())
 
     # Grab reference genome fasta path
     reference_genome = (
@@ -30,12 +36,20 @@ def generate_contigs(experiment_sample_to_alignment, contig_ref_genome):
     prepare_ref_genome_related_datasets(reference_genome, ref_fasta_dataset)
 
     # Make data_dir directory to house genome_finishing files
-    contig_dir = contig_ref_genome.get_model_data_dir()
-    data_dir = os.path.join(contig_dir, 'genome_finishing')
+    genome_finishing_dir = os.path.join(
+            experiment_sample_to_alignment.get_model_data_dir(),
+            'genome_finishing')
 
     # Make data_dir directory if it does not exist
-    if not os.path.exists(data_dir):
-        os.mkdir(data_dir)
+    if not os.path.exists(genome_finishing_dir):
+        os.mkdir(genome_finishing_dir)
+
+    data_dir = os.path.join(genome_finishing_dir, '0')
+    data_dir_counter = 0
+    while(os.path.exists(data_dir)):
+        data_dir_counter += 1
+        data_dir = os.path.join(genome_finishing_dir, str(data_dir_counter))
+    os.mkdir(data_dir)
 
     # Retrieve bwa mem .bam alignment if exists otherwise generate it
     if not experiment_sample_to_alignment.dataset_set.filter(
@@ -116,5 +130,36 @@ def generate_contigs(experiment_sample_to_alignment, contig_ref_genome):
         # Collect resulting contigs fasta
         contigs_fasta = os.path.join(velvet_dir, 'contigs.fa')
         contig_files.append(contigs_fasta)
+
+        for seq_record in SeqIO.parse(contigs_fasta, 'fasta'):
+
+            contig_label = '_'.join(
+                    [contig_label_base, seq_record.description])
+
+            # Create an insertion model for the contig
+            contig = Contig.objects.create(
+                    label=contig_label,
+                    parent_reference_genome=reference_genome,
+                    experiment_sample_to_alignment=(
+                            experiment_sample_to_alignment))
+
+            contig.metadata['coverage'] = float(
+                    seq_record.description.rsplit('_', 1)[1])
+            contig.metadata['timestamp'] = timestamp
+
+            contig.ensure_model_data_dir_exists()
+
+            dataset_path = os.path.join(contig.get_model_data_dir(),
+                    'fasta.fa')
+            assert not os.path.exists(dataset_path)
+
+            with open(dataset_path, 'w') as fh:
+                SeqIO.write([seq_record], fh, 'fasta')
+
+            add_dataset_to_entity(
+                    contig,
+                    'contig_fasta',
+                    Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                    filesystem_location=dataset_path)
 
     return contig_files

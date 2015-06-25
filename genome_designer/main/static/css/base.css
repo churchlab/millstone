@@ -180,6 +180,15 @@ input.gd-form-tall {
     border-bottom-left-radius: 4px !important;
     border-top-left-radius: 4px !important;
     margin-left: 6px;
+    color: #ffffff;
+    background-color: #666699;
+    border-color: #666699;
+}
+
+.gd-controls-auxiliary-button:hover,
+.gd-controls-auxiliary-button:focus,
+.gd-controls-auxiliary-button.active {
+  background-color: #52527a;
 }
 
 /* is this a bootstrap 3 bug?

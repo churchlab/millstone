@@ -1,0 +1,29 @@
+<div id="gd-contig-assemble-modal" class="modal fade" role="dialog">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal">×</button>
+      <h1>Assemble Contigs</h1>
+    </div>
+    <form id="gd-contig-assemble" method="POST" onsubmit="return false">
+      <div class="modal-body">
+        <div class="form-group">
+        <label>Select Experiment Sample</label>
+          <select class="form-control" name="sample_selector">
+            {% for sample,uid in samples_uid_tuples %}
+              <option value="{{uid}}">{{sample}}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </form>
+    <div class="modal-footer">
+      <button class="btn btn-default" data-dismiss="modal">
+        Cancel
+      </button>
+      <button id="gd-contig-assemble-submit"
+          class="gd-id-form-submit-button btn btn-primary">
+        Submit
+      </button>
+    </div>
+  </div></div>
+</div>

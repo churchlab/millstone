@@ -16,7 +16,13 @@
       <a role="menuitem" tabindex="-1" href="#modalFromNCBI" data-toggle="modal">
         From NCBI Accession...</a></li>
   </ul>
-  <button class="btn btn-info gd-controls-auxiliary-button" id="gd-ref-genome-toggle-display-de-novo">Hide De Novo Assemblies</button>
+  {% if project_has_de_novo_assemblies %}
+    {% if show_de_novo %}
+      <button class="btn gd-controls-auxiliary-button" id="gd-ref-genome-toggle-display-de-novo">Hide De Novo Assemblies</button>
+    {% else %}
+      <button class="btn gd-controls-auxiliary-button" id="gd-ref-genome-toggle-display-de-novo">Show De Novo Assemblies</button>
+    {% endif %}
+  {% endif %}
 </div>
 
 
