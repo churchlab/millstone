@@ -66,6 +66,17 @@ def reference_genome_list_controls(request):
         'project': project,
     }
 
+    # If there are no de novo assemblies, pass flag to context to hide the
+    # toggle de novo assemblies button
+    project_has_de_novo_assemblies = False
+    for rg in ReferenceGenome.objects.filter(project=project):
+        if rg.metadata.get('is_from_de_novo_assembly', False):
+            project_has_de_novo_assemblies = True
+            break
+    context['project_has_de_novo_assemblies'] = project_has_de_novo_assemblies
+
+    context['show_de_novo'] = int(request.GET.get('showDeNovo'))
+
     # If the request passed a tableId, then give it to Django to decorate the
     # controls.
     context['table_id'] = request.GET.get('tableId',
