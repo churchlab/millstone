@@ -123,9 +123,10 @@ def project_view(request, project_uid):
 
 
 VALID_ANALYZE_SUB_VIEWS = set([
-    'variants',
+    'contigs',
+    'genes',
     'sets',
-    'genes'
+    'variants'
 ])
 
 
@@ -171,7 +172,8 @@ def tab_root_analyze(request, project_uid, alignment_group_uid=None, sub_view=No
         'project': project,
         'init_js_data': json.dumps(init_js_data),
         'tab_root': TAB_ROOT__ANALYZE,
-        'ref_genomes_with_alignments': ref_genomes_with_alignments
+        'ref_genomes_with_alignments': ref_genomes_with_alignments,
+        'genome_finish_enabled': settings.FLAG__GENOME_FINISHING_ENABLED
     })
 
     return render(request, 'tab_root_analyze.html', context)

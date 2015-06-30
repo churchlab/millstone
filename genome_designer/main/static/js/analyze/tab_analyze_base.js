@@ -226,9 +226,10 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
 {
   /** Mape from subview to the class that decorates that view. */
   SUBVIEW_TYPE_TO_VIEW_CLASS: {
+      CONTIGS: gd.TabAnalyzeSubviewContigs,
       GENES: gd.TabAnalyzeSubviewGenes,
       SETS: gd.TabAnalyzeSubviewSets,
-      VARIANTS: gd.TabAnalyzeSubviewVariants
+      VARIANTS: gd.TabAnalyzeSubviewVariants,
   }
 }
 );

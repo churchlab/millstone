@@ -156,6 +156,10 @@ urlpatterns = patterns('',
     url(r'^_/single_ref_genome$',
             'main.xhr_handlers.get_single_ref_genome'),
 
+    url(r'^_/contigs$',
+        'main.xhr_handlers.get_contigs'),
+    url(r'^_/contigs/delete$',
+        'main.xhr_handlers.contigs_delete'),
 
     ###########################################################################
     # Template XHR's
@@ -174,6 +178,8 @@ urlpatterns = patterns('',
             'main.template_xhrs.reference_genome_list_controls'),
     url(r'^_/templates/sample_list_controls$',
             'main.template_xhrs.sample_list_controls'),
+    url(r'^_/templates/contig_list_controls$',
+            'main.template_xhrs.contig_list_controls'),
     url(r'^_/templates/create_new_empty_variant_set$',
             'main.template_xhrs.create_new_empty_variant_set'),
 

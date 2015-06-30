@@ -3,6 +3,7 @@ Signal registration.
 
 See: https://docs.djangoproject.com/en/dev/topics/signals/.
 """
+from Bio import SeqIO
 
 from django.contrib.auth.models import User
 from django.db.models.signals import m2m_changed
@@ -11,7 +12,7 @@ from django.db.models.signals import pre_delete
 from django.db.models.signals import post_delete
 
 from models import AlignmentGroup
-from models import Chromosome
+from models import Contig
 from models import Dataset
 from models import ExperimentSample
 from models import ExperimentSampleToAlignment
@@ -120,6 +121,37 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
 m2m_changed.connect(post_add_seq_to_ref_genome,
     sender=ReferenceGenome.dataset_set.through,
     dispatch_uid='add_seq_to_ref_genome')
+
+
+def post_add_seq_to_contig(sender, instance, **kwargs):
+    """When a dataset gets added to a contig, we need to grab
+    the number of bases from the dataset if it is a fasta and
+    ensure that it is not a multifasta
+    """
+
+    # Skip unless we've already added the relationship
+    if kwargs['action'] != 'post_add':
+        return
+
+    # TODO: Why is this a loop? When will this ever have more than one pk in
+    # kwargs['pk_set']?
+    model = kwargs['model']
+    for pk in kwargs['pk_set']:
+        dataset = model.objects.get(pk=pk)
+        if dataset.type == Dataset.TYPE.REFERENCE_GENOME_FASTA:
+            assert instance.num_bases == 0
+            seq_record_count = 0
+            for seq_record in SeqIO.parse(dataset.get_absolute_location(),
+                    'fasta'):
+                if seq_record_count != 0:
+                    raise Exception('Contig associated fastas can only' +
+                                    'contain one sequence')
+                instance.num_bases = len(seq_record)
+                seq_record_count += 1
+
+m2m_changed.connect(post_add_seq_to_contig,
+        sender=Contig.dataset_set.through,
+        dispatch_uid='post_add_seq_to_contig')
 
 
 def post_variant_evidence_create(sender, instance, created, **kwargs):

@@ -1,0 +1,12 @@
+<!-- Control Box -->
+<div id='{{table_id}}-control' class="gd-datatable-control btn-group">
+  <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
+    New
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu">
+    <li role="presentation"><a role="menuitem" tabindex="-1" href="#gd-contig-assemble-modal" data-toggle="modal">Assemble Contigs</a></li>
+  </ul>
+</div>
+
+{% include "controls/generate_contigs_modal.html" %}

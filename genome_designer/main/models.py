@@ -650,6 +650,72 @@ class ReferenceGenome(UniqueUidModelMixin):
         mvm.drop()
 
 
+class Contig(UniqueUidModelMixin):
+
+    # A human-readable label for this genome.
+    label = models.CharField(verbose_name="Name", max_length=256)
+
+    # Number of bases in the Contig
+    num_bases = models.BigIntegerField(default=0)
+
+    # Datasets pointing to files on the system (e.g. .fasta files, etc.)
+    dataset_set = models.ManyToManyField('Dataset', blank=True, null=True,
+        verbose_name="Datasets")
+
+    # Reference genome which the insertion belongs to
+    parent_reference_genome = models.ForeignKey('ReferenceGenome',
+            related_name='+')
+
+    # The sample alignment that provides evidence for the insertion
+    experiment_sample_to_alignment = models.ForeignKey(
+            'ExperimentSampleToAlignment')
+
+    # Contig metadata field for storing key-value pairs of contig
+    # related information e.g. metadata['is_from_de_novo_assembly']=True
+    metadata = PostgresJsonField()
+
+    def get_model_data_root(self):
+        """Get the root location for all data of this type in the project.
+        """
+        return os.path.join(
+                self.parent_reference_genome.project.get_model_data_dir(),
+                'contigs')
+
+    def get_model_data_dir(self):
+        """Get the full path to the location of this model's data.
+        """
+        return os.path.join(self.get_model_data_root(), str(self.uid))
+
+    def ensure_model_data_dir_exists(self):
+        """Ensure that a data directory exists for this model.
+        """
+        # Make sure the root exists.
+        ensure_exists_0775_dir(self.get_model_data_root())
+
+        # Check whether the data dir exists, and create it if not.
+        return ensure_exists_0775_dir(self.get_model_data_dir())
+
+    @property
+    def timestamp(self):
+        return self.metadata.get('timestamp', '')
+
+    @property
+    def coverage(self):
+        return self.metadata.get('coverage', '')
+
+    @classmethod
+    def get_field_order(clazz, **kwargs):
+        """Get the order of the models for displaying on the front-end.
+        Called by the adapter.
+        """
+        return [
+            {'field': 'label'},
+            {'field': 'num_bases', 'verbose': 'Contig Length'},
+            {'field': 'coverage', 'verbose': 'Average Coverage'},
+            {'field': 'timestamp'}
+        ]
+
+
 class ExperimentSample(UniqueUidModelMixin):
     """Model representing data for a particular experiment sample.
 

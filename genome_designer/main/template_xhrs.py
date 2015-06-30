@@ -87,6 +87,32 @@ def reference_genome_list_controls(request):
                     context))
 
 
+def contig_list_controls(request):
+    """Returns the Contig List control box.
+    """
+
+    # TODO: Find out if below line is important
+    # csrf = request.GET.get('csrf')
+
+    alignment_group = get_object_or_404(
+            AlignmentGroup,
+            uid=request.GET.get('alignmentGroupUid'))
+
+    # If the request passed a tableId, then give it to Django to decorate the
+    # controls.
+    context = {
+            'table_id': request.GET.get('tableId',
+                    'reference-genome-list-datatable'),
+            'alignment_group_uid': alignment_group.uid,
+            'samples_uid_tuples': [
+                    (esta.experiment_sample.label, esta.uid) for esta in
+                    alignment_group.experimentsampletoalignment_set.all()]
+    }
+
+    return HttpResponse(
+            render_to_string('controls/contig_list_controls.html', context))
+
+
 def sample_list_controls(request):
     """Returns the Sample List control box.
     """

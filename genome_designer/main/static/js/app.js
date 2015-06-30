@@ -35,11 +35,6 @@ gd.App.prototype.run = function() {
       var view = new gd.RefGenomeListView({'model': model});
       break;
 
-    case 'GENOME_FINISH':
-      var model = new Backbone.Model(INIT_JS_DATA.entity);
-      var view = new gd.GenomeFinishView({'model': model});
-      break;
-
     case 'SAMPLE':
       var model = new Backbone.Model(INIT_JS_DATA.entity);
       var view = new gd.SampleListView({'model': model});
