@@ -45,6 +45,8 @@ TEST_LUMPY_VCF = os.path.join(settings.PWD, 'test_data', 'pipeline',
 class TestLumpy(TestCase):
 
     def test_run_lumpy(self):
+        TEST_SAMPLE_UID = '8c57e7b9'
+
         user = User.objects.create_user('test_username', password='password',
                 email='test@example.com')
         self.project = Project.objects.create(owner=user.get_profile(),
@@ -56,7 +58,7 @@ class TestLumpy(TestCase):
 
         # Create a sample.
         self.experiment_sample = ExperimentSample.objects.create(
-                project=self.project, label='sample1')
+                uid=TEST_SAMPLE_UID, project=self.project, label='sample1')
 
         # Create a new alignment group.
         alignment_group = AlignmentGroup.objects.create(
@@ -123,14 +125,6 @@ class TestLumpy(TestCase):
         va_offset = [25000 - va_pos for va_pos in va_positions]
         self.assertTrue(any([v < 50 for v in va_offset]))
 
-        # Clean up.
-        remove_dataset_types = [
-            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV,
-            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM
-        ]
-        for dataset_type in remove_dataset_types:
-            dataset = get_dataset_with_type(self.sample_alignment, dataset_type)
-            os.remove(dataset.get_absolute_location())
 
     def test_run_lumpy__deletion(self):
         """Tests running Lumpy on data that should have a deletion.
@@ -184,7 +178,7 @@ class TestLumpy(TestCase):
         lumpy_params = dict(VARIANT_TOOL_PARAMS_MAP[TOOL_LUMPY])
         lumpy_params['tool_kwargs'] = {
             'region_num': sample_alignment.id,
-            'sample_alignment': sample_alignment
+            'sample_alignments': [sample_alignment]
         }
         find_variants_with_tool(
                 self.alignment_group, lumpy_params, project=self.project)
