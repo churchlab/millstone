@@ -26,7 +26,13 @@ from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import add_bed_file_track
 from utils import titlecase_spaces
 
-LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/pairend_distro.py' % settings.TOOLS_DIR
+
+# NOTE: The latest Lumpy pairend_distro.py has some bugs so we use the old
+# version for getting insert metrics here.
+LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/pairend_distro.old.py' % settings.TOOLS_DIR
+if not os.path.exists(LUMPY_PAIREND_DISTRO_BIN):
+    LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/pairend_distro.py' % settings.TOOLS_DIR
+
 SAMTOOLS_BINARY = '%s/samtools/samtools' % settings.TOOLS_DIR
 
 
