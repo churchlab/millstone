@@ -222,6 +222,7 @@ class TestAlignmentPipeline(TestCase):
                     break
             self.assertTrue(found_bam_track)
 
+
 class TestAlignmentPieces(TestCase):
 
     def setUp(self):
@@ -319,5 +320,5 @@ class TestAlignmentPieces(TestCase):
 
     def test_get_insert_size(self):
         mean, stdev = get_insert_size_mean_and_stdev(self.sample_alignment)
-        self.assertEqual(mean, 499)
+        self.assertAlmostEqual(mean, 498, delta=2)
         self.assertAlmostEqual(stdev, 50, delta=1)
