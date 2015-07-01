@@ -10,7 +10,7 @@ class Migration(SchemaMigration):
     def forwards(self, orm):
         # Adding field 'ReferenceGenome.metadata'
         db.add_column(u'main_referencegenome', 'metadata',
-                      self.gf('main.custom_fields.PostgresJsonField')(default='{"is_from_de_novo_assembly": false}'),
+                      self.gf('main.custom_fields.PostgresJsonField')(default='{}'),
                       keep_default=False)
 
 
