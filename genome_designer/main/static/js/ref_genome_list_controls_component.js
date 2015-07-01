@@ -20,8 +20,6 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
         _.bind(this.handleCreateFromServerLocation, this));
     $('#gd-ref-genome-create-from-ncbi-submit').click(
         _.bind(this.handleCreateFromNCBI, this));
-    $('#gd-ref-genome-toggle-display-de-novo').click(
-        _.bind(function() {this.trigger('TOGGLE_DE_NOVO');}, this));
 
     this.drawDropdownOptions();
   },

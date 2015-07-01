@@ -7,7 +7,6 @@ gd.RefGenomeListView = Backbone.View.extend({
   el: '#gd-page-container',
 
   initialize: function() {
-    this.showDeNovo = true;
     this.render();
   },
 
@@ -25,7 +24,6 @@ gd.RefGenomeListView = Backbone.View.extend({
 
     var requestData = {
         projectUid: this.model.get('uid'),
-        showDeNovo: this.showDeNovo ? 1 : 0
     };
 
     this.datatableComponent = new gd.DataTableComponent({
@@ -47,10 +45,5 @@ gd.RefGenomeListView = Backbone.View.extend({
 
     this.listenTo(this.refGenomeControlsComponent, 'MODELS_UPDATED',
         _.bind(this.redrawDatatable, this));
-    this.listenTo(this.refGenomeControlsComponent, 'TOGGLE_DE_NOVO',
-        _.bind(function() {
-            this.showDeNovo = !this.showDeNovo;
-            this.redrawDatatable();
-        }, this));
   }
 });

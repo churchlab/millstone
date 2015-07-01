@@ -1011,17 +1011,6 @@ def get_ref_genomes(request):
 
     filters = {'project': project}
 
-    # If hiding de_novo_assemblies, generate a list of uids from non-assemblies
-    # from the metadata json field of a ReferenceGenome to use as a filter
-    # when adapting the model to the front end
-    show_de_novo = int(request.GET.get('showDeNovo', 1))
-    if not show_de_novo:
-        uid_list = []
-        for rg in ReferenceGenome.objects.all():
-            if not rg.metadata.get('is_from_de_novo_assembly', False):
-                uid_list.append(rg.uid)
-        filters['uid__in'] = uid_list
-
     response_data = adapt_model_to_frontend(ReferenceGenome, filters)
 
     return HttpResponse(response_data, content_type='application/json')
