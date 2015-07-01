@@ -132,7 +132,7 @@ def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):
                 variant.position,
                 variant.uid,
                 variant.ref_value,
-                alt_value,
+                (alt_value,),
                 1, # QUAL
                 [], # FILTER
                 {}, # INFO
