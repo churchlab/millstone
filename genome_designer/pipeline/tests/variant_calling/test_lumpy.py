@@ -99,7 +99,7 @@ class TestLumpy(TestCase):
         get_split_reads(self.sample_alignment)
 
         run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
-                vcf_output_filename, alignment_type, sample_alignment)
+                vcf_output_filename, alignment_type)
 
         dataset = Dataset.objects.create(
                 type=Dataset.TYPE.VCF_LUMPY,

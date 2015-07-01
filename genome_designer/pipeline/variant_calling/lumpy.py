@@ -96,16 +96,17 @@ INFO_FORMAT_STR = (
     'DP={reads}')
 
 
-
 def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
-              vcf_output_filename, alignment_type, sample_alignment, **kwargs):
+              vcf_output_filename, alignment_type, **kwargs):
     """Runs lumpy on single alignment.
 
     See: https://github.com/arq5x/lumpy-sv
     """
-    # NOTE: Ignoring sample_alignments but keeping the variable
-    # in the signature to match rest of pipeline. We probably need to
-    # revamp the framework.
+    # NOTE: Only supporting single sample alignment for now. Previously we
+    # tried to use lumpy for multiple sample alignments but the machine would
+    # run out of memory so we are going to limit functionality to single
+    # alignment only for now.
+    assert len(sample_alignments) == 1
 
     # TODO, look for these three in kwargs before setting?
     global_lumpy_options = ['-mw', 1, '-tt', 0.0]
@@ -133,7 +134,7 @@ def run_lumpy(fasta_ref, sample_alignments, vcf_output_dir,
 
     # build up the option strings for each sample
     i = 0
-    sa = sample_alignment
+    sa = sample_alignments[0]
     sample_uid = sa.experiment_sample.uid
     sample_uid_order.append(sample_uid)
     sample_id_dict[i] = sample_uid

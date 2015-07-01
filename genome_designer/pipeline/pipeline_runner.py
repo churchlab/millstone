@@ -256,7 +256,7 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
                 per_sample_params = dict(tool_params)
                 per_sample_params['tool_kwargs'] = {
                     'region_num': sa.id,
-                    'sample_alignment': sa
+                    'sample_alignments': [sa]
                 }
                 parallel_tasks.append(find_variants_with_tool.si(
                         alignment_group, per_sample_params,
