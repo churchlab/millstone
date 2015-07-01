@@ -272,7 +272,8 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
 
 @task
 def start_variant_calling_pipeline_task(alignment_group):
-    """First task in variant calling pipeline.
+    """First task in variant calling pipeline which waits for all alignments
+    to be complete.
 
     Nested chords in celery don't work so we need to break up the pipeline into
     two separate pipelines: 1) alignment and 2) variant calling. This task is
@@ -318,7 +319,6 @@ def start_variant_calling_pipeline_task(alignment_group):
             time.sleep(POLL_INTERVAL_SEC)
 
     # All ready. Set VARIANT_CALLING.
-    alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
     alignment_group.status = AlignmentGroup.STATUS.VARIANT_CALLING
     alignment_group.save(update_fields=['status'])
 

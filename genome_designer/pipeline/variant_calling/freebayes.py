@@ -187,7 +187,6 @@ def merge_freebayes_parallel(alignment_group):
     vcf_ouput_filename_merged_fh.close()
 
     vcf_dataset_type = Dataset.TYPE.VCF_FREEBAYES
-    vcf_annotated_dataset_type = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 
     # add unannotated vcf dataset first
     vcf_dataset = add_vcf_dataset(alignment_group, vcf_dataset_type,
@@ -199,11 +198,11 @@ def merge_freebayes_parallel(alignment_group):
 
         vcf_ouput_filename_merged_snpeff = run_snpeff(
                 alignment_group, Dataset.TYPE.BWA_ALIGN)
-        
-        vcf_dataset_type = vcf_annotated_dataset_type
 
-        vcf_dataset = add_vcf_dataset(alignment_group, 
-                vcf_dataset_type,
+        vcf_dataset_type = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
+
+        vcf_dataset = add_vcf_dataset(
+                alignment_group, vcf_dataset_type,
                 vcf_ouput_filename_merged_snpeff)
 
     # generate variants, process, etc

@@ -128,9 +128,10 @@ def flag_variants_from_bed(alignment_group, bed_dataset_type):
                 bed_dataset=callable_loci_bed)
 
 
-# Returns a dictionary of common parameters required for all variant callers
-# (freebayes, pindel, delly, lumpy).
 def get_common_tool_params(alignment_group):
+    """Returns a dictionary of common parameters required for all variant
+    callers (i.e. freebayes, pindel, delly, lumpy).
+    """
     alignment_type = Dataset.TYPE.BWA_ALIGN
     return {
         'alignment_group': alignment_group,

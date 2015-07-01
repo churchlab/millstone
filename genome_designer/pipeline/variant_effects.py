@@ -2,41 +2,34 @@
 Methods for working with snpEff.
 """
 
-from django import template
-from Bio import SeqIO
-import os
-import os.path
-import subprocess
-import sys
-import vcf
 from collections import defaultdict
 from collections import OrderedDict
-import re
 from itertools import chain
+import os
+import re
 from string import Template
 from StringIO import StringIO
+import subprocess
+import sys
+
+from Bio import SeqIO
+from django.conf import settings
+from django import template
+import vcf
 
 from main.models import Dataset
 from main.models import ensure_exists_0775_dir
 from main.models import get_dataset_with_type
-from main.model_utils import clean_filesystem_location
 from utils import ensure_line_lengths
 from utils import uppercase_underscore
-import settings
 
-# TODO: These should be set somewhere else. snpeff_util and vcf_parser also use
-#   them, but where should they go? settings.py seems logical, but it cannot
-#   import from models.py... -dbg
 
-# Dataset type to use for snp calling.
-VCF_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES
-# Dataset type to use for snp annotation.
-VCF_ANNOTATED_DATASET_TYPE = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
-
-#Compile this SNPEFF parsing refex only once
-# Example:
+# Compile this SNPEFF parsing regex only once
+# Here we compile the SnpEff-parsing regex that parses a string that looks like
+# e.g.:
 #   NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC||CODING
 #        |b3038|1|1)
+# Since it's complicated, we build it up in steps:
 
 SNPEFF_FIELDS = OrderedDict([
     ('EFFECT', {
@@ -122,6 +115,7 @@ SNPEFF_ALT_RE = re.compile(r''.join([
         r'\|(?P<{:s}>[^\|]*)' * (len(SNPEFF_FIELDS.keys())-4),
         r'\|?(?P<{:s}>[^\|]*)\|?(?P<{:s}>[^\|]*)\)']
         ).format(*SNPEFF_FIELDS.keys()))
+
 
 def build_snpeff(ref_genome):
     """
@@ -300,9 +294,9 @@ def run_snpeff(alignment_group, alignment_type):
 
     # Get the freebayes vcf file as input
     assert get_dataset_with_type(alignment_group,
-            type=VCF_DATASET_TYPE)
+            type=Dataset.TYPE.VCF_FREEBAYES)
     vcf_input_filename = get_dataset_with_type(alignment_group,
-            type=VCF_DATASET_TYPE).get_absolute_location()
+            type=Dataset.TYPE.VCF_FREEBAYES).get_absolute_location()
 
     # Prepare a directory to put the output file.
     vcf_output_filename = get_snpeff_vcf_output_path(alignment_group,
