@@ -265,16 +265,23 @@ def add_genbank_file_track(reference_genome, **kwargs):
 
 
 def add_vcf_track(reference_genome, alignment_group, vcf_dataset_type):
-    """Adds a vcf track to JBrowse for this vcf.
-
-    See JBrowse Docs:
-        http://gmod.org/wiki/JBrowse_Configuration_Guide#Example_VCF-based_Variant_Track_Configuration
+    """DEPRECATED. Use add_vcf_track_given_dataset().
     """
     # Get the vcf file location from the the Dataset of the genome
     # keyed by the alignment_type.
     vcf_dataset = get_dataset_with_type(alignment_group,
             vcf_dataset_type)
+    return add_vcf_track_given_dataset(
+        reference_genome, alignment_group, vcf_dataset)
 
+
+def add_vcf_track_given_dataset(
+        reference_genome, alignment_group, vcf_dataset):
+    """Adds a vcf track to JBrowse for this vcf.
+
+    See JBrowse Docs:
+        http://gmod.org/wiki/JBrowse_Configuration_Guide#Example_VCF-based_Variant_Track_Configuration
+    """
     vcf_dataset = _vcf_to_vcftabix(vcf_dataset)
 
     if reference_genome.project.is_s3_backed():
