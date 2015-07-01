@@ -3,9 +3,9 @@ import os
 from conf.global_settings import *
 
 try:
-	from conf.local_settings import *
+    from conf.local_settings import *
 except ImportError:
-	pass
+    pass
 
 # Use a default temp file root if none is set.
 if 'TEMP_FILE_ROOT' not in locals():
