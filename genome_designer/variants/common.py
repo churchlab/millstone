@@ -365,6 +365,8 @@ def update_parent_child_variant_fields(alignment_group):
                     0 if ve.data['GT_TYPE'] is None else ve.data['GT_TYPE'])
 
         for parent, children in relations.items():
+            if not parent in sample_to_ve:
+                continue
             parent_ve = sample_to_ve[parent]
             chldrn_ve = [sample_to_ve[child] for child in children]
 
