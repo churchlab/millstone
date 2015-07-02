@@ -14,6 +14,10 @@ from pipeline.variant_effects import run_snpeff
 from pipeline.variant_calling.common import add_vcf_dataset
 from pipeline.variant_calling.common import get_common_tool_params
 from pipeline.variant_calling.common import process_vcf_dataset
+from pipeline.variant_calling.common import TOOL_DELLY
+from pipeline.variant_calling.common import TOOL_FREEBAYES
+from pipeline.variant_calling.common import TOOL_LUMPY
+from pipeline.variant_calling.common import TOOL_PINDEL
 from pipeline.variant_calling.delly import run_delly
 from pipeline.variant_calling.freebayes import run_freebayes
 from pipeline.variant_calling.lumpy import run_lumpy
@@ -24,12 +28,6 @@ from utils import uppercase_underscore
 ###############################################################################
 # Constants and Maps
 ###############################################################################
-
-TOOL_FREEBAYES = 'freebayes'
-TOOL_PINDEL = 'pindel'
-TOOL_DELLY = 'delly'
-TOOL_LUMPY = 'lumpy'
-
 
 # Map from variant caller name to params.
 VARIANT_TOOL_PARAMS_MAP = {
@@ -80,10 +78,10 @@ def find_variants_with_tool(alignment_group, variant_params_dict):
     # TODO: More informative failure information.
     try:
         common_params = get_common_tool_params(alignment_group)
-    except:
+    except Exception as e:
         alignment_group.status = AlignmentGroup.STATUS.FAILED
         alignment_group.save(update_fields=['status'])
-        return False
+        raise e
 
     tool_name = variant_params_dict['tool_name']
     vcf_dataset_type = variant_params_dict['dataset_type']
@@ -120,8 +118,11 @@ def find_variants_with_tool(alignment_group, variant_params_dict):
     if not tool_succeeded:
         return False
 
-    # Freebayes in parallel mode handles own merging so we are done here.
-    if is_parallel_tool and tool_name == TOOL_FREEBAYES:
+    # Certain tools require merging and so are responsible for their own
+    # vcf processing.
+    does_vcf_processing_occur_elsewhere = (
+            is_parallel_tool and tool_name in [TOOL_FREEBAYES, TOOL_LUMPY])
+    if does_vcf_processing_occur_elsewhere:
         return True
 
     # Otherwise proceed with processing vcf dataset.

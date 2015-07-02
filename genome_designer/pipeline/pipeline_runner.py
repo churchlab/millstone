@@ -25,6 +25,7 @@ from pipeline.variant_calling import TOOL_FREEBAYES
 from pipeline.variant_calling import TOOL_LUMPY
 from pipeline.variant_calling.freebayes import merge_freebayes_parallel
 from pipeline.variant_calling.freebayes import freebayes_regions
+from pipeline.variant_calling.lumpy import merge_lumpy_vcf
 
 
 # List of variant callers to use. At time of writing, this was not hooked
@@ -328,6 +329,7 @@ def merge_variant_data(alignment_group):
     """Merges results of variant caller data after pipeline is complete.
     """
     merge_freebayes_parallel(alignment_group)
+    merge_lumpy_vcf(alignment_group)
 
 
 @task

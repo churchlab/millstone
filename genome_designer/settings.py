@@ -29,11 +29,19 @@ DELLY_BIN = '%s/delly/src/delly' % TOOLS_DIR
 
 LUMPY_EXPRESS_BINARY = '%s/lumpy/lumpyexpress' % TOOLS_DIR
 
+LUMPY_SCRIPTS_DIR = '%s/lumpy/scripts' % TOOLS_DIR
+
 # NOTE: The latest Lumpy pairend_distro.py has some bugs so we use the old
 # version for getting insert metrics here.
 LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/scripts/pairend_distro.old.py' % TOOLS_DIR
 if not os.path.exists(LUMPY_PAIREND_DISTRO_BIN):
     LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/scripts/pairend_distro.py' % TOOLS_DIR
+
+# Merging lumpy vcfs
+
+LUMPY_L_SORT_BINARY = os.path.join(LUMPY_SCRIPTS_DIR, 'l_sort.py')
+
+LUMPY_L_MERGE_BINARY = os.path.join(LUMPY_SCRIPTS_DIR, 'l_merge.py')
 
 ### vcftools
 
