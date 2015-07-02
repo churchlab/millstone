@@ -60,8 +60,9 @@ def get_insertion_location(bam_filename):
                         GENOME_FINISH_PATH,
                         'find_insertion_neighborhood.py'))
 
-    output = subprocess.check_output(cmd, shell=True, executable=BASH_PATH)
-    return pickle.loads(output)
+    pickled_output = subprocess.check_output(
+            cmd, shell=True, executable=BASH_PATH)
+    return pickle.loads(pickled_output)
 
 
 def make_sliced_fasta(fasta_path, seqrecord_id, left_index, right_index,

@@ -703,6 +703,18 @@ class Contig(UniqueUidModelMixin):
     def coverage(self):
         return self.metadata.get('coverage', '')
 
+    @property
+    def chromosome(self):
+        return self.metadata.get('chromosome', '')
+
+    @property
+    def ref_insertion_pos(self):
+        return self.metadata.get('ref_insertion_pos', '')
+
+    @property
+    def insertion_sequence_endpoints(self):
+        return self.metadata.get('insertion_sequence_endpoints', '')
+
     @classmethod
     def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
@@ -712,7 +724,11 @@ class Contig(UniqueUidModelMixin):
             {'field': 'label'},
             {'field': 'num_bases', 'verbose': 'Contig Length'},
             {'field': 'coverage', 'verbose': 'Average Coverage'},
-            {'field': 'timestamp'}
+            {'field': 'timestamp'},
+            {'field': 'chromosome', 'verbose': 'Chromosome'},
+            {'field': 'ref_insertion_pos',
+                    'verbose': 'Reference Insertion Position'},
+            {'field': 'insertion_sequence_endpoints'}
         ]
 
 

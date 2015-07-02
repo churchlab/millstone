@@ -11,6 +11,7 @@ import os
 from StringIO import StringIO
 import tempfile
 
+from Bio import SeqIO
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
@@ -29,6 +30,7 @@ from django.views.decorators.http import require_POST
 from main.adapters import adapt_model_to_frontend
 from main.adapters import adapt_experiment_samples_to_frontend
 from main.exceptions import ValidationException
+from main.model_utils import get_dataset_with_type
 from main.model_views import adapt_gene_list_to_frontend
 from main.model_views import get_all_fields
 from main.model_views import adapt_variant_to_frontend
@@ -47,6 +49,8 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
 from genome_finish import assembly
+from genome_finish.insertion_placement import find_contig_insertion_site
+from genome_finish.insertion_placement import place_cassette
 from utils.combine_reference_genomes import combine_list_allformats
 from utils.data_export_util import export_melted_variant_view
 from utils.import_util import create_samples_from_row_data
@@ -1037,6 +1041,106 @@ def get_contigs(request):
     response_data = adapt_model_to_frontend(Contig, filters)
 
     return HttpResponse(response_data, content_type='application/json')
+
+
+@login_required
+@require_GET
+def contigs_has_insertion_location(request):
+    """Returns {'has_insertion_location': True} if any of the contigs
+    in the passed list of contig uids have insertion location data
+    """
+    # Parse the GET params.
+    request_data = json.loads(request.GET['data'])
+    contig_uid_list = request_data.get('contigUidList', None)
+
+    # Search metadata of filtered contigs for non-null
+    # insertion location keys
+    has_insertion_location = False
+    for c in Contig.objects.filter(uid__in=contig_uid_list):
+        if c.metadata.get('insertion_sequence_endpoints', None):
+            has_insertion_location = True
+            break
+
+    result = {'has_insertion_location': has_insertion_location}
+    return HttpResponse(json.dumps(result), content_type='application/json')
+
+
+@login_required
+@require_POST
+def contigs_find_insertion_location(request):
+    """Attempts to find the placement parameters for the contigs
+    in the passedd contig uid list.  If unable to place a contig,
+    the specific error message is included in the format (label, error_string)
+    in a list under the key 'error' in the response dict
+    """
+    request_data = json.loads(request.body)
+    contig_uid_list = request_data.get('contigUidList', [])
+
+    result = {}
+    for contig in Contig.objects.filter(uid__in=contig_uid_list):
+        ref_genome = contig.parent_reference_genome
+        contig_fasta = get_dataset_with_type(contig,
+                Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+        with open(contig_fasta) as fh:
+            seqrecord = SeqIO.parse(fh, 'fasta').next()
+            insertion_data = find_contig_insertion_site(
+                    ref_genome, seqrecord)
+
+            if 'error_string' in insertion_data:
+                if result.get('error', False):
+                    result['error'].append(
+                            (contig.label, insertion_data['error_string']))
+                else:
+                    result['error'] = [
+                            (contig.label, insertion_data['error_string'])]
+            else:
+                contig.metadata['insertion_sequence_endpoints'] = (
+                        insertion_data['contig_cassette_start_pos'],
+                        insertion_data['contig_cassette_end_pos'])
+                contig.metadata['ref_insertion_pos'] = insertion_data[
+                        'ref_insertion_pos']
+                contig.metadata['chromosome'] = insertion_data[
+                        'ref_chromosome_seqrecord_id']
+                contig.save()
+
+    return HttpResponse(json.dumps(result), content_type='application/json')
+
+
+@login_required
+@require_POST
+def contigs_place_in_ref(request):
+    """Incorporates the passed contigs into the reference they belong to
+    to make a new version of the reference with the passed label. For now
+    only incorporation of single contigs is supported
+    """
+    request_data = json.loads(request.body)
+    contig_uid_list = request_data.get('contigUidList', [])
+    new_genome_label = request_data.get('newGenomeLabel', '')
+
+    result = {}
+    for contig in Contig.objects.filter(uid__in=contig_uid_list):
+        ref_genome = contig.parent_reference_genome
+
+        start, end = contig.metadata.get('insertion_sequence_endpoints')
+        placement_position_params = {
+            'ref_insertion_pos': contig.metadata.get('ref_insertion_pos'),
+            'ref_chromosome_seqrecord_id': contig.metadata.get('chromosome'),
+            'contig_cassette_start_pos': start,
+            'contig_cassette_end_pos': end
+        }
+
+        new_reference_genome_params = {
+            'label': new_genome_label
+        }
+
+        contig_fasta = get_dataset_with_type(contig,
+                Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+        with open(contig_fasta) as fh:
+            seqrecord = SeqIO.parse(fh, 'fasta').next()
+            place_cassette(ref_genome, seqrecord,
+                    placement_position_params, new_reference_genome_params)
+
+    return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 @login_required
