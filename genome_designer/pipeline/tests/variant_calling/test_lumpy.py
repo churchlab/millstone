@@ -24,6 +24,7 @@ from pipeline.variant_calling import find_variants_with_tool
 from pipeline.variant_calling.lumpy import filter_lumpy_vcf
 from pipeline.variant_calling.lumpy import merge_lumpy_vcf
 from pipeline.variant_calling.lumpy import run_lumpy
+from pipeline.variant_calling.lumpy import process_vcf_post_l_merge
 from pipeline.variant_calling import TOOL_LUMPY
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from utils.import_util import copy_and_add_dataset_source
@@ -80,6 +81,9 @@ DELETION_SAMPLE_4_UID = 'f8346a99'
 
 DELETION_SAMPLE_4_BWA = os.path.join(DELETION_f8346a99_TEST_DATA_DIR,
         'deletion_f8346a99.bam')
+
+L_MERGE_TEST_OUTPUT = os.path.join(
+        TEST_DATA_DIR, 'sv_testing', 'l_merge_test_data', 'l_merge_output.vcf')
 
 
 class TestLumpy(TestCase):
@@ -192,7 +196,7 @@ class TestLumpy(TestCase):
         # Run lumpy.
         lumpy_params = dict(VARIANT_TOOL_PARAMS_MAP[TOOL_LUMPY])
         lumpy_params['tool_kwargs'] = {
-            'region_num': sa.uid,
+            'region_num': sample_alignment.uid,
             'sample_alignments': [sample_alignment]
         }
         find_variants_with_tool(
@@ -283,6 +287,34 @@ class TestLumpy(TestCase):
 
         # Should have 2 events.
         self.assertEqual(2, len(variants))
+
+    def test_post_l_merge(self):
+        """Tests post-processing code following l_sort/l_merge.py on outputs
+        of lumpy applied on single samples.
+        """
+        _, processed_vcf_path = tempfile.mkstemp()
+        process_vcf_post_l_merge(L_MERGE_TEST_OUTPUT, processed_vcf_path)
+
+        MAP_EXPECTED_VARIANT_POS_TO_SAMPLE_LIST = {
+            4998: ['f8346a99'],
+            9999: ['ds1', 'ds2', 'ds3'],
+        }
+
+        with open(processed_vcf_path) as fh:
+            # Assert expected number of sample cols.
+            vcf_reader = vcf.Reader(fh)
+            self.assertEqual(4, len(vcf_reader.samples))
+
+            # Assert each sample has proper GT.
+            for record in vcf_reader:
+                samples_with_var = MAP_EXPECTED_VARIANT_POS_TO_SAMPLE_LIST[
+                        record.POS]
+                for sample_call in record.samples:
+                    # error_msg = sample_
+                    if sample_call.gt_nums == '1/1':
+                        self.assertTrue(sample_call.sample in samples_with_var)
+                    else:
+                        self.assertFalse(sample_call.sample in samples_with_var)
 
     def test_filter_vcf(self):
         """Tests filtering out noisy values from vcf.

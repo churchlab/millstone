@@ -108,14 +108,19 @@ def merge_lumpy_vcf(alignment_group):
         subprocess.check_call(l_sort_cmd_list, stdout=l_sort_output_fh)
 
     # l_merge merges lines representing the same variant.
-    merged_vcf_filepath = os.path.join(
-            partial_vcf_output_dir,
-            uppercase_underscore(common_params['alignment_type']) + '.vcf')
+    l_merge_output_path = os.path.join(
+            partial_vcf_output_dir, 'lumpy_l_merge_output.vcf')
     l_merge_cmd_list = [
         settings.LUMPY_L_MERGE_BINARY,
         '-i', l_sort_output_vcf_filepath]
-    with open(merged_vcf_filepath, 'w') as l_merge_output_fh:
+    with open(l_merge_output_path, 'w') as l_merge_output_fh:
         subprocess.check_call(l_merge_cmd_list, stdout=l_merge_output_fh)
+
+    # Post-processing following l-merge.
+    merged_vcf_filepath = os.path.join(
+            partial_vcf_output_dir,
+            uppercase_underscore(common_params['alignment_type']) + '.vcf')
+    process_vcf_post_l_merge(l_merge_output_path, merged_vcf_filepath)
 
     # Create Dataset pointing to merged vcf file.
     vcf_dataset_type = Dataset.TYPE.VCF_LUMPY
@@ -130,3 +135,56 @@ def merge_lumpy_vcf(alignment_group):
     #     os.remove(filename)
 
     return vcf_dataset
+
+
+def process_vcf_post_l_merge(l_merge_output_vcf_path, processed_vcf_path):
+    """Processes vcf following l_merge.
+
+    The output of l_merge doesn't have a column per sample with GT information,
+    which is the format that vcf_parser expects. Instead, l_merge places the
+    information into the INFO string. So we need to parse this and output
+    the properly formatted vcf file.
+    """
+    with open(l_merge_output_vcf_path) as l_merge_output_fh:
+        with open(processed_vcf_path, 'w') as processed_vcf_fh:
+            vcf_reader = vcf.Reader(l_merge_output_fh)
+
+            # Make column headers match what's expected by vcf_parser.
+            # l_merge output is missing FORMAT column header, and columns
+            # for each sample.
+            if not 'FORMAT' in vcf_reader._column_headers:
+                vcf_reader._column_headers.append('FORMAT')
+            vcf_reader.samples = [
+                    x['ID'] for x in vcf_reader.metadata['SAMPLE']]
+
+            # Writer object using Reader as template.
+            vcf_writer = vcf.Writer(processed_vcf_fh, vcf_reader)
+
+            # Format each record with correct setting.
+            for record in vcf_reader:
+                # import ipdb
+                # ipdb.set_trace()
+
+                # We only track GT in this first pass at implementation.
+                record.FORMAT = 'GT'
+
+                # vcf.model._Call requires data as a hashable type so follow
+                # vcf internal code pattern of making a tuple.
+                calldata_tuple_type = vcf.model.make_calldata_tuple(
+                        record.FORMAT)
+
+                samples_with_sv = set([
+                        x.split(':')[0] for x in record.INFO['SNAME']])
+
+                # Parse the record
+                record_samples = []
+                for sample_id in vcf_reader.samples:
+                    if sample_id in samples_with_sv:
+                        sample_data = calldata_tuple_type(GT='1/1')
+                    else:
+                        sample_data = calldata_tuple_type(GT='./.')
+                    record_samples.append(
+                            vcf.model._Call(record, sample_id, sample_data))
+                record.samples = record_samples
+
+                vcf_writer.write_record(record)
