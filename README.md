@@ -350,7 +350,8 @@ From the `genome_designer` directory, run:
     (venv)$ python scripts/bootstrap_data.py full
 
 NOTE: This will delete the entire dev database and re-create it with the
-hard-coded test models only.
+hard-coded test models only. The username and password for this test database
+are at the top of `scripts/boostrap_data.py`.
 
 ## Debugging
 
