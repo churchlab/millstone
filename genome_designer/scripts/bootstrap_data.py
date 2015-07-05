@@ -73,10 +73,10 @@ TEST_FASTQ_GZ_2 = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
         '6057f443', 'test_genome_8.snps.simLibrary.2.fq.gz')
 
 TEST_BAM = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
-        '38d786f2', 'bwa_align.sorted.grouped.realigned.bam')
+        '38d786f2', 'bwa_align.sorted.realigned.bam')
 
 TEST_BAM_INDEX = os.path.join(GD_ROOT, 'test_data', 'fake_genome_and_reads',
-        '38d786f2', 'bwa_align.sorted.grouped.realigned.bam.bai')
+        '38d786f2', 'bwa_align.sorted.realigned.bam.bai')
 
 TEST_PROJECT_NAME = 'recoli'
 

@@ -128,7 +128,8 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
             '%s/bwa/bwa' % settings.TOOLS_DIR,
             'mem',
             '-t', '1', # threads
-            '-M', # picard compatibility
+            '-R', '"'+read_group_string(experiment_sample)+'"',
+            '-M',
             ref_genome_fasta,
             input_reads_1_fq,
         ])
@@ -210,7 +211,7 @@ DEFAULT_PROCESSING_MASK = {
     'make_bam': True,
     'sort': True,
     'rmdup': True,
-    'add_groups': True,
+    'add_groups': False,
     # Disabling GATK indel realignment by default;
     # freebayes does it locally while calling, and it's slower;
     # 27 sec vs 38 seconds on pipeline tests on my MBP.
@@ -270,7 +271,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     assert os.path.splitext(bam_file_location)[1] == '.bam'
 
     # 2. Sort
-    sorted_output_name = os.path.splitext(bam_file_location)[0] + '.sorted'
+    sorted_output_name = os.path.splitext(bam_file_location)[0] + '.'
     sorted_bam_file_location = sorted_output_name + '.bam'
 
     # We are only performing rmdup if we are sorting - if no sorting, then
@@ -319,37 +320,27 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         compute_insert_metrics(sorted_bam_file_location,
                 sample_alignment, error_output)
 
-    # 4. Add groups
-    grouped_output_name = (
-            os.path.splitext(sorted_bam_file_location)[0] +
-            '.grouped')
-    grouped_bam_file_location = grouped_output_name + '.bam'
-    if effective_mask['add_groups']:
-        add_groups(experiment_sample, sorted_bam_file_location,
-                grouped_bam_file_location,
-                error_output)
-
     # 5. Perform realignment accounting for indels.
     realigned_bam_file_location = (
-            os.path.splitext(grouped_bam_file_location)[0] +
+            os.path.splitext(sorted_bam_file_location)[0] +
             '.realigned.bam'
     )
 
     if effective_mask['indel_realigner']:
         # Make sure the previous result is indexed.
-        index_bam_file(grouped_bam_file_location, error_output)
+        index_bam_file(sorted_bam_file_location, error_output)
 
         realign_given_indels(
                 experiment_sample,
                 reference_genome,
-                grouped_bam_file_location,
+                sorted_bam_file_location,
                 realigned_bam_file_location,
                 error_output
         )
     # if we are not realigning indels, then point at the grouped file
     # for the next step.
     else:
-        realigned_bam_file_location = grouped_bam_file_location
+        realigned_bam_file_location = sorted_bam_file_location
 
     # 6. Add back MD tags for visualization of mismatches by Jbrowse
     if effective_mask['withmd']:
@@ -389,29 +380,20 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     return final_bam_location
 
 
-def add_groups(experiment_sample, input_bam_file, bam_output_file, error_output):
-    from main.models import ensure_exists_0775_dir
-    # Create a temp directory in the experiment_sample data dir else we run out of space
-    # with big alignment jobs.
-    picard_tmp_dir = os.path.join(experiment_sample.get_model_data_dir(),
-            'picard_tmp')
-    ensure_exists_0775_dir(picard_tmp_dir)
+def read_group_string(experiment_sample):
+    """
+    Generate a SAM header string for the read group.
+    Passed to bwa with escaped tabs.
+    """
+    read_group_fields = [
+            '@RG',
+            'ID:'+experiment_sample.uid,
+            'PL:illumina',
+            'PU:'+experiment_sample.uid,
+            'LB:'+experiment_sample.uid,
+            'SM:'+experiment_sample.uid]
 
-    prefix = experiment_sample.uid
-    subprocess.check_call([
-        'java', '-Xmx1024M',
-        '-jar', '%s/picard/AddOrReplaceReadGroups.jar' % settings.TOOLS_DIR,
-        'I=' + input_bam_file,
-        'O=' + bam_output_file,
-        'RGPU=' + prefix,
-        'RGLB=' + prefix,
-        'RGID=' + prefix,
-        'RGPL=illumina',
-        'RGSM=' + prefix,
-        'SORT_ORDER=coordinate',
-        'TMP_DIR=' + picard_tmp_dir, # Write temp data locally to avoid exhausting space.
-        'VALIDATION_STRINGENCY=LENIENT' # Prevent unmapped read problems
-    ], stderr=error_output)
+    return('\\t'.join(read_group_fields))
 
 
 def realign_given_indels(
@@ -843,9 +825,7 @@ FILES_TO_DELETE_AFTER_ALIGNMENT = set([
     'bwa_align.bam',
     'bwa_align.sorted.bam',
     'bwa_align.sorted.bam.bai',
-    'bwa_align.sorted.grouped.bam',
-    'bwa_align.sorted.grouped.bam.bai',
-    'bwa_align.sorted.grouped.realigned.bam'
+    'bwa_align.sorted.realigned.bam'
 ])
 
 
