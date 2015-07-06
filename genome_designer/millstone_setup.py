@@ -27,7 +27,6 @@ TOOLS_URLS = {
         # we use the following tools in the freebayes git repo (+submodules):
         # * freebayes
         # * bamleftalign
-        # * bamtools
         # * vcfstreamsort (from vcflib)
         # * vcfuniq (from vcflib)
         'Darwin' : [
@@ -99,10 +98,10 @@ TOOLS_URLS = {
     ],
     'lumpy' : {
         'Darwin' : [
-            'https://www.dropbox.com/s/xyzmhtyjdfzhcza/lumpy-0.2.1-darwin.zip'
+            'https://www.dropbox.com/s/u068igb7phoijpk/lumpy-0.2.11-darwin.zip'
         ],
         'Linux' : [
-            'https://www.dropbox.com/s/xl8honqq7gnh5yi/lumpy-0.2.1-linux.zip'
+	    'https://www.dropbox.com/s/dbgjw59xcum1jru/lumpy-0.2.11-linux.zip'
         ]
     },
     'fastqc' : [
@@ -133,7 +132,7 @@ TOOLS_TO_EXECUTABLES = {
     'lumpy': ['*'], # make all executable
     'pindel': ['pindel', 'pindel2vcf'],
     'tabix': ['tabix', 'bgzip'],
-    'freebayes': ['freebayes', 'bamtools', 'vcfstreamsort', 'vcfuniq'],
+    'freebayes': ['freebayes', 'vcfstreamsort', 'vcfuniq'],
     'velvet': ['velvetg', 'velveth'],
     'seqan': ['place_contig']
 }
@@ -176,16 +175,12 @@ def download_tools(tools=TOOLS_URLS.keys()):
             tool_urls = TOOLS_URLS[tool]
 
         # Make the directory for this tool, if it doesn't exist
-        dest_dir = os.path.join(TOOLS_DIR,tool)
-
-        if not os.path.isdir(dest_dir):
-            os.mkdir(dest_dir)
+        dest_dir = _get_or_create_tool_destination_dir(tool)
 
         for tool_url in tool_urls:
 
             # Grab last part of url after final '/' as file name
             dest_filename = re.match(r'^.*\/([^/]+)$', tool_url).group(1)
-            dest_path = os.path.join(dest_dir,dest_filename)
 
             # Get the *actual* file URL from the dropbox popup
             tool_url = _get_file_url_from_dropbox(tool_url, dest_filename)
@@ -203,26 +198,18 @@ def download_tools(tools=TOOLS_URLS.keys()):
 
             # Otherwise download files to the correct location.
             else:
+                dest_path = os.path.join(dest_dir, dest_filename)
                 urllib.urlretrieve(tool_url,dest_path)
                 print '    %s' % dest_path
 
-        # This is really hackish, but because ZipFile does not save file
-        # permissions, we need to make the bins executable. In cases where
-        # the executable name is different than the tool key in TOOL_URLS,
-        # use TOOLS_TO_EXECUTABLES.
-        if not tool in TOOLS_TO_EXECUTABLES:
-            tool_bin_files = [tool]
-        else:
-            tool_bin_files = [exe for exe in TOOLS_TO_EXECUTABLES[tool]]
-            if '*' in tool_bin_files:
-                # All files are executables.
-                tool_bin_files = [exe for exe in os.listdir(dest_dir)]
+        _update_executable_permissions(tool)
 
-        for tbf in tool_bin_files:
-            tool_bin_path = os.path.join(dest_dir, tbf)
-            if os.path.exists(tool_bin_path):
-                os.chmod(tool_bin_path,
-                        stat.S_IXUSR | stat.S_IWUSR | stat.S_IRUSR)
+
+def _get_or_create_tool_destination_dir(tool):
+    dest_dir = os.path.join(TOOLS_DIR, tool)
+    if not os.path.isdir(dest_dir):
+        os.mkdir(dest_dir)
+    return dest_dir
 
 
 def _get_file_url_from_dropbox(dropbox_url, filename):
@@ -230,6 +217,39 @@ def _get_file_url_from_dropbox(dropbox_url, filename):
     param that will allow the tool to start downloading immediately.
     """
     return dropbox_url + '?dl=1'
+
+
+def _update_executable_permissions(tool):
+    """Set executable permissions lost during zip.
+
+    This is really hackish, but because ZipFile does not save file
+    permissions, we need to make the bins executable. In cases where
+    the executable name is different than the tool key in TOOL_URLS,
+    use TOOLS_TO_EXECUTABLES.
+    """
+    # Location of tool files.
+    dest_dir = _get_or_create_tool_destination_dir(tool)
+
+    # Gather full paths of all files to make executable.
+    if not tool in TOOLS_TO_EXECUTABLES:
+        # By default, tool binary is name of the tool.
+        tool_bin_paths = [os.path.join(dest_dir, tool)]
+    elif '*' in TOOLS_TO_EXECUTABLES[tool]:
+        # tool_bin_files = [exe for exe in os.listdir(dest_dir)]
+        tool_bin_paths = []
+        walk_results = [exe for exe in os.walk(dest_dir)]
+        for root, dirs, files in walk_results:
+            for f in files:
+                tool_bin_paths.append(os.path.join(root, f))
+    else:
+        tool_bin_paths = [os.path.join(dest_dir, exe) for exe in
+                TOOLS_TO_EXECUTABLES[tool]]
+
+    # Set executable permissions.
+    for tbp in tool_bin_paths:
+        # Some packages just have .jars which don't need permissions changed.
+        if os.path.exists(tbp):
+            os.chmod(tbp, stat.S_IXUSR | stat.S_IWUSR | stat.S_IRUSR)
 
 
 def setup_jbrowse():
