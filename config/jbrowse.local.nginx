@@ -2,7 +2,7 @@ server {
   server_name localhost;
 
   location /jbrowse {
-    alias /Users/dbg/software/millstone/jbrowse;
+    alias /path/to/millstone/jbrowse;
   }
 
   location / {
