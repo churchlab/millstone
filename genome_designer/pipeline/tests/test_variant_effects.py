@@ -26,8 +26,6 @@ from pipeline.variant_effects import build_snpeff
 from pipeline.variant_effects import run_snpeff
 from pipeline.variant_effects import get_snpeff_config_path
 from pipeline.variant_effects import populate_record_eff
-from pipeline.variant_calling import VCF_DATASET_TYPE
-from pipeline.variant_calling import VCF_ANNOTATED_DATASET_TYPE
 from pipeline.variant_calling.common import add_vcf_dataset
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
@@ -41,6 +39,7 @@ TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
 TEST_GENBANK = os.path.join(TEST_DIR, 'mg1655_tolC_through_zupT.gb')
 
 TEST_UNANNOTATED_VCF = os.path.join(TEST_DIR, 'bwa_align_unannotated.vcf')
+
 
 class TestSnpeff(TestCase):
 
@@ -72,8 +71,8 @@ class TestSnpeff(TestCase):
 
         # Add unannotated SNP data.
         self.vcf_dataset = Dataset.objects.create(
-                type=VCF_DATASET_TYPE,
-                label=VCF_DATASET_TYPE,
+                type=Dataset.TYPE.VCF_FREEBAYES,
+                label=Dataset.TYPE.VCF_FREEBAYES,
                 filesystem_location=TEST_UNANNOTATED_VCF)
         self.alignment_group.dataset_set.add(self.vcf_dataset)
 
@@ -105,14 +104,13 @@ class TestSnpeff(TestCase):
                 self.alignment_group, Dataset.TYPE.BWA_ALIGN)
 
         vcf_dataset = add_vcf_dataset(
-                self.alignment_group,
-                VCF_ANNOTATED_DATASET_TYPE,
+                self.alignment_group, Dataset.TYPE.VCF_FREEBAYES_SNPEFF,
                 snpeff_vcf_filename)
 
         # Check that the alignment group has a freebayes vcf dataset associated
         # with it.
-        vcf_dataset = get_dataset_with_type(self.alignment_group,
-                VCF_ANNOTATED_DATASET_TYPE)
+        vcf_dataset = get_dataset_with_type(
+                self.alignment_group, Dataset.TYPE.VCF_FREEBAYES_SNPEFF)
         self.assertIsNotNone(vcf_dataset,
             'SnpEff annotated vcf dataset was not found after running snpeff.')
 

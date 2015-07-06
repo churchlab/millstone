@@ -61,6 +61,7 @@ def freebayes_regions(ref_genome,
 
     return regions
 
+
 def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
         vcf_output_filename, alignment_type, region=None, **kwargs):
     """Run freebayes using the bam alignment files keyed by the alignment_type
@@ -116,13 +117,13 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
     return True # success
 
 
-@task
 def merge_freebayes_parallel(alignment_group):
     """
     Merge, sort, and make unique all regional freebayes variant calls after
     parallel execution.
 
-    Returns the path to the merged vcf file.
+    Returns the Dataset pointing to the merged vcf file. If no freebayes files,
+    returns None.
     """
     # First, grab all freebayes parallel vcf files.
     common_params = get_common_tool_params(alignment_group)
@@ -135,8 +136,8 @@ def merge_freebayes_parallel(alignment_group):
             uppercase_underscore(common_params['alignment_type']) +
             '.partial.*.vcf')
     vcf_files = glob.glob(vcf_output_filename_prefix)
-    assert len(vcf_files), (
-            "No vcf files at freebayes merge step. Did freebayes fail?")
+    if not len(vcf_files):
+        return None
 
     # Generate output filename.
     vcf_ouput_filename_merged = os.path.join(partial_freebayes_vcf_output_dir,
@@ -186,7 +187,6 @@ def merge_freebayes_parallel(alignment_group):
     vcf_ouput_filename_merged_fh.close()
 
     vcf_dataset_type = Dataset.TYPE.VCF_FREEBAYES
-    vcf_annotated_dataset_type = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 
     # add unannotated vcf dataset first
     vcf_dataset = add_vcf_dataset(alignment_group, vcf_dataset_type,
@@ -198,11 +198,11 @@ def merge_freebayes_parallel(alignment_group):
 
         vcf_ouput_filename_merged_snpeff = run_snpeff(
                 alignment_group, Dataset.TYPE.BWA_ALIGN)
-        
-        vcf_dataset_type = vcf_annotated_dataset_type
 
-        vcf_dataset = add_vcf_dataset(alignment_group, 
-                vcf_dataset_type,
+        vcf_dataset_type = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
+
+        vcf_dataset = add_vcf_dataset(
+                alignment_group, vcf_dataset_type,
                 vcf_ouput_filename_merged_snpeff)
 
     # generate variants, process, etc

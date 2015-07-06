@@ -22,7 +22,9 @@ from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
 from pipeline.variant_calling import find_variants_with_tool
 from pipeline.variant_calling.lumpy import filter_lumpy_vcf
+from pipeline.variant_calling.lumpy import merge_lumpy_vcf
 from pipeline.variant_calling.lumpy import run_lumpy
+from pipeline.variant_calling.lumpy import process_vcf_post_l_merge
 from pipeline.variant_calling import TOOL_LUMPY
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from utils.import_util import copy_and_add_dataset_source
@@ -41,10 +43,54 @@ TEST_DISC_SPLIT_BAM = os.path.join(settings.PWD, 'test_data',
 TEST_LUMPY_VCF = os.path.join(settings.PWD, 'test_data', 'pipeline',
         'variant_calling', 'lumpy.vcf')
 
+# Test genomes generated using:
+# https://github.com/churchlab/structural-variants-testing
+DELETION_TEST_DATA_DIR = os.path.join(TEST_DATA_DIR,
+        'sv_testing', 'deletion_bd5a1123')
+
+DELETION_REF = os.path.join(DELETION_TEST_DATA_DIR, 'small_ref.fa')
+
+DELETION_FASTQ1 = os.path.join(DELETION_TEST_DATA_DIR, 'deletion_bd5a1123.1.fq')
+
+DELETION_FASTQ2 = os.path.join(DELETION_TEST_DATA_DIR, 'deletion_bd5a1123.2.fq')
+
+DELETION_SAMPLE_1_UID = '38d786f2'
+
+DELETION_SAMPLE_1_BWA = os.path.join(DELETION_TEST_DATA_DIR,
+        'deletion_bd5a1123_sample_uid_38d786f2.bam')
+
+DELETION_SAMPLE_1_UID = 'ds1'
+
+DELETION_SAMPLE_1_BWA = os.path.join(DELETION_TEST_DATA_DIR,
+        'deletion_bd5a1123_ds1.bam')
+
+DELETION_SAMPLE_2_UID = 'ds2'
+
+DELETION_SAMPLE_2_BWA = os.path.join(DELETION_TEST_DATA_DIR,
+        'deletion_bd5a1123_ds2.bam')
+
+DELETION_SAMPLE_3_UID = 'ds3'
+
+DELETION_SAMPLE_3_BWA = os.path.join(DELETION_TEST_DATA_DIR,
+        'deletion_bd5a1123_ds3.bam')
+
+DELETION_f8346a99_TEST_DATA_DIR = os.path.join(
+        TEST_DATA_DIR, 'sv_testing', 'deletion_f8346a99')
+
+DELETION_SAMPLE_4_UID = 'f8346a99'
+
+DELETION_SAMPLE_4_BWA = os.path.join(DELETION_f8346a99_TEST_DATA_DIR,
+        'deletion_f8346a99.bam')
+
+L_MERGE_TEST_OUTPUT = os.path.join(
+        TEST_DATA_DIR, 'sv_testing', 'l_merge_test_data', 'l_merge_output.vcf')
+
 
 class TestLumpy(TestCase):
 
     def test_run_lumpy(self):
+        TEST_SAMPLE_UID = '8c57e7b9'
+
         user = User.objects.create_user('test_username', password='password',
                 email='test@example.com')
         self.project = Project.objects.create(owner=user.get_profile(),
@@ -56,7 +102,7 @@ class TestLumpy(TestCase):
 
         # Create a sample.
         self.experiment_sample = ExperimentSample.objects.create(
-                project=self.project, label='sample1')
+                uid=TEST_SAMPLE_UID, project=self.project, label='sample1')
 
         # Create a new alignment group.
         alignment_group = AlignmentGroup.objects.create(
@@ -123,20 +169,9 @@ class TestLumpy(TestCase):
         va_offset = [25000 - va_pos for va_pos in va_positions]
         self.assertTrue(any([v < 50 for v in va_offset]))
 
-        # Clean up.
-        remove_dataset_types = [
-            Dataset.TYPE.LUMPY_INSERT_METRICS_MEAN_STDEV,
-            Dataset.TYPE.LUMPY_INSERT_METRICS_HISTOGRAM
-        ]
-        for dataset_type in remove_dataset_types:
-            dataset = get_dataset_with_type(self.sample_alignment, dataset_type)
-            os.remove(dataset.get_absolute_location())
-
     def test_run_lumpy__deletion(self):
         """Tests running Lumpy on data that should have a deletion.
         """
-        TEST_SAMPLE_UID = '38d786f2'
-
         user = User.objects.create_user('test_username_sv', password='password',
                 email='test@example.com')
 
@@ -144,46 +179,29 @@ class TestLumpy(TestCase):
         self.project = Project.objects.create(title='test project',
                 owner=user.get_profile())
 
-        # Use genome with deletion from our sv testing repo:
-        # https://github.com/churchlab/structural-variants-testing
-        DELETION_TEST_DATA_DIR = os.path.join(TEST_DATA_DIR,
-                'sv_testing', 'deletion_bd5a1123')
-        REF = os.path.join(DELETION_TEST_DATA_DIR, 'small_ref.fa')
-        FASTQ1 = os.path.join(DELETION_TEST_DATA_DIR, 'deletion_bd5a1123.1.fq')
-        FASTQ2 = os.path.join(DELETION_TEST_DATA_DIR, 'deletion_bd5a1123.2.fq')
-        BWA_ALIGNMENT = os.path.join(DELETION_TEST_DATA_DIR,
-                'deletion_bd5a1123.bam')
-
         # Create Datasets / import data.
         self.reference_genome = import_reference_genome_from_local_file(
-                self.project, 'ref_genome', REF, 'fasta')
-        self.experiment_sample = ExperimentSample.objects.create(
-                project=self.project, label='sample1')
-        copy_and_add_dataset_source(self.experiment_sample,
-                Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ1, FASTQ1)
-        copy_and_add_dataset_source(self.experiment_sample,
-                Dataset.TYPE.FASTQ2, Dataset.TYPE.FASTQ2, FASTQ2)
+                self.project, 'ref_genome', DELETION_REF, 'fasta')
 
         # Create an alignment that's already complete, so we can focus on
         # testing variant calling only.
         self.alignment_group = AlignmentGroup.objects.create(
                 label='test alignment', reference_genome=self.reference_genome)
 
-        sample_1 = ExperimentSample.objects.create(
-                uid=TEST_SAMPLE_UID,
-                project=self.project,
-                label='sample1')
-
-        sample_alignment = ExperimentSampleToAlignment.objects.create(
-                alignment_group=self.alignment_group,
-                experiment_sample=sample_1)
-        copy_and_add_dataset_source(sample_alignment, Dataset.TYPE.BWA_ALIGN,
-                Dataset.TYPE.BWA_ALIGN, BWA_ALIGNMENT)
+        r = _create_sample_and_alignment(
+                self.project, self.alignment_group, DELETION_SAMPLE_1_UID,
+                DELETION_SAMPLE_1_BWA)
+        sample_alignment = r['sample_alignment']
 
         # Run lumpy.
-        lumpy_params = VARIANT_TOOL_PARAMS_MAP[TOOL_LUMPY]
+        lumpy_params = dict(VARIANT_TOOL_PARAMS_MAP[TOOL_LUMPY])
+        lumpy_params['tool_kwargs'] = {
+            'region_num': sample_alignment.uid,
+            'sample_alignments': [sample_alignment]
+        }
         find_variants_with_tool(
                 self.alignment_group, lumpy_params, project=self.project)
+        merge_lumpy_vcf(self.alignment_group)
 
         # Grab the resulting variants.
         variants = Variant.objects.filter(
@@ -203,6 +221,100 @@ class TestLumpy(TestCase):
         self.assertTrue(900 < size < 1100)
 
         # TODO: Check SV type.
+
+    def test_run_lumpy__multiple_samples_of_same_exact_deletion(self):
+        """Tests lumpy running on multiple samples.
+        """
+        user = User.objects.create_user('test_username_sv', password='password',
+                email='test@example.com')
+
+        # Grab a project.
+        self.project = Project.objects.create(title='test project',
+                owner=user.get_profile())
+
+        # Create Datasets / import data.
+        self.reference_genome = import_reference_genome_from_local_file(
+                self.project, 'ref_genome', DELETION_REF, 'fasta')
+
+        # Create an alignment that's already complete, so we can focus on
+        # testing variant calling only.
+        self.alignment_group = AlignmentGroup.objects.create(
+                label='test alignment', reference_genome=self.reference_genome)
+
+        r1 = _create_sample_and_alignment(
+                self.project, self.alignment_group, DELETION_SAMPLE_1_UID,
+                DELETION_SAMPLE_1_BWA)
+        sa1 = r1['sample_alignment']
+
+        r2 = _create_sample_and_alignment(
+                self.project, self.alignment_group, DELETION_SAMPLE_2_UID,
+                DELETION_SAMPLE_2_BWA)
+        sa2 = r2['sample_alignment']
+
+        r3 = _create_sample_and_alignment(
+                self.project, self.alignment_group, DELETION_SAMPLE_3_UID,
+                DELETION_SAMPLE_3_BWA)
+        sa3 = r3['sample_alignment']
+
+        r4 = _create_sample_and_alignment(
+                self.project, self.alignment_group, DELETION_SAMPLE_4_UID,
+                DELETION_SAMPLE_4_BWA)
+        sa4 = r4['sample_alignment']
+
+        # Common params for each run of lumpy.
+        lumpy_params = dict(VARIANT_TOOL_PARAMS_MAP[TOOL_LUMPY])
+
+        def _run_lumpy_for_sample_alignment(sa):
+            """Helper function to run lumpy for sample alignment.
+            """
+            lumpy_params['tool_kwargs'] = {
+                'region_num': sa.uid,
+                'sample_alignments': [sa]
+            }
+            find_variants_with_tool(
+                    self.alignment_group, lumpy_params, project=self.project)
+
+        _run_lumpy_for_sample_alignment(sa1)
+        _run_lumpy_for_sample_alignment(sa2)
+        _run_lumpy_for_sample_alignment(sa3)
+        _run_lumpy_for_sample_alignment(sa4)
+
+        merge_lumpy_vcf(self.alignment_group)
+
+        # Grab the resulting variants.
+        variants = Variant.objects.filter(
+                reference_genome=self.reference_genome)
+
+        # Should have 2 events.
+        self.assertEqual(2, len(variants))
+
+    def test_post_l_merge(self):
+        """Tests post-processing code following l_sort/l_merge.py on outputs
+        of lumpy applied on single samples.
+        """
+        _, processed_vcf_path = tempfile.mkstemp()
+        process_vcf_post_l_merge(L_MERGE_TEST_OUTPUT, processed_vcf_path)
+
+        MAP_EXPECTED_VARIANT_POS_TO_SAMPLE_LIST = {
+            4998: ['f8346a99'],
+            9999: ['ds1', 'ds2', 'ds3'],
+        }
+
+        with open(processed_vcf_path) as fh:
+            # Assert expected number of sample cols.
+            vcf_reader = vcf.Reader(fh)
+            self.assertEqual(4, len(vcf_reader.samples))
+
+            # Assert each sample has proper GT.
+            for record in vcf_reader:
+                samples_with_var = MAP_EXPECTED_VARIANT_POS_TO_SAMPLE_LIST[
+                        record.POS]
+                for sample_call in record.samples:
+                    # error_msg = sample_
+                    if sample_call.gt_nums == '1/1':
+                        self.assertTrue(sample_call.sample in samples_with_var)
+                    else:
+                        self.assertFalse(sample_call.sample in samples_with_var)
 
     def test_filter_vcf(self):
         """Tests filtering out noisy values from vcf.
@@ -239,8 +351,27 @@ class TestLumpy(TestCase):
         self.assertEqual(1, new_record_count)
 
 
+###############################################################################
+# Helper Functions
+###############################################################################
+
 def _count_records_in_vcf(vcf_reader):
     record_count = 0
     for record in vcf_reader:
         record_count += 1
     return record_count
+
+
+def _create_sample_and_alignment(
+        project, alignment_group, sample_uid, bwa_alignment):
+    sample = ExperimentSample.objects.create(
+            uid=sample_uid, project=project, label=sample_uid)
+    sample_alignment = ExperimentSampleToAlignment.objects.create(
+            alignment_group=alignment_group, experiment_sample=sample)
+    copy_and_add_dataset_source(
+            sample_alignment, Dataset.TYPE.BWA_ALIGN, Dataset.TYPE.BWA_ALIGN,
+            bwa_alignment)
+    return {
+        'sample': sample,
+        'sample_alignment': sample_alignment
+    }

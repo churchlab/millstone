@@ -27,15 +27,6 @@ from utils.jbrowse_util import add_bed_file_track
 from utils import titlecase_spaces
 
 
-# NOTE: The latest Lumpy pairend_distro.py has some bugs so we use the old
-# version for getting insert metrics here.
-LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/pairend_distro.old.py' % settings.TOOLS_DIR
-if not os.path.exists(LUMPY_PAIREND_DISTRO_BIN):
-    LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/pairend_distro.py' % settings.TOOLS_DIR
-
-SAMTOOLS_BINARY = '%s/samtools/samtools' % settings.TOOLS_DIR
-
-
 @task
 @project_files_needed
 def align_with_bwa_mem(alignment_group, sample_alignment):
@@ -140,7 +131,7 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
 
         # To skip saving the SAM file to disk directly, pipe output directly to
         # make a BAM file.
-        align_input_args += ' | ' + SAMTOOLS_BINARY + ' view -bS -'
+        align_input_args += ' | ' + settings.SAMTOOLS_BINARY + ' view -bS -'
 
         ### 2. Generate SAM output.
         output_bam = os.path.join(sample_alignment.get_model_data_dir(),
@@ -259,7 +250,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         if effective_mask['make_bam']:
             with open(bam_file_location, 'w') as fh:
                 subprocess.check_call([
-                    SAMTOOLS_BINARY,
+                    settings.SAMTOOLS_BINARY,
                     'view',
                     '-bS',
                     sam_file_location
@@ -285,13 +276,13 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         # 2a. Perform the actual sorting and rmdup on stream.
         sort_rmdup_cmd = '|'.join([
                 ' '.join([
-                        SAMTOOLS_BINARY,
+                        settings.SAMTOOLS_BINARY,
                         'sort',
                         '-o',
                         bam_file_location,
                         sorted_output_name + '.tmp.bam']),
                 ' '.join([
-                        SAMTOOLS_BINARY,
+                        settings.SAMTOOLS_BINARY,
                         'rmdup',
                         '-',
                         sorted_bam_file_location])])
@@ -304,7 +295,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     elif effective_mask['sort']:
         # 2a. Perform the actual sorting.
         subprocess.check_call([
-            SAMTOOLS_BINARY,
+            settings.SAMTOOLS_BINARY,
             'sort',
             bam_file_location,
             sorted_output_name
@@ -356,7 +347,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         with open(final_bam_location, 'w') as fh:
             # Add MD tags for Jbrowse visualization
             subprocess.check_call([
-                SAMTOOLS_BINARY,
+                settings.SAMTOOLS_BINARY,
                 'fillmd', '-b',
                 realigned_bam_file_location,
                 ref_genome_fasta_location
@@ -448,7 +439,7 @@ def compute_insert_metrics(bam_file, sample_alignment, stderr=None):
 
     # First, we analyze the bam distribution.
     read_bam_cmd = [
-            SAMTOOLS_BINARY,
+            settings.SAMTOOLS_BINARY,
             'view',
             bam_file
     ]
@@ -457,7 +448,7 @@ def compute_insert_metrics(bam_file, sample_alignment, stderr=None):
     read_length = get_read_length(bam_file)
 
     pairend_distro_cmd = [
-        LUMPY_PAIREND_DISTRO_BIN,
+        settings.LUMPY_PAIREND_DISTRO_BIN,
         '-r', str(read_length),
         '-X', '4', # num stdevs from end to extend
         '-N', '10000', # number to sample
@@ -575,7 +566,7 @@ def get_read_length(bam_file):
     """
     assert len(os.path.splitext(bam_file)[1]), "Invalid bam: %s" % bam_file
 
-    p = subprocess.Popen([SAMTOOLS_BINARY, 'view', bam_file],
+    p = subprocess.Popen([settings.SAMTOOLS_BINARY, 'view', bam_file],
         stdout=subprocess.PIPE)
 
     lines = 0
@@ -709,7 +700,7 @@ def get_discordant_read_pairs(sample_alignment):
                 '{samtools} view -u -F 0x0004 - ',
                 '{samtools} view -u -F 0x0008 - ',
                 '{samtools} view -b -F 0x0400 - ']).format(
-                        samtools=SAMTOOLS_BINARY,
+                        samtools=settings.SAMTOOLS_BINARY,
                         bam_filename=bam_filename)
 
         with open(bam_discordant_filename, 'w') as fh:
@@ -717,7 +708,7 @@ def get_discordant_read_pairs(sample_alignment):
                     stdout=fh, shell=True, executable=settings.BASH_PATH)
 
         # sort the discordant reads, overwrite the old file
-        subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_discordant_filename,
+        subprocess.check_call([settings.SAMTOOLS_BINARY, 'sort', bam_discordant_filename,
                 os.path.splitext(bam_discordant_filename)[0]])
 
         _filter_out_interchromosome_reads(bam_discordant_filename)
@@ -779,7 +770,7 @@ def get_split_reads(sample_alignment):
             '{samtools} view -h {bam_filename}',
             'python {lumpy_bwa_mem_sr_script} -i stdin',
             '{samtools} view -Sb -']).format(
-                    samtools=SAMTOOLS_BINARY,
+                    samtools=settings.SAMTOOLS_BINARY,
                     bam_filename=bam_filename,
                     lumpy_bwa_mem_sr_script=os.path.join(
                             settings.TOOLS_DIR, 'lumpy',
@@ -796,7 +787,7 @@ def get_split_reads(sample_alignment):
                     executable=settings.BASH_PATH)
 
         # sort the split reads, overwrite the old file
-        subprocess.check_call([SAMTOOLS_BINARY, 'sort', bam_split_filename,
+        subprocess.check_call([settings.SAMTOOLS_BINARY, 'sort', bam_split_filename,
                 os.path.splitext(bam_split_filename)[0]])
 
         _filter_out_interchromosome_reads(bam_split_filename)

@@ -17,6 +17,20 @@ from variants.variant_sets import add_variants_to_set_from_bed
 from variants.vcf_parser import parse_alignment_group_vcf
 
 
+###############################################################################
+# Constants and Maps
+###############################################################################
+
+TOOL_FREEBAYES = 'freebayes'
+TOOL_PINDEL = 'pindel'
+TOOL_DELLY = 'delly'
+TOOL_LUMPY = 'lumpy'
+
+
+###############################################################################
+# Common functions
+###############################################################################
+
 def common_postprocess_vcf(vcf_reader):
     # Do postprocessing in common to Pindel and Delly VCFs.
     modified_header_lines = []
@@ -128,9 +142,10 @@ def flag_variants_from_bed(alignment_group, bed_dataset_type):
                 bed_dataset=callable_loci_bed)
 
 
-# Returns a dictionary of common parameters required for all variant callers
-# (freebayes, pindel, delly, lumpy).
 def get_common_tool_params(alignment_group):
+    """Returns a dictionary of common parameters required for all variant
+    callers (i.e. freebayes, pindel, delly, lumpy).
+    """
     alignment_type = Dataset.TYPE.BWA_ALIGN
     return {
         'alignment_group': alignment_group,
