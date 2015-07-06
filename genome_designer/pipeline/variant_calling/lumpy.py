@@ -149,6 +149,10 @@ def process_vcf_post_l_merge(l_merge_output_vcf_path, processed_vcf_path):
         with open(processed_vcf_path, 'w') as processed_vcf_fh:
             vcf_reader = vcf.Reader(l_merge_output_fh)
 
+            # Fix info strings.
+            _update_info_string_number(vcf_reader, 'SVTYPE', -1)
+            _update_info_string_number(vcf_reader, 'SVLEN', -1)
+
             # Make column headers match what's expected by vcf_parser.
             # l_merge output is missing FORMAT column header, and columns
             # for each sample.
@@ -188,3 +192,11 @@ def process_vcf_post_l_merge(l_merge_output_vcf_path, processed_vcf_path):
                 record.samples = record_samples
 
                 vcf_writer.write_record(record)
+
+
+def _update_info_string_number(vcf_reader, key, new_number):
+    """Sets new number on info strings.
+    """
+    orig = vcf_reader.infos[key]
+    vcf_reader.infos[key] = vcf.parser._Info(
+            orig.id, -1, orig.type, orig.desc)
