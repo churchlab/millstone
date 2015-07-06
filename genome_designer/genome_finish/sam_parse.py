@@ -72,6 +72,7 @@ def extractCigarOps(cigar,flag):
             cigarOps.append(cigar)
     return(cigarOps)
 
+
 def calcQueryPosFromCigar(cigarOps):
     qsPos = 0
     qePos = 0
@@ -92,6 +93,12 @@ def calcQueryPosFromCigar(cigarOps):
             opPosition += 1
     d = queryPos(qsPos, qePos, qLen);
     return d
+
+
+def cigarLength(cigarOps):
+    d = calcQueryPosFromCigar(cigarOps)
+    return d.qePos - d.qsPos
+
 
 class cigarOp(object):
     """

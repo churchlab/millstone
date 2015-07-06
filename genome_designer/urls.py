@@ -160,6 +160,12 @@ urlpatterns = patterns('',
         'main.xhr_handlers.get_contigs'),
     url(r'^_/contigs/delete$',
         'main.xhr_handlers.contigs_delete'),
+    url(r'^_/contigs/has_insertion_location$',
+        'main.xhr_handlers.contigs_has_insertion_location'),
+    url(r'^_/contigs/find_insertion_location$',
+        'main.xhr_handlers.contigs_find_insertion_location'),
+    url(r'^_/contigs/place_in_ref$',
+        'main.xhr_handlers.contigs_place_in_ref'),
 
     ###########################################################################
     # Template XHR's

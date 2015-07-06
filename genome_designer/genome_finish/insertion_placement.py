@@ -22,6 +22,7 @@ from pipeline.read_alignment import align_with_bwa_mem
 from utils import convert_seqrecord_to_fastq
 from utils import generate_safe_filename_prefix_from_label
 from utils.import_util import add_dataset_to_entity
+from utils.import_util import copy_and_add_dataset_source
 from utils.reference_genome_maker_util import generate_new_reference_genome
 
 
@@ -32,6 +33,10 @@ def place_contig(reference_genome, contig_seqrecord,
     placement_position_params = find_contig_insertion_site(
             reference_genome,
             contig_seqrecord)
+
+    # Propogate error message upwards
+    if 'error_string' in placement_position_params:
+        return placement_position_params
 
     new_reference_genome_params = {
         'label': new_reference_genome_label
@@ -45,7 +50,7 @@ def place_contig(reference_genome, contig_seqrecord,
             new_reference_genome_params)
 
 
-def align_contig_to_reference(reference_genome, contig_seqrecord):
+def align_contig_to_reference(reference_genome, contig_seqrecord, keep=False):
     alignment_group = AlignmentGroup.objects.create(
             reference_genome=reference_genome,
             label='contig_alignment')
@@ -80,6 +85,16 @@ def align_contig_to_reference(reference_genome, contig_seqrecord):
             sample_to_alignment, Dataset.TYPE.BWA_ALIGN
                     ).get_absolute_location()
 
+    new_dataset = copy_and_add_dataset_source(reference_genome, 'contig_align',
+        Dataset.TYPE.BWA_ALIGN, contig_to_ref_bam, move=True)
+
+    contig_to_ref_bam = new_dataset.get_absolute_location()
+
+    if not keep:
+        alignment_group.delete()
+        contig_sample.delete()
+        sample_to_alignment.delete()
+
     return contig_to_ref_bam
 
 
@@ -92,7 +107,12 @@ def find_contig_insertion_site(reference_genome, contig_seqrecord):
     # Find region of insertion in the reference genome
     insertion_location_data = get_insertion_location(contig_to_ref_bam)
 
-    ref_chromosome_seqrecord_id = insertion_location_data['chromosome_seqrecord_id']
+    # Check for errors in getting insertion region
+    if 'error_string' in insertion_location_data:
+        return insertion_location_data
+
+    ref_chromosome_seqrecord_id = insertion_location_data[
+            'chromosome_seqrecord_id']
     ins_left_end = insertion_location_data['left_end']
     ins_right_end = insertion_location_data['right_end']
 
