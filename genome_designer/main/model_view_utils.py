@@ -6,6 +6,7 @@ to datatables.
 from math import floor
 from itertools import chain
 from itertools import groupby
+import re
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -208,6 +209,9 @@ def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
 
         alt_strs = []
         for alt, group in alt_counts:
+            maybe_surrounding_brackets_match = re.match(r'<([\w]+)>', alt)
+            if maybe_surrounding_brackets_match:
+                alt = maybe_surrounding_brackets_match.group(1)
             group = list(group)
             num_het = sum([alt_het[1] for alt_het in group])
             alt_string = ' %s (%d)' % (alt, len(list(group)) - maybe_dec)
