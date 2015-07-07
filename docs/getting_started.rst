@@ -13,35 +13,6 @@ the instance, and log in.
 *All new users will want to use this guide. Docs for individuals wishing
 to configure their instance or modify source code are coming soon.*
 
-**Table of Contents**
-
--  `Before Reading this Guide <#before-reading-this-guide>`__
--  `Create an Amazon AWS Account <#create-an-amazon-aws-account>`__
--  `Cloning the AMI <#cloning-the-ami>`__
--  `Accessing your instance <#accessing-your-instance>`__
--  `In the browser <#in-the-browser>`__
--  `On the command line <#on-the-command-line-just-in-case>`__
--  `Using Millstone <#using-millstone>`__
--  `Registration <#registration>`__
--  `New Project and First
-   Alignment <#new-project-and-first-alignment>`__
--  `Viewing Variants <#viewing-variants>`__
--  `Cast vs. Melted <#cast-vs-melted>`__
--  `Links <#links>`__
--  `Fields and Filtering <#fields-and-filtering>`__
--  `Examples <#examples>`__
--  `Viewing Variants <#viewing-variants>`__
--  `Cast vs. Melted <#cast-vs-melted>`__
--  `Links <#links>`__
--  `Fields and Filtering <#fields-and-filtering>`__
--  `Examples <#examples>`__
--  `Marginal Calls <#marginal-calls>`__
--  `Variant Sets <#variant-sets>`__
--  `Creating a blank set <#creating-a-blank-set>`__
--  `Uploading a set from a VCF
-   file <#uploading-a-set-from-a-vcf-file>`__
--  `Troubleshooting <#troubleshooting>`__
-
 Before Reading this Guide
 -------------------------
 
