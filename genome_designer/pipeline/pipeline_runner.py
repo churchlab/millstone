@@ -328,8 +328,13 @@ def start_variant_calling_pipeline_task(alignment_group):
 def merge_variant_data(alignment_group):
     """Merges results of variant caller data after pipeline is complete.
     """
-    merge_freebayes_parallel(alignment_group)
-    merge_lumpy_vcf(alignment_group)
+    try:
+        merge_freebayes_parallel(alignment_group)
+        merge_lumpy_vcf(alignment_group)
+    except:
+        alignment_group.status = AlignmentGroup.STATUS.FAILED
+        alignment_group.end_time = datetime.now()
+        alignment_group.save(update_fields=['end_time', 'status'])
 
 
 @task
