@@ -79,6 +79,12 @@ def adapt_non_recursive(obj_list, field_dict_list, reference_genome, melted):
                 value = create_variant_links_field(
                         melted_variant_obj, reference_genome,
                         jbrowse_track_names, hack_single_alignment_group)
+            elif field == MELTED_SCHEMA_KEY__CHROMOSOME:
+                value = melted_variant_obj.get(field, '')
+                # Truncate chromosme names and add a trailing '...' if longer
+                # than 15 characters
+                if len(value) > 15:
+                    value = value[:15] + '...'
             elif field == MELTED_SCHEMA_KEY__VS_LABEL:
                 value = _adapt_variant_set_label_field(
                         melted_variant_obj, reference_genome.project.uid,
