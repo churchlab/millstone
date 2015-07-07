@@ -229,6 +229,11 @@ def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
 
     else:
         value = variant_as_dict[MELTED_SCHEMA_KEY__ALT]
+        if value is None:
+            return None
+        maybe_surrounding_brackets_match = re.match(r'<([\w]+)>', value)
+        if maybe_surrounding_brackets_match:
+            value = maybe_surrounding_brackets_match.group(1)
         if ve_data and ve_data.get(MELTED_SCHEMA_KEY__HET, False):
             value += (
                     ' <span class="%s" ' +
