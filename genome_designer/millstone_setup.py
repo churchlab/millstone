@@ -93,9 +93,6 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/buf80h0qfwjqaqp/vcf-concat-linux.zip'
         ]
     },
-    'picard' : [
-        'https://www.dropbox.com/s/189loxsmsch1xbb/picard-tools-1.96.zip'
-    ],
     'lumpy' : {
         'Darwin' : [
             'https://www.dropbox.com/s/u068igb7phoijpk/lumpy-0.2.11-darwin.zip'
