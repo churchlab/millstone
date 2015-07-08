@@ -18,6 +18,8 @@ from main.models import Project
 from main.models import User
 from main.models import Variant
 from main.model_utils import clean_filesystem_location
+from main.testing_util import create_common_entities
+from main.testing_util import create_sample_and_alignment
 from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
 from pipeline.variant_calling import find_variants_with_tool
@@ -82,19 +84,28 @@ DELETION_SAMPLE_4_UID = 'f8346a99'
 DELETION_SAMPLE_4_BWA = os.path.join(DELETION_f8346a99_TEST_DATA_DIR,
         'deletion_f8346a99.bam')
 
+INVERSION_TEST_DATA_DIR = os.path.join(
+        TEST_DATA_DIR, 'sv_testing', 'inversion_5a996d78')
+
+INVERSION_REF = os.path.join(INVERSION_TEST_DATA_DIR, 'small_ref.fa')
+
+INVERSION_SAMPLE_UID = 'group'
+
+INVERSION_SAMPLE_BWA = os.path.join(INVERSION_TEST_DATA_DIR,
+        'inversion_5a996d78.bam')
+
 L_MERGE_TEST_OUTPUT = os.path.join(
         TEST_DATA_DIR, 'sv_testing', 'l_merge_test_data', 'l_merge_output.vcf')
 
 
 class TestLumpy(TestCase):
 
+    def setUp(self):
+        self.common_data = create_common_entities()
+        self.project = self.common_data['project']
+
     def test_run_lumpy(self):
         TEST_SAMPLE_UID = '8c57e7b9'
-
-        user = User.objects.create_user('test_username', password='password',
-                email='test@example.com')
-        self.project = Project.objects.create(owner=user.get_profile(),
-                title='Test Project')
 
         # Create a ref genome.
         self.reference_genome = import_reference_genome_from_local_file(
@@ -172,13 +183,6 @@ class TestLumpy(TestCase):
     def test_run_lumpy__deletion(self):
         """Tests running Lumpy on data that should have a deletion.
         """
-        user = User.objects.create_user('test_username_sv', password='password',
-                email='test@example.com')
-
-        # Grab a project.
-        self.project = Project.objects.create(title='test project',
-                owner=user.get_profile())
-
         # Create Datasets / import data.
         self.reference_genome = import_reference_genome_from_local_file(
                 self.project, 'ref_genome', DELETION_REF, 'fasta')
@@ -225,13 +229,6 @@ class TestLumpy(TestCase):
     def test_run_lumpy__multiple_samples_of_same_exact_deletion(self):
         """Tests lumpy running on multiple samples.
         """
-        user = User.objects.create_user('test_username_sv', password='password',
-                email='test@example.com')
-
-        # Grab a project.
-        self.project = Project.objects.create(title='test project',
-                owner=user.get_profile())
-
         # Create Datasets / import data.
         self.reference_genome = import_reference_genome_from_local_file(
                 self.project, 'ref_genome', DELETION_REF, 'fasta')
@@ -287,6 +284,49 @@ class TestLumpy(TestCase):
 
         # Should have 2 events.
         self.assertEqual(2, len(variants))
+
+    def test_run_lumpy__inversion(self):
+        """Tests running Lumpy on data with single inversion.
+        """
+        # Create Datasets / import data.
+        self.reference_genome = import_reference_genome_from_local_file(
+                self.project, 'ref_genome', INVERSION_REF, 'fasta')
+
+        # Create an alignment that's already complete, so we can focus on
+        # testing variant calling only.
+        self.alignment_group = AlignmentGroup.objects.create(
+                label='test alignment', reference_genome=self.reference_genome)
+
+        r = _create_sample_and_alignment(
+                self.project, self.alignment_group, INVERSION_SAMPLE_UID,
+                INVERSION_SAMPLE_BWA)
+        sample_alignment = r['sample_alignment']
+
+        # Run lumpy.
+        lumpy_params = dict(VARIANT_TOOL_PARAMS_MAP[TOOL_LUMPY])
+        lumpy_params['tool_kwargs'] = {
+            'region_num': sample_alignment.uid,
+            'sample_alignments': [sample_alignment]
+        }
+        find_variants_with_tool(
+                self.alignment_group, lumpy_params, project=self.project)
+        merge_lumpy_vcf(self.alignment_group)
+
+        # Grab the resulting variants.
+        variants = Variant.objects.filter(
+                reference_genome=self.reference_genome)
+
+        self.assertEqual(1, len(variants))
+
+        v = variants[0]
+
+        # position
+        self.assertAlmostEqual(v.position, 30000, delta=2)
+
+        # size
+        vccd = v.variantcallercommondata_set.all()[0]
+        size = vccd.data['INFO_END'] - v.position
+        self.assertAlmostEqual(size, 1000, delta=10)
 
     def test_post_l_merge(self):
         """Tests post-processing code following l_sort/l_merge.py on outputs
@@ -364,14 +404,5 @@ def _count_records_in_vcf(vcf_reader):
 
 def _create_sample_and_alignment(
         project, alignment_group, sample_uid, bwa_alignment):
-    sample = ExperimentSample.objects.create(
-            uid=sample_uid, project=project, label=sample_uid)
-    sample_alignment = ExperimentSampleToAlignment.objects.create(
-            alignment_group=alignment_group, experiment_sample=sample)
-    copy_and_add_dataset_source(
-            sample_alignment, Dataset.TYPE.BWA_ALIGN, Dataset.TYPE.BWA_ALIGN,
-            bwa_alignment)
-    return {
-        'sample': sample,
-        'sample_alignment': sample_alignment
-    }
+    return create_sample_and_alignment(
+            project, alignment_group, sample_uid, bwa_alignment)

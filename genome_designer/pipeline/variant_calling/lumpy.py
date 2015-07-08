@@ -153,6 +153,12 @@ def process_vcf_post_l_merge(l_merge_output_vcf_path, processed_vcf_path):
             _update_info_string_number(vcf_reader, 'SVTYPE', -1)
             _update_info_string_number(vcf_reader, 'SVLEN', -1)
 
+            # Fix format header.
+            orig = vcf_reader.formats['SU']
+            vcf_reader.formats['DP'] = vcf.parser._Format(
+                    'DP', orig.num, orig.type, orig.desc)
+            del vcf_reader.formats['SU']
+
             # Make column headers match what's expected by vcf_parser.
             # l_merge output is missing FORMAT column header, and columns
             # for each sample.
@@ -169,24 +175,33 @@ def process_vcf_post_l_merge(l_merge_output_vcf_path, processed_vcf_path):
                 # import ipdb
                 # ipdb.set_trace()
 
-                # We only track GT in this first pass at implementation.
-                record.FORMAT = 'GT'
+                # Per-sample values.
+                record.FORMAT = 'GT:DP'
 
                 # vcf.model._Call requires data as a hashable type so follow
                 # vcf internal code pattern of making a tuple.
                 calldata_tuple_type = vcf.model.make_calldata_tuple(
-                        record.FORMAT)
+                        record.FORMAT.split(':'))
 
-                samples_with_sv = set([
-                        x.split(':')[0] for x in record.INFO['SNAME']])
+                samples_with_sv = [
+                        x.split(':')[0] for x in record.INFO['SNAME']]
+
+                if 'SULIST' in record.INFO:
+                    dp_list = [x.split(':')[0] for x in record.INFO['SULIST']]
+                else:
+                    dp_list = [record.INFO['SU']]
 
                 # Parse the record
                 record_samples = []
                 for sample_id in vcf_reader.samples:
-                    if sample_id in samples_with_sv:
-                        sample_data = calldata_tuple_type(GT='1/1')
-                    else:
-                        sample_data = calldata_tuple_type(GT='./.')
+                    try:
+                        sample_idx = samples_with_sv.index(sample_id)
+
+                        sample_data = calldata_tuple_type(
+                                GT='1/1',
+                                DP=dp_list[sample_idx])
+                    except ValueError:
+                        sample_data = calldata_tuple_type(GT='./.', DP=0)
                     record_samples.append(
                             vcf.model._Call(record, sample_id, sample_data))
                 record.samples = record_samples
