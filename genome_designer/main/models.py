@@ -696,6 +696,14 @@ class Contig(UniqueUidModelMixin):
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
     @property
+    def href(self):
+        """Link to url view for this model.
+        """
+        return reverse(
+                'main.views.contig_view',
+                args=(self.parent_reference_genome.project.uid, self.uid))
+
+    @property
     def timestamp(self):
         return self.metadata.get('timestamp', '')
 

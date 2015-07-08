@@ -258,6 +258,27 @@ def ref_genomes_download(request):
 
 
 @login_required
+@require_GET
+def contigs_download(request):
+    """Downloads fasta file of contig sequence
+    """
+    contig = get_object_or_404(
+            Contig, uid=request.GET['contig_uid'])
+
+    file_path = contig.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    file_name = '.'.join([contig.label, 'fa'])
+
+    wrapper = FileWrapper(file(file_path))
+    response = StreamingHttpResponse(wrapper, content_type='text/plain')
+    response['Content-Disposition'] = 'attachment; filename="{0}"'.format(
+            file_name)
+    response['Content-Length'] = os.path.getsize(file_path)
+
+    return response
+
+
+@login_required
 @require_POST
 def contigs_delete(request):
     """Deletes ReferenceGenomes.

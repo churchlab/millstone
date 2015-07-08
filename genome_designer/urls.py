@@ -60,6 +60,10 @@ urlpatterns = patterns('',
     url(r'^projects/([\w-]+)/samples/([\w-]+)/fastqc/read([\d+])$',
             'main.views.fastqc_view'),
 
+    # Contigs
+    url(r'^projects/([\w-]+)/contigs/([\w-]+)$',
+        'main.views.contig_view'),
+
 
     # Demo Splash
     url(r'^demo_splash$',
@@ -166,6 +170,8 @@ urlpatterns = patterns('',
         'main.xhr_handlers.contigs_find_insertion_location'),
     url(r'^_/contigs/place_in_ref$',
         'main.xhr_handlers.contigs_place_in_ref'),
+    url(r'^_/contigs/download$',
+            'main.xhr_handlers.contigs_download'),
 
     ###########################################################################
     # Template XHR's
