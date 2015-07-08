@@ -101,7 +101,7 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/u068igb7phoijpk/lumpy-0.2.11-darwin.zip'
         ],
         'Linux' : [
-	    'https://www.dropbox.com/s/dbgjw59xcum1jru/lumpy-0.2.11-linux.zip'
+            'https://www.dropbox.com/s/dbgjw59xcum1jru/lumpy-0.2.11-linux.zip'
         ]
     },
     'fastqc' : [

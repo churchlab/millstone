@@ -148,3 +148,18 @@ def create_common_entities_w_variants():
         'samples': samples,
         'alignment_group': alignment_group
     }
+
+
+def create_sample_and_alignment(
+        project, alignment_group, sample_uid, bwa_alignment):
+    sample = ExperimentSample.objects.create(
+            uid=sample_uid, project=project, label=sample_uid)
+    sample_alignment = ExperimentSampleToAlignment.objects.create(
+            alignment_group=alignment_group, experiment_sample=sample)
+    copy_and_add_dataset_source(
+            sample_alignment, Dataset.TYPE.BWA_ALIGN, Dataset.TYPE.BWA_ALIGN,
+            bwa_alignment)
+    return {
+        'sample': sample,
+        'sample_alignment': sample_alignment
+    }

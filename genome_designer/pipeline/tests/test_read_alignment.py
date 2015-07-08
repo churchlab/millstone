@@ -17,6 +17,7 @@ from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from main.model_utils import clean_filesystem_location
+from main.testing_util import create_sample_and_alignment
 from pipeline.read_alignment import align_with_bwa_mem
 from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
@@ -31,6 +32,8 @@ from utils.jbrowse_util import compile_tracklist_json
 TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
+
+TEST_DATA_DIR = os.path.join(settings.PWD, 'test_data')
 
 TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
@@ -322,3 +325,29 @@ class TestAlignmentPieces(TestCase):
         mean, stdev = get_insert_size_mean_and_stdev(self.sample_alignment)
         self.assertAlmostEqual(mean, 498, delta=2)
         self.assertAlmostEqual(stdev, 50, delta=1)
+
+    def test_get_insert_size__generated_data(self):
+        INVERSION_TEST_DATA_DIR = os.path.join(
+                TEST_DATA_DIR, 'sv_testing', 'inversion_5a996d78')
+
+        INVERSION_REF = os.path.join(INVERSION_TEST_DATA_DIR, 'small_ref.fa')
+
+        INVERSION_SAMPLE_UID = 'group'
+
+        INVERSION_SAMPLE_BAM = os.path.join(INVERSION_TEST_DATA_DIR,
+                'inversion_5a996d78.bam')
+
+        reference_genome = import_reference_genome_from_local_file(
+                self.project, 'ref_genome', INVERSION_REF, 'fasta')
+
+        alignment_group = AlignmentGroup.objects.create(
+                label='test alignment', reference_genome=reference_genome)
+
+        r = create_sample_and_alignment(
+                self.project, alignment_group, INVERSION_SAMPLE_UID,
+                INVERSION_SAMPLE_BAM)
+        sample_alignment = r['sample_alignment']
+
+        mean, stdev = get_insert_size_mean_and_stdev(sample_alignment)
+        self.assertAlmostEqual(mean, 498, delta=2)
+        self.assertAlmostEqual(stdev, 1, delta=1)
