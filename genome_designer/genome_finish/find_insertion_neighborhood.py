@@ -34,12 +34,13 @@ def find_insertion_neighborhood(inFile):
         readCigarOps = extractCigarOps(sam.cigar, sam.flag)
 
         # Grab right and left alignments by looking the matching end
-        if readCigarOps[0].op not in ['H', 'S']:
-            left_sam = sam
-            left_readCigarOps = readCigarOps
-        elif readCigarOps[-1] not in ['H', 'S']:
-            right_sam = sam
-            right_readCigarOps = readCigarOps
+        if readCigarOps:
+            if readCigarOps[0].op not in ['H', 'S']:
+                left_sam = sam
+                left_readCigarOps = readCigarOps
+            elif readCigarOps[-1] not in ['H', 'S']:
+                right_sam = sam
+                right_readCigarOps = readCigarOps
 
     if left_sam is None:
         error_string = 'Expected homology on left end of contig not found'
