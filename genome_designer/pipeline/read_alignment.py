@@ -262,7 +262,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     assert os.path.splitext(bam_file_location)[1] == '.bam'
 
     # 2. Sort
-    sorted_output_name = os.path.splitext(bam_file_location)[0] + '.'
+    sorted_output_name = os.path.splitext(bam_file_location)[0] + '.sorted'
     sorted_bam_file_location = sorted_output_name + '.bam'
 
     # We are only performing rmdup if we are sorting - if no sorting, then
