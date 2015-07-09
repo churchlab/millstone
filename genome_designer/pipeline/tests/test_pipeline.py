@@ -12,6 +12,7 @@ from main.models import AlignmentGroup
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
+from main.models import Variant
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
@@ -82,6 +83,15 @@ class TestAlignmentPipeline(TransactionTestCase):
         alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
         self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
                 alignment_group.status)
+
+        # Make sure some expected variants are found.
+        variants = Variant.objects.filter(
+                reference_genome=self.reference_genome)
+        self.assertTrue(len(variants))
+        v_1834 = Variant.objects.get(position=1834)
+        v_1834_vccd = v_1834.variantcallercommondata_set.all()[0]
+        v_1834_ve = v_1834_vccd.variantevidence_set.all()[0]
+        self.assertFalse(v_1834_ve.data.get('IS_SV', False))
 
     def test_run_pipeline__samples_not_ready__fastq1(self):
         """Tests that the pipeline raises an AssertionError if samples aren't

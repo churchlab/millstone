@@ -233,8 +233,6 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
         # Common params for this tool.
         tool_params = VARIANT_TOOL_PARAMS_MAP[tool]
 
-        parallel_tasks = []
-
         if settings.FREEBAYES_PARALLEL and tool == TOOL_FREEBAYES:
             # Special handling for freebayes if running parallel. Break up
             # ReferenceGenome into regions and create separate job for each.
