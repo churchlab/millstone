@@ -3,6 +3,7 @@ import tempfile
 
 from Bio import SeqIO
 from django.conf import settings
+import pysam
 
 from genome_finish.millstone_de_novo_fns import get_insertion_location
 from genome_finish.millstone_de_novo_fns import get_local_contig_placement
@@ -26,13 +27,13 @@ from utils.import_util import copy_and_add_dataset_source
 from utils.reference_genome_maker_util import generate_new_reference_genome
 
 
-def place_contig(reference_genome, contig_seqrecord,
+def place_contig(reference_genome, contig,
         new_reference_genome_label):
     # Find the insertion position in reference and the end positions of the
     # insertion cassette in the contig
     placement_position_params = find_contig_insertion_site(
             reference_genome,
-            contig_seqrecord)
+            contig)
 
     # Propogate error message upwards
     if 'error_string' in placement_position_params:
@@ -44,13 +45,23 @@ def place_contig(reference_genome, contig_seqrecord,
 
     # Generate a new version of the reference genome with the
     # cassette incorporated
+    is_reverse = contig.metadata.get('is_reverse', False)
     return place_cassette(
-            reference_genome, contig_seqrecord,
+            reference_genome, contig,
             placement_position_params,
-            new_reference_genome_params)
+            new_reference_genome_params,
+            is_reverse)
 
 
-def align_contig_to_reference(reference_genome, contig_seqrecord, keep=False):
+def align_contig_to_reference(reference_genome, contig, keep=False):
+
+    # Get Seqrecord
+    contig_fasta = get_dataset_with_type(
+            contig,
+            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    with open(contig_fasta) as fh:
+            contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
     alignment_group = AlignmentGroup.objects.create(
             reference_genome=reference_genome,
             label='contig_alignment')
@@ -85,11 +96,19 @@ def align_contig_to_reference(reference_genome, contig_seqrecord, keep=False):
             sample_to_alignment, Dataset.TYPE.BWA_ALIGN
                     ).get_absolute_location()
 
-    new_dataset = copy_and_add_dataset_source(reference_genome, 'contig_align',
-        Dataset.TYPE.BWA_ALIGN, contig_to_ref_bam, move=True)
+    new_dataset = copy_and_add_dataset_source(reference_genome,
+        'contig_align', Dataset.TYPE.BWA_ALIGN, contig_to_ref_bam, move=True)
 
     contig_to_ref_bam = new_dataset.get_absolute_location()
 
+    # Check if contig is sense or antisense
+    samfile = pysam.AlignmentFile(contig_to_ref_bam)
+    read_0 = samfile.next()
+    if read_0.is_reverse:
+        contig.metadata['is_reverse'] = True
+        contig.save()
+
+    # Delete alignment asssociated models
     if not keep:
         alignment_group.delete()
         contig_sample.delete()
@@ -98,11 +117,11 @@ def align_contig_to_reference(reference_genome, contig_seqrecord, keep=False):
     return contig_to_ref_bam
 
 
-def find_contig_insertion_site(reference_genome, contig_seqrecord):
+def find_contig_insertion_site(reference_genome, contig):
 
     # Align contig to reference
     contig_to_ref_bam = align_contig_to_reference(
-            reference_genome, contig_seqrecord)
+            reference_genome, contig)
 
     # Find region of insertion in the reference genome
     insertion_location_data = get_insertion_location(contig_to_ref_bam)
@@ -128,8 +147,21 @@ def find_contig_insertion_site(reference_genome, contig_seqrecord):
             ref_chromosome_seqrecord_id, ins_left_end, ins_right_end,
             ref_slice_fasta_temp)
 
-    # Make temporary FASTA for contig_seqrecord
+    # Get Seqrecord
+    contig_fasta = get_dataset_with_type(
+            contig,
+            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    with open(contig_fasta) as fh:
+            contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+    # Make temporary FASTA for contig_seqrecord and if contig is reverse
+    # complement relative to the reference, then take the reverse complement
+    # of the contig sequence before writing it to file, as Seqan split
+    # alignment function does not automatically attempt the reverse
+    # complement alignment
     contig_fasta_temp = _make_temp_file(contig_seqrecord.id, '.fa')
+    if contig.metadata.get('is_reverse', False):
+        contig_seqrecord.seq = contig_seqrecord.seq.reverse_complement()
     SeqIO.write(contig_seqrecord, contig_fasta_temp, 'fasta')
 
     # Use Seqan C++ script to find exact insertion position in reference
@@ -146,7 +178,8 @@ def find_contig_insertion_site(reference_genome, contig_seqrecord):
     return {
         'ref_insertion_pos': ref_genome_insertion_pos,
         'ref_chromosome_seqrecord_id': ref_chromosome_seqrecord_id,
-        'contig_cassette_start_pos': local_contig_placement['contig_start_pos'],
+        'contig_cassette_start_pos': local_contig_placement[
+                'contig_start_pos'],
         'contig_cassette_end_pos': local_contig_placement['contig_end_pos']
     }
 
@@ -161,8 +194,8 @@ def _make_temp_file(label, extension):
     return temp_file_path
 
 
-def place_cassette(reference_genome, contig_seqrecord,
-        placement_position_params, new_reference_genome_params):
+def place_cassette(reference_genome, contig, placement_position_params,
+        new_reference_genome_params, is_reverse=None):
 
     # Validate param dictionaries
     try:
@@ -187,10 +220,26 @@ def place_cassette(reference_genome, contig_seqrecord,
             position=placement_position_params['ref_insertion_pos'],
             ref_value='')
 
+    # Get Seqrecord
+    contig_fasta = get_dataset_with_type(
+            contig,
+            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    with open(contig_fasta) as fh:
+            contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+    # Determine whether contig is reverse complement relative to reference
+    if is_reverse is None:
+        is_reverse = contig.metadata.get('is_reverse', False)
+
     # Extract cassette sequence from contig
-    cassette_sequence = str(contig_seqrecord.seq[
+    if is_reverse:
+        cassette_sequence = str(contig_seqrecord.seq.reverse_complement()[
             placement_position_params['contig_cassette_start_pos']:
             placement_position_params['contig_cassette_end_pos']])
+    else:
+        cassette_sequence = str(contig_seqrecord.seq[
+                placement_position_params['contig_cassette_start_pos']:
+                placement_position_params['contig_cassette_end_pos']])
 
     # Create the variant alternate for the cassette sequence
     insertion_variant.variantalternate_set.add(

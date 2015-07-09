@@ -54,7 +54,7 @@ def sort_bam(input_bam, output_bam=None):
     if output_bam is None:
         output_bam = input_bam
 
-    cmd = "{samtools} sort {input_bam} {output_bam_prefix}".format(
+    cmd = "{samtools} sort -n {input_bam} {output_bam_prefix}".format(
             samtools=settings.SAMTOOLS_BINARY,
             input_bam=input_bam,
             output_bam_prefix=os.path.splitext(output_bam)[0])

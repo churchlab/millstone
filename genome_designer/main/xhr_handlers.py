@@ -1100,29 +1100,26 @@ def contigs_find_insertion_location(request):
     result = {}
     for contig in Contig.objects.filter(uid__in=contig_uid_list):
         ref_genome = contig.parent_reference_genome
-        contig_fasta = get_dataset_with_type(contig,
-                Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-        with open(contig_fasta) as fh:
-            seqrecord = SeqIO.parse(fh, 'fasta').next()
-            insertion_data = find_contig_insertion_site(
-                    ref_genome, seqrecord)
 
-            if 'error_string' in insertion_data:
-                if result.get('error', False):
-                    result['error'].append(
-                            (contig.label, insertion_data['error_string']))
-                else:
-                    result['error'] = [
-                            (contig.label, insertion_data['error_string'])]
+        insertion_data = find_contig_insertion_site(
+                ref_genome, contig)
+
+        if 'error_string' in insertion_data:
+            if result.get('error', False):
+                result['error'].append(
+                        (contig.label, insertion_data['error_string']))
             else:
-                contig.metadata['insertion_sequence_endpoints'] = (
-                        insertion_data['contig_cassette_start_pos'],
-                        insertion_data['contig_cassette_end_pos'])
-                contig.metadata['ref_insertion_pos'] = insertion_data[
-                        'ref_insertion_pos']
-                contig.metadata['chromosome'] = insertion_data[
-                        'ref_chromosome_seqrecord_id']
-                contig.save()
+                result['error'] = [
+                        (contig.label, insertion_data['error_string'])]
+        else:
+            contig.metadata['insertion_sequence_endpoints'] = (
+                    insertion_data['contig_cassette_start_pos'],
+                    insertion_data['contig_cassette_end_pos'])
+            contig.metadata['ref_insertion_pos'] = insertion_data[
+                    'ref_insertion_pos']
+            contig.metadata['chromosome'] = insertion_data[
+                    'ref_chromosome_seqrecord_id']
+            contig.save()
 
     return HttpResponse(json.dumps(result), content_type='application/json')
 
@@ -1138,28 +1135,27 @@ def contigs_place_in_ref(request):
     contig_uid_list = request_data.get('contigUidList', [])
     new_genome_label = request_data.get('newGenomeLabel', '')
 
+    # For now handle only one contig insertion until insertions are handled
+    # as SVs
+    assert len(contig_uid_list) == 1
+
     result = {}
-    for contig in Contig.objects.filter(uid__in=contig_uid_list):
-        ref_genome = contig.parent_reference_genome
+    contig = Contig.objects.get(uid=contig_uid_list[0])
+    ref_genome = contig.parent_reference_genome
 
-        start, end = contig.metadata.get('insertion_sequence_endpoints')
-        placement_position_params = {
-            'ref_insertion_pos': contig.metadata.get('ref_insertion_pos'),
-            'ref_chromosome_seqrecord_id': contig.metadata.get('chromosome'),
-            'contig_cassette_start_pos': start,
-            'contig_cassette_end_pos': end
-        }
+    start, end = contig.metadata.get('insertion_sequence_endpoints')
+    placement_position_params = {
+        'ref_insertion_pos': contig.metadata.get('ref_insertion_pos'),
+        'ref_chromosome_seqrecord_id': contig.metadata.get('chromosome'),
+        'contig_cassette_start_pos': start,
+        'contig_cassette_end_pos': end
+    }
+    new_reference_genome_params = {
+        'label': new_genome_label
+    }
 
-        new_reference_genome_params = {
-            'label': new_genome_label
-        }
-
-        contig_fasta = get_dataset_with_type(contig,
-                Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-        with open(contig_fasta) as fh:
-            seqrecord = SeqIO.parse(fh, 'fasta').next()
-            place_cassette(ref_genome, seqrecord,
-                    placement_position_params, new_reference_genome_params)
+    place_cassette(ref_genome, contig,
+            placement_position_params, new_reference_genome_params)
 
     return HttpResponse(json.dumps(result), content_type='application/json')
 

@@ -62,6 +62,9 @@ INS_1KB_CONTIG_FASTA_PATH = os.path.join(
 INS_1KB_TRANSFORMED_FASTA_PATH = os.path.join(
         settings.PWD,
         'test_data/genome_finish_test/ins_1kb_transformed.fa')
+INS_1KB_ANTISENSE_CONTIG_FASTA_PATH = os.path.join(
+        settings.PWD,
+        'test_data/genome_finish_test/ins_1kb_antisense_contig.fa')
 INSERTION_LENGTH = 1000
 
 
@@ -323,12 +326,78 @@ class TestContigPlacement(TestCase):
                 self.project, 'test_ref',
                 INS_1KB_REF_GENOME_PATH, 'fasta')
 
-        with open(INS_1KB_CONTIG_FASTA_PATH, 'r') as fh:
-            contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+        ag = AlignmentGroup.objects.create(
+            reference_genome=reference_genome,
+            label='ag')
+
+        es = ExperimentSample.objects.create(
+            project=self.project,
+            label='es')
+
+        esta = ExperimentSampleToAlignment.objects.create(
+            alignment_group=ag,
+            experiment_sample=es)
+
+        contig = Contig.objects.create(
+            parent_reference_genome=reference_genome,
+            experiment_sample_to_alignment=esta)
+
+        add_dataset_to_entity(contig, 'contig_fasta',
+                Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                filesystem_location=INS_1KB_CONTIG_FASTA_PATH)
 
         placed_contig_ref_genome = place_contig(
-                reference_genome, contig_seqrecord,
+                reference_genome, contig,
                 new_reference_genome_label)
+
+        # Verify expected transformation
+        placed_contig_fasta = get_dataset_with_type(
+                placed_contig_ref_genome,
+                Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
+        with open(placed_contig_fasta, 'r') as fh:
+            placed_contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+        with open(INS_1KB_TRANSFORMED_FASTA_PATH, 'r') as fh:
+            transformed_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+        print 'here\n'
+
+        self.assertEqual(str(placed_contig_seqrecord.seq),
+                str(transformed_seqrecord.seq))
+
+    def test_1kb_insertion_placement__antisense_contig(self):
+        new_reference_genome_label = 'insertion_incorporated'
+
+        reference_genome = import_reference_genome_from_local_file(
+                self.project, 'test_ref',
+                INS_1KB_REF_GENOME_PATH, 'fasta')
+
+        ag = AlignmentGroup.objects.create(
+            reference_genome=reference_genome,
+            label='ag')
+
+        es = ExperimentSample.objects.create(
+            project=self.project,
+            label='es')
+
+        esta = ExperimentSampleToAlignment.objects.create(
+            alignment_group=ag,
+            experiment_sample=es)
+
+        contig = Contig.objects.create(
+            parent_reference_genome=reference_genome,
+            experiment_sample_to_alignment=esta)
+
+        add_dataset_to_entity(contig, 'contig_fasta',
+                Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                filesystem_location=INS_1KB_ANTISENSE_CONTIG_FASTA_PATH)
+
+        placed_contig_ref_genome = place_contig(
+                reference_genome, contig,
+                new_reference_genome_label)
+
+        self.assertTrue(contig.metadata['is_reverse'])
 
         # Verify expected transformation
         placed_contig_fasta = get_dataset_with_type(
