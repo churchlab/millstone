@@ -7,22 +7,29 @@ import re
 from Bio import SeqIO
 from django.conf import settings
 
+from genome_finish import __path__ as gf_path_list
 from settings import SAMTOOLS_BINARY
 from settings import BASH_PATH
-from genome_finish import __path__ as gf_path_list
+from utils.bam_utils import clipping_stats
+
 
 GENOME_FINISH_PATH = gf_path_list[0]
 VELVETH_BINARY = settings.TOOLS_DIR + '/velvet/velveth'
 VELVETG_BINARY = settings.TOOLS_DIR + '/velvet/velvetg'
 
 
-def get_clipped_reads(bam_filename, output_filename):
+def get_clipped_reads(bam_filename, output_filename, clipping_threshold=None):
+    if clipping_threshold is None:
+        stats = clipping_stats(bam_filename, sample_size=10000)
+        clipping_threshold = int(stats['mean'] + stats['std'])
+
     cmd = ' | '.join([
             '{samtools} view -h {bam_filename}',
-            '{extract_clipped_script} -i stdin',
+            '{extract_clipped_script} -i stdin -t {clipping_threshold}',
             '{samtools} view -Sb -']).format(
                     samtools=SAMTOOLS_BINARY,
                     bam_filename=bam_filename,
+                    clipping_threshold=clipping_threshold,
                     extract_clipped_script=os.path.join(
                             GENOME_FINISH_PATH,
                             'extractClippedReads.py'))
