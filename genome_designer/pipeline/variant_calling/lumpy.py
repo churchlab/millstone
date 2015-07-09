@@ -62,9 +62,9 @@ def run_lumpy(
     print ' '.join(lumpy_cmd)
 
     # Run Lumpy Express.
-    with open(vcf_output_filename + '.error', 'w') as error_output_fh:
+    lumpy_error_output = vcf_output_filename + '.error'
+    with open(lumpy_error_output, 'w') as error_output_fh:
         subprocess.check_call(lumpy_cmd, stderr=error_output_fh)
-    # subprocess.check_call(lumpy_cmd)
 
     return True  # success
 

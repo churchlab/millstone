@@ -104,6 +104,14 @@ TOOLS_URLS = {
     'fastqc' : [
             'https://www.dropbox.com/s/6d46rqjxyqi9k31/fastqc_v0.11.2.zip'
     ],
+    'samblaster': {
+        'Darwin': [
+            'https://www.dropbox.com/s/hcns1lcp1ows52w/samblaster'
+        ],
+        'Linux': [
+            'https://www.dropbox.com/s/ia8z8ib0fxnsaft/samblaster'
+        ]
+    },
     'velvet': {
         'Darwin': [
             'https://www.dropbox.com/s/6bja2ofeuuba1v5/velvet-darwin.zip'

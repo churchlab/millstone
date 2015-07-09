@@ -14,8 +14,6 @@ from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import get_dataset_with_type
-from main.models import Project
-from main.models import User
 from main.models import Variant
 from main.model_utils import clean_filesystem_location
 from main.testing_util import create_common_entities
@@ -29,7 +27,6 @@ from pipeline.variant_calling.lumpy import run_lumpy
 from pipeline.variant_calling.lumpy import process_vcf_post_l_merge
 from pipeline.variant_calling import TOOL_LUMPY
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
-from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
 from variants.vcf_parser import parse_alignment_group_vcf
 
