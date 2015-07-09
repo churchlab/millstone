@@ -24,6 +24,8 @@ def run_lumpy(
         alignment_type, **kwargs):
     """Runs lumpy.
     """
+    print 'RUNNING LUMPY...'
+
     # NOTE: Only supporting single sample alignment for now. Previously we
     # tried to use lumpy for multiple sample alignments but the machine would
     # run out of memory so we are going to limit functionality to single
@@ -48,15 +50,21 @@ def run_lumpy(
         bam_sr_dataset = get_split_reads(sa)
         bam_sr_file_list.append(bam_sr_dataset.get_absolute_location())
 
-    # Run Lumpy Express.
-    subprocess.check_call([
+    lumpy_cmd = [
         settings.LUMPY_EXPRESS_BINARY,
         '-B', ','.join(bam_file_list),
         '-S', ','.join(bam_sr_file_list),
         '-D', ','.join(bam_disc_file_list),
         '-o', vcf_output_filename,
         '-P' # get probability distributions, required for merge
-    ])
+    ]
+
+    print ' '.join(lumpy_cmd)
+
+    # Run Lumpy Express.
+    with open(vcf_output_filename + '.error', 'w') as error_output_fh:
+        subprocess.check_call(lumpy_cmd, stderr=error_output_fh)
+    # subprocess.check_call(lumpy_cmd)
 
     return True  # success
 
@@ -172,9 +180,6 @@ def process_vcf_post_l_merge(l_merge_output_vcf_path, processed_vcf_path):
 
             # Format each record with correct setting.
             for record in vcf_reader:
-                # import ipdb
-                # ipdb.set_trace()
-
                 # Per-sample values.
                 record.FORMAT = 'GT:DP'
 
@@ -189,7 +194,7 @@ def process_vcf_post_l_merge(l_merge_output_vcf_path, processed_vcf_path):
                 if 'SULIST' in record.INFO:
                     dp_list = [x.split(':')[0] for x in record.INFO['SULIST']]
                 else:
-                    dp_list = [record.INFO['SU']]
+                    dp_list = record.INFO['SU']
 
                 # Parse the record
                 record_samples = []

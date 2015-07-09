@@ -68,7 +68,6 @@ class TestAlignmentPipeline(TransactionTestCase):
         copy_and_add_dataset_source(self.experiment_sample_single_fastq,
                 Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ1, TEST_FASTQ1)
 
-
     def test_run_pipeline(self):
         """End-to-end test of pipeline. Fails if any errors.
         """

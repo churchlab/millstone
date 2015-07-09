@@ -30,7 +30,6 @@ def freebayes_regions(ref_genome,
     ref_genome: the reference genome object
     region_size: how many bases each parallelized region 'chunk' will be
     """
-
     ref_genome_fasta = get_dataset_with_type(ref_genome,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
@@ -73,6 +72,8 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
     Returns:
         Boolean, True if successfully made it to the end, else False.
     """
+    print 'RUNNING FREEBAYES...'
+
     bam_files = [
             get_dataset_with_type(sa, alignment_type).get_absolute_location()
             for sa in sample_alignments]
@@ -103,7 +104,7 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
     ]
 
     if region:
-        other_args_part.extend(['--region',region])
+        other_args_part.extend(['--region', region])
 
     # Build the full command and execute it for all bam files at once.
     full_command = (
@@ -111,8 +112,13 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
             bam_part +
             other_args_part)
 
-    with open(vcf_output_filename, 'w') as fh:
-        subprocess.check_call(full_command, stdout=fh)
+    print ' '.join(full_command)
+
+    # Run Lumpy Express.
+    with open(vcf_output_filename + '.error', 'w') as error_output_fh:
+        with open(vcf_output_filename, 'w') as fh:
+            subprocess.check_call(
+                    full_command, stdout=fh, stderr=error_output_fh)
 
     return True # success
 

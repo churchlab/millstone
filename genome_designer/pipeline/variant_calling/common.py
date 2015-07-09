@@ -151,7 +151,7 @@ def get_common_tool_params(alignment_group):
         'alignment_group': alignment_group,
         'alignment_type': alignment_type,
         'fasta_ref': _get_fasta_ref(alignment_group),
-        'output_dir': _create_output_dir(alignment_group),
+        'output_dir': get_or_create_vcf_output_dir(alignment_group),
         'sample_alignments': _find_valid_sample_alignments(
                 alignment_group, alignment_type),
     }
@@ -164,12 +164,17 @@ def _get_fasta_ref(alignment_group):
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
 
-def _create_output_dir(alignment_group):
-    # Prepare a directory to put the output files.
-    # We'll put them in
-    #     /projects/<project_uid>/alignment_groups/vcf/<variant tool>/
-    #     <alignment_type>.vcf
-    # We'll save these for now, maybe it's not necessary later.
+def get_or_create_vcf_output_dir(alignment_group):
+    """Ensures root directory for vcf files exists and returns the full path.
+
+    Root directory looks like:
+        /projects/<project_uid>/alignment_groups/vcf/
+
+    And per-tool vcf files will go in directory:
+        /projects/<project_uid>/alignment_groups/vcf/<variant tool>/
+
+    We'll save these for now, maybe it's not necessary later.
+    """
     vcf_dir = os.path.join(alignment_group.get_model_data_dir(), 'vcf')
     ensure_exists_0775_dir(vcf_dir)
     return vcf_dir

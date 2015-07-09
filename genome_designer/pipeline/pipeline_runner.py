@@ -7,6 +7,7 @@ cleaning, snv calling, and effect prediction.
 """
 
 from datetime import datetime
+import os
 import time
 
 from celery import group
@@ -23,6 +24,7 @@ from pipeline.variant_calling import find_variants_with_tool
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from pipeline.variant_calling import TOOL_FREEBAYES
 from pipeline.variant_calling import TOOL_LUMPY
+from pipeline.variant_calling.common import get_or_create_vcf_output_dir
 from pipeline.variant_calling.freebayes import merge_freebayes_parallel
 from pipeline.variant_calling.freebayes import freebayes_regions
 from pipeline.variant_calling.lumpy import merge_lumpy_vcf
@@ -336,6 +338,14 @@ def merge_variant_data(alignment_group):
         alignment_group.end_time = datetime.now()
         alignment_group.save(update_fields=['end_time', 'status'])
 
+        # Log error.
+        vcf_output_root = get_or_create_vcf_output_dir(alignment_group)
+        merge_variant_data_error_path = os.path.join(
+                vcf_output_root, 'merge_variant_data.error')
+        with open(merge_variant_data_error_path, 'w') as error_output_fh:
+            import traceback
+            error_output_fh.write(traceback.format_exc())
+
 
 @task
 def pipeline_completion_tasks(alignment_group):
@@ -344,17 +354,19 @@ def pipeline_completion_tasks(alignment_group):
 
     Sets end_time and status on alignment_group.
     """
-    print 'START PIPELINE COMPLETION'
-    try:
-        # Get fresh copy of alignment_group.
-        alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
-        assert AlignmentGroup.STATUS.VARIANT_CALLING == alignment_group.status
+    print 'START PIPELINE COMPLETION...'
 
-        # The alignment pipeline is now officially complete.
+    # Get fresh copy of alignment_group.
+    alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
+
+    # Previous status should have been VARIANT_CALLING. If anything else,
+    # then pipeline failed.
+    if AlignmentGroup.STATUS.VARIANT_CALLING == alignment_group.status:
         alignment_group.status = AlignmentGroup.STATUS.COMPLETED
-    except:
-        # TODO(gleb): Failure logging.
+    else:
         alignment_group.status = AlignmentGroup.STATUS.FAILED
 
     alignment_group.end_time = datetime.now()
     alignment_group.save(update_fields=['end_time', 'status'])
+
+    print 'PIPELINE COMPLETION DONE.'
