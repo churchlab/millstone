@@ -27,6 +27,7 @@ from registration.backends.simple.views import RegistrationView
 from main.adapters import adapt_model_instance_to_frontend
 from main.adapters import adapt_model_to_frontend
 from main.models import AlignmentGroup
+from main.models import Contig
 from main.models import Dataset
 from main.models import Project
 from main.models import ReferenceGenome
@@ -246,6 +247,29 @@ def reference_genome_view(request, project_uid, ref_genome_uid):
         'init_js_data': init_js_data
     }
     return render(request, 'reference_genome.html', context)
+
+
+@login_required
+def contig_view(request, project_uid, contig_uid):
+    """Overview of a single project.
+    """
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+
+    contig = Contig.objects.get(
+            parent_reference_genome__project=project, uid=contig_uid)
+
+    init_js_data = json.dumps({
+        'entity': adapt_model_instance_to_frontend(contig)
+    })
+
+    context = {
+        'project': project,
+        'tab_root': TAB_ROOT__DATA,
+        'contig': contig,
+        'init_js_data': init_js_data
+    }
+    return render(request, 'contig.html', context)
 
 
 @login_required

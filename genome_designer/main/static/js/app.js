@@ -65,6 +65,11 @@ gd.App.prototype.run = function() {
       var view = new gd.VariantSetListView({'model': model});
       break;
 
+    case 'CONTIG':
+      var model = new Backbone.Model(INIT_JS_DATA.entity);
+      var view = new gd.ContigView({'model': model})
+      break;
+
     case 'GENE':
       var view = new gd.GeneView();
       break;
