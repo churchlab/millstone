@@ -33,6 +33,9 @@ LUMPY_SCRIPTS_DIR = '%s/lumpy/scripts' % TOOLS_DIR
 
 LUMPY_PAIREND_DISTRO_BIN = '%s/lumpy/scripts/pairend_distro.py' % TOOLS_DIR
 
+LUMPY_EXTRACT_SPLIT_READS_BWA_MEM = (
+        '%s/lumpy/scripts/extractSplitReads_BwaMem' % TOOLS_DIR)
+
 # Merging lumpy vcfs
 
 LUMPY_L_SORT_BINARY = os.path.join(LUMPY_SCRIPTS_DIR, 'l_sort.py')

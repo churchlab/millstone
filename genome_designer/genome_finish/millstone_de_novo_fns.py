@@ -138,8 +138,8 @@ def get_split_reads(bam_filename, output_filename):
             '{samtools} view -Sb -']).format(
                     samtools=SAMTOOLS_BINARY,
                     bam_filename=bam_filename,
-                    lumpy_bwa_mem_sr_script=os.path.join(
-                            settings.TOOLS_DIR, 'lumpy', 'extractSplitReads_BwaMem'))
+                    lumpy_bwa_mem_sr_script=
+                            settings.LUMPY_EXTRACT_SPLIT_READS_BWA_MEM)
 
     try:
         with open(output_filename, 'w') as fh:
