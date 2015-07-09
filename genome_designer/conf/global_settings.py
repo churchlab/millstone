@@ -390,9 +390,8 @@ FREEBAYES_PARALLEL = True
 # TODO: perhaps this should be determined dynamically based on genome size.
 FREEBAYES_REGION_SIZE = 200000
 
-# SNPEff can be multithreaded; probably makes sense to set this to the same as
-# a more general CPU thread value.
-SNPEFF_THREADS = 2
+# SNPEff can be multithreaded but for simplicity, let's always keep this at 1.
+SNPEFF_THREADS = 1
 
 # If we're debugging snpeff, print the output
 SNPEFF_BUILD_DEBUG = True
