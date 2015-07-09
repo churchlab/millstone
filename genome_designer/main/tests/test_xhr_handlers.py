@@ -355,6 +355,37 @@ class TestUploadSingleSample(TestCase):
         for dataset in datasets:
             self.assertEqual(Dataset.STATUS.READY, dataset.status)
 
+    def test_upload_single_sample__unpaired(self):
+        project = self.common_entities['project']
+        request = HttpRequest()
+        request.POST = {
+            'projectUid': project.uid
+        }
+        request.method = 'POST'
+        request.user = self.common_entities['user']
+        authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
+        self.assertTrue(request.user.is_authenticated())
+
+        EXPERIMENT_SAMPLE_LABEL = 'my sample'
+        request.POST['sampleLabel'] = EXPERIMENT_SAMPLE_LABEL
+
+        request.FILES['fastq1'] = UploadedFile(
+                file=open(TEST_FQ1_FILE),
+                name='read1.fq')
+
+        response = upload_single_sample(request)
+        self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
+        self.assertFalse('error' in json.loads(response.content))
+
+        sample = ExperimentSample.objects.get(label=EXPERIMENT_SAMPLE_LABEL)
+        self.assertTrue(sample)
+
+        datasets = sample.dataset_set.all()
+        # num_datasets: 1 fastq + 1 fastqc = 2
+        self.assertEqual(2, len(datasets))
+        for dataset in datasets:
+            self.assertEqual(Dataset.STATUS.READY, dataset.status)
+
 
 class TestSamplesUploadThroughBrowserSampleData(TestCase):
 
