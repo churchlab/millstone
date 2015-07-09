@@ -519,7 +519,6 @@ def copy_experiment_sample_data(
     else:
         # Unpaired.
         read1_dataset.status = Dataset.STATUS.READY
-        read2_dataset.status = Dataset.STATUS.READY
 
     # Quality Control via FASTQC and save.
     read1_dataset.status = Dataset.STATUS.QC
@@ -528,11 +527,13 @@ def copy_experiment_sample_data(
     read1_dataset.status = Dataset.STATUS.READY
     read1_dataset.save()
 
-    read2_dataset.status = Dataset.STATUS.QC
-    if not options.get('skip_fastqc', False):
-        run_fastqc_on_sample_fastq(experiment_sample, read2_dataset, rev=True)
-    read2_dataset.status = Dataset.STATUS.READY
-    read2_dataset.save()
+    if read2_dataset is not None:
+        read2_dataset.status = Dataset.STATUS.QC
+        if not options.get('skip_fastqc', False):
+            run_fastqc_on_sample_fastq(experiment_sample, read2_dataset,
+                    rev=True)
+        read2_dataset.status = Dataset.STATUS.READY
+        read2_dataset.save()
 
 
 def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):

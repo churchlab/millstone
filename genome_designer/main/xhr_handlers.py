@@ -393,7 +393,7 @@ def upload_single_sample(request):
         temp_file_fh.write(fastq1_uploaded_file.read())
 
     # Maybe handle fastq2.
-    fastq2_uploaded_file = None
+    fastq2_temp_file_location = None
     if 'fastq2' in request.FILES:
         fastq2_uploaded_file = request.FILES['fastq2']
         _, fastq2_temp_file_location = tempfile.mkstemp(
