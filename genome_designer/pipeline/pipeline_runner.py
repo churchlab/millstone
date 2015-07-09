@@ -251,6 +251,19 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
         elif tool == TOOL_LUMPY:
             sample_alignment_list = (
                     alignment_group.experimentsampletoalignment_set.all())
+
+            # Lumpy only works for paired reads right now. Skip Lumpy if
+            # any unpaired reads.
+            any_unpaired = False
+            for sa in sample_alignment_list:
+                dataset_types = [ds.type for ds in
+                        sa.experiment_sample.dataset_set.all()]
+                if not Dataset.TYPE.FASTQ2 in dataset_types:
+                    any_unpaired = True
+                    break
+            if any_unpaired:
+                continue
+
             # TODO: What if some alignments failed?
             for sa in sample_alignment_list:
                 # Create separate lumpy task for each sample.

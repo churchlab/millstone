@@ -122,18 +122,18 @@ class TestAlignmentPipeline(TransactionTestCase):
         with self.assertRaises(AssertionError):
             run_pipeline('name_placeholder', self.reference_genome, sample_list)
 
-    # def test_run_pipeline__single_fastq(self):
-    #     """End-to-end test of pipeline with single fastq sample.
-    #     Fails if any errors.
-    #     """
-    #     sample_list = [self.experiment_sample_single_fastq]
-    #     result = run_pipeline(
-    #             'name_placeholder', self.reference_genome, sample_list)
-    #     alignment_group = result[0]
-    #     alignment_async_result = result[1]
-    #     variant_calling_async_result = result[2]
-    #     alignment_async_result.get()
-    #     variant_calling_async_result.get()
-    #     alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
-    #     self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
-    #             alignment_group.status)
+    def test_run_pipeline__single_fastq(self):
+        """End-to-end test of pipeline with single fastq sample.
+        Fails if any errors.
+        """
+        sample_list = [self.experiment_sample_single_fastq]
+        result = run_pipeline(
+                'name_placeholder', self.reference_genome, sample_list)
+        alignment_group = result[0]
+        alignment_async_result = result[1]
+        variant_calling_async_result = result[2]
+        alignment_async_result.get()
+        variant_calling_async_result.get()
+        alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
+        self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
+                alignment_group.status)
