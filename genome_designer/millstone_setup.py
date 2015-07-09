@@ -112,20 +112,20 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/ia8z8ib0fxnsaft/samblaster'
         ]
     },
-    'velvet': {
-        'Darwin': [
-            'https://www.dropbox.com/s/6bja2ofeuuba1v5/velvet-darwin.zip'
-        ],
-        'Linux': [
-            'https://www.dropbox.com/s/y83fqsdq73pt1w8/velvet-linux.zip'
-        ]
-    },
     'seqan': {
         'Linux': [
             'https://www.dropbox.com/s/4vel0v42cmh5nqk/place_contig'
         ],
         'Darwin': [
             'https://www.dropbox.com/s/5q49fy7w1j5u4bg/place_contig'
+        ]
+    },
+    'velvet': {
+        'Darwin': [
+            'https://www.dropbox.com/s/ff3g2j46tr8rf2w/velvet-darwin.zip'
+        ],
+        'Linux': [
+            'https://www.dropbox.com/s/wxxcjruhjfzy5wz/velvet-linux.zip'
         ]
     }
 }
