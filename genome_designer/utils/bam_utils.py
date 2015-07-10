@@ -7,10 +7,39 @@ import shutil
 import subprocess
 
 from django.conf import settings
+import pysam
+import numpy as np
 
 from utils import convert_fasta_to_fastq
 
 BWA_BINARY = os.path.join(settings.TOOLS_DIR, 'bwa/bwa')
+
+
+def clipping_stats(bam_path, sample_size=1000):
+
+    BAM_CSOFT_CLIP = 4
+    BAM_CHARD_CLIP = 5
+    clip_codes = [BAM_CSOFT_CLIP, BAM_CHARD_CLIP]
+
+    samfile = pysam.AlignmentFile(bam_path)
+    sample_size = min(sample_size, samfile.mapped)
+
+    terminal_clipping = []
+    i = 0
+    for read in samfile:
+        if not read.is_unmapped:
+            first_cig = read.cigartuples[0]
+            last_cig = read.cigartuples[-1]
+            terminal_clipping.append(max([
+                    first_cig[1] if first_cig[0] in clip_codes else 0,
+                    last_cig[1] if last_cig[0] in clip_codes else 0]))
+
+            i += 1
+            if i == sample_size:
+                break
+
+    return {'mean': np.mean(terminal_clipping),
+            'std': np.std(terminal_clipping)}
 
 
 def index_bam(bam):
@@ -25,7 +54,7 @@ def sort_bam(input_bam, output_bam=None):
     if output_bam is None:
         output_bam = input_bam
 
-    cmd = "{samtools} sort {input_bam} {output_bam_prefix}".format(
+    cmd = "{samtools} sort -n {input_bam} {output_bam_prefix}".format(
             samtools=settings.SAMTOOLS_BINARY,
             input_bam=input_bam,
             output_bam_prefix=os.path.splitext(output_bam)[0])

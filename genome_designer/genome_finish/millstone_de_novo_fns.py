@@ -6,23 +6,30 @@ import re
 
 from Bio import SeqIO
 from django.conf import settings
+import pysam
 
+from genome_finish import __path__ as gf_path_list
 from settings import SAMTOOLS_BINARY
 from settings import BASH_PATH
-from genome_finish import __path__ as gf_path_list
+from utils.bam_utils import clipping_stats
 
 GENOME_FINISH_PATH = gf_path_list[0]
 VELVETH_BINARY = settings.TOOLS_DIR + '/velvet/velveth'
 VELVETG_BINARY = settings.TOOLS_DIR + '/velvet/velvetg'
 
 
-def get_clipped_reads(bam_filename, output_filename):
+def get_clipped_reads(bam_filename, output_filename, clipping_threshold=None):
+    if clipping_threshold is None:
+        stats = clipping_stats(bam_filename, sample_size=10000)
+        clipping_threshold = int(stats['mean'] + stats['std'])
+
     cmd = ' | '.join([
             '{samtools} view -h {bam_filename}',
-            '{extract_clipped_script} -i stdin',
+            '{extract_clipped_script} -i stdin -t {clipping_threshold}',
             '{samtools} view -Sb -']).format(
                     samtools=SAMTOOLS_BINARY,
                     bam_filename=bam_filename,
+                    clipping_threshold=clipping_threshold,
                     extract_clipped_script=os.path.join(
                             GENOME_FINISH_PATH,
                             'extractClippedReads.py'))
@@ -50,19 +57,46 @@ def get_match_counts(bam_filename):
     return pickle.loads(output)
 
 
-def get_insertion_location(bam_filename):
-    cmd = ' | '.join([
-            '{samtools} view -h {bam_filename}',
-            '{find_insertion_location_script} -i stdin']).format(
-                    samtools=SAMTOOLS_BINARY,
-                    bam_filename=bam_filename,
-                    find_insertion_location_script=os.path.join(
-                        GENOME_FINISH_PATH,
-                        'find_insertion_neighborhood.py'))
+def get_insertion_location(bam_path):
 
-    pickled_output = subprocess.check_output(
-            cmd, shell=True, executable=BASH_PATH)
-    return pickle.loads(pickled_output)
+    BAM_CSOFT_CLIP = 4
+    BAM_CHARD_CLIP = 5
+    clip_codes = [BAM_CSOFT_CLIP, BAM_CHARD_CLIP]
+
+    samfile = pysam.AlignmentFile(bam_path)
+    contig_length = 0
+    for read in samfile:
+        contig_length = max(contig_length, read.query_length)
+        if read.cigartuples[0][0] not in clip_codes:
+            left_read = read
+        elif read.cigartuples[-1][0] not in clip_codes:
+            right_read = read
+
+    if left_read is None:
+        error_string = 'Expected homology on left end of contig not found'
+    elif right_read is None:
+        error_string = 'Expected homology on right end of contig not found'
+    else:
+        left_start_pos = left_read.reference_start
+        right_end_pos = right_read.reference_end
+        chromosome_seqrecord_id = samfile.getrname(left_read.reference_id)
+
+        if left_start_pos > right_end_pos:
+            error_string = ('Contig alignment to reference suggests a ' +
+                    'structural variant more complex than a simple insertion')
+        elif contig_length < right_end_pos - left_start_pos:
+            error_string = ('Contig not long enough to span putative ' +
+                    'insertion region, suggesting insertion is longer than ' +
+                    'assembled contig')
+        else:
+            locations_dict = {
+                    'chromosome_seqrecord_id': chromosome_seqrecord_id,
+                    'left_end': left_start_pos,
+                    'right_end': right_end_pos,
+            }
+            return locations_dict
+
+    return {'error_string', error_string}
 
 
 def make_sliced_fasta(fasta_path, seqrecord_id, left_index, right_index,

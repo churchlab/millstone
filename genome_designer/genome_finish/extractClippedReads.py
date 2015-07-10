@@ -56,13 +56,20 @@ def main():
         "-i", "--inFile", dest="inFile",
         help="A SAM file or standard input (-i stdin).",
         metavar="FILE")
+    parser.add_option(
+        "-t", "--clipThreshold", dest="clipThreshold", type="int",
+        default=None, help="An integer threshold for terminal clipping.")
     (opts, args) = parser.parse_args()
     if opts.inFile is None:
         parser.print_help()
         print
     else:
         try:
-            get_clipped_reads(opts.inFile)
+            if opts.clipThreshold is None:
+                get_clipped_reads(opts.inFile)
+            else:
+                get_clipped_reads(
+                        opts.inFile, clipping_threshold=opts.clipThreshold)
         except IOError as err:
             sys.stderr.write("IOError " + str(err) + "\n")
             return

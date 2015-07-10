@@ -16,6 +16,7 @@ from utils.bam_utils import concatenate_bams
 from utils.bam_utils import make_bam
 from utils.bam_utils import make_sam
 from utils.bam_utils import rmdup
+from utils.bam_utils import sort_bam
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
 
@@ -104,6 +105,9 @@ def generate_contigs(experiment_sample_to_alignment, contig_label_base):
     SV_indicants_with_pairs_bam = (
         alignment_prefix + '.SV_indicants_with_pairs.bam')
     make_bam(SV_indicants_with_pairs_sam, SV_indicants_with_pairs_bam)
+
+    # Sort for velvet assembly
+    sort_bam(SV_indicants_with_pairs_bam)
 
     # Velvet assembly
     contig_files = []
