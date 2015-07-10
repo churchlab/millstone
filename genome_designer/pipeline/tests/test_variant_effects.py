@@ -8,11 +8,9 @@ Tests for alignment_pipeline.py
 
 import os
 
+from django.conf import settings
 from django.test import TestCase
 import vcf
-from collections import defaultdict
-import re
-import itertools
 
 from main.models import AlignmentGroup
 from main.models import Dataset
@@ -21,24 +19,21 @@ from main.models import ExperimentSampleToAlignment
 from main.models import get_dataset_with_type
 from main.models import Project
 from main.models import User
-from main.models import Variant
 from pipeline.variant_effects import build_snpeff
 from pipeline.variant_effects import run_snpeff
 from pipeline.variant_effects import get_snpeff_config_path
 from pipeline.variant_effects import populate_record_eff
 from pipeline.variant_calling.common import add_vcf_dataset
-from utils.import_util import add_dataset_to_entity
-from utils.import_util import copy_and_add_dataset_source
-from utils.import_util import copy_dataset_to_entity_data_dir
 from utils.import_util import import_reference_genome_from_local_file
-from settings import PWD as GD_ROOT
 
 
-TEST_DIR = os.path.join(GD_ROOT, 'test_data', 'genbank_aligned')
+TEST_DIR = os.path.join(settings.PWD, 'test_data', 'genbank_aligned')
 
 TEST_GENBANK = os.path.join(TEST_DIR, 'mg1655_tolC_through_zupT.gb')
 
 TEST_UNANNOTATED_VCF = os.path.join(TEST_DIR, 'bwa_align_unannotated.vcf')
+
+NO_VARIANTS_VCF = os.path.join(TEST_DIR, 'no_variants.vcf')
 
 
 class TestSnpeff(TestCase):
@@ -164,3 +159,17 @@ class TestSnpeff(TestCase):
 
         self.assertEqual(updated_test_record.INFO['EFF_GENE'],
                 ['ygiC','ygiC'])
+
+    def test_variant_effects__no_variants(self):
+        """Tests that variant_effects runs without problems when input
+        is empty vcf.
+        """
+        alignment_group = AlignmentGroup.objects.create(
+                label='test alignment', reference_genome=self.reference_genome)
+        vcf_dataset = Dataset.objects.create(
+                type=Dataset.TYPE.VCF_FREEBAYES,
+                label=Dataset.TYPE.VCF_FREEBAYES,
+                filesystem_location=NO_VARIANTS_VCF)
+        alignment_group.dataset_set.add(vcf_dataset)
+
+        run_snpeff(alignment_group, Dataset.TYPE.BWA_ALIGN)

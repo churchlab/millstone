@@ -17,9 +17,9 @@ from django.conf import settings
 from django import template
 import vcf
 
+from main.model_utils import ensure_exists_0775_dir
+from main.model_utils import get_dataset_with_type
 from main.models import Dataset
-from main.models import ensure_exists_0775_dir
-from main.models import get_dataset_with_type
 from utils import ensure_line_lengths
 from utils import uppercase_underscore
 
@@ -286,7 +286,6 @@ def run_snpeff(alignment_group, alignment_type):
 
     Returns the snpeff vcf output filename.
     """
-
     # Get the reference genome uid to get the config path and snpeff genome name
     ref_genome = alignment_group.reference_genome
     ref_genome_uid = alignment_group.reference_genome.uid
@@ -297,6 +296,16 @@ def run_snpeff(alignment_group, alignment_type):
             type=Dataset.TYPE.VCF_FREEBAYES)
     vcf_input_filename = get_dataset_with_type(alignment_group,
             type=Dataset.TYPE.VCF_FREEBAYES).get_absolute_location()
+    assert os.path.exists(vcf_input_filename)
+
+    # Make sure vcf has at least one record. If not, return.
+    with open(vcf_input_filename) as unannotated_fh:
+        vcf_reader = vcf.Reader(unannotated_fh)
+        try:
+            vcf_reader.next()
+        except StopIteration:
+            # No variants called. No need to do SnpEff.
+            return
 
     # Prepare a directory to put the output file.
     vcf_output_filename = get_snpeff_vcf_output_path(alignment_group,
@@ -338,6 +347,7 @@ def run_snpeff(alignment_group, alignment_type):
     for file in settings.SNPEFF_SUMMARY_FILES:
         os.remove(os.path.join(os.getcwd(),file))
 
+
 def convert_snpeff_info_fields(vcf_input_fh, vcf_output_fh):
     """This function takes a VCF file on an input stream, reads it in,
     converts the single EFF field to a set of EFF fields, and then returns
@@ -360,7 +370,6 @@ def convert_snpeff_info_fields(vcf_input_fh, vcf_output_fh):
     We will pull out all of these fields separately into INFO_EFF_* and return
     a new VCF file.
     """
-
     vcf_reader = vcf.Reader(vcf_input_fh)
 
     # Generate extra header rows.
