@@ -9,7 +9,6 @@ import string
 from django.core.urlresolvers import reverse
 
 from main.models import AlignmentGroup
-from main.models import Variant
 from main.model_view_utils import create_variant_links_field
 from main.model_view_utils import get_jbrowse_track_names
 from main.model_view_utils import create_alt_flag_field
@@ -406,6 +405,8 @@ LINKS_FIELD = {
     'sWidth': '48px'
 }
 
+SCHEMA_KEY__DP = 'DP'
+
 MELTED_VARIANT_FIELD_DICT_LIST = [
     LINKS_FIELD,
     {'field': MELTED_SCHEMA_KEY__ES_LABEL, 'verbose': 'Sample'},
@@ -413,6 +414,12 @@ MELTED_VARIANT_FIELD_DICT_LIST = [
     {'field': MELTED_SCHEMA_KEY__POSITION},
     {'field': MELTED_SCHEMA_KEY__REF},
     {'field': MELTED_SCHEMA_KEY__ALT},
+    {
+        'field': SCHEMA_KEY__DP,
+        'verbose': 'Depth',
+        'is_subkey': True,
+        'parent_col': 've_data'
+    },
     {'field': MELTED_SCHEMA_KEY__HET, 'hide': True},
     {'field': MELTED_SCHEMA_KEY__VS_LABEL, 'verbose': 'Sets', 'last': True},
     {'field': MELTED_SCHEMA_KEY__ES_UID, 'hide': True},

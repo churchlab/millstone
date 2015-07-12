@@ -1276,19 +1276,8 @@ class Variant(UniqueUidModelMixin):
 
     @classmethod
     def get_field_order(clazz, **kwargs):
-        """Get the order of the models for displaying on the front-end.
-        Called by the adapter.
-        """
-        return [{'field':'label'},
-                {'field':'jbrowse_link', 'verbose': 'JBrowse'},
-                {'field':'chromosome'},
-                {'field':'position'},
-                # This is useless right now, always 'UNKNOWN'
-                #{'field':'type'},
-                {'field':'ref_value', 'verbose':'Ref'},
-                {'field':'variantset_set',
-                    'verbose':'Set Membership',
-                    'classes':['label']}]
+        raise NotImplementedError(
+                "Currently, Variants are displayed via model_views.py")
 
 
 class VariantCallerCommonData(Model, VisibleFieldMixin):

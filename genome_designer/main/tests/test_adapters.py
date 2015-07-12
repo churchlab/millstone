@@ -52,32 +52,3 @@ class TestAdapters(TestCase):
         for field in ReferenceGenome.get_field_order():
             self.assertTrue(field['field'] in ref_genome_1_fe)
         self.assertTrue('href' in ref_genome_1_fe)
-
-
-    def test_adapters__two_levels(self):
-        """Test adapting model with nested models.
-        """
-        variant = Variant.objects.create(
-                type=Variant.TYPE.TRANSITION,
-                reference_genome=self.ref_genome_1,
-                chromosome=self.chromosome,
-                position=100,
-                ref_value='A')
-
-        var_alt = VariantAlternate.objects.create(
-                variant=variant,
-                alt_value='G')
-
-        fe_variants = json.loads(adapt_model_to_frontend(Variant))
-
-        self.assertEqual(1, len(fe_variants['obj_list']))
-        fe_variant = fe_variants['obj_list'][0]
-
-        for field in Variant.get_field_order():
-            self.assertTrue(field['field'] in fe_variant)
-
-        # self.assertTrue('reference_genome' in fe_variant)
-        
-        # for ref_genome_field in ReferenceGenome.get_field_order():
-        #     self.assertTrue(ref_genome_field['field'] in 
-        #         fe_variant['reference_genome'])
