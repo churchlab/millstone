@@ -452,6 +452,11 @@ OPTIONAL_DEFAULT_FIELDS = [
     {'field': 'INFO_EFF_GENE', 'verbose': 'Gene', 'format': 'gather'}, # va_data
     {'field': 'INFO_EFF_IMPACT', 'verbose': 'Impact', 'format': 'gather',
             'recase':'title'}, # va_data
+    {
+        'field': 'INFO_SVLEN',
+        'verbose': 'SV Length',
+        'format': 'gather'
+    }
 ]
 
 

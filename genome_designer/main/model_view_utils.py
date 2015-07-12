@@ -76,13 +76,24 @@ def create_jbrowse_link_for_variant_object(variant_as_dict, reference_genome,
     position = variant_as_dict[MELTED_SCHEMA_KEY__POSITION]
     ref_genome_jbrowse_link = reference_genome.get_client_jbrowse_link()
 
-    location_str = '..'.join([str(i) for i in [
-            position - int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2)),
-            position + int(floor(settings.JBROWSE_DEFAULT_VIEW_WINDOW/2))]])
+    # HACK(gleb): JBrowse parses the reference .fasta file to use the first
+    # word as the name of the reference genome, while we store the entire
+    # string in the chromosome name. For now, imitate this.
+    ref_genome_name = variant_as_dict[MELTED_SCHEMA_KEY__CHROMOSOME].split()[0]
 
-    location_param = ('&loc=' +
-            variant_as_dict[MELTED_SCHEMA_KEY__CHROMOSOME] +
-            ':' + str(location_str))
+    # Create the location string.
+    window_start = position - settings.JBROWSE_DEFAULT_VIEW_WINDOW / 2
+    if (variant_as_dict.get('VA_DATA', None) is not None and
+            'INFO_SVLEN' in variant_as_dict['VA_DATA']):
+        svlen = abs(int(variant_as_dict['VA_DATA']['INFO_SVLEN']))
+        window_end = position + svlen + settings.JBROWSE_DEFAULT_VIEW_WINDOW / 2
+    else:
+        window_end = position + settings.JBROWSE_DEFAULT_VIEW_WINDOW / 2
+    location_str = '{start}..{end}'.format(start=window_start, end=window_end)
+
+    location_param = '&loc={ref}:{loc_str}'.format(
+            ref=ref_genome_name,
+            loc_str=location_str)
 
     tracks = [] + settings.JBROWSE_DEFAULT_TRACKS
 
