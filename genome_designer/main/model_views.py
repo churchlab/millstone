@@ -455,7 +455,8 @@ OPTIONAL_DEFAULT_FIELDS = [
     {
         'field': 'INFO_SVLEN',
         'verbose': 'SV Length',
-        'format': 'gather'
+        'format': 'gather',
+        'hide': True
     }
 ]
 
