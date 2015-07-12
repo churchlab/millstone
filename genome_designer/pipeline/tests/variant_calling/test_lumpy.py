@@ -29,6 +29,7 @@ from pipeline.variant_calling import TOOL_LUMPY
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from utils.import_util import import_reference_genome_from_local_file
 from variants.vcf_parser import parse_alignment_group_vcf
+from variants.vcf_parser import SV_REF_VALUE
 
 
 TEST_DATA_DIR = os.path.join(settings.PWD, 'test_data')
@@ -215,6 +216,8 @@ class TestLumpy(TestCase):
 
         # start position
         self.assertTrue(9950 < v.position < 10050)
+
+        self.assertEqual(SV_REF_VALUE, v.ref_value)
 
         # size
         vccd = v.variantcallercommondata_set.all()[0]

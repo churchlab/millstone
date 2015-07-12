@@ -27,6 +27,8 @@ SV_TYPES = {
     'INV': 'INVERSION'
 }
 
+SV_REF_VALUE = '--'
+
 UNKNOWN_VARIANT_TYPE = 'unknown'
 
 IGNORE_VCF_RECORD_KEYS = [
@@ -200,6 +202,9 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     position = int(raw_data_dict.pop('POS'))
     ref_value = raw_data_dict.pop('REF')
     alt_values = raw_data_dict.pop('ALT')
+
+    if ref_value == 'N':
+        ref_value = SV_REF_VALUE
 
     # Make sure the chromosome cited in the VCF exists for
     # the reference genome variant is being added to
