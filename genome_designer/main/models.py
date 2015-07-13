@@ -114,6 +114,7 @@ class Dataset(UniqueUidModelMixin):
         VCF_LUMPY = 'Lumpy VCF'
         VCF_USERINPUT = 'User VCF'
         VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
+        VCF_LUMPY_SNPEFF = 'Lumpy SNPEff VCF'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
         LUMPY_INSERT_METRICS_HISTOGRAM = 'Lumpy Insert Metrics Histogram'
         LUMPY_INSERT_METRICS_MEAN_STDEV = 'Lumpy Insert Metrics Mean Stdev'

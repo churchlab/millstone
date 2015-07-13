@@ -16,6 +16,7 @@ from pipeline.variant_calling.constants import TOOL_LUMPY
 from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
 from pipeline.variant_calling.common import process_vcf_dataset
+from pipeline.variant_effects import run_snpeff
 from utils import uppercase_underscore
 
 
@@ -113,6 +114,16 @@ def merge_lumpy_vcf(alignment_group):
     vcf_dataset_type = Dataset.TYPE.VCF_LUMPY
     vcf_dataset = add_vcf_dataset(
             alignment_group, vcf_dataset_type, merged_vcf_filepath)
+
+    # If genome is annotated then run snpeff now,
+    # then update the vcf_output_filename and vcf_dataset_type.
+    if alignment_group.reference_genome.is_annotated():
+        vcf_ouput_filename_merged_snpeff = run_snpeff(
+                alignment_group, TOOL_LUMPY)
+        vcf_dataset_type = Dataset.TYPE.VCF_LUMPY_SNPEFF
+        vcf_dataset = add_vcf_dataset(
+                alignment_group, vcf_dataset_type,
+                vcf_ouput_filename_merged_snpeff)
 
     # Parse VCF to add variants to database.
     process_vcf_dataset(alignment_group, vcf_dataset_type)
