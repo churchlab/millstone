@@ -14,10 +14,10 @@ from pipeline.variant_effects import run_snpeff
 from pipeline.variant_calling.common import add_vcf_dataset
 from pipeline.variant_calling.common import get_common_tool_params
 from pipeline.variant_calling.common import process_vcf_dataset
-from pipeline.variant_calling.common import TOOL_DELLY
-from pipeline.variant_calling.common import TOOL_FREEBAYES
-from pipeline.variant_calling.common import TOOL_LUMPY
-from pipeline.variant_calling.common import TOOL_PINDEL
+from pipeline.variant_calling.constants import TOOL_DELLY
+from pipeline.variant_calling.constants import TOOL_FREEBAYES
+from pipeline.variant_calling.constants import TOOL_LUMPY
+from pipeline.variant_calling.constants import TOOL_PINDEL
 from pipeline.variant_calling.delly import run_delly
 from pipeline.variant_calling.freebayes import run_freebayes
 from pipeline.variant_calling.lumpy import run_lumpy

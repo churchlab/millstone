@@ -16,6 +16,7 @@ from pipeline.read_alignment_util import ensure_bwa_index
 from pipeline.variant_calling.common import add_vcf_dataset
 from pipeline.variant_calling.common import process_vcf_dataset
 from pipeline.variant_calling.common import get_common_tool_params
+from pipeline.variant_calling.constants import TOOL_FREEBAYES
 
 from pipeline.variant_effects import run_snpeff
 from utils import uppercase_underscore
@@ -203,7 +204,7 @@ def merge_freebayes_parallel(alignment_group):
     if alignment_group.reference_genome.is_annotated():
 
         vcf_ouput_filename_merged_snpeff = run_snpeff(
-                alignment_group, Dataset.TYPE.BWA_ALIGN)
+                alignment_group, TOOL_FREEBAYES)
 
         vcf_dataset_type = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
 

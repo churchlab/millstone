@@ -24,6 +24,7 @@ from pipeline.variant_effects import run_snpeff
 from pipeline.variant_effects import get_snpeff_config_path
 from pipeline.variant_effects import populate_record_eff
 from pipeline.variant_calling.common import add_vcf_dataset
+from pipeline.variant_calling.constants import TOOL_FREEBAYES
 from utils.import_util import import_reference_genome_from_local_file
 
 
@@ -96,7 +97,7 @@ class TestSnpeff(TestCase):
 
         # Try running snpeff
         snpeff_vcf_filename = run_snpeff(
-                self.alignment_group, Dataset.TYPE.BWA_ALIGN)
+                self.alignment_group, TOOL_FREEBAYES)
 
         vcf_dataset = add_vcf_dataset(
                 self.alignment_group, Dataset.TYPE.VCF_FREEBAYES_SNPEFF,
@@ -172,4 +173,4 @@ class TestSnpeff(TestCase):
                 filesystem_location=NO_VARIANTS_VCF)
         alignment_group.dataset_set.add(vcf_dataset)
 
-        run_snpeff(alignment_group, Dataset.TYPE.BWA_ALIGN)
+        run_snpeff(alignment_group, TOOL_FREEBAYES)

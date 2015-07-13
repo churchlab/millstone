@@ -17,20 +17,6 @@ from variants.variant_sets import add_variants_to_set_from_bed
 from variants.vcf_parser import parse_alignment_group_vcf
 
 
-###############################################################################
-# Constants and Maps
-###############################################################################
-
-TOOL_FREEBAYES = 'freebayes'
-TOOL_PINDEL = 'pindel'
-TOOL_DELLY = 'delly'
-TOOL_LUMPY = 'lumpy'
-
-
-###############################################################################
-# Common functions
-###############################################################################
-
 def common_postprocess_vcf(vcf_reader):
     # Do postprocessing in common to Pindel and Delly VCFs.
     modified_header_lines = []
@@ -87,6 +73,7 @@ def add_vcf_dataset(alignment_group, vcf_dataset_type, vcf_output_filename):
     alignment_group.dataset_set.add(vcf_dataset)
 
     return vcf_dataset
+
 
 def process_vcf_dataset(alignment_group, vcf_dataset_type):
     """

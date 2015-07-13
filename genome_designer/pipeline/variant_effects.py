@@ -116,6 +116,12 @@ SNPEFF_ALT_RE = re.compile(r''.join([
         r'\|?(?P<{:s}>[^\|]*)\|?(?P<{:s}>[^\|]*)\)']
         ).format(*SNPEFF_FIELDS.keys()))
 
+MAP_VCF_SOURCE_TOOL_TO_ORIGINAL_VCF_DATASET_TYPE = {
+    # TODO: Use constants once circular imports issue is resolved.
+    'freebayes': Dataset.TYPE.VCF_FREEBAYES,
+    'lumpy': Dataset.TYPE.VCF_LUMPY
+}
+
 
 def build_snpeff(ref_genome):
     """
@@ -228,6 +234,7 @@ def render_snpeff_config(
     with open(output_file_location, 'w') as output_fh:
         output_fh.write(config_template.render(context))
 
+
 def build_snpeff_db(snpeff_config_path, ref_genome_uid):
     """
     Call snpeff's build function to build a database based on the
@@ -261,41 +268,53 @@ def build_snpeff_db(snpeff_config_path, ref_genome_uid):
     snpeff_proc = subprocess.call(snpeff_args)
 
 
-def get_snpeff_vcf_output_path(alignment_group, alignment_type):
-    """Returns the path to SnpEff dir, reltaive to the AlignmentGroup data
-    location.
+def get_snpeff_vcf_output_path(alignment_group, vcf_source_tool):
+    """Returns the path to SnpEff dir for the given AlignmentGroup and tool.
 
     Ensures that the intermediate dirs are created so the file can be written.
 
     Path is of the form:
-    /projects/<project_uid>/alignment_groups/vcf/snpeff/<alignment_type>.vcf
+    /projects/<project_uid>/alignment_groups/vcf/<tool>/snpeff/<tool>_snpeff.vcf
     """
+    assert vcf_source_tool in MAP_VCF_SOURCE_TOOL_TO_ORIGINAL_VCF_DATASET_TYPE
+
+    # Root vcf dir.
     vcf_dir = os.path.join(alignment_group.get_model_data_dir(), 'vcf')
     ensure_exists_0775_dir(vcf_dir)
-    snpeff_vcf_dir = os.path.join(vcf_dir, 'snpeff')
+
+    # Tool-specific dir.
+    tool_dir = os.path.join(vcf_dir, vcf_source_tool)
+    ensure_exists_0775_dir(tool_dir)
+
+    # Dir where snpeff data will be written.
+    snpeff_vcf_dir = os.path.join(tool_dir, 'snpeff')
     ensure_exists_0775_dir(snpeff_vcf_dir)
+
+    # Snpeff output vcf path.
     vcf_output_filename = os.path.join(
-            snpeff_vcf_dir, uppercase_underscore(alignment_type) + '.vcf')
+            snpeff_vcf_dir, vcf_source_tool + '_snpeff.vcf')
     return vcf_output_filename
 
 
-def run_snpeff(alignment_group, alignment_type):
+def run_snpeff(alignment_group, vcf_source_tool):
     """Run snpeff on an alignment group after creating a vcf with a snpcaller.
 
     We only use the alignment type to store the snpeff file.
 
     Returns the snpeff vcf output filename.
     """
+    assert vcf_source_tool in MAP_VCF_SOURCE_TOOL_TO_ORIGINAL_VCF_DATASET_TYPE
+
     # Get the reference genome uid to get the config path and snpeff genome name
     ref_genome = alignment_group.reference_genome
     ref_genome_uid = alignment_group.reference_genome.uid
-    snpeff_config_path = get_snpeff_config_path(ref_genome)
 
-    # Get the freebayes vcf file as input
-    assert get_dataset_with_type(alignment_group,
-            type=Dataset.TYPE.VCF_FREEBAYES)
-    vcf_input_filename = get_dataset_with_type(alignment_group,
-            type=Dataset.TYPE.VCF_FREEBAYES).get_absolute_location()
+    source_vcf_dataset_type = (
+            MAP_VCF_SOURCE_TOOL_TO_ORIGINAL_VCF_DATASET_TYPE[vcf_source_tool])
+    source_vcf_dataset = get_dataset_with_type(alignment_group,
+            type=source_vcf_dataset_type)
+    assert source_vcf_dataset is not None
+    vcf_input_filename = source_vcf_dataset.get_absolute_location()
     assert os.path.exists(vcf_input_filename)
 
     # Make sure vcf has at least one record. If not, return.
@@ -309,7 +328,7 @@ def run_snpeff(alignment_group, alignment_type):
 
     # Prepare a directory to put the output file.
     vcf_output_filename = get_snpeff_vcf_output_path(alignment_group,
-            alignment_type)
+            vcf_source_tool)
 
     snpeff_args = [
         'java',
@@ -332,20 +351,12 @@ def run_snpeff(alignment_group, alignment_type):
     print ' '.join(snpeff_args)
 
     with open(vcf_output_filename, 'w') as fh_out:
-
-        #Create a stringIO buffer to hold the unedited snpeff vcf
-        raw_snpeff_vcf = StringIO()
-
         snpeff_proc = subprocess.Popen(
             snpeff_args,
             stdout=subprocess.PIPE)
         convert_snpeff_info_fields(snpeff_proc.stdout, fh_out)
 
     return vcf_output_filename
-
-    #clean up the snpEff_genes.txt and snpEff_summary.txt files in the home dir
-    for file in settings.SNPEFF_SUMMARY_FILES:
-        os.remove(os.path.join(os.getcwd(),file))
 
 
 def convert_snpeff_info_fields(vcf_input_fh, vcf_output_fh):
@@ -394,6 +405,7 @@ def convert_snpeff_info_fields(vcf_input_fh, vcf_output_fh):
     # Write the old records with the new EFF INFO fields
     for record in vcf_reader:
         vcf_writer.write_record(populate_record_eff(record))
+
 
 def populate_record_eff(vcf_record):
     """This function takes a single VCF record and separates the EFF key
@@ -453,6 +465,7 @@ def populate_record_eff(vcf_record):
     vcf_record.INFO.update(eff_field_lists)
 
     return vcf_record
+
 
 def get_snpeff_config_path(ref_genome):
     """The parent directory of the snpeff model dir holds the config file, but
