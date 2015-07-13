@@ -69,27 +69,6 @@ def run_lumpy(
     return True  # success
 
 
-def filter_lumpy_vcf(original_vcf_path, new_vcf_path):
-    """Filters lumpy vcf to get rid of noisy values.
-
-    Args:
-        original_vcf_path: Full path to starting vcf.
-        new_vcf_path: Path where new vcf will be written.
-
-    NOTE: Now that we are using lumpyexpress, we might not need this anymore.
-    """
-    with open(original_vcf_path) as orig_vcf_fh:
-        with open(new_vcf_path, 'w') as new_vcf_fh:
-            vcf_reader = vcf.Reader(orig_vcf_fh)
-            vcf_writer = vcf.Writer(new_vcf_fh, vcf_reader)
-            for record in vcf_reader:
-                # If record fails any filter, continue to next record without
-                # writing.
-                if int(record.INFO['DP']) < 10:
-                    continue
-                vcf_writer.write_record(record)
-
-
 def merge_lumpy_vcf(alignment_group):
     """Merge lumpy outputs run on individual samples.
 
@@ -180,6 +159,10 @@ def process_vcf_post_l_merge(l_merge_output_vcf_path, processed_vcf_path):
 
             # Format each record with correct setting.
             for record in vcf_reader:
+                # Filter when insufficient support.
+                if int(record.INFO['SU'][0]) < 10:
+                    continue
+
                 # Per-sample values.
                 record.FORMAT = 'GT:DP'
 

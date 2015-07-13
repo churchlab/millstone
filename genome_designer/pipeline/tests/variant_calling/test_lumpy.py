@@ -21,7 +21,6 @@ from main.testing_util import create_sample_and_alignment
 from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
 from pipeline.variant_calling import find_variants_with_tool
-from pipeline.variant_calling.lumpy import filter_lumpy_vcf
 from pipeline.variant_calling.lumpy import merge_lumpy_vcf
 from pipeline.variant_calling.lumpy import run_lumpy
 from pipeline.variant_calling.lumpy import process_vcf_post_l_merge
@@ -39,9 +38,6 @@ TEST_FASTA = os.path.join(TEST_DATA_DIR, 'fake_genome_and_reads',
 
 TEST_DISC_SPLIT_BAM = os.path.join(settings.PWD, 'test_data',
         'discordant_split_reads', 'bwa_align.bam')
-
-TEST_LUMPY_VCF = os.path.join(settings.PWD, 'test_data', 'pipeline',
-        'variant_calling', 'lumpy.vcf')
 
 # Test genomes generated using:
 # https://github.com/churchlab/structural-variants-testing
@@ -355,40 +351,6 @@ class TestLumpy(TestCase):
                         self.assertTrue(sample_call.sample in samples_with_var)
                     else:
                         self.assertFalse(sample_call.sample in samples_with_var)
-
-    def test_filter_vcf(self):
-        """Tests filtering out noisy values from vcf.
-        """
-        # We want to make sure two conditions are satisfied after filtering:
-        #     1) Only records that pass rules are preserved.
-        #     2) Vcf file header is preserved.
-
-        # Read original vcf.
-        with open(TEST_LUMPY_VCF) as fh:
-            orig_vcf_reader = vcf.Reader(fh)
-            orig_vcf_header_lines = orig_vcf_reader._header_lines
-            orig_record_count = _count_records_in_vcf(fh)
-
-        # Make sure all records present.
-        self.assertTrue(len(orig_vcf_header_lines) > 1)
-        self.assertEqual(4, orig_record_count)
-
-        # Create new filtered vcf.
-        NEW_VCF_FILE = tempfile.NamedTemporaryFile()
-        NEW_VCF_FILE_PATH = NEW_VCF_FILE.name
-        filter_lumpy_vcf(TEST_LUMPY_VCF, NEW_VCF_FILE_PATH)
-
-        # Read new vcf.
-        with open(NEW_VCF_FILE_PATH) as new_vcf_fh:
-            new_vcf_reader = vcf.Reader(new_vcf_fh)
-            new_vcf_header_lines = new_vcf_reader._header_lines
-            new_record_count = _count_records_in_vcf(new_vcf_reader)
-
-        # 1) Make sure header is preserved.
-        self.assertEqual(set(orig_vcf_header_lines), set(new_vcf_header_lines))
-
-        # 2) Make sure only single record.
-        self.assertEqual(1, new_record_count)
 
 
 ###############################################################################
