@@ -12,7 +12,7 @@ from main.model_utils import get_dataset_with_type
 from main.models import Dataset
 from pipeline.variant_calling.common import add_vcf_dataset
 from pipeline.variant_calling.common import get_common_tool_params
-from pipeline.variant_calling.common import TOOL_LUMPY
+from pipeline.variant_calling.constants import TOOL_LUMPY
 from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
 from pipeline.variant_calling.common import process_vcf_dataset
