@@ -17,6 +17,9 @@ from settings import MEDIA_ROOT
 from settings import PWD as GD_ROOT
 from settings import TOOLS_DIR
 
+# Retry download at least X times if disconnected.
+MAX_DL_RETRY = 2
+
 
 TOOLS_URLS = {
     'bwa' : {
@@ -132,7 +135,7 @@ TOOLS_URLS = {
 
 
 # For any tools that have multiple executables that need permission changes,
-# for tools whose executables arent named after their tool
+# for tools whose executables aren't named after their tool
 TOOLS_TO_EXECUTABLES = {
     'lumpy': ['*'], # make all executable
     'pindel': ['pindel', 'pindel2vcf'],
@@ -192,23 +195,41 @@ def download_tools(tools=TOOLS_URLS.keys()):
 
             # If *.zip, download to a tmp file and unzip it to the right dir.
             if dest_filename.endswith('.zip'):
-                tmp_path, http_msg = urllib.urlretrieve(tool_url)
+                tmp_path, http_msg = _try_urlretrieve(tool_url)
                 print '    %s (Unzipping...)' % tmp_path
                 try:
                     tool_zipped = zipfile.ZipFile(tmp_path)
                     tool_zipped.extractall(dest_dir)
                 except:
-                    'File {} missing or invalid format!'.format(
-                            tool_url)
+                    raise(OSError('File {} missing or invalid format!'.format(
+                            tool_url)))
 
             # Otherwise download files to the correct location.
             else:
                 dest_path = os.path.join(dest_dir, dest_filename)
-                urllib.urlretrieve(tool_url,dest_path)
+                _try_urlretrieve(tool_url,dest_path)
                 print '    %s' % dest_path
 
         _update_executable_permissions(tool)
 
+
+def _try_urlretrieve(tool_url, dest_path=None, retry=0):
+    """Allow retrying urllib.urlretrieve in case connection drops."""
+    try:
+        if dest_path:
+            result = urllib.urlretrieve(tool_url)
+        else:
+            result = urllib.urlretrieve(tool_url, dest_path)
+
+    except IOError:
+        # attempt retry
+        if retry < MAX_DL_RETRY:
+            print '    Connection failed, retry #{}'.format(retry+1)
+            _try_urlretrieve(tool_url, dest_path=dest_path, retry=retry+1)
+        else:
+            raise
+
+    return result
 
 def _get_or_create_tool_destination_dir(tool):
     dest_dir = os.path.join(TOOLS_DIR, tool)
