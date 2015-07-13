@@ -12,7 +12,7 @@ from utils.samtools_utils import run_mpileup
 
 
 def analyze_coverage(sample_alignment, output_dir, coverage_only=True):
-    ref_genome_fasta_location = get_dataset_with_type(
+    input_ref_genome_fasta_location = get_dataset_with_type(
             sample_alignment.alignment_group.reference_genome,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
@@ -23,6 +23,8 @@ def analyze_coverage(sample_alignment, output_dir, coverage_only=True):
         sample_alignment.experiment_sample.label + '_' +
         sample_alignment.uid) + '.coverage'
     output_path = os.path.join(output_dir, output_filename)
+
+    #input_ref_genome_fasta_path = sample_alignment.alignment_group.reference_genome.dataset_set.get(type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
     run_mpileup(input_bam_file, input_ref_genome_fasta_path, output_path,
             coverage_only=coverage_only)

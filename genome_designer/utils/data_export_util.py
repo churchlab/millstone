@@ -9,9 +9,12 @@ import re
 import StringIO
 import zipfile
 
+from Bio import SeqIO
 from django.conf import settings
 import vcf
 
+from main.model_utils import get_dataset_with_type
+from main.models import Dataset
 from utils import lowercase_underscore
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
@@ -109,6 +112,115 @@ VCF_TEMPLATE_PATH = os.path.join(settings.PWD, 'test_data', 'vcf_template.vcf')
 # multiple alts. We're not necessarily set on continuing to do it this way,
 # but we're happy enough with it for now.
 PLACEHOLDER_SAMPLE_NAME = 'fake_sid'
+
+
+def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
+    """Exports a list of contigs as a vcf
+    """
+    # Allow dest input as path or filehandle.
+    if (isinstance(vcf_dest_path_or_filehandle, str) or
+            isinstance(vcf_dest_path_or_filehandle, unicode)):
+        out_vcf_fh = open(vcf_dest_path_or_filehandle, 'w')
+    else:
+        out_vcf_fh = vcf_dest_path_or_filehandle
+
+    # The vcf.Writer() requires a template vcf in order to structure itself.
+    # We read in a generic template to satisfy this.
+    with open(VCF_TEMPLATE_PATH) as template_fh:
+        vcf_template = vcf.Reader(template_fh)
+
+    vcf_writer = vcf.Writer(out_vcf_fh, vcf_template)
+    for contig in contig_list:
+        assert contig.chromosome
+        assert contig.reference_insertion_endpoints
+        assert contig.contig_insertion_endpoints
+
+        ref_left, ref_right = contig.reference_insertion_endpoints
+        contig_left, contig_right = contig.contig_insertion_endpoints
+
+        # Get Seqrecord
+        contig_fasta = get_dataset_with_type(
+                contig,
+                Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+        with open(contig_fasta) as fh:
+                contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+        # Determine whether contig is reverse complement relative to reference
+        is_reverse = contig.metadata.get('is_reverse', False)
+
+        # Extract cassette sequence from contig
+        if is_reverse:
+            cassette_sequence = str(contig_seqrecord.seq.reverse_complement()[
+                contig_left:contig_right])
+        else:
+            cassette_sequence = str(contig_seqrecord.seq[
+                    contig_left:contig_right])
+
+        if ref_left > ref_right:
+            bases_to_peel_back = ref_left - ref_right
+            ref_genome_fasta = get_dataset_with_type(
+                    contig.parent_reference_genome,
+                    Dataset.TYPE.REFERENCE_GENOME_FASTA
+                            ).get_absolute_location()
+            with open(ref_genome_fasta) as fh:
+                ref_seqrecord_iter = SeqIO.parse(fh, 'fasta')
+                ref_seqrecord = None
+                for seqrecord in ref_seqrecord_iter:
+                    if seqrecord.id == contig.chromosome:
+                        ref_seqrecord = seqrecord
+                        break
+                assert ref_seqrecord is not None
+
+            peel_back_sequence = str(ref_seqrecord.seq[
+                    (ref_left - bases_to_peel_back):ref_left])
+
+            pos = ref_left - bases_to_peel_back + 1
+            ref_value = ''
+            alt_value = peel_back_sequence + cassette_sequence
+
+        elif ref_right > ref_left:
+            ref_genome_fasta = get_dataset_with_type(
+                    contig.parent_reference_genome,
+                    Dataset.TYPE.REFERENCE_GENOME_FASTA
+                            ).get_absolute_location()
+            with open(ref_genome_fasta) as fh:
+                ref_seqrecord_iter = SeqIO.parse(fh, 'fasta')
+                ref_seqrecord = None
+                for seqrecord in ref_seqrecord_iter:
+                    if seqrecord.id == contig.chromosome:
+                        ref_seqrecord = seqrecord
+                        break
+                assert ref_seqrecord is not None
+
+            # + 1 to insert AFTER end of reference
+            pos = ref_left + 1
+            ref_value = str(ref_seqrecord.seq[
+                    ref_left+1: ref_right])
+            alt_value = cassette_sequence
+
+        elif ref_right == ref_left:
+            pos = ref_left + 1
+            ref_value = ''
+            alt_value = cassette_sequence
+
+        record = vcf.model._Record(
+                contig.chromosome,
+                pos,
+                contig.uid,
+                ref_value,
+                (alt_value,),
+                1, # QUAL
+                [], # FILTER
+                {}, # INFO
+                'GT:DP:RO:QR:AO:QA:GL', # FORMAT
+                {PLACEHOLDER_SAMPLE_NAME: 0}, # sample_indexes
+        )
+        # Add a placeholder sample.
+        calldata_type = vcf.model.make_calldata_tuple(['GT'])
+        placeholder_sample_data = calldata_type(GT='1/1')
+        record.samples = [vcf.model._Call(
+                record, PLACEHOLDER_SAMPLE_NAME, placeholder_sample_data)]
+        vcf_writer.write_record(record)
 
 
 def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):

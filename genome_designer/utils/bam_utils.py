@@ -10,9 +10,43 @@ from django.conf import settings
 import pysam
 import numpy as np
 
+from main.models import AlignmentGroup
+from main.models import Dataset
+from main.models import ExperimentSample
+from main.models import ExperimentSampleToAlignment
 from utils import convert_fasta_to_fastq
+from utils.import_util import add_dataset_to_entity
+from utils.jbrowse_util import add_bam_file_track
 
 BWA_BINARY = os.path.join(settings.TOOLS_DIR, 'bwa/bwa')
+
+
+def add_bam_track(reference_genome, bam_file, label):
+    print 'add_bam_file_track entered'
+    ag = AlignmentGroup.objects.create(
+            reference_genome=reference_genome,
+            label=label)
+    es = ExperimentSample.objects.create(
+            project=reference_genome.project,
+            label=label)
+    esta = ExperimentSampleToAlignment.objects.create(
+            alignment_group=ag,
+            experiment_sample=es)
+    coordinate_sorted_bam = (os.path.splitext(bam_file)[0] +
+            '.coordinate_sorted.bam')
+    print 'created related models'
+    sort_bam_by_coordinate(bam_file, coordinate_sorted_bam)
+    print 'sorted bam'
+    index_bam(coordinate_sorted_bam)
+    print 'indexed bam'
+    add_dataset_to_entity(esta,
+                label,
+                Dataset.TYPE.BWA_ALIGN,
+                filesystem_location=coordinate_sorted_bam)
+    print 'about to add bam file track'
+    add_bam_file_track(reference_genome, esta,
+            Dataset.TYPE.BWA_ALIGN)
+    print 'added bam file track'
 
 
 def clipping_stats(bam_path, sample_size=1000):
@@ -50,11 +84,23 @@ def index_bam(bam):
     subprocess.call(cmd, shell=True, executable=settings.BASH_PATH)
 
 
-def sort_bam(input_bam, output_bam=None):
+def sort_bam_by_name(input_bam, output_bam=None):
     if output_bam is None:
         output_bam = input_bam
 
     cmd = "{samtools} sort -n {input_bam} {output_bam_prefix}".format(
+            samtools=settings.SAMTOOLS_BINARY,
+            input_bam=input_bam,
+            output_bam_prefix=os.path.splitext(output_bam)[0])
+
+    subprocess.call(cmd, shell=True, executable=settings.BASH_PATH)
+
+
+def sort_bam_by_coordinate(input_bam, output_bam=None):
+    if output_bam is None:
+        output_bam = input_bam
+
+    cmd = "{samtools} sort {input_bam} {output_bam_prefix}".format(
             samtools=settings.SAMTOOLS_BINARY,
             input_bam=input_bam,
             output_bam_prefix=os.path.splitext(output_bam)[0])
@@ -213,7 +259,7 @@ def minimal_bwa_align(reads, ref_fasta, data_dir):
     subprocess.call(cmd, shell=True, executable=settings.BASH_PATH)
 
     # 4. samtools sort alignment.bam
-    sort_bam(alignment_bam)
+    sort_bam_by_coordinate(alignment_bam)
 
     # 5. Index it
     index_bam(alignment_bam)

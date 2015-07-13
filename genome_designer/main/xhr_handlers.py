@@ -49,8 +49,8 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
 from genome_finish import assembly
-from genome_finish.insertion_placement import find_contig_insertion_site
-from genome_finish.insertion_placement import place_cassette
+from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
+# from genome_finish.insertion_placement_read_trkg import place_cassette
 from utils.combine_reference_genomes import combine_list_allformats
 from utils.data_export_util import export_melted_variant_view
 from utils.data_export_util import export_project_as_zip
@@ -1120,7 +1120,7 @@ def contigs_has_insertion_location(request):
     # insertion location keys
     has_insertion_location = False
     for c in Contig.objects.filter(uid__in=contig_uid_list):
-        if c.metadata.get('insertion_sequence_endpoints', None):
+        if c.metadata.get('reference_insertion_endpoints', None):
             has_insertion_location = True
             break
 
@@ -1141,65 +1141,62 @@ def contigs_find_insertion_location(request):
 
     result = {}
     for contig in Contig.objects.filter(uid__in=contig_uid_list):
-        ref_genome = contig.parent_reference_genome
 
-        insertion_data = find_contig_insertion_site(
-                ref_genome, contig)
+        insertion_placement_positions = get_insertion_placement_positions(
+                contig)
 
-        if 'error_string' in insertion_data:
-            if result.get('error', False):
-                result['error'].append(
-                        (contig.label, insertion_data['error_string']))
-            else:
-                result['error'] = [
-                        (contig.label, insertion_data['error_string'])]
-        else:
-            contig.metadata['insertion_sequence_endpoints'] = (
-                    insertion_data['contig_cassette_start_pos'],
-                    insertion_data['contig_cassette_end_pos'])
-            contig.metadata['ref_insertion_pos'] = insertion_data[
-                    'ref_insertion_pos']
-            contig.metadata['chromosome'] = insertion_data[
-                    'ref_chromosome_seqrecord_id']
-            contig.save()
+        if 'error_string' in insertion_placement_positions:
+            if 'error' not in result:
+                result['error'] = []
+            result['error'].append((
+                    contig.label,
+                    insertion_placement_positions['error_string']))
 
     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
-@login_required
-@require_POST
-def contigs_place_in_ref(request):
-    """Incorporates the passed contigs into the reference they belong to
-    to make a new version of the reference with the passed label. For now
-    only incorporation of single contigs is supported
-    """
-    request_data = json.loads(request.body)
-    contig_uid_list = request_data.get('contigUidList', [])
-    new_genome_label = request_data.get('newGenomeLabel', '')
+# @login_required
+# @require_POST
+# def contigs_place_in_ref(request):
+#     """Incorporates the passed contigs into the reference they belong to
+#     to make a new version of the reference with the passed label. For now
+#     only incorporation of single contigs is supported
+#     """
+#     request_data = json.loads(request.body)
+#     contig_uid_list = request_data.get('contigUidList', [])
+#     new_genome_label = request_data.get('newGenomeLabel', '')
 
-    # For now handle only one contig insertion until insertions are handled
-    # as SVs
-    assert len(contig_uid_list) == 1
+#     # For now handle only one contig insertion until insertions are handled
+#     # as SVs
+#     assert len(contig_uid_list) == 1
 
-    result = {}
-    contig = Contig.objects.get(uid=contig_uid_list[0])
-    ref_genome = contig.parent_reference_genome
+#     result = {}
+#     contig = Contig.objects.get(uid=contig_uid_list[0])
+#     ref_left, ref_right = contig.metadata['reference_insertion_endpoints']
+#     contig_left, contig_right = contig.metadata['contig_insertion_endpoints']
 
-    start, end = contig.metadata.get('insertion_sequence_endpoints')
-    placement_position_params = {
-        'ref_insertion_pos': contig.metadata.get('ref_insertion_pos'),
-        'ref_chromosome_seqrecord_id': contig.metadata.get('chromosome'),
-        'contig_cassette_start_pos': start,
-        'contig_cassette_end_pos': end
-    }
-    new_reference_genome_params = {
-        'label': new_genome_label
-    }
+#     insertion_placement_positions = {
+#         'reference': {
+#             'left': ref_left,
+#             'right': ref_right
+#         },
+#         'contig': {
+#             'left': contig_left,
+#             'right': contig_right
+#         }
+#         # 'ref_chromosome_seqrecord_id': contig.metadata.get('chromosome'),
+#     }
 
-    place_cassette(ref_genome, contig,
-            placement_position_params, new_reference_genome_params)
+#     new_reference_genome_params = {
+#         'label': new_genome_label
+#     }
 
-    return HttpResponse(json.dumps(result), content_type='application/json')
+#     place_cassette(
+#             contig,
+#             insertion_placement_positions,
+#             new_reference_genome_params)
+
+#     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 @login_required
@@ -1371,19 +1368,9 @@ def generate_contigs(request):
                     request.user.get_profile()),
             uid=sample_alignment_uid)
 
-    # Get reference genome
-    reference_genome = (
-            experiment_sample_to_alignment.alignment_group.reference_genome)
-
-    # Generate name for contigs
-    sample_label = experiment_sample_to_alignment.experiment_sample.label
-    ref_label = reference_genome.label
-    contig_label_base = '_'.join(
-            [ref_label, sample_label])
-
     # Generate a list of fasta file paths to the contigs
     contig_filepaths = assembly.generate_contigs(
-            experiment_sample_to_alignment, contig_label_base)
+            experiment_sample_to_alignment)
 
     # Check if contigs exist
     are_no_contigs = all([os.stat(contig_filepath).st_size == 0

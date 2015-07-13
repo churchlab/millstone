@@ -8,10 +8,24 @@ import shutil
 import tempfile
 import urllib2
 import string
+
 from Bio import SeqIO
+from django.conf import settings
+
+
 
 # Number of characters that snpeff requires per line of the genbank file
 SNPEFF_MIN_LINE_LEN = 20
+
+
+def make_temp_file(label, extension):
+    if not os.path.exists(settings.TEMP_FILE_ROOT):
+        os.mkdir(settings.TEMP_FILE_ROOT)
+    _, temp_file_path = tempfile.mkstemp(
+            suffix=('_' + generate_safe_filename_prefix_from_label(label) +
+                    extension),
+            dir=settings.TEMP_FILE_ROOT)
+    return temp_file_path
 
 
 def internet_on():
