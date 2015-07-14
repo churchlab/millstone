@@ -96,7 +96,8 @@ def align_contig_to_reference(reference_genome, contig, keep=False):
             sample_to_alignment, Dataset.TYPE.BWA_ALIGN
                     ).get_absolute_location()
 
-    new_dataset = copy_and_add_dataset_source(reference_genome,
+    contig.ensure_model_data_dir_exists()
+    new_dataset = copy_and_add_dataset_source(contig,
         'contig_align', Dataset.TYPE.BWA_ALIGN, contig_to_ref_bam, move=True)
 
     contig_to_ref_bam = new_dataset.get_absolute_location()
