@@ -47,10 +47,13 @@ def common_postprocess_vcf(vcf_reader):
         key, val = parser.read_info(header_line)
         vcf_reader.infos[key] = val
 
+
 def add_vcf_dataset(alignment_group, vcf_dataset_type, vcf_output_filename):
+    """Sort vcf file, creates vcf dataset, and adds it to the alignment group.
     """
-    Sort the vcf file, and create a vcf dataset, Add it to the alignment group.
-    """
+    if not os.path.exists(vcf_output_filename):
+        return None
+
     sort_vcf(vcf_output_filename)
 
     # If a Dataset already exists, delete it, might have been a bad run.

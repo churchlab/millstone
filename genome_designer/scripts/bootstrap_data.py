@@ -40,6 +40,7 @@ from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantSet
 from main.models import VariantToVariantSet
+from main.testing_util import FullVCFTestSet
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_and_add_dataset_source
@@ -96,18 +97,6 @@ CUSTOM_SAVED_QUERY_LIST = [
     'GT_TYPE = 2 & DP > 10',
     'INFO_EFF_IMPACT = HIGH',
 ]
-
-# A set of data consisting of a small annotated genome, many samples, and some
-# designed SNPs which are each in some of the samples.
-class FullVCFTestSet:
-    TEST_DIR = os.path.join(GD_ROOT,'test_data', 'full_vcf_test_set')
-    NUM_SAMPLES = 3
-    TEST_GENBANK = os.path.join(TEST_DIR, 'mg1655_tolC_through_zupT.gb')
-    FASTQ1 = [os.path.join(TEST_DIR, 'sample%d.simLibrary.1.fq' % i)
-             for i in range(NUM_SAMPLES)]
-    FASTQ2 = [os.path.join(TEST_DIR, 'sample%d.simLibrary.2.fq' % i)
-             for i in range(NUM_SAMPLES)]
-    TEST_DESIGNED_SNPS = os.path.join(TEST_DIR, 'designed_snps.vcf')
 
 
 def create_fake_variants_and_variant_sets(ref_genome):

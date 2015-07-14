@@ -110,6 +110,15 @@ def merge_lumpy_vcf(alignment_group):
             uppercase_underscore(common_params['alignment_type']) + '.vcf')
     process_vcf_post_l_merge(l_merge_output_path, merged_vcf_filepath)
 
+    # Check if any variants called. If not, then skip remaining steps.
+    with open(merged_vcf_filepath) as fh:
+        vcf_reader = vcf.Reader(fh)
+        try:
+            vcf_reader.next()
+        except StopIteration:
+            # No variants called. No need to do SnpEff.
+            return
+
     # Create Dataset pointing to merged vcf file.
     vcf_dataset_type = Dataset.TYPE.VCF_LUMPY
     vcf_dataset = add_vcf_dataset(

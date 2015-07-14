@@ -2,10 +2,10 @@
 Utility methods for testing.
 """
 
-import fileinput
 import os
 import vcf
 
+from django.conf import settings
 from django.contrib.auth.models import User
 
 from main.models import AlignmentGroup
@@ -16,7 +16,6 @@ from main.models import ExperimentSample
 from main.models import Project
 from main.models import ReferenceGenome
 from main.models import ExperimentSampleToAlignment
-from settings import PWD as GD_ROOT
 from utils.import_util import copy_and_add_dataset_source
 from variants.vcf_parser import parse_alignment_group_vcf
 
@@ -27,9 +26,22 @@ TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 TEST_PROJECT_NAME = 'recoli'
 TEST_REF_GENOME_LABEL = 'mg1655'
 
-TEST_GENOME_SNPS = os.path.join(GD_ROOT, 'test_data',
+TEST_GENOME_SNPS = os.path.join(settings.PWD, 'test_data',
         'fake_genome_and_reads',
         'test_genome_snps.vcf')
+
+
+# A set of data consisting of a small annotated genome, many samples, and some
+# designed SNPs which are each in some of the samples.
+class FullVCFTestSet:
+    TEST_DIR = os.path.join(settings.PWD, 'test_data', 'full_vcf_test_set')
+    NUM_SAMPLES = 3
+    TEST_GENBANK = os.path.join(TEST_DIR, 'mg1655_tolC_through_zupT.gb')
+    FASTQ1 = [os.path.join(TEST_DIR, 'sample%d.simLibrary.1.fq' % i)
+             for i in range(NUM_SAMPLES)]
+    FASTQ2 = [os.path.join(TEST_DIR, 'sample%d.simLibrary.2.fq' % i)
+             for i in range(NUM_SAMPLES)]
+    TEST_DESIGNED_SNPS = os.path.join(TEST_DIR, 'designed_snps.vcf')
 
 
 def create_common_entities():

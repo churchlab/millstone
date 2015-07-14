@@ -13,6 +13,7 @@ from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import Project
 from main.models import Variant
+from main.testing_util import FullVCFTestSet
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
@@ -129,6 +130,39 @@ class TestAlignmentPipeline(TransactionTestCase):
         sample_list = [self.experiment_sample_single_fastq]
         result = run_pipeline(
                 'name_placeholder', self.reference_genome, sample_list)
+        alignment_group = result[0]
+        alignment_async_result = result[1]
+        variant_calling_async_result = result[2]
+        alignment_async_result.get()
+        variant_calling_async_result.get()
+        alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
+        self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
+                alignment_group.status)
+
+    def test_run_pipeline__no_svs(self):
+        """Tests pipeline when no SVs called.
+        """
+        ref_genome = import_reference_genome_from_local_file(
+                self.project, 'mg1655_tolC_through_zupT',
+                FullVCFTestSet.TEST_GENBANK, 'genbank')
+
+        sample_obj = ExperimentSample.objects.create(
+                project=self.project,
+                label='Sample %d' % 0)
+
+        # Add raw reads to each sample.
+        copy_and_add_dataset_source(sample_obj,
+                Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1,
+                FullVCFTestSet.FASTQ1[0])
+        copy_and_add_dataset_source(sample_obj,
+                Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2,
+                FullVCFTestSet.FASTQ2[0])
+
+        result = run_pipeline(
+            'test_align', ref_genome, [sample_obj])
+
         alignment_group = result[0]
         alignment_async_result = result[1]
         variant_calling_async_result = result[2]
