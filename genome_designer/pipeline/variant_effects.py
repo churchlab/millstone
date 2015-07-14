@@ -390,7 +390,6 @@ def convert_snpeff_info_fields(vcf_input_fh, vcf_output_fh):
     for field, values in SNPEFF_FIELDS.items():
 
         # Create a new header line from the new field.
-        print values
         new_header_line = SNPEFF_INFO_TEMPLATE.substitute(values)
 
         # Add this extra header line to the vcf reader.

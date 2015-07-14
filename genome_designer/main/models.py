@@ -142,6 +142,7 @@ class Dataset(UniqueUidModelMixin):
         TYPE.VCF_LUMPY : 'alignmentgroup_set',
         TYPE.VCF_DELLY : 'alignmentgroup_set',
         TYPE.VCF_LUMPY : 'alignmentgroup_set',
+        TYPE.VCF_LUMPY_SNPEFF: 'alignmentgroup_set',
         TYPE.VCF_USERINPUT : 'variantset_set',
         TYPE.VCF_FREEBAYES_SNPEFF : 'alignmentgroup_set',
         TYPE.FASTQC1_HTML: 'experimentsample_set',

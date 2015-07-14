@@ -5,6 +5,10 @@ Tests for lumpy.py.
 import os
 import tempfile
 
+from Bio import SeqIO
+from Bio.Alphabet import generic_dna
+from Bio.SeqFeature import FeatureLocation
+from Bio.SeqFeature import SeqFeature
 from django.conf import settings
 from django.test import TestCase
 import vcf
@@ -45,6 +49,24 @@ DELETION_TEST_DATA_DIR = os.path.join(TEST_DATA_DIR,
         'sv_testing', 'deletion_bd5a1123')
 
 DELETION_REF = os.path.join(DELETION_TEST_DATA_DIR, 'small_ref.fa')
+
+# NOTE: Generated below.
+DELETION_REF_GENBANK = os.path.join(DELETION_TEST_DATA_DIR, 'small_ref.gb')
+
+# Uncomment/modify to create test data.
+# def _create_annotated_ref_genome():
+#     """Creates annotated ref genome.
+#     """
+#     with open(DELETION_REF) as fasta_fh:
+#         seq_record = SeqIO.read(fasta_fh, 'fasta', alphabet=generic_dna)
+#     seq_record.features = []
+#     feature = SeqFeature(
+#             FeatureLocation(9800, 10200, strand=1), type='CDS', id=1)
+#     feature.qualifiers['gene'] = ['geneX']
+#     seq_record.features.append(feature)
+#     with open(DELETION_REF_GENBANK, 'w') as fh:
+#         SeqIO.write(seq_record, fh, 'genbank')
+# _create_annotated_ref_genome()
 
 DELETION_FASTQ1 = os.path.join(DELETION_TEST_DATA_DIR, 'deletion_bd5a1123.1.fq')
 
@@ -179,7 +201,7 @@ class TestLumpy(TestCase):
         """
         # Create Datasets / import data.
         self.reference_genome = import_reference_genome_from_local_file(
-                self.project, 'ref_genome', DELETION_REF, 'fasta')
+                self.project, 'ref_genome', DELETION_REF_GENBANK, 'genbank')
 
         # Create an alignment that's already complete, so we can focus on
         # testing variant calling only.
@@ -210,17 +232,23 @@ class TestLumpy(TestCase):
         self.assertEqual(1, len(variants))
         v = variants[0]
 
-        # start position
+        # position/ref
         self.assertTrue(9950 < v.position < 10050)
-
         self.assertEqual(SV_REF_VALUE, v.ref_value)
 
-        # size
         vccd = v.variantcallercommondata_set.all()[0]
+
+        # size
         size = vccd.data['INFO_END'] - v.position
         self.assertTrue(900 < size < 1100)
 
-        # TODO: Check SV type.
+        va = v.variantalternate_set.all()[0]
+
+        # Type
+        self.assertEqual('DEL', va.data['INFO_SVTYPE'])
+
+        # SnpEff data
+        self.assertEqual('geneX', va.data['INFO_EFF_GENE'])
 
     def test_run_lumpy__multiple_samples_of_same_exact_deletion(self):
         """Tests lumpy running on multiple samples.
