@@ -170,7 +170,7 @@ def import_reference_genome_from_local_file(project, label, file_location,
 
 
 def add_chromosomes(reference_genome, dataset):
-    """ Makes a Chromosome for each unique SeqRecord.name in the dataset
+    """Makes a Chromosome for each unique SeqRecord.name in the dataset
     """
 
     seqrecord_ids = [
@@ -189,12 +189,16 @@ def add_chromosomes(reference_genome, dataset):
     dataset_path = dataset.get_absolute_location()
 
     # Add chromosome labels and ids
-    if dataset.TYPE.REFERENCE_GENOME_FASTA:
+    if dataset.type == Dataset.TYPE.REFERENCE_GENOME_FASTA:
         _make_chromosome(SeqIO.parse(dataset_path, "fasta"))
-    elif dataset.TYPE.REFERENCE_GENOME_GENBANK:
+    elif dataset.type == Dataset.TYPE.REFERENCE_GENOME_GENBANK:
         _make_chromosome(SeqIO.parse(dataset_path, "genbank"))
+    elif dataset.type == Dataset.TYPE.REFERENCE_GENOME_GFF:
+        # Don't add chromosomes for GFF. Used internally with JBrowse.
+        return
     else:
-        raise AssertionError("Unexpected Dataset type")
+        raise AssertionError("Unexpected Dataset type {ds_type}".format(
+                ds_type=dataset.type))
 
 
 def generate_fasta_from_genbank(ref_genome):
