@@ -139,8 +139,8 @@ class TestAlignmentPipeline(TransactionTestCase):
         self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
                 alignment_group.status)
 
-    def test_run_pipeline__no_svs(self):
-        """Tests pipeline when no SVs called.
+    def test_run_pipeline__snps_with_effect__no_svs(self):
+        """Tests pipeline with SNPs with effect, but no SVs called.
         """
         ref_genome = import_reference_genome_from_local_file(
                 self.project, 'mg1655_tolC_through_zupT',
@@ -171,3 +171,9 @@ class TestAlignmentPipeline(TransactionTestCase):
         alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
         self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
                 alignment_group.status)
+
+        # Check that SnpEff worked.
+        v_205 = Variant.objects.get(
+                reference_genome=alignment_group.reference_genome, position=205)
+        v_205_va = v_205.variantalternate_set.all()[0]
+        self.assertEqual('tolC', v_205_va.data['INFO_EFF_GENE'])
