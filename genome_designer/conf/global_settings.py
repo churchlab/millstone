@@ -399,6 +399,27 @@ SNPEFF_BUILD_DEBUG = True
 # Names of SnpEff summary files, which we want to delete after running.
 SNPEFF_SUMMARY_FILES = ['snpEff_genes.txt', 'snpEff_summary.html']
 
+###############################################################################
+# Callable Loci
+###############################################################################
+
+# Minimum mapping quality (out of 60) to be a 'good' call
+CL__MIN_MAPQ = 20
+
+# Maximum depth before complaining of excessive depth
+CL__MAX_DEPTH = 1000
+
+# Minimum depth for low coverage
+CL__MIN_DEPTH = 4
+
+# minimum depth to allow for calling low map quality
+CL__MIN_LOWMAPQ_DEPTH = 8
+
+# minimum read fraction that has low map quality for call
+CL__MAX_LOWMAP_FRAC = 0.3
+
+# Distance between adjacent features, below which to merge them
+CL__MERGE_DIST = 25
 
 ###############################################################################
 # Feature Flags

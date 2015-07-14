@@ -8,6 +8,7 @@ import os
 import shutil
 import re
 import subprocess
+import sys
 from tempfile import mkdtemp
 from tempfile import mkstemp
 from tempfile import NamedTemporaryFile
@@ -515,13 +516,18 @@ def copy_experiment_sample_data(
             # how make an error link for alignments.
         else:
             read1_dataset.status = Dataset.STATUS.READY
+            read1_dataset.save()
             read2_dataset.status = Dataset.STATUS.READY
+            read2_dataset.save()
+
     else:
         # Unpaired.
         read1_dataset.status = Dataset.STATUS.READY
+        read1_dataset.save()
 
     # Quality Control via FASTQC and save.
     read1_dataset.status = Dataset.STATUS.QC
+    read1_dataset.save()
     if not options.get('skip_fastqc', False):
         run_fastqc_on_sample_fastq(experiment_sample, read1_dataset)
     read1_dataset.status = Dataset.STATUS.READY
@@ -529,6 +535,7 @@ def copy_experiment_sample_data(
 
     if read2_dataset is not None:
         read2_dataset.status = Dataset.STATUS.QC
+        read1_dataset.save()
         if not options.get('skip_fastqc', False):
             run_fastqc_on_sample_fastq(experiment_sample, read2_dataset,
                     rev=True)

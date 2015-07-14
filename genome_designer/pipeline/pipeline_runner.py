@@ -171,10 +171,11 @@ def _assert_pipeline_is_safe_to_run(alignment_group_label, sample_list):
     relevant_datasets = Dataset.objects.filter(
             experimentsample__in=sample_list)
     for d in relevant_datasets:
-        assert d.status == Dataset.STATUS.READY, (
+        good_statuses = (Dataset.STATUS.READY, Dataset.STATUS.QC)
+        assert any([d.status == status for status in good_statuses]), (
                 "Dataset %s for sample %s has status %s. Expected %s." % (
-                        d.label, d.experimentsample_set.all()[0].label,
-                        d.status, Dataset.STATUS.READY))
+                d.label, d.experimentsample_set.all()[0].label,
+                d.status, Dataset.STATUS.READY))
 
 
 def _get_or_create_sample_alignment_datasets(alignment_group, sample_list):

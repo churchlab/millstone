@@ -19,10 +19,12 @@ from main.models import Project
 from main.model_utils import clean_filesystem_location
 from main.testing_util import create_sample_and_alignment
 from pipeline.read_alignment import align_with_bwa_mem
+from pipeline.read_alignment import compute_callable_loci
 from pipeline.read_alignment import get_discordant_read_pairs
 from pipeline.read_alignment import get_split_reads
 from pipeline.read_alignment import get_read_length
 from pipeline.read_alignment import get_insert_size_mean_and_stdev
+from pipeline.read_alignment_util import index_bam_file
 from settings import TOOLS_DIR
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
@@ -277,6 +279,8 @@ class TestAlignmentPieces(TestCase):
         bwa_dataset.status = status=Dataset.STATUS.READY
         bwa_dataset.save()
 
+        index_bam_file(bwa_dataset.get_absolute_location())
+
         self.bwa_dataset = bwa_dataset
         self.sample_alignment = sample_alignment
 
@@ -298,6 +302,20 @@ class TestAlignmentPieces(TestCase):
                 stdout=subprocess.PIPE)
         self.assertEqual(134, sum([1 for line in p.stdout]))
 
+    def test_callable_loci(self):
+        callable_loci_bed_fn = compute_callable_loci(
+                self.reference_genome,
+                self.sample_alignment,
+                self.bwa_dataset.get_absolute_location())
+
+        # Bam should have no reads at start, so first bed
+        # record should be NO_COVERAGE.
+        with open(callable_loci_bed_fn, 'r') as callable_loci_fh:
+            first_bed_record = callable_loci_fh.next().split('\t')
+
+        self.assertEqual(
+            first_bed_record[-1],
+            'No_Coverage\n')
 
     def test_get_split_reads(self):
 

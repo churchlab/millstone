@@ -19,6 +19,7 @@ from main.model_utils import clean_filesystem_location
 from main.model_utils import get_dataset_with_type
 from main.s3 import project_files_needed
 from pipeline.read_alignment_util import ensure_bwa_index
+from pipeline.callable_loci import get_callable_loci
 from pipeline.read_alignment_util import index_bam_file
 from utils.bam_utils import filter_bam_file_by_row
 from utils.import_util import add_dataset_to_entity
@@ -120,7 +121,10 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
             'mem',
             '-t', '1', # threads
             '-R', '"'+read_group_string(experiment_sample)+'"',
-            '-M',
+            # uncomment this to keep secondary alignments (for finding and marking paralogy regions)
+            # But before we can uncomment we need to fix de novo assembly code
+            # '-a',
+            #'-M',
             ref_genome_fasta,
             input_reads_1_fq,
         ])
@@ -202,7 +206,6 @@ DEFAULT_PROCESSING_MASK = {
     'make_bam': True,
     'sort': True,
     'rmdup': True,
-    'add_groups': False,
     # Disabling GATK indel realignment by default;
     # freebayes does it locally while calling, and it's slower;
     # 27 sec vs 38 seconds on pipeline tests on my MBP.
@@ -234,7 +237,6 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     Returns:
         The path of the final .bam file.
     """
-
     experiment_sample = sample_alignment.experiment_sample
 
     # For any keys missing from the processing mask, give them the values from
@@ -487,23 +489,17 @@ def compute_insert_metrics(bam_file, sample_alignment, stderr=None):
 def compute_callable_loci(reference_genome, sample_alignment,
             bam_file_location, stderr=None):
 
+    # Set output fn to None in case try fails.
+    callable_loci_bed_fn = None
+
     try:
         ref_genome_fasta_location = get_dataset_with_type(
                 reference_genome,
                 Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
         output = _get_callable_loci_output_filename(bam_file_location)
-        summary_file = os.path.splitext(bam_file_location)[0] + '.loci_summary.txt'
 
-        subprocess.check_call([
-            'java', '-Xmx1024M',
-            '-jar', '%s/gatk/GenomeAnalysisTK.jar' % settings.TOOLS_DIR,
-            '-T', 'CallableLoci',
-            '-R', ref_genome_fasta_location,
-            '-I', bam_file_location,
-            '-summary', summary_file,
-            '-o', output,
-        ], stderr=stderr)
+        get_callable_loci(bam_file_location, output)
 
         # Add callable loci bed as dataset
         callable_loci_bed = Dataset.objects.create(
@@ -516,11 +512,8 @@ def compute_callable_loci(reference_genome, sample_alignment,
 
         callable_loci_bed_fn = callable_loci_bed.get_absolute_location()
 
-        # Remove 'CALLABLE' rows - we assume no feature means callable
-        # Also convert other features to title case
-
         output = subprocess.check_output(
-                ['grep',  '-v', 'CALLABLE', callable_loci_bed_fn])
+                ['cat', callable_loci_bed_fn])
 
         with open(callable_loci_bed_fn, 'w') as callable_loci_bed_fh:
             for i, line in enumerate(output.split('\n')):
@@ -529,13 +522,10 @@ def compute_callable_loci(reference_genome, sample_alignment,
                     if len(fields) == 0:
                         continue
                     chrom, start, end, feature = fields
-                    if feature == 'CALLABLE':
-                        continue
-                    else:
 
-                        feature = titlecase_spaces(feature)
-                        # Bed feature can't have spaces =(
-                        feature = feature.replace(' ', '_')
+                    feature = titlecase_spaces(feature)
+                    # Bed feature can't have spaces =(
+                    feature = feature.replace(' ', '_')
 
                     print >> callable_loci_bed_fh, '\t'.join(
                             [chrom, start, end, feature])
@@ -544,12 +534,15 @@ def compute_callable_loci(reference_genome, sample_alignment,
                         'WARNING: Callable Loci line' +
                         '%d: (%s) couldn\'t be parsed: %s') % (
                                 i, line, str(e))
+
         # add it as a jbrowse track
         add_bed_file_track(reference_genome, sample_alignment, callable_loci_bed)
 
     except Exception as e:
         print >> stderr, 'WARNING: Callable Loci failed.'
         print >> stderr, str(e)
+
+    return callable_loci_bed_fn
 
 
 def _get_metrics_output_filename(bam_file_location):

@@ -211,6 +211,8 @@ def add_paired_mates(input_sam_path, source_bam_filename, output_sam_path):
 
     TODO: This is potentially memory-overwhelming. Need to think about
     the de novo assembly feature more carefully before making it user-facing.
+
+    TODO: dbg 7/13/15: brian will replace this with pysam for speed.
     """
     # Strategy:
     # 1. Copy input to output, to preserve existing reads.
