@@ -195,7 +195,7 @@ def build_snpeff(ref_genome):
 
         # Set the ACCESSION/LOCUS/VERSION to all be the same for this
         # new modified genbank
-        seq_record.id = seq_record.name
+        seq_record.name = seq_record.id
         new_gb.append(seq_record)
 
         # Add this record as a chromosome to this ref genome
