@@ -70,6 +70,10 @@ gd.AlignmentCreateView = Backbone.View.extend({
 
   /** Create component to wrap samples controls, and listen for events. */
   decorateSamplesControls: function() {
+    if (this.samplesControlsComponent) {
+      this.samplesControlComponent.destroy();
+    }
+
     this.samplesControlsComponent = new gd.SamplesControlsComponent({
       el: '#gd-datatable-samples-hook-control',
       model: this.model,
