@@ -314,7 +314,7 @@ BASH_PATH = '/bin/bash'
 JBROWSE_ROOT = os.path.abspath(os.path.join(PWD, '../jbrowse'))
 
 # The location of the JBrowse scripts (perl scripts, ugh)
-JBROWSE_BIN_PATH = os.path.abspath(os.path.join(PWD, '../jbrowse/bin'))
+JBROWSE_BIN_PATH = os.path.join(JBROWSE_ROOT, 'bin')
 
 # Name of the symlink from within JBrowse to the data dir.
 # See JBROWSE_DATA_URL_ROOT description below.
