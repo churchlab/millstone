@@ -152,7 +152,7 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
 
     // The above screws up the radio button. Do it manually here.
     requestData['importFileFormat'] =
-        $('input[name="importFileFormat"]:checked').val();
+        $('#' + formId).find('input[name="importFileFormat"]:checked').val();
 
     return requestData;
   },
