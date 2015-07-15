@@ -19,12 +19,19 @@ VELVETG_BINARY = settings.TOOLS_DIR + '/velvet/velvetg'
 
 
 def get_clipped_reads(bam_filename, output_filename, clipping_threshold=None):
+    """Creates bam of reads that have more than clipping_threshold bases
+    of clipping.  If no clipping_threshold specified, clipping stats
+    for the alignment are calculated and the clipping_threshold is set
+    to the mean + one stddev of the per read clipping of a sample of
+    10000 reads
+    """
     if clipping_threshold is None:
         stats = clipping_stats(bam_filename, sample_size=10000)
         clipping_threshold = int(stats['mean'] + stats['std'])
 
     cmd = ' | '.join([
-            '{samtools} view -h {bam_filename}',
+            # -F 0x100 option filters out secondary alignments
+            '{samtools} view -h -F 0x100 {bam_filename}',
             '{extract_clipped_script} -i stdin -t {clipping_threshold}',
             '{samtools} view -Sb -']).format(
                     samtools=SAMTOOLS_BINARY,
@@ -167,7 +174,8 @@ def get_split_reads(bam_filename, output_filename):
 
     # Use lumpy bwa-mem split read script to pull out split reads.
     filter_split_reads = ' | '.join([
-            '{samtools} view -h {bam_filename}',
+            # -F 0x100 option filters out secondary alignments
+            '{samtools} view -h -F 0x100 {bam_filename}',
             'python {lumpy_bwa_mem_sr_script} -i stdin',
             '{samtools} view -Sb -']).format(
                     samtools=SAMTOOLS_BINARY,
@@ -247,6 +255,8 @@ def add_paired_mates(input_sam_path, source_bam_filename, output_sam_path):
         read_bam_cmd = [
             SAMTOOLS_BINARY,
             'view',
+            # -F 0x100 option filters out secondary alignments
+            '-F', '0x100',
             source_bam_filename
         ]
         samtools_proc = subprocess.Popen(read_bam_cmd, stdout=subprocess.PIPE)
