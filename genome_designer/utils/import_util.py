@@ -142,6 +142,9 @@ def import_reference_genome_from_local_file(project, label, file_location,
     # Validate the input.
     assert import_format in ['fasta', 'genbank']
 
+    # Get rid of any whitepspace.
+    file_location = file_location.strip()
+
     # Validate the file.
     assert os.path.exists(file_location), "File %s doesn't exist." % (
             file_location)
