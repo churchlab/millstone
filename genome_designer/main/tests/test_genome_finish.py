@@ -222,7 +222,7 @@ class TestContigAssembly(TestCase):
 
         # Only one contig, corresponding to the single 1kb insertion, should
         # be created
-        self.assertTrue(contigs.count() == 1)
+        self.assertEqual(contigs.count(), 1)
         contig = contigs[0]
 
         # Create Experiment Sample for the inserted sequence
