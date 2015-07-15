@@ -41,6 +41,10 @@ gd.AlignmentCreateView = Backbone.View.extend({
 
   /** Create component to wrap ref genome controls, and listen for events. */
   decorateRefGenomeControls: function() {
+    if (this.refGenomeControlsComponent) {
+      this.refGenomeControlsComponent.destroy();
+    }
+
     this.refGenomeControlsComponent = new gd.RefGenomeControlsComponent({
       el: '#gd-datatable-ref_genome-hook-control',
       datatableComponent: this.refGenomeDataTable

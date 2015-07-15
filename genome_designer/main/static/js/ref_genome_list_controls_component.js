@@ -8,17 +8,38 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
   initialize: function() {
     gd.DataTableControlsComponent.prototype.initialize.call(this);
 
-    this.decorateControls();
+    this.eventListenerMap = {};
 
     this.maybeCreateFineS3Uploader();
+
+    this.decorateControls();
+  },
+
+  registerEventListener: function(element, eventType, handlerFn) {
+    var mapKey = element + ',' + eventType;
+    this.eventListenerMap[mapKey] = handlerFn;
+    $(element).bind(eventType, handlerFn);
+  },
+
+  removeAllEventListeners: function(element, eventType) {
+    var parts, elements, eventype;
+    for (var mapKey in this.eventListenerMap) {
+      parts = mapKey.split(',');
+      element = parts[0];
+      eventType = parts[1];
+      $(element).unbind(eventType);
+    }
   },
 
   decorateControls: function() {
-    $('#gd-ref-genome-upload-through-browser-submit').click(
+    this.registerEventListener(
+        '#gd-ref-genome-upload-through-browser-submit', 'click',
         _.bind(this.handleUploadThroughBrowser, this));
-    $('#gd-ref-genome-upload-from-server-location-submit').click(
+    this.registerEventListener(
+        '#gd-ref-genome-upload-from-server-location-submit', 'click',
         _.bind(this.handleCreateFromServerLocation, this));
-    $('#gd-ref-genome-create-from-ncbi-submit').click(
+    this.registerEventListener(
+        '#gd-ref-genome-create-from-ncbi-submit', 'click',
         _.bind(this.handleCreateFromNCBI, this));
 
     this.drawDropdownOptions();
@@ -318,8 +339,7 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
 
     $.post('/_/ref_genomes/concatenate', {data:JSON.stringify(postData)},
         _.bind(this.handleConcatenateResponse, this));
-
-},
+  },
 
   handleConcatenateResponse: function(response) {
     this.exitLoadingState();
@@ -329,8 +349,7 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
     } else {
       this.trigger('MODELS_UPDATED');
     }
-},
-
+  },
 
   /**
    * Creates the S3 uploader if DOM target is present.
@@ -386,4 +405,8 @@ gd.RefGenomeControlsComponent = gd.DataTableControlsComponent.extend({
             }
       );}, this));
   },
+
+  destroy: function() {
+    this.removeAllEventListeners();
+  }
 });
