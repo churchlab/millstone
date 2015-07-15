@@ -321,6 +321,15 @@ gd.SamplesControlsComponent = gd.DataTableControlsComponent.extend({
   },
 
   destroy: function() {
+    $('#gd-samples-upload-single-sample-through-browser-modal').unbind(
+        'shown.bs.modal');
+    $('#gd-samples-upload-single-sample-through-browser-modal').unbind(
+        'hidden.bs.modal');
+    $('#gd-samples-upload-through-browser-modal').unbind(
+        'shown.bs.modal');
+    $('#gd-samples-upload-through-browser-modal').unbind(
+        'hidden.bs.modal');
+
     if (this.uploadSingleSampleModal) {
       this.uploadSingleSampleModal.destroy();
     }
