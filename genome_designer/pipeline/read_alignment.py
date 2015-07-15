@@ -124,7 +124,6 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
             # uncomment this to keep secondary alignments (for finding and marking paralogy regions)
             # But before we can uncomment we need to fix de novo assembly code
             # '-a',
-            #'-M',
             ref_genome_fasta,
             input_reads_1_fq,
         ])
