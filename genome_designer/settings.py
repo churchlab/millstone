@@ -49,3 +49,6 @@ VCFTOOLS_DIR = os.path.join(TOOLS_DIR, 'vcftools')
 VCF_CONCAT_BINARY = os.path.join(VCFTOOLS_DIR, 'bin', 'vcf-concat')
 
 VCF_SORT_BINARY = os.path.join(VCFTOOLS_DIR, 'bin', 'vcf-sort')
+
+# The location of the JBrowse scripts (perl scripts, ugh)
+JBROWSE_BIN_PATH = os.path.join(JBROWSE_ROOT, 'bin')
