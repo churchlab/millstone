@@ -3,22 +3,35 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Millstone
-=====================================
+.. image:: _images/millstone_logo.svg
+   :height: 400px
+   :alt: Millstone Logo
+   :align: center
 
 Millstone is a distributed bioinformatics software platform designed to
-facilitate genome engineering for synthetic biology. Automate iterative
-design, analysis, and debugging for projects involving hundreds of
-microbial genomes.
+facilitate genome engineering and evolutionary genomic analyses. With Millstone,
+you can automate and iterate genome analysis and debugging for sequencing
+projects involving tens to hundreds of microbial genomes.
 
-Contents:
+Table of Contents
+=================
 
 .. toctree::
   :maxdepth: 2
+  :caption: User Guide
+  :glob:
 
-  getting_started
-  pipeline
-  variant_calling
+  user_guide/intro
+  user_guide/*
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Technical Details
+  :glob:
+
+  technical_details/*
+
+
 
 
 Indices and tables

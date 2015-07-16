@@ -1,0 +1,11 @@
+Sample_Name	Plate_or_Group	Well	Read_1_Path	Read_2_Path	Parents	Growth_Rate
+Test Sample 0	Group A	A01	/path/to/genome_0_read_1.fq	/path/to/genome_0_read_2.fq		0.5
+Test Sample 1	Group A	A02	/path/to/genome_1_read_1.fq	/path/to/genome_1_read_2.fq	Test Sample 0	0.7
+Test Sample 2	Group A	A03	/path/to/genome_2_read_1.fq	/path/to/genome_2_read_2.fq	Test Sample 0	0.6
+Test Sample 3	Group A	A04	/path/to/genome_3_read_1.fq	/path/to/genome_3_read_2.fq	Test Sample 0	0.8
+Test Sample 4	Group A	A05	/path/to/genome_4_read_1.fq	/path/to/genome_4_read_2.fq	Test Sample 0	0.3
+Test Sample 5	Group A	B01	/path/to/genome_5_read_1.fastq.gz	/path/to/genome_5_read_2.fastq.gz	Test Sample 1	0.8
+Test Sample 6	Group A	B02	/path/to/genome_6_read_1.fq	/path/to/genome_6_read_2.fq	Test Sample 2	0.7
+Test Sample 7	Group A	B03	/path/to/genome_7_read_1.fq	/path/to/genome_7_read_2.fq	Test Sample 3,Test Sample 2	0.8
+Test Sample 8	Group A	B04	/path/to/genome_8_read_1.fq.gz	/path/to/genome_8_read_2.fq.gz	Test Sample 4	0.3
+Test Sample 9	Group A	B05	/path/to/genome_9_read_1.fq	/path/to/genome_9_read_2.fq		0.2
