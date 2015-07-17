@@ -205,11 +205,6 @@ DEFAULT_PROCESSING_MASK = {
     'make_bam': True,
     'sort': True,
     'rmdup': True,
-    # Disabling GATK indel realignment by default;
-    # freebayes does it locally while calling, and it's slower;
-    # 27 sec vs 38 seconds on pipeline tests on my MBP.
-    # see further: http://goo.gl/COm53O (bcbio article)
-    'indel_realigner': False,
     'compute_insert_metrics': True,
     'index': True,
     'compute_callable_loci': True,
@@ -236,8 +231,6 @@ def process_sam_bam_file(sample_alignment, reference_genome,
     Returns:
         The path of the final .bam file.
     """
-    experiment_sample = sample_alignment.experiment_sample
-
     # For any keys missing from the processing mask, give them the values from
     # the default mask.
     effective_mask = copy.copy(DEFAULT_PROCESSING_MASK)
@@ -312,32 +305,10 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         compute_insert_metrics(sorted_bam_file_location,
                 sample_alignment, error_output)
 
-    # 5. Perform realignment accounting for indels.
-    realigned_bam_file_location = (
-            os.path.splitext(sorted_bam_file_location)[0] +
-            '.realigned.bam'
-    )
-
-    if effective_mask['indel_realigner']:
-        # Make sure the previous result is indexed.
-        index_bam_file(sorted_bam_file_location, error_output)
-
-        realign_given_indels(
-                experiment_sample,
-                reference_genome,
-                sorted_bam_file_location,
-                realigned_bam_file_location,
-                error_output
-        )
-    # if we are not realigning indels, then point at the grouped file
-    # for the next step.
-    else:
-        realigned_bam_file_location = sorted_bam_file_location
-
-    # 6. Add back MD tags for visualization of mismatches by Jbrowse
+    # 4. Add back MD tags for visualization of mismatches by Jbrowse
     if effective_mask['withmd']:
         final_bam_location = (
-                os.path.splitext(realigned_bam_file_location)[0] +
+                os.path.splitext(sorted_bam_file_location)[0] +
                 '.withmd.bam'
         )
 
@@ -350,7 +321,7 @@ def process_sam_bam_file(sample_alignment, reference_genome,
             subprocess.check_call([
                 settings.SAMTOOLS_BINARY,
                 'fillmd', '-b',
-                realigned_bam_file_location,
+                sorted_bam_file_location,
                 ref_genome_fasta_location
             ], stderr=error_output, stdout=fh)
 
@@ -358,14 +329,14 @@ def process_sam_bam_file(sample_alignment, reference_genome,
         index_bam_file(final_bam_location, error_output)
 
     else:
-        final_bam_location = realigned_bam_file_location
+        final_bam_location = sorted_bam_file_location
 
-    # 7. Compute callable loci
+    # 5. Compute callable loci
     if effective_mask['compute_callable_loci']:
         compute_callable_loci(reference_genome, sample_alignment,
                 final_bam_location, error_output)
 
-    # 8. Create index.
+    # 6. Create index.
     if effective_mask['index']:
         index_bam_file(final_bam_location, error_output)
 
@@ -386,45 +357,6 @@ def read_group_string(experiment_sample):
             'SM:'+experiment_sample.uid]
 
     return('\\t'.join(read_group_fields))
-
-
-def realign_given_indels(
-        experiment_sample,
-        reference_genome,
-        input_bam_file,
-        output_bam_file,
-        error_output):
-    """Perform realignment accounting for indels. This should give a cleaner
-    alignment.
-    """
-    temp_intervals_file = os.path.join(
-            experiment_sample.get_model_data_dir(), 'realign.intervals')
-    ref_genome_fasta_location = get_dataset_with_type(
-            reference_genome,
-            Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-
-    # Prepare realignment intervals file.
-    subprocess.check_call([
-        'java', '-Xmx1024M',
-        '-jar', '%s/gatk/GenomeAnalysisTK.jar' % settings.TOOLS_DIR,
-        '-T', 'RealignerTargetCreator',
-        '-I', input_bam_file,
-        '-R', ref_genome_fasta_location,
-        '-o', temp_intervals_file,
-    ], stderr=error_output)
-
-    # Perform realignment.
-    subprocess.check_call([
-        'java', '-Xmx1024M',
-        '-jar', '%s/gatk/GenomeAnalysisTK.jar' % settings.TOOLS_DIR,
-        '-T', 'IndelRealigner',
-        '-I', input_bam_file,
-        '-R', ref_genome_fasta_location,
-        '-targetIntervals',  temp_intervals_file,
-        '-o', output_bam_file,
-        # to avoid bwa mem multi-aligns (must be combined with -M flag to BWA MEM)
-        '-rf', 'NotPrimaryAlignment'
-    ], stderr=error_output)
 
 
 def compute_insert_metrics(bam_file, sample_alignment, stderr=None):

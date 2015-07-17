@@ -51,11 +51,6 @@ TOOLS_URLS = {
     'snpEff' : [
         'https://www.dropbox.com/s/jnob4hkcwtquyag/snpEff-3.3e.zip',
         ],
-    'gatk' : [
-        #New GATK doesn't work for OSX 10.6 and below b/c it requires Java 7
-        #'https://www.dropbox.com/s/47b0ivwlr80vtw1/GenomeAnalysisTK-2.6-5-gba531bd.zip'
-        'https://www.dropbox.com/s/227curebr2prswn/GenomeAnalysisTK-legacy.zip'
-        ],
     'samtools' : {
         'Darwin' : [
             'https://www.dropbox.com/s/wvd9iumzq1qi24h/samtools-0.1.20-darwin.zip'
