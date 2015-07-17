@@ -12,10 +12,13 @@ import sys
 import urllib
 import zipfile
 
-from settings import JBROWSE_DATA_SYMLINK_PATH
-from settings import MEDIA_ROOT
-from settings import PWD as GD_ROOT
-from settings import TOOLS_DIR
+# Setup Django environment.
+sys.path.append(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), '../'))
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+
+from django.conf import settings
+
 
 # Retry download at least X times if disconnected.
 MAX_DL_RETRY = 2
@@ -144,7 +147,7 @@ TOOLS_TO_EXECUTABLES = {
 def setup(arglist):
     if len(arglist) == 0:
         download_tools()
-        setup_jbrowse()
+        # setup_jbrowse()
     else:
         if 'jbrowse' in arglist:
             setup_jbrowse()
@@ -152,10 +155,10 @@ def setup(arglist):
         download_tools(tools=arglist)
 
 
-def download_tools(tools=TOOLS_URLS.keys()):
+def download_tools(tools=TOOLS_URLS.keys(), tools_dir=settings.TOOLS_DIR):
     # Create tools dir if it doesn't exist.
-    if not os.path.isdir(TOOLS_DIR):
-        os.mkdir(TOOLS_DIR)
+    if not os.path.isdir(tools_dir):
+        os.mkdir(tools_dir)
 
     sys_type = platform.system()
 
@@ -178,7 +181,7 @@ def download_tools(tools=TOOLS_URLS.keys()):
             tool_urls = TOOLS_URLS[tool]
 
         # Make the directory for this tool, if it doesn't exist
-        dest_dir = _get_or_create_tool_destination_dir(tool)
+        dest_dir = _get_or_create_tool_destination_dir(tool, tools_dir)
 
         for tool_url in tool_urls:
 
@@ -205,13 +208,13 @@ def download_tools(tools=TOOLS_URLS.keys()):
                 _try_urlretrieve(tool_url,dest_path)
                 print '    %s' % dest_path
 
-        _update_executable_permissions(tool)
+        _update_executable_permissions(tool, tools_dir)
 
 
 def _try_urlretrieve(tool_url, dest_path=None, retry=0):
     """Allow retrying urllib.urlretrieve in case connection drops."""
     try:
-        if dest_path:
+        if dest_path is None:
             result = urllib.urlretrieve(tool_url)
         else:
             result = urllib.urlretrieve(tool_url, dest_path)
@@ -226,8 +229,9 @@ def _try_urlretrieve(tool_url, dest_path=None, retry=0):
 
     return result
 
-def _get_or_create_tool_destination_dir(tool):
-    dest_dir = os.path.join(TOOLS_DIR, tool)
+
+def _get_or_create_tool_destination_dir(tool, tools_dir):
+    dest_dir = os.path.join(tools_dir, tool)
     if not os.path.isdir(dest_dir):
         os.mkdir(dest_dir)
     return dest_dir
@@ -240,7 +244,7 @@ def _get_file_url_from_dropbox(dropbox_url, filename):
     return dropbox_url + '?dl=1'
 
 
-def _update_executable_permissions(tool):
+def _update_executable_permissions(tool, tools_dir):
     """Set executable permissions lost during zip.
 
     This is really hackish, but because ZipFile does not save file
@@ -249,7 +253,7 @@ def _update_executable_permissions(tool):
     use TOOLS_TO_EXECUTABLES.
     """
     # Location of tool files.
-    dest_dir = _get_or_create_tool_destination_dir(tool)
+    dest_dir = _get_or_create_tool_destination_dir(tool, tools_dir)
 
     # Gather full paths of all files to make executable.
     if not tool in TOOLS_TO_EXECUTABLES:
@@ -278,14 +282,14 @@ def setup_jbrowse():
     """
     # Unlink if there was a link and then create a new link.
     try:
-        os.unlink(JBROWSE_DATA_SYMLINK_PATH)
+        os.unlink(settings.JBROWSE_DATA_SYMLINK_PATH)
     except OSError:
         # There was no symlink. That's fine.
         pass
 
     # Re-create the link.
-    os.symlink(os.path.join(GD_ROOT, MEDIA_ROOT),
-            JBROWSE_DATA_SYMLINK_PATH)
+    os.symlink(os.path.join(settings.PWD, settings.MEDIA_ROOT),
+            settings.JBROWSE_DATA_SYMLINK_PATH)
 
 if __name__ == '__main__':
     setup(sys.argv[1:])
