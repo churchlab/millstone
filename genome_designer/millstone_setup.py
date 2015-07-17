@@ -147,7 +147,7 @@ TOOLS_TO_EXECUTABLES = {
 def setup(arglist):
     if len(arglist) == 0:
         download_tools()
-        # setup_jbrowse()
+        setup_jbrowse()
     else:
         if 'jbrowse' in arglist:
             setup_jbrowse()
