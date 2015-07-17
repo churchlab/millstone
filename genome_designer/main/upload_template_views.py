@@ -10,7 +10,7 @@ CONTENT_TYPE__CSV = 'text/csv'
 TEMPLATE__SAMPLES_BATCH_IMPORT_FROM_SERVER = 'sample_list_targets_template.csv'
 
 TEMPLATE__SAMPLES_BATCH_BROWSER_UPLOAD = (
-        'sample_list_browser_upload_template.tsv')
+        'sample_list_browser_upload_template.csv')
 
 
 def sample_list_targets_template(request):
