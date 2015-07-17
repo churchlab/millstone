@@ -1,11 +1,12 @@
-import csv
 import StringIO
+from tempfile import mkstemp
 
+from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.test import Client
 from django.test import TestCase
 
-from main.upload_template_views import SAMPLE_LIST_BROWSER_UPLOAD_TEMPLATE
+from utils.import_util import determine_template_delimiter
 from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME
 from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_1
 from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_2
@@ -22,26 +23,24 @@ class TestSampleListBrowserUploadTemplate(TestCase):
         The main issue we're testing here is that we don't accidentally
         break our template.
         """
-        # Make the request.
-        template_url  = reverse(
-                'main.upload_template_views.sample_list_browser_upload_template')
-        response = self.client.get(template_url)
-
-        # Create a reader on the response content.
-        reader = csv.DictReader(StringIO.StringIO(response.content),
-                delimiter='\t')
-
-        # Check that the expected headrs are there.
-        targets_file_header = reader.fieldnames
         EXPECTED_TEMPLATE_HEADER = [
                 SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME,
                 SAMPLE_BROWSER_UPLOAD_KEY__READ_1,
                 SAMPLE_BROWSER_UPLOAD_KEY__READ_2
         ]
 
-        missing_header_cols = (set(EXPECTED_TEMPLATE_HEADER) -
-            set(targets_file_header))
-        self.assertEqual(0, len(missing_header_cols),
-            "Missing cols: %s. "
-            "Make sure the template is properly tab-delimited." %
-            ' '.join(missing_header_cols))
+        # Make the request.
+        template_url = reverse(
+                'main.upload_template_views.sample_list_browser_upload_template')
+        response = self.client.get(template_url)
+
+        # Save the content to temp file to match interface of
+        # determine_template_delimiter().
+        _, temp_file_location = mkstemp(dir=settings.TEMP_FILE_ROOT)
+        with open(temp_file_location, 'w') as temp_fh:
+            temp_fh.write(StringIO.StringIO(response.content).read())
+
+        delim = determine_template_delimiter(
+                temp_file_location, EXPECTED_TEMPLATE_HEADER)
+
+        self.assertEqual(',', delim)

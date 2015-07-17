@@ -8,7 +8,6 @@ import os
 import shutil
 import re
 import subprocess
-import sys
 from tempfile import mkdtemp
 from tempfile import mkstemp
 from tempfile import NamedTemporaryFile
@@ -712,6 +711,7 @@ def _update_experiment_sample_parentage(experiment_samples):
                    'Parent {} missing from ExperimentSamples'.format(parent))
             es_label_dict[parent].add_child(es_label_dict[child])
 
+
 def parse_experiment_sample_targets_file(project,
         targets_filehandle_or_filename, required_header, sample_name_key,
         read_1_key, read_2_key):
@@ -742,11 +742,14 @@ def parse_experiment_sample_targets_file(project,
         _, temp_file_location = mkstemp(dir=settings.TEMP_FILE_ROOT)
         with open(temp_file_location, 'w') as temp_fh:
             temp_fh.write(targets_filehandle_or_filename.read())
-    targets_file = open(temp_file_location, 'rU')
-    os.remove(temp_file_location)
 
-    # Now this works even if there are silly carriage return characters ^M.
-    reader = csv.DictReader(targets_file, delimiter='\t')
+    # Identify delim (comma or tab). Might raise AssertionError.
+    delim = determine_template_delimiter(temp_file_location, required_header)
+
+    targets_file = open(temp_file_location, 'rU')
+
+    # Proceed with appropriate delim.
+    reader = csv.DictReader(targets_file, delimiter=delim)
 
     # Read the header / schema.
     targets_file_header = reader.fieldnames
@@ -824,8 +827,36 @@ def parse_experiment_sample_targets_file(project,
         _assert_no_repeated_value(read_2_key)
 
     targets_file.close()
+    os.remove(temp_file_location)
 
     return valid_rows
+
+
+def determine_template_delimiter(
+        template_file_location, required_header):
+    """Determine the file delimiter. Either comma or tab.
+
+    Returns delimiter or raises AssertionError if missing header cols.
+    """
+    def _get_missing_cols(delim):
+        with open(template_file_location, 'rU') as fh:
+            test_reader = csv.DictReader(fh, delimiter=delim)
+            test_reader.fieldnames
+            return (set(required_header) - set(test_reader.fieldnames))
+    delim = ','
+    missing_cols_comma = _get_missing_cols(delim)
+    if len(missing_cols_comma):
+        delim = '\t'
+        missing_cols_tab = _get_missing_cols(delim)
+        if len(missing_cols_tab):
+            # Neither are good. Return best guess at missing cols.
+            guess_appropriate_missing_cols = missing_cols_comma
+            if len(missing_cols_tab) < len(missing_cols_comma):
+                guess_appropriate_missing_cols = missing_cols_tab
+                raise AssertionError(
+                    "Invalid template or, missing columns: %s" % ' '.join(
+                            guess_appropriate_missing_cols))
+    return delim
 
 
 @transaction.commit_on_success

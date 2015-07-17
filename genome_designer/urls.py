@@ -74,10 +74,10 @@ urlpatterns = patterns('',
     # Templates
     ###########################################################################
 
-    url(r'^templates/sample_list_browser_upload_template.tsv$',
+    url(r'^templates/sample_list_browser_upload_template.csv$',
             'main.upload_template_views.sample_list_browser_upload_template'),
 
-    url(r'^templates/sample_list_targets_template.tsv$',
+    url(r'^templates/sample_list_targets_template.csv$',
             'main.upload_template_views.sample_list_targets_template'),
 
     url(r'^templates/variant_set_upload_template.vcf$',

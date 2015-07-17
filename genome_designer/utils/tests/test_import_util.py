@@ -19,6 +19,7 @@ from main.models import Variant
 from main.models import VariantSet
 from main.model_utils import get_dataset_with_type
 from main.testing_util import create_common_entities
+from main.upload_template_views import TEMPLATE__SAMPLES_BATCH_IMPORT_FROM_SERVER
 from utils.import_util import _get_fastqc_path
 from utils.import_util import DataImportError
 from utils.import_util import copy_and_add_dataset_source
@@ -120,7 +121,7 @@ class TestImportSamplesFromTargetsFile(TestCase):
         """Tests importing samples from a template file.
         """
         TARGETS_TEMPLATE_FILEPATH = os.path.join(settings.PWD, 'main',
-                'templates', 'sample_list_targets_template.tsv')
+                'templates', TEMPLATE__SAMPLES_BATCH_IMPORT_FROM_SERVER)
 
         NUM_SAMPLES_IN_TEMPLATE = 10
 

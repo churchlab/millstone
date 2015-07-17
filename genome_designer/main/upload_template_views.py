@@ -5,17 +5,22 @@ Handlers for fetching upload templates.
 from django.shortcuts import render
 
 
-SAMPLE_LIST_BROWSER_UPLOAD_TEMPLATE = 'sample_list_browser_upload_template.tsv'
+CONTENT_TYPE__CSV = 'text/csv'
+
+TEMPLATE__SAMPLES_BATCH_IMPORT_FROM_SERVER = 'sample_list_targets_template.csv'
+
+TEMPLATE__SAMPLES_BATCH_BROWSER_UPLOAD = (
+        'sample_list_browser_upload_template.tsv')
 
 
 def sample_list_targets_template(request):
-    """Let the user download a blank sample targets template as a tab
-    separated values file (.tsv) so they can fill it in and upload
+    """Let the user download a blank sample targets template as a
+    comma-separated values file (.csv) so they can fill it in and upload
     it back to the server.
     """
     context = {}
-    return render(request, 'sample_list_targets_template.tsv', context,
-            content_type='text/tab-separated-values')
+    return render(request, TEMPLATE__SAMPLES_BATCH_IMPORT_FROM_SERVER, context,
+            content_type=CONTENT_TYPE__CSV)
 
 
 def variant_set_upload_template(request):
@@ -32,5 +37,5 @@ def sample_list_browser_upload_template(request):
     will updload through the browser form.
     """
     context = {}
-    return render(request, SAMPLE_LIST_BROWSER_UPLOAD_TEMPLATE, context,
-            content_type='text/tab-separated-values')
+    return render(request, TEMPLATE__SAMPLES_BATCH_BROWSER_UPLOAD, context,
+            content_type=CONTENT_TYPE__CSV)
