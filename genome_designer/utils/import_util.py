@@ -552,21 +552,27 @@ def copy_experiment_sample_data(
         read2_dataset.save()
 
 
-def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):
+@task
+def run_fastqc_on_sample_fastq(
+        experiment_sample, source_fastq_dataset, rev=False,
+        source_dataset_status_on_success=None):
     """Runs FASTQC on a fastq dataset object.
 
     Args:
         experiment_sample: The ExperimentSample for this fastq.
         fastq_dataset: Dataset that points to uploaded fastq file.
+        rev: If True, this is the FASTQ2.
+        source_dataset_status_on_success: Status to set on fastq_dataset upon
+            success.
 
     Returns:
         New Dataset pointing to html file of FastQC results.
     """
-    fastq_filename = fastq_dataset.get_absolute_location()
+    fastq_filename = source_fastq_dataset.get_absolute_location()
 
     # There's no option to pass the output filename to FastQC so we just
     # create the name that matches what FastQC outputs.
-    fastqc_filename = _get_fastqc_path(fastq_dataset)
+    fastqc_filename = _get_fastqc_path(source_fastq_dataset)
 
     if rev:
         dataset_type = Dataset.TYPE.FASTQC2_HTML
@@ -596,7 +602,11 @@ def run_fastqc_on_sample_fastq(experiment_sample, fastq_dataset, rev=False):
     fastqc_dataset = add_dataset_to_entity(experiment_sample,
             dataset_type, dataset_type, fastqc_filename)
     fastqc_dataset.status = Dataset.STATUS.READY
-    fastqc_dataset.save()
+    fastqc_dataset.save(update_fields=['status'])
+
+    if source_dataset_status_on_success is not None:
+        source_fastq_dataset.status = source_dataset_status_on_success
+        source_fastq_dataset.save(update_fields=['status'])
 
     return fastqc_dataset
 

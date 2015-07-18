@@ -59,6 +59,7 @@ from utils.import_util import import_reference_genome_from_local_file
 from utils.import_util import import_reference_genome_from_ncbi
 from utils.import_util import import_samples_from_targets_file
 from utils.import_util import import_variant_set_from_vcf
+from utils.import_util import run_fastqc_on_sample_fastq
 from utils.optmage_util import ReplicationOriginParams
 from utils.optmage_util import print_mage_oligos
 from utils.reference_genome_maker_util import generate_new_reference_genome
@@ -525,9 +526,20 @@ def samples_upload_through_browser_sample_data(request):
         for chunk in uploaded_file.chunks():
             dest_fh.write(chunk)
 
-    # Update the status.
-    dataset.status = Dataset.STATUS.READY
+    # Determine which of the fastq files this is.
+    assert dataset.type in [Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ2]
+    rev = bool(dataset.type == Dataset.TYPE.FASTQ2)
+
+    # Obtain experiment sample. Should only be one.
+    assert 1 == dataset.experimentsample_set.count()
+    experiment_sample = dataset.experimentsample_set.all()[0]
+
+    # Start async fastq.
+    dataset.status = Dataset.STATUS.QC
     dataset.save(update_fields=['status'])
+    run_fastqc_on_sample_fastq.delay(
+            experiment_sample, dataset, rev=rev,
+            source_dataset_status_on_success=Dataset.STATUS.READY)
 
     return HttpResponse(json.dumps({}), content_type='application/json')
 
