@@ -88,6 +88,9 @@ urlpatterns = patterns('',
     # XHR Actions
     ###########################################################################
 
+    url(r'^_/projects/export$',
+            'main.xhr_handlers.export_project'),
+
     url(r'^_/sets$',
             'main.xhr_handlers.get_variant_set_list'),
     url(r'^_/sets/create$',
@@ -256,6 +259,7 @@ if settings.DEBUG:
     from django.conf.urls.static import static
     urlpatterns += static('jbrowse', document_root=settings.JBROWSE_ROOT,
             show_indexes=True)
+    urlpatterns += static('tmp', document_root=settings.TEMP_FILE_ROOT)
 
 
 ###########################################################################

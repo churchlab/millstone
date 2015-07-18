@@ -53,6 +53,7 @@ from genome_finish.insertion_placement import find_contig_insertion_site
 from genome_finish.insertion_placement import place_cassette
 from utils.combine_reference_genomes import combine_list_allformats
 from utils.data_export_util import export_melted_variant_view
+from utils.data_export_util import export_project_as_zip
 from utils.import_util import create_samples_from_row_data
 from utils.import_util import create_sample_models_for_eventual_upload
 from utils.import_util import import_reference_genome_from_local_file
@@ -917,6 +918,21 @@ def export_variants_as_csv(request):
             content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="variants.csv"'
     return response
+
+
+@require_GET
+@login_required
+def export_project(request):
+    """Handles a request to export project.
+    """
+    print request.GET
+    p_uid = request.GET.get('project_uid')
+    project = get_object_or_404(
+            Project, owner=request.user.get_profile(), uid=p_uid)
+    download_url = export_project_as_zip(project)
+    response_data = {'downloadUrl': download_url}
+    return HttpResponse(json.dumps(response_data),
+            content_type='application/json')
 
 
 @login_required

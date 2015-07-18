@@ -3,8 +3,11 @@ Methods for exporting data.
 """
 
 import csv
+from datetime import datetime
 import os
+import re
 import StringIO
+import zipfile
 
 from django.conf import settings
 import vcf
@@ -145,3 +148,35 @@ def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):
         record.samples = [vcf.model._Call(
                 record, PLACEHOLDER_SAMPLE_NAME, placeholder_sample_data)]
         vcf_writer.write_record(record)
+
+
+def export_project_as_zip(project):
+    """Compresses project and generates link for download.
+    """
+    # Common root for exported zip file.
+    COMMON_EXPORT_ROOT = 'millstone_export'
+
+    # Delete previous export files to avoid overwhelming space.
+    for f in os.listdir(settings.TEMP_FILE_ROOT):
+        if re.match(COMMON_EXPORT_ROOT, f):
+            os.remove(os.path.join(settings.TEMP_FILE_ROOT, f))
+
+    project_export_zip_name = (
+            '{common_root}_{proj_title}_{timestamp}.zip'.format(
+                    common_root=COMMON_EXPORT_ROOT,
+                    proj_title=project.title[:20],
+                    timestamp=datetime.now().strftime('%Y_%m_%d_%H%M')))
+    project_zip_dest = os.path.join(
+            settings.TEMP_FILE_ROOT, project_export_zip_name)
+    with zipfile.ZipFile(project_zip_dest, 'w') as ziph:
+        project_root_dir = project.get_model_data_dir()
+        for root, dirs, files in os.walk(project_root_dir):
+            for file in files:
+                full_path = os.path.join(root, file)
+                # Write to destination in archive that omits part of path
+                # before project uid.
+                archive_target_path = (
+                        re.search(project.uid + '.*', full_path).group())
+                ziph.write(full_path, archive_target_path)
+
+    return os.path.join('/tmp', project_export_zip_name)

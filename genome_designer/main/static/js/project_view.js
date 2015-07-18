@@ -27,6 +27,11 @@ gd.ProjectView = Backbone.View.extend({
   },
 
   handleExportClick: function() {
-    alert('Coming soon.');
+    var data = {
+      'project_uid': this.model.get('uid')
+    };
+    $.get('/_/projects/export', data, function(responseData) {
+      window.location.href = responseData.downloadUrl;
+    });
   }
 });
