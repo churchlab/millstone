@@ -186,6 +186,8 @@ gd.SampleUploadThroughBrowserModal = Backbone.View.extend({
   },
 
   destroy: function() {
+    $('#gd-samples-fastq-fileupload').unbind('fileuploadadd');
+    $('#gd-samples-template-fileupload').unbind('fileuploadadd');
     this.remove();
     this.unbind();
   }
