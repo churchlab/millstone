@@ -76,6 +76,7 @@ TEST_FASTA_1_PATH = os.path.join(TEST_FA_DIR, 'random_fasta_1.fa')
 TEST_FASTA_2_PATH = os.path.join(TEST_FA_DIR, 'random_fasta_2.fa')
 TEST_2_CHROM_FASTA_PATH = os.path.join(GD_ROOT, 'test_data', 'two_chromosome.fa')
 
+
 class TestGetVariantList(TestCase):
 
     url = reverse('main.xhr_handlers.get_variant_list')
@@ -408,8 +409,8 @@ class TestSamplesUploadThroughBrowserSampleData(TestCase):
         # Fake having uploaded a template.
         row_data = {
             SAMPLE_BROWSER_UPLOAD_KEY__SAMPLE_NAME: 'red',
-            SAMPLE_BROWSER_UPLOAD_KEY__READ_1: 'red1.fq',
-            SAMPLE_BROWSER_UPLOAD_KEY__READ_2: 'red2.fq'
+            SAMPLE_BROWSER_UPLOAD_KEY__READ_1: TEST_FQ1_FILE,
+            SAMPLE_BROWSER_UPLOAD_KEY__READ_2: TEST_FQ2_FILE
         }
         _create_sample_and_placeholder_dataset(project, row_data)
         datasets = Dataset.objects.all()
@@ -417,10 +418,11 @@ class TestSamplesUploadThroughBrowserSampleData(TestCase):
         for dataset in datasets:
             self.assertEqual(Dataset.STATUS.AWAITING_UPLOAD, dataset.status)
 
-        def _upload_file_and_check_response(name):
+        def _upload_file_and_check_response(full_path):
+            name = os.path.split(full_path)[1]
             # Add mock file to request.
             mock_uploaded_file = UploadedFile(
-                    file=StringIO.StringIO(),
+                    file=open(TEST_FQ1_FILE),
                     name=name)
             request.FILES = {
                 'file': mock_uploaded_file
@@ -429,11 +431,18 @@ class TestSamplesUploadThroughBrowserSampleData(TestCase):
             self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
             self.assertFalse('error' in json.loads(response.content))
 
-        _upload_file_and_check_response('red1.fq')
-        _upload_file_and_check_response('red2.fq')
+        _upload_file_and_check_response(TEST_FQ1_FILE)
+        _upload_file_and_check_response(TEST_FQ2_FILE)
 
         datasets = Dataset.objects.all()
-        self.assertEqual(2, len(datasets))
+        # 2 fastq, 2 fastqc
+        self.assertEqual(4, len(datasets))
+        EXPECTED_DATASET_TYPES_SET = set([
+            Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ2,
+            Dataset.TYPE.FASTQC1_HTML, Dataset.TYPE.FASTQC2_HTML])
+        self.assertEqual(
+                EXPECTED_DATASET_TYPES_SET,
+                set([ds.type for ds in datasets]))
         for dataset in datasets:
             self.assertEqual(Dataset.STATUS.READY, dataset.status)
 
