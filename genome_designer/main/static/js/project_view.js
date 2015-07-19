@@ -35,10 +35,10 @@ gd.ProjectView = Backbone.View.extend({
     $('#gd-projects-export-btn').addClass('disabled');
     this.setUIStartLoadingState();
 
-    $.get('/_/projects/export', data, function(responseData) {
+    $.get('/_/projects/export', data, _.bind(function(responseData) {
       this.setUIDoneLoadingState();
       window.location.href = responseData.downloadUrl;
-    });
+    }, this));
   },
 
   /** Show loading feedback while loading. */
