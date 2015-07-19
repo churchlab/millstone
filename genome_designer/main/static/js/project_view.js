@@ -30,8 +30,30 @@ gd.ProjectView = Backbone.View.extend({
     var data = {
       'project_uid': this.model.get('uid')
     };
+
+    // UI affordance.
+    $('#gd-projects-export-btn').addClass('disabled');
+    this.setUIStartLoadingState();
+
     $.get('/_/projects/export', data, function(responseData) {
       window.location.href = responseData.downloadUrl;
+      if (this.loadingSpinner) {
+        this.setUIDoneLoadingState();
+        this.loadingSpinner.stop();
+      }
     });
+  },
+
+  /** Show loading feedback while loading. */
+  setUIStartLoadingState: function() {
+    this.loadingSpinner = new gd.Spinner();
+    this.loadingSpinner.spin()
+  },
+
+  /** Reset UI changes after loading complete.. */
+  setUIDoneLoadingState: function() {
+    if (this.loadingSpinner) {
+      this.loadingSpinner.stop();
+    }
   }
 });

@@ -79,6 +79,7 @@ def merge_nested_dictionaries(d1, d2, allow_update=True):
 
     return merge_values(d1, d2)
 
+
 def uppercase_underscore(a_string):
     """
     Internally some strings that are Title Cased With Spaces should be
@@ -86,6 +87,14 @@ def uppercase_underscore(a_string):
     """
     a_string = a_string.replace(' ','_')
     return a_string.upper()
+
+
+def lowercase_underscore(a_string):
+    """Returns lowercased version of string,where whitespace is replaced by
+    underscores and extra whitespace is stripped.
+    """
+    return re.sub('\W', '_', a_string.strip().lower())
+
 
 def titlecase_spaces(a_string):
     """

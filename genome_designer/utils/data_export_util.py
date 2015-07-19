@@ -12,6 +12,7 @@ import zipfile
 from django.conf import settings
 import vcf
 
+from utils import lowercase_underscore
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 
@@ -164,11 +165,11 @@ def export_project_as_zip(project):
     project_export_zip_name = (
             '{common_root}_{proj_title}_{timestamp}.zip'.format(
                     common_root=COMMON_EXPORT_ROOT,
-                    proj_title=project.title[:20],
+                    proj_title=lowercase_underscore(project.title[:20]),
                     timestamp=datetime.now().strftime('%Y_%m_%d_%H%M')))
     project_zip_dest = os.path.join(
             settings.TEMP_FILE_ROOT, project_export_zip_name)
-    with zipfile.ZipFile(project_zip_dest, 'w') as ziph:
+    with zipfile.ZipFile(project_zip_dest, 'w', allowZip64=True) as ziph:
         project_root_dir = project.get_model_data_dir()
         for root, dirs, files in os.walk(project_root_dir):
             for file in files:
