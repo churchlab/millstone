@@ -36,11 +36,8 @@ gd.ProjectView = Backbone.View.extend({
     this.setUIStartLoadingState();
 
     $.get('/_/projects/export', data, function(responseData) {
+      this.setUIDoneLoadingState();
       window.location.href = responseData.downloadUrl;
-      if (this.loadingSpinner) {
-        this.setUIDoneLoadingState();
-        this.loadingSpinner.stop();
-      }
     });
   },
 
