@@ -165,9 +165,7 @@ def get_or_create_vcf_output_dir(alignment_group):
 
     We'll save these for now, maybe it's not necessary later.
     """
-    vcf_dir = os.path.join(alignment_group.get_model_data_dir(), 'vcf')
-    ensure_exists_0775_dir(vcf_dir)
-    return vcf_dir
+    return alignment_group.get_or_create_vcf_output_dir()
 
 
 def _find_valid_sample_alignments(alignment_group, alignment_type):

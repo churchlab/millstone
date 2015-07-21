@@ -1105,6 +1105,28 @@ class AlignmentGroup(UniqueUidModelMixin):
         return ExperimentSample.objects.filter(
                 experimentsampletoalignment__alignment_group=self)
 
+    def get_or_create_vcf_output_dir(self):
+        """Returns path to vcf root dir.
+        """
+        vcf_dir = os.path.join(self.get_model_data_dir(), 'vcf')
+        ensure_exists_0775_dir(vcf_dir)
+        return vcf_dir
+
+    def get_combined_error_log_data(self):
+        """Returns raw string representing entire error log for alignment.
+        """
+        vcf_dir = self.get_or_create_vcf_output_dir()
+
+        # TODO(gleb): Support other error files.
+        error_file = os.path.join(vcf_dir, 'merge_variant_data.error')
+
+        if os.path.exists(error_file):
+            with open(error_file) as fh:
+                raw_data = fh.read()
+        else:
+            raw_data = 'None'
+        return raw_data
+
 
 class ExperimentSampleToAlignment(UniqueUidModelMixin):
     """Model that describes the alignment of a single ExperimentSample

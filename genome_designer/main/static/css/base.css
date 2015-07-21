@@ -444,6 +444,10 @@ div.dataTables_paginate ul.pagination {
   margin-left: 10px;
 }
 
+.gd-ag-error-log-text {
+  margin-left: 10px;
+}
+
 #gd-filter-key-modal .modal-content{
   height: 92vh;
   overflow: auto;

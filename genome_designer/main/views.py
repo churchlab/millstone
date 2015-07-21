@@ -363,6 +363,25 @@ def alignment_view(request, project_uid, alignment_group_uid):
     return render(request, 'alignment.html', context)
 
 
+def alignment_error_log(request, project_uid, alignment_group_uid):
+    """Shows the combined error log for an alignment.
+    """
+    project = get_object_or_404(Project, owner=request.user.get_profile(),
+            uid=project_uid)
+    ag = AlignmentGroup.objects.get(
+            uid=alignment_group_uid,
+            reference_genome__project__uid=project_uid)
+
+    raw_data = ag.get_combined_error_log_data()
+
+    context = {
+        'project': project,
+        'tab_root': TAB_ROOT__DATA,
+        'raw_data': raw_data
+    }
+    return render(request, 'alignment_error_log.html', context)
+
+
 def _rerun_alignment(alignment_group):
     """Re-runs existing alignment.
     """

@@ -45,6 +45,8 @@ urlpatterns = patterns('',
             'main.views.alignment_create_view'),
     url(r'^projects/([\w-]+)/alignments/([\w-]+)$',
             'main.views.alignment_view'),
+    url(r'^projects/([\w-]+)/alignments/([\w-]+)/error$',
+            'main.views.alignment_error_log'),
     url(r'^projects/([\w-]+)/alignments/([\w-]+)/samplealign/([\w-]+)/error$',
             'main.views.sample_alignment_error_view'),
 

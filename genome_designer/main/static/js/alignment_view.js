@@ -115,6 +115,15 @@ gd.AlignmentView = Backbone.View.extend({
       '<span id="gd-ag-status-text" class="gd-ag-status-text">' +
         this.model.get('alignment_group').status +
       '</span>');
+
+    // Draw 'Error log' link if AlignmentGroup FAILED.
+    if (this.model.get('alignment_group').status == 'FAILED') {
+      var errorLogUrl = window.location.href + '/error';
+      $('#gd-ag-controls-toolbar').append(
+        '<span id="gd-ag-status-text" class="gd-ag-error-log-text">' +
+          '<a href="' + errorLogUrl + '">Error Log</a>' +
+        '</span>');
+    }
   },
 
   /**
