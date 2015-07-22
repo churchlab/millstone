@@ -1049,6 +1049,20 @@ def is_materialized_view_valid(request):
 
 
 @login_required
+@require_POST
+def invalidate_materialized_view(request):
+    """Checks whether the materialized view is valid for this ReferenceGenome.
+    """
+    ref_genome_uid = request.POST.get('refGenomeUid')
+    reference_genome = get_object_or_404(ReferenceGenome,
+                project__owner=request.user.get_profile(),
+                uid=ref_genome_uid)
+    reference_genome.invalidate_materialized_view()
+    response_data = json.dumps({})
+    return HttpResponse(response_data, content_type='application/json')
+
+
+@login_required
 @require_GET
 def get_ref_genomes(request):
     """Get list of AlignmentGroups for the provided ReferenceGenome uid.

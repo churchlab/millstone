@@ -84,6 +84,10 @@ gd.VariantsTableComponent = Backbone.View.extend({
     $('#gd-filter-field-select-btn').click(
             _.bind(this.handleShowFieldSelect, this));
 
+    // Decorate force refresh materialized view.
+    $('#gd-filter-force-refresh-btn').click(
+        _.bind(this.handleForceRefreshMaterializedView, this));
+
     // Manually handle error alert close.
     $('#gd-snp-filter-error-close-btn').click(
         _.bind(this.handleErrorAlertClose, this));
@@ -232,6 +236,18 @@ gd.VariantsTableComponent = Backbone.View.extend({
     })
   },
 
+  /** Forces refereshing the materialized view. */
+  handleForceRefreshMaterializedView: function() {
+    var requestData = {
+      'refGenomeUid': this.model.get('refGenomeUid'),
+    };
+    $.post('/_/variants/invalidate_materialized_view', requestData,
+        _.bind(function() {
+            this.renderDatatable();
+        }, this));
+
+  },
+
   /**
    * Hides the alert box.
    *
@@ -361,6 +377,8 @@ gd.VariantsTableComponent = Backbone.View.extend({
    */
   handleRefreshMaterializedView: function(onSuccess) {
     this.setUIStartLoadingState();
+
+    $('#gd-datatable-hook').empty();
 
     // Show special message indicating this initial load might be a bit long.
     $('#gd-datatable-hook').append(
