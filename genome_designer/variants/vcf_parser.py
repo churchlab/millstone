@@ -155,8 +155,8 @@ def extract_raw_data_dict(vcf_record):
     data_dict['TYPE'] = UNKNOWN_VARIANT_TYPE
 
     # Populate 'INFO'
-    if hasattr(vcf_record, 'INFO'):
-        populate_common_data_info(data_dict, vcf_record)
+    if hasattr(vcf_record, 'INFO') and not isinstance(vcf_record.INFO, str):
+            populate_common_data_info(data_dict, vcf_record)
 
     return data_dict
 

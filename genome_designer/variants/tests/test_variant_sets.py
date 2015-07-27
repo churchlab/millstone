@@ -21,8 +21,11 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import VariantToVariantSet
 from main.testing_util import create_common_entities
+from main.testing_util import create_common_entities_w_variants
+from utils.data_export_util import export_variant_set_as_vcf
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import copy_dataset_to_entity_data_dir
+from utils.import_util import import_variant_set_from_vcf
 from variants.variant_sets import add_variants_to_set_from_bed
 from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__ADD
 from variants.variant_sets import MODIFY_VARIANT_SET_MEMBERSHIP__REMOVE
@@ -37,6 +40,35 @@ TEST_BED = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
 SAMPLE_1_LABEL = 'sample1'
 VARIANTSET_1_LABEL = 'New Set A'
 VARIANTSET_2_LABEL = 'New Set B'
+
+
+class TestExportImportVCF(TestCase):
+
+    def test_import_export(self):
+
+        common_entities = create_common_entities_w_variants()
+
+        ref_genome = common_entities['reference_genome']
+        variant_set = VariantSet.objects.create(
+                reference_genome=ref_genome,
+                label='test_variant_set')
+
+        for variant in Variant.objects.filter(reference_genome=ref_genome):
+
+            if len(variant.variantalternate_set.all()) > 1:
+                continue
+
+            VariantToVariantSet.objects.create(
+                    variant=variant,
+                    variant_set=variant_set)
+
+        temporary_vcf_path = os.path.join(
+                variant_set.get_model_data_dir(),
+                'temp.vcf')
+
+        export_variant_set_as_vcf(variant_set, str(temporary_vcf_path))
+        import_variant_set_from_vcf(ref_genome,
+                'temp_variant_set', str(temporary_vcf_path))
 
 
 class TestAddVariantsToSetFromBed(TestCase):
