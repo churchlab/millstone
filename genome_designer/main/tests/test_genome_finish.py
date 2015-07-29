@@ -3,6 +3,7 @@ Tests for genome finishing features
 """
 import os
 
+from Bio import SeqIO
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
@@ -10,15 +11,19 @@ from django.http.request import HttpRequest
 from django.test import Client
 from django.test import TestCase
 
+from main.model_utils import get_dataset_with_type
 from main.models import Contig
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
+from main.models import VariantSet
 import main.xhr_handlers as xhr_handlers
 from pipeline.pipeline_runner import run_pipeline
+from utils import are_fastas_same
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import import_reference_genome_from_local_file
+from utils.reference_genome_maker_util import generate_new_reference_genome
 
 TEST_USERNAME = 'testuser'
 TEST_PASSWORD = 'password'
@@ -112,3 +117,21 @@ class TestGenomeFinishMG1655(TestCase):
         # Assert one contig was generated
         self.assertEqual(contigs.count(), 1)
         self.assertTrue(contigs[0].num_bases > 0)
+
+        # Get VariantSet
+        insertion_variant_set = VariantSet.objects.get(
+                reference_genome=contigs[0].parent_reference_genome,
+                label='de_novo_assembled_insertions')
+
+        # Make new reference genome
+        new_ref_genome_params = {'label': 'new_ref'}
+        new_ref_genome = generate_new_reference_genome(
+                insertion_variant_set, new_ref_genome_params)
+
+        # Verify insertion was placed correctly
+        target_fasta = os.path.join(data_dir_1kb, 'no_ins_ref.fa')
+        new_ref_genome_fasta = get_dataset_with_type(
+                new_ref_genome, Dataset.TYPE.REFERENCE_GENOME_FASTA
+                ).get_absolute_location()
+
+        self.assertTrue(are_fastas_same(target_fasta, new_ref_genome_fasta))

@@ -18,6 +18,21 @@ from django.conf import settings
 SNPEFF_MIN_LINE_LEN = 20
 
 
+def are_fastas_same(fasta_1, fasta_2):
+
+    with open(fasta_1, 'r') as fasta_1_fh, \
+         open(fasta_2, 'r') as fasta_2_fh:
+
+        fasta_1_seqrecord_list = list(SeqIO.parse(fasta_1_fh, 'fasta'))
+        fasta_2_seqrecord_list = list(SeqIO.parse(fasta_2_fh, 'fasta'))
+
+        assert len(fasta_1_seqrecord_list) == 1
+        assert len(fasta_2_seqrecord_list) == 1
+
+        return(str(fasta_1_seqrecord_list[0].seq) ==
+                str(fasta_2_seqrecord_list[0].seq))
+
+
 def make_temp_file(label, extension):
     if not os.path.exists(settings.TEMP_FILE_ROOT):
         os.mkdir(settings.TEMP_FILE_ROOT)
