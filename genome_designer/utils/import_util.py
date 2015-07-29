@@ -976,6 +976,7 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
     # NOTE: Must open with 'rU', universal mode, to handle non-standard
     # linebreaks that might be introduced in different environments. For
     # example, Excel on Mac OS X saves funky linebreaks.
+    variant_list = []
     with open(variant_set_file, 'rU') as fh:
         # Use this wrapper to skip the header lines
         # Double ##s are part of the header, but single #s are column

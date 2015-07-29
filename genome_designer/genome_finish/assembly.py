@@ -24,8 +24,10 @@ from utils.bam_utils import make_bam
 from utils.bam_utils import make_sam
 from utils.bam_utils import rmdup
 from utils.bam_utils import sort_bam_by_name
+from utils.data_export_util import export_contig_list_as_vcf
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
+from variants.vcf_parser import parse_vcf
 
 # Default args for velvet assembly
 VELVETH_BINARY = settings.TOOLS_DIR + '/velvet/velveth'
@@ -364,6 +366,7 @@ def evaluate_contigs(contig_list):
     # Sort contig_list by highest length weighted coverage
     contig_list.sort(key=_length_weighted_coverage, reverse=True)
 
+    placeable_contigs = []
     for i, contig in enumerate(contig_list[:NUM_CONTIGS_TO_EVALUATE]):
         print 'Evaluating contig ', i, ':', contig.label
         insertion_placement_positions = get_insertion_placement_positions(
@@ -377,3 +380,26 @@ def evaluate_contigs(contig_list):
                 insertion_placement_positions['reference']['left'],
                 insertion_placement_positions['reference']['right'])
             contig.save()
+            placeable_contigs.append(contig)
+
+    if not placeable_contigs:
+        return
+
+    # Get path for contigs vcf
+    ag = contig.experiment_sample_to_alignment.alignment_group
+    vcf_path = os.path.join(
+            ag.get_model_data_dir(),
+            'de_novo_assembled_contigs.vcf')
+
+    # Write contigs to vcf
+    export_contig_list_as_vcf(placeable_contigs, vcf_path)
+
+    # Make dataset for contigs vcf
+    vcf_dataset = add_dataset_to_entity(
+            ag,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+            vcf_path)
+
+    # Make variants from vcf
+    parse_vcf(vcf_dataset, ag)

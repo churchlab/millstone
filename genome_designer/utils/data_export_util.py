@@ -106,6 +106,8 @@ def export_melted_variant_view(alignment_group, filter_string):
 
 
 VCF_TEMPLATE_PATH = os.path.join(settings.PWD, 'test_data', 'vcf_template.vcf')
+EXPORT_CONTIGS_TEMPLATE_PATH = os.path.join(settings.PWD, 'test_data',
+        'export_contigs_vcf_template.vcf')
 
 # We use a fake single sample. The reason for this is that the external library
 # reference_genome_maker expects there to be a sample in case there are
@@ -124,10 +126,23 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
     else:
         out_vcf_fh = vcf_dest_path_or_filehandle
 
+    # Assert all contigs come from same sample
+    assert len(set([c.experiment_sample_to_alignment.experiment_sample.uid
+            for c in contig_list])) == 1
+
     # The vcf.Writer() requires a template vcf in order to structure itself.
     # We read in a generic template to satisfy this.
-    with open(VCF_TEMPLATE_PATH) as template_fh:
+    with open(EXPORT_CONTIGS_TEMPLATE_PATH) as template_fh:
         vcf_template = vcf.Reader(template_fh)
+
+    # Set samples and sample_indexes for template
+    contig_0 = contig_list[0]
+    sample_uid = (
+            contig_0.experiment_sample_to_alignment.experiment_sample.uid)
+
+    vcf_template.samples = [sample_uid]
+    sample_indexes = {sample_uid: 0}
+
 
     vcf_writer = vcf.Writer(out_vcf_fh, vcf_template)
     for contig in contig_list:
@@ -211,15 +226,15 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
                 (alt_value,),
                 1, # QUAL
                 [], # FILTER
-                {}, # INFO
+                {'contig_uid': contig.uid}, # INFO
                 'GT:DP:RO:QR:AO:QA:GL', # FORMAT
-                {PLACEHOLDER_SAMPLE_NAME: 0}, # sample_indexes
+                sample_indexes, # sample_indexes
         )
         # Add a placeholder sample.
         calldata_type = vcf.model.make_calldata_tuple(['GT'])
         placeholder_sample_data = calldata_type(GT='1/1')
         record.samples = [vcf.model._Call(
-                record, PLACEHOLDER_SAMPLE_NAME, placeholder_sample_data)]
+                record, sample_uid, placeholder_sample_data)]
         vcf_writer.write_record(record)
 
 

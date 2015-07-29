@@ -11,12 +11,12 @@ from Bio.SeqRecord import SeqRecord
 from django.conf import settings
 import pysam
 
+from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from main.models import Dataset
-from main.models import VariantSet
 from utils import make_temp_file
-from utils.data_export_util import export_contig_list_as_vcf
-from utils.import_util import import_variant_set_from_vcf
-from variants.variant_sets import update_variant_in_set_memberships
+from utils.bam_utils import index_bam
+from utils.bam_utils import sort_bam_by_coordinate
+from utils.import_util import add_dataset_to_entity
 
 ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF = 0.5
 REVERSED_COMPLEMENTARITY_FRACTION_CUTOFF = 0.75
@@ -100,37 +100,7 @@ def get_insertion_placement_positions(contig, strategy='all_reads'):
         insertion_placement_positions['reference']['right'])
     contig.save()
 
-    create_variant_for_contig(contig)
-
     return insertion_placement_positions
-
-
-def create_variant_for_contig(contig):
-
-    temp_variant_set_label = 'de_novo_assembled_insertions'
-
-    temporary_vcf_path = make_temp_file(contig.label, '.vcf')
-    # temporary_vcf_path = os.path.join(contig.get_model_data_dir(),
-    #         'test_vcf.vcf')
-    export_contig_list_as_vcf([contig], temporary_vcf_path)
-    import_variant_set_from_vcf(contig.parent_reference_genome,
-            temp_variant_set_label, temporary_vcf_path,
-            add_to_existing_set=True)
-
-    # TODO: Find out how to remove from variant set
-    # without making unviewable, temporary fix: put
-    # variant_set = VariantSet.objects.get(
-    #         reference_genome=contig.parent_reference_genome,
-    #         label=temp_variant_set_label)
-    # all contig variants into their own set
-    # vtvs = variant_set.varianttovariantset_set.all()
-    # assert len(vtvs) == 1
-    # variant = vtvs[0].variant
-    # update_variant_in_set_memberships(
-    #         contig.parent_reference_genome,
-    #         [variant.uid],
-    #         'remove',
-    #         variant_set.uid)
 
 
 def mapped_mates_of_unmapped_reads(contig):
@@ -247,6 +217,35 @@ def extract_contig_reads(contig, read_category='all'):
         contig_seqrecord_id = sam_file.getrname(mode_chrom_tid)
         contig.metadata['chromosome'] = contig_seqrecord_id
         contig.save()
+
+
+    # Get bam filename
+    extracted_reads_bam_file = os.path.join(
+            contig.get_model_data_dir(),
+            'sv_indicants_' + read_category + '.bam')
+
+    # Write extracted reads into bam file
+    extracted_reads_alignment_file = pysam.AlignmentFile(
+            extracted_reads_bam_file, "wb", template=sam_file)
+
+    for read in sv_indicant_reads_in_contig:
+        extracted_reads_alignment_file.write(read)
+
+    extracted_reads_alignment_file.close()
+
+    coordinate_sorted_bam = (os.path.splitext(extracted_reads_bam_file)[0] +
+            '.coordinate_sorted.bam')
+    sort_bam_by_coordinate(extracted_reads_bam_file, coordinate_sorted_bam)
+    index_bam(coordinate_sorted_bam)
+
+    # Add the bam file to contig as BWA_SV_INDICANTS dataset
+    add_dataset_to_entity(contig,
+            Dataset.TYPE.BWA_SV_INDICANTS,
+            Dataset.TYPE.BWA_SV_INDICANTS,
+            filesystem_location=coordinate_sorted_bam)
+
+    # Add bam track
+    add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
 
     # Uncomment to create bam track on reference showing contig reads
     # from utils.bam_utils import add_bam_track
