@@ -363,6 +363,7 @@ def alignment_view(request, project_uid, alignment_group_uid):
     return render(request, 'alignment.html', context)
 
 
+@login_required
 def alignment_error_log(request, project_uid, alignment_group_uid):
     """Shows the combined error log for an alignment.
     """
