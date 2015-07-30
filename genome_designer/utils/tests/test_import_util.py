@@ -54,6 +54,9 @@ TEST_FASTQ_GZ_B_1 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
 TEST_FASTQ_GZ_B_2 = os.path.join(TEST_DATA_ROOT, 'fake_genome_and_reads',
         '70e343f5', 'test_genome_5.snps.simLibrary.2.fastq.gz')
 
+TEST_VCF = os.path.join(TEST_DATA_ROOT,
+        'fake_genome_and_reads/test_genome_snps.vcf')
+
 
 class TestImportReferenceGenome(TestCase):
     """Tests importing a ReferenceGenome.
@@ -378,9 +381,10 @@ class TestImportVariantSetFromVCFFile(TestCase):
         # Test models.
         user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
                 email=TEST_EMAIL)
-        test_project = Project.objects.create(owner=user.get_profile(),
+        self.test_project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
-        self.ref_genome = ReferenceGenome.objects.create(project=test_project,
+        self.ref_genome = ReferenceGenome.objects.create(
+                project=self.test_project,
                 label='refgenome')
         Chromosome.objects.create(
             reference_genome=self.ref_genome,
@@ -431,6 +435,23 @@ class TestImportVariantSetFromVCFFile(TestCase):
                 'test_data', 'fake_genome_and_reads',
                 'test_genome_variant_set__mac_linebreaks.vcf')
         self._assert_variants(VARIANT_SET_VCF_FILEPATH)
+
+    def test_import_variant_set__basic(self):
+
+        variant_set_name = 'test_variant_set'
+        variant_set_file = TEST_VCF
+
+        import_variant_set_from_vcf(
+                self.ref_genome, variant_set_name, variant_set_file)
+
+        variant_set = VariantSet.objects.get(
+                reference_genome=self.ref_genome,
+                label=variant_set_name)
+
+        # Verify a variant alternate got data dictionary populated
+        a_variant = variant_set.variants.all()[0]
+        a_variant_alternate = a_variant.variantalternate_set.all()[0]
+        self.assertTrue(a_variant_alternate.data)
 
 
 class TestFastQC(TestCase):

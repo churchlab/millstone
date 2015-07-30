@@ -155,7 +155,7 @@ def extract_raw_data_dict(vcf_record):
     data_dict['TYPE'] = UNKNOWN_VARIANT_TYPE
 
     # Populate 'INFO'
-    if hasattr(vcf_record, 'INFO') and not isinstance(vcf_record.INFO, str):
+    if hasattr(vcf_record, 'INFO') and not vcf_record.INFO == '.':
             populate_common_data_info(data_dict, vcf_record)
 
     return data_dict
@@ -288,26 +288,28 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
                 data=raw_data_dict
         )
 
-    # TODO: What about num -2 objects? I'm really not excited about
-    # creating a VariantGenotype object, nor do I think it will
-    # be necessary, so skipping it for now, and keeping that data in
-    # the VCC object.
+        # TODO: What about num -2 objects? I'm really not excited about
+        # creating a VariantGenotype object, nor do I think it will
+        # be necessary, so skipping it for now, and keeping that data in
+        # the VCC object.
 
-    # Create a VariantEvidence object for each ExperimentSample.
-    # NOTE: VariantEvidence are automatically linked to the correct
-    #     VariantAlternate after they are created in
-    #     main.signals.post_variant_evidence_create()
-    for sample in vcf_record.samples:
-        sample_uid = sample.sample
-        sample_data_dict = extract_sample_data_dict(sample)
-        if query_cache is not None:
-            sample_obj = query_cache.uid_to_experiment_sample_map[sample_uid]
-        else:
-            sample_obj = ExperimentSample.objects.get(uid=sample_uid)
-        VariantEvidence.objects.create(
-                experiment_sample=sample_obj,
-                variant_caller_common_data=common_data_obj,
-                data=sample_data_dict)
+        # Create a VariantEvidence object for each ExperimentSample.
+        # NOTE: VariantEvidence are automatically linked to the correct
+        #     VariantAlternate after they are created in
+        #     main.signals.post_variant_evidence_create()
+
+        for sample in vcf_record.samples:
+            sample_uid = sample.sample
+            sample_data_dict = extract_sample_data_dict(sample)
+            if query_cache is not None:
+                sample_obj = query_cache.uid_to_experiment_sample_map[
+                        sample_uid]
+            else:
+                sample_obj = ExperimentSample.objects.get(uid=sample_uid)
+            VariantEvidence.objects.create(
+                    experiment_sample=sample_obj,
+                    variant_caller_common_data=common_data_obj,
+                    data=sample_data_dict)
 
     return (variant, alts)
 
