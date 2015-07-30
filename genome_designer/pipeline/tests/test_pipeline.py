@@ -73,6 +73,13 @@ class TestAlignmentPipeline(TransactionTestCase):
     def test_run_pipeline(self):
         """End-to-end test of pipeline. Fails if any errors.
         """
+        # Create an extra sample that will not be aligned but has parent-child
+        # relationship with the sample that is aligned. This would catch the
+        # bug reported in https://github.com/churchlab/millstone/issues/561.
+        unused_es = ExperimentSample.objects.create(
+                project=self.project, label='unused sample')
+        self.experiment_sample.add_child(unused_es)
+
         sample_list = [self.experiment_sample]
         result = run_pipeline(
                 'name_placeholder', self.reference_genome, sample_list)
