@@ -1201,6 +1201,16 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
 
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
 
+    data = PostgresJsonField()
+
+    class ASSEMBLY_STATUS:
+        """
+        The status of an Assembly
+        """
+        ASSEMBLING = 'ASSEMBLING'
+        COMPLETED = 'COMPLETED'
+        FAILED = 'FAILED'
+
     @property
     def status(self):
         """The status of a running alignment job.

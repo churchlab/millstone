@@ -14,6 +14,7 @@ from django.template import RequestContext
 from django.template.loader import render_to_string
 
 from main.models import AlignmentGroup
+from main.models import ExperimentSampleToAlignment
 from main.models import ReferenceGenome
 from main.models import Project
 from main.models import SavedVariantFilterQuery
@@ -97,6 +98,18 @@ def contig_list_controls(request):
                     (esta.experiment_sample.label, esta.uid) for esta in
                     alignment_group.experimentsampletoalignment_set.all()]
     }
+
+    sample_alignment_query = ExperimentSampleToAlignment.objects.filter(
+            alignment_group=alignment_group)
+
+    assembly_status_tuples = []
+    for sample_alignment in sample_alignment_query:
+        status = sample_alignment.data.get('assembly_status', False)
+        if status:
+            assembly_status_tuples.append(
+                    (sample_alignment.experiment_sample.label, status))
+
+    context['assembly_status_tuples'] = assembly_status_tuples
 
     return HttpResponse(
             render_to_string('controls/contig_list_controls.html', context))

@@ -293,6 +293,7 @@ CELERY_IMPORTS = (
         'pipeline.variant_calling',
         'pipeline.variant_calling.freebayes',
         'utils.import_util',
+        'genome_finish.assembly'
 )
 
 # When True, forces synchronous behavior so that it's not necessary
