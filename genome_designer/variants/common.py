@@ -368,7 +368,11 @@ def update_parent_child_variant_fields(alignment_group):
             if not parent in sample_to_ve:
                 continue
             parent_ve = sample_to_ve[parent]
-            chldrn_ve = [sample_to_ve[child] for child in children]
+
+            chldrn_ve = []
+            for child in children:
+                if child in sample_to_ve:
+                    chldrn_ve.append(child)
 
             in_parent = int(ve_to_gt[parent_ve.uid] > 0)
             in_children = 0
