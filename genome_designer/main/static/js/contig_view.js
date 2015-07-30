@@ -1,5 +1,5 @@
 /**
- * @fileoverview Single ReferenceGenome view.
+ * @fileoverview Single Contig view.
  */
 
 

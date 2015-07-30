@@ -94,7 +94,7 @@ def generate_contigs(sample_alignment,
     sv_indicants_bam = get_sv_indicating_reads(sample_alignment,
             sv_read_classes, overwrite=overwrite)
 
-    velvet_opts = DEFAULT_VELVET_OPTS
+    velvet_opts = dict(DEFAULT_VELVET_OPTS)
 
     # Find insertion metrics
     ins_length, ins_length_sd = get_insert_size_mean_and_stdev(
@@ -294,7 +294,11 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
              if key not in ['hash_length']] +
             ['-bam', '-shortPaired', sv_indicants_bam])
     print 'velveth cmd:', cmd
-    subprocess.check_call(cmd, shell=True, executable=settings.BASH_PATH)
+
+    velveth_error_output = os.path.join(data_dir, 'velveth_error_log.txt')
+    with open(velveth_error_output, 'w') as error_output_fh:
+        subprocess.check_call(cmd, shell=True, executable=settings.BASH_PATH,
+                stderr=error_output_fh)
 
     ins_length = velvet_opts['velvetg']['ins_length']
     # exp_cov = velvet_opts['velvetg']['exp_cov']
@@ -315,7 +319,11 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
 
     cmd = ' '.join(arg_list)
     print 'velvetg cmd:', cmd
-    subprocess.check_call(cmd, shell=True, executable=settings.BASH_PATH)
+
+    velvetg_error_output = os.path.join(data_dir, 'velveth_error_log.txt')
+    with open(velvetg_error_output, 'w') as error_output_fh:
+        subprocess.check_call(cmd, shell=True, executable=settings.BASH_PATH,
+                stderr=error_output_fh)
 
     # Collect resulting contigs fasta
     contigs_fasta = os.path.join(data_dir, 'contigs.fa')

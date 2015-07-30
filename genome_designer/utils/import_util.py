@@ -872,8 +872,7 @@ def determine_template_delimiter(
 
 
 @transaction.commit_on_success
-def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file,
-            add_to_existing_set=False):
+def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file):
     """Convert an uploaded VCF file into a new variant set object.
 
     Args:
@@ -881,22 +880,16 @@ def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file,
         variant_set_name: Name of the variant set (label).
         variant_set_file: Path to the variant set on disk.
     """
-    if add_to_existing_set:
-        # Create the VariantSet.
-        variant_set = VariantSet.objects.get_or_create(
-                reference_genome=ref_genome,
-                label=variant_set_name)[0]
-    else:
-        # For now, variant set name must be unique even among diff ref genomes.
-        variant_set_name_exists = bool(VariantSet.objects.filter(
-                reference_genome=ref_genome,
-                label=variant_set_name).count())
-        assert not variant_set_name_exists, 'Variant set name must be unique.'
+    # For now, variant set name must be unique even among diff ref genomes.
+    variant_set_name_exists = bool(VariantSet.objects.filter(
+            reference_genome=ref_genome,
+            label=variant_set_name).count())
+    assert not variant_set_name_exists, 'Variant set name must be unique.'
 
-        # Create the VariantSet.
-        variant_set = VariantSet.objects.create(
-                reference_genome=ref_genome,
-                label=variant_set_name)
+    # Create the VariantSet.
+    variant_set = VariantSet.objects.create(
+            reference_genome=ref_genome,
+            label=variant_set_name)
 
     # First, save this vcf as a dataset, so we can point to it from the
     # new variant common_data_objs
