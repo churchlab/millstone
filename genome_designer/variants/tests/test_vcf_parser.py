@@ -18,7 +18,6 @@ from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
 from main.testing_util import create_common_entities
 from utils.import_util import copy_and_add_dataset_source
-from utils.import_util import import_variant_set_from_vcf
 from utils.import_util import import_reference_genome_from_local_file
 from variants.vcf_parser import parse_alignment_group_vcf
 from variants.vcf_parser import parse_vcf
@@ -51,16 +50,6 @@ class TestVCFParser(TestCase):
         self.project = self.common_data['project']
         self.reference_genome = import_reference_genome_from_local_file(
                 self.project, 'ref_genome', TEST_FASTA, 'fasta')
-
-    def test_import_variant_set(self):
-
-        ref_genome = self.reference_genome
-        variant_set_name = 'test_variant_set'
-        variant_set_file = TEST_VARIANTS_IMPORT_VCF
-
-        import_variant_set_from_vcf(
-                ref_genome, variant_set_name, variant_set_file)
-
 
     def test_parser(self):
         """Basic tests for the parser.
