@@ -9,9 +9,12 @@ import pysam
 
 from genome_finish import __path__ as gf_path_list
 from genome_finish.insertion_placement_read_trkg import extract_left_and_right_clipped_read_dicts
+from main.models import Variant
+from main.models import VariantSet
 from settings import SAMTOOLS_BINARY
 from settings import BASH_PATH
 from utils.bam_utils import clipping_stats
+from variants.variant_sets import update_variant_in_set_memberships
 
 GENOME_FINISH_PATH = gf_path_list[0]
 VELVETH_BINARY = settings.TOOLS_DIR + '/velvet/velveth'
@@ -390,3 +393,30 @@ def run_velvet(reads, output_dir, opt_dict=None):
             ['-' + key + ' ' + str(opt_dict['velvetg'][key])
              for key in opt_dict['velvetg']])
     subprocess.check_call(cmd, shell=True, executable=BASH_PATH)
+
+
+def create_de_novo_variants_set(alignment_group, variant_set_label):
+
+    ref_genome = alignment_group.reference_genome
+
+    # Get de novo variants
+    de_novo_variants = []
+    for variant in Variant.objects.filter(
+            reference_genome=ref_genome):
+        for vccd in variant.variantcallercommondata_set.all():
+            if 'INFO_contig_uid' in vccd.data:
+                de_novo_variants.append(variant)
+                continue
+
+    variant_set = VariantSet.objects.create(
+            reference_genome=ref_genome,
+            label='de_novo_variants')
+
+
+    update_variant_in_set_memberships(
+        ref_genome,
+        [variant.uid for variant in de_novo_variants],
+        'add',
+        variant_set.uid)
+
+    return variant_set

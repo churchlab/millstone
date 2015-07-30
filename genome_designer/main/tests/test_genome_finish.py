@@ -3,7 +3,6 @@ Tests for genome finishing features
 """
 import os
 
-from Bio import SeqIO
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
@@ -11,13 +10,13 @@ from django.http.request import HttpRequest
 from django.test import Client
 from django.test import TestCase
 
+from genome_finish.millstone_de_novo_fns import create_de_novo_variants_set
 from main.model_utils import get_dataset_with_type
 from main.models import Contig
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
-from main.models import VariantSet
 import main.xhr_handlers as xhr_handlers
 from pipeline.pipeline_runner import run_pipeline
 from utils import are_fastas_same
@@ -118,15 +117,15 @@ class TestGenomeFinishMG1655(TestCase):
         self.assertEqual(contigs.count(), 1)
         self.assertTrue(contigs[0].num_bases > 0)
 
-        # Get VariantSet
-        insertion_variant_set = VariantSet.objects.get(
-                reference_genome=contigs[0].parent_reference_genome,
-                label='de_novo_assembled_insertions')
+        ag = contigs[0].experiment_sample_to_alignment.alignment_group
+
+        # Get set of de novo variants
+        variant_set = create_de_novo_variants_set(ag, 'de_novo_variants')
 
         # Make new reference genome
         new_ref_genome_params = {'label': 'new_ref'}
         new_ref_genome = generate_new_reference_genome(
-                insertion_variant_set, new_ref_genome_params)
+                variant_set, new_ref_genome_params)
 
         # Verify insertion was placed correctly
         target_fasta = os.path.join(data_dir_1kb, 'no_ins_ref.fa')
