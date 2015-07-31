@@ -6,6 +6,7 @@ import re
 
 from Bio import SeqIO
 from django.conf import settings
+import numpy as np
 
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.millstone_de_novo_fns import add_paired_mates
@@ -13,6 +14,7 @@ from genome_finish.millstone_de_novo_fns import filter_low_qual_read_pairs
 from genome_finish.millstone_de_novo_fns import filter_out_unpaired_reads
 from genome_finish.millstone_de_novo_fns import get_piled_reads
 from genome_finish.millstone_de_novo_fns import get_clipped_reads_smart
+from genome_finish.millstone_de_novo_fns import get_avg_genome_coverage
 from genome_finish.millstone_de_novo_fns import get_unmapped_reads
 from main.models import Contig
 from main.models import Dataset
@@ -66,8 +68,6 @@ def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=False):
 
-    contig_label_base = '' # Force for now
-
     # Grab reference genome fasta path, ensure indexed
     reference_genome = sample_alignment.alignment_group.reference_genome
     ref_fasta_dataset = reference_genome.dataset_set.get_or_create(
@@ -102,11 +102,17 @@ def generate_contigs(sample_alignment,
     velvet_opts['velvetg']['ins_length'] = ins_length
     velvet_opts['velvetg']['ins_length_sd'] = ins_length_sd
 
-    # # Find expected coverage
-    # exp_cov = kmer_coverage(180, 100, 21)
-    # print exp_cov
-    # velvet_opts['velvetg']['exp_cov'] = exp_cov
+    # Find expected kmer coverage
+    alignment_dataset = sample_alignment.dataset_set.get(
+            type=Dataset.TYPE.BWA_ALIGN)
+    avg_read_coverage = get_avg_genome_coverage(
+            alignment_dataset.get_absolute_location())
 
+    exp_cov = kmer_coverage(avg_read_coverage, ins_length,
+            velvet_opts['velveth']['hash_length'])
+    velvet_opts['velvetg']['exp_cov'] = exp_cov
+
+    # Update velvet_opts with input_velvet_opts
     for shallow_key in ['velveth', 'velvetg']:
         if shallow_key in input_velvet_opts:
             for deep_key in input_velvet_opts[shallow_key]:
@@ -301,7 +307,7 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
                 stderr=error_output_fh)
 
     ins_length = velvet_opts['velvetg']['ins_length']
-    # exp_cov = velvet_opts['velvetg']['exp_cov']
+    exp_cov = velvet_opts['velvetg']['exp_cov']
     ins_length_sd = velvet_opts['velvetg']['ins_length_sd']
     cov_cutoff = velvet_opts['velvetg']['cov_cutoff']
     min_contig_lgth = velvet_opts['velvetg']['min_contig_lgth']
@@ -310,10 +316,10 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
             VELVETG_BINARY,
             data_dir,
             '-ins_length', str(ins_length),
-            # '-exp_cov', str(exp_cov),
+            '-exp_cov', str(exp_cov),
             '-ins_length_sd', str(ins_length_sd),
             '-cov_cutoff', str(cov_cutoff),
-            # '-max_coverage', str(3 * exp_cov),
+            '-max_coverage', str(3 * exp_cov),
             '-min_contig_lgth', str(min_contig_lgth),
             '-read_trkg', 'yes']
 

@@ -872,7 +872,8 @@ def determine_template_delimiter(
 
 
 @transaction.commit_on_success
-def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file):
+def import_variant_set_from_vcf(ref_genome, variant_set_name,
+        variant_set_file):
     """Convert an uploaded VCF file into a new variant set object.
 
     Args:

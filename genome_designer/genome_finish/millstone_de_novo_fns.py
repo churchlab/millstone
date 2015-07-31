@@ -420,3 +420,64 @@ def create_de_novo_variants_set(alignment_group, variant_set_label):
         variant_set.uid)
 
     return variant_set
+
+
+def get_coverage_stats(bam_path):
+    """Returns a dictionary with chromosome seqrecord_ids as keys and
+    subdictionaries as values.
+
+    Each subdictionary has three keys: length, mean, and std which hold the
+    particular chromosome's length, mean read coverage, and standard
+    deviation of read coverage
+    """
+    alignment_af = pysam.AlignmentFile(bam_path)
+    chrom_list = alignment_af.references
+    chrom_lens = alignment_af.lengths
+
+    c_starts = [0]*len(chrom_list)
+    c_ends = chrom_lens
+
+    chrom_cov_lists = []
+    for chrom, c_start, c_end in zip(chrom_list, c_starts, c_ends):
+
+        chrom_cov_lists.append([])
+        cov_list = chrom_cov_lists[-1]
+        for pileup_col in alignment_af.pileup(chrom,
+                start=c_start, end=c_end, truncate=True):
+
+            depth = pileup_col.nsegments
+            cov_list.append(depth)
+    alignment_af.close()
+
+    sub_dict_tup_list = zip(
+            chrom_lens,
+            map(np.mean, chrom_cov_lists),
+            map(np.std, chrom_cov_lists))
+
+    sub_dict_list = map(
+            lambda tup: dict(zip(['length', 'mean', 'std'], tup)),
+            sub_dict_tup_list)
+
+    chrom_cov_dict = dict(zip(chrom_list, sub_dict_list))
+
+    return chrom_cov_dict
+
+
+def get_avg_genome_coverage(bam_path):
+    """Returns a float which is the average genome coverage, calculated as
+    the average length-weighted read coverage over all chromosomes
+    """
+
+    coverage_stats = get_coverage_stats(bam_path)
+
+    len_weighted_coverage = 0
+    total_len = 0
+
+    for sub_dict in coverage_stats.values():
+        length = sub_dict['length']
+        avg_coverage = sub_dict['mean']
+
+        len_weighted_coverage += length * avg_coverage
+        total_len += length
+
+    return float(len_weighted_coverage) / total_len
