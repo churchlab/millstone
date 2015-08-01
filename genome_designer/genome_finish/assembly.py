@@ -108,9 +108,14 @@ def generate_contigs(sample_alignment,
     avg_read_coverage = get_avg_genome_coverage(
             alignment_dataset.get_absolute_location())
 
-    exp_cov = kmer_coverage(avg_read_coverage, ins_length,
+    ideal_cov = kmer_coverage(avg_read_coverage, ins_length,
             velvet_opts['velveth']['hash_length'])
+    exp_cov = 0.75 * ideal_cov
     velvet_opts['velvetg']['exp_cov'] = exp_cov
+
+    # Set cov cutoff to half expected
+    cov_cutoff = ideal_cov / 2
+    velvet_opts['velvetg']['cov_cutoff'] = cov_cutoff
 
     # Update velvet_opts with input_velvet_opts
     for shallow_key in ['velveth', 'velvetg']:

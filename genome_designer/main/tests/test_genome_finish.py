@@ -108,10 +108,11 @@ class TestGenomeFinishMG1655(TestCase):
         return contigs
 
 
-    def test_1kb_insertion(self):
+    def _run_genome_finish_test(self, data_dir):
+        # import ipdb
+        # ipdb.set_trace()
 
-        data_dir_1kb = os.path.join(GF_TEST_DIR, 'small_mg1655_data/1kb_ins')
-        contigs = self._perform_assembly(data_dir_1kb)
+        contigs = self._perform_assembly(data_dir)
 
         # Assert one contig was generated
         self.assertEqual(contigs.count(), 1)
@@ -128,9 +129,19 @@ class TestGenomeFinishMG1655(TestCase):
                 variant_set, new_ref_genome_params)
 
         # Verify insertion was placed correctly
-        target_fasta = os.path.join(data_dir_1kb, 'no_ins_ref.fa')
+        target_fasta = os.path.join(data_dir, 'no_ins_ref.fa')
         new_ref_genome_fasta = get_dataset_with_type(
                 new_ref_genome, Dataset.TYPE.REFERENCE_GENOME_FASTA
                 ).get_absolute_location()
 
         self.assertTrue(are_fastas_same(target_fasta, new_ref_genome_fasta))
+
+
+    def test_1kb_insertion(self):
+        data_dir = os.path.join(GF_TEST_DIR, 'small_mg1655_data/1kb_ins')
+        self._run_genome_finish_test(data_dir)
+
+
+    def test_1kb_insertion__cov_80(self):
+        data_dir = os.path.join(GF_TEST_DIR, 'mg1655_test/5')
+        self._run_genome_finish_test(data_dir)
