@@ -346,42 +346,47 @@ def update_parent_child_variant_fields(alignment_group):
     Ideally this is done before making the materialized view.
     """
 
-    #1. Get parent-child pairs for all experiment_samples in alignment_group.
+    #1. Get parent-children uid relationships for all experiment_samples
+    # in alignment_group.
     samples = alignment_group.get_samples()
-    relations = {}
+    parent_uid__to__child_uid_list = {}
     for sample in samples:
-        child_uids = [child.uid for child in sample.get_children()]
-        relations[sample.uid] = child_uids
+        child_uid_list = [child.uid for child in sample.get_children()]
+        parent_uid__to__child_uid_list[sample.uid] = child_uid_list
 
     #2. Grab all variants and update the variant_evidence fields with data from
     #   each pair.
     for vcc in alignment_group.variantcallercommondata_set.all():
         ve_set = vcc.variantevidence_set.all()
-        sample_to_ve = {}
-        ve_to_gt = {}
+        ve_uid__to__ve = {}
+        sample_uid__to__ve = {}
+        ve_uid__to__gt = {}
         for ve in ve_set:
-            sample_to_ve[ve.experiment_sample.uid] = ve
-            ve_to_gt[ve.uid] = (
+            ve_uid__to__ve[ve.uid] = ve
+            sample_uid__to__ve[ve.experiment_sample.uid] = ve
+            ve_uid__to__gt[ve.uid] = (
                     0 if ve.data['GT_TYPE'] is None else ve.data['GT_TYPE'])
 
-        for parent, children in relations.items():
-            if not parent in sample_to_ve:
+        for parent_uid, child_uids in parent_uid__to__child_uid_list.items():
+            if not parent_uid in sample_uid__to__ve:
                 continue
-            parent_ve = sample_to_ve[parent]
+            parent_ve = sample_uid__to__ve[parent_uid]
 
-            chldrn_ve = []
-            for child in children:
-                if child in sample_to_ve:
-                    chldrn_ve.append(child)
+            chldrn_ve_list = []
+            for child_uid in child_uids:
+                if child_uid in sample_uid__to__ve:
+                    chldrn_ve_list.append(sample_uid__to__ve[child_uid])
 
-            in_parent = int(ve_to_gt[parent_ve.uid] > 0)
+            # If the parent GT_TYPE is > 0, then set in_parent to 1.
+            in_parent = int(ve_uid__to__gt[parent_ve.uid] > 0)
+
+            # For each child whose GT_TYPE is > 0, increment in_children.
             in_children = 0
-
-            for child_ve in chldrn_ve:
+            for child_ve in chldrn_ve_list:
                 child_ve.data['IN_PARENTS'] = in_parent
                 in_children += int(child_ve.data['GT_TYPE'] > 0)
                 child_ve.save(update_fields=['data'])
 
-            sample_to_ve[parent].data['IN_CHILDREN'] = in_children
-            sample_to_ve[parent].save(update_fields=['data'])
+            sample_uid__to__ve[parent_uid].data['IN_CHILDREN'] = in_children
+            sample_uid__to__ve[parent_uid].save(update_fields=['data'])
 
