@@ -227,6 +227,8 @@ def extract_contig_reads(contig, read_category='all'):
     # Write extracted reads into bam file
     extracted_reads_alignment_file = pysam.AlignmentFile(
             extracted_reads_bam_file, "wb", template=sam_file)
+    sam_file.close()
+
 
     for read in sv_indicant_reads_in_contig:
         extracted_reads_alignment_file.write(read)
@@ -253,23 +255,6 @@ def extract_contig_reads(contig, read_category='all'):
     # Add bam track
     add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
 
-    # Uncomment to create bam track on reference showing contig reads
-    # from utils.bam_utils import add_bam_track
-    # extracted_reads_bam_file = os.path.join(
-    #         contig.get_model_data_dir(), read_category + '.bam')
-    # extracted_reads_alignment_file = pysam.AlignmentFile(
-    #     extracted_reads_bam_file, "wb", template=sam_file)
-
-    # for read in sv_indicant_reads_in_contig:
-    #     extracted_reads_alignment_file.write(read)
-    # extracted_reads_alignment_file.close()
-
-    # label = ('Contig_' + str(contig.metadata['node_number']) + '_length_' +
-    #         str(contig.num_bases) + '_' + str(read_category))
-    # add_bam_track(
-    #         contig.parent_reference_genome, extracted_reads_bam_file, label)
-
-    sam_file.close()
     return sv_indicant_reads_in_contig
 
 

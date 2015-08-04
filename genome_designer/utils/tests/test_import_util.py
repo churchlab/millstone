@@ -381,10 +381,10 @@ class TestImportVariantSetFromVCFFile(TestCase):
         # Test models.
         user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
                 email=TEST_EMAIL)
-        self.test_project = Project.objects.create(owner=user.get_profile(),
+        test_project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(
-                project=self.test_project,
+                project=test_project,
                 label='refgenome')
         Chromosome.objects.create(
             reference_genome=self.ref_genome,

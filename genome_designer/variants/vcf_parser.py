@@ -164,11 +164,6 @@ def extract_raw_data_dict(vcf_record):
 def populate_common_data_info(data_dict, vcf_record):
     """Parses the vcf record INFO field and updates the data dict.
     """
-    # info_str = vcf_record.INFO
-    # info_list = info_list = info_str.split(';')
-    # info_dict = dict(map(lambda x: x.split('='), info_list))
-
-    # for key, value in info_dict.iteritems():
     for key, value in vcf_record.INFO.iteritems():
         effective_key = 'INFO_' + key
         data_dict[effective_key] = value

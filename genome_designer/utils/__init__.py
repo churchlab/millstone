@@ -12,8 +12,6 @@ import string
 from Bio import SeqIO
 from django.conf import settings
 
-
-
 # Number of characters that snpeff requires per line of the genbank file
 SNPEFF_MIN_LINE_LEN = 20
 

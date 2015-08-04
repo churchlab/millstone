@@ -11,7 +11,6 @@ import os
 from StringIO import StringIO
 import tempfile
 
-from Bio import SeqIO
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
@@ -30,7 +29,6 @@ from django.views.decorators.http import require_POST
 from main.adapters import adapt_model_to_frontend
 from main.adapters import adapt_experiment_samples_to_frontend
 from main.exceptions import ValidationException
-from main.model_utils import get_dataset_with_type
 from main.model_views import adapt_gene_list_to_frontend
 from main.model_views import get_all_fields
 from main.model_views import adapt_variant_to_frontend
@@ -50,7 +48,6 @@ from main.models import VariantSet
 from main.models import S3File
 from genome_finish import assembly
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
-# from genome_finish.insertion_placement_read_trkg import place_cassette
 from utils.combine_reference_genomes import combine_list_allformats
 from utils.data_export_util import export_melted_variant_view
 from utils.data_export_util import export_project_as_zip
@@ -1153,50 +1150,6 @@ def contigs_find_insertion_location(request):
                     insertion_placement_positions['error_string']))
 
     return HttpResponse(json.dumps(result), content_type='application/json')
-
-
-# @login_required
-# @require_POST
-# def contigs_place_in_ref(request):
-#     """Incorporates the passed contigs into the reference they belong to
-#     to make a new version of the reference with the passed label. For now
-#     only incorporation of single contigs is supported
-#     """
-#     request_data = json.loads(request.body)
-#     contig_uid_list = request_data.get('contigUidList', [])
-#     new_genome_label = request_data.get('newGenomeLabel', '')
-
-#     # For now handle only one contig insertion until insertions are handled
-#     # as SVs
-#     assert len(contig_uid_list) == 1
-
-#     result = {}
-#     contig = Contig.objects.get(uid=contig_uid_list[0])
-#     ref_left, ref_right = contig.metadata['reference_insertion_endpoints']
-#     contig_left, contig_right = contig.metadata['contig_insertion_endpoints']
-
-#     insertion_placement_positions = {
-#         'reference': {
-#             'left': ref_left,
-#             'right': ref_right
-#         },
-#         'contig': {
-#             'left': contig_left,
-#             'right': contig_right
-#         }
-#         # 'ref_chromosome_seqrecord_id': contig.metadata.get('chromosome'),
-#     }
-
-#     new_reference_genome_params = {
-#         'label': new_genome_label
-#     }
-
-#     place_cassette(
-#             contig,
-#             insertion_placement_positions,
-#             new_reference_genome_params)
-
-#     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 @login_required

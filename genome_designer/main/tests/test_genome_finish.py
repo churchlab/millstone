@@ -109,13 +109,11 @@ class TestGenomeFinishMG1655(TestCase):
 
 
     def _run_genome_finish_test(self, data_dir):
-        # import ipdb
-        # ipdb.set_trace()
 
         contigs = self._perform_assembly(data_dir)
 
-        # Assert one contig was generated
-        self.assertEqual(contigs.count(), 1)
+        # Assert contigs were generated
+        self.assertTrue(contigs.count() > 0)
         self.assertTrue(contigs[0].num_bases > 0)
 
         ag = contigs[0].experiment_sample_to_alignment.alignment_group
