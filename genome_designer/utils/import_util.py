@@ -938,7 +938,6 @@ def _read_variant_set_file(variant_set_file, ref_genome, dataset,
         reference_genome = ReferenceGenome.objects.get(id=ref_genome.id)
         # Update the reference genome and grab it from the db again.
         update_filter_key_map(reference_genome, vcf_reader)
-        reference_genome = ReferenceGenome.objects.get(id=ref_genome.id)
 
         for record_idx, record in enumerate(vcf_reader):
             print 'vcf_parser: Parsing %d out of %d' % (
@@ -970,7 +969,6 @@ def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
     # NOTE: Must open with 'rU', universal mode, to handle non-standard
     # linebreaks that might be introduced in different environments. For
     # example, Excel on Mac OS X saves funky linebreaks.
-    variant_list = []
     with open(variant_set_file, 'rU') as fh:
         # Use this wrapper to skip the header lines
         # Double ##s are part of the header, but single #s are column
