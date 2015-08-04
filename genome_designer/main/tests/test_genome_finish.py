@@ -141,7 +141,11 @@ class TestGenomeFinishMG1655(TestCase):
 
 
     def test_1kb_insertion_cov_80(self):
-        # data_dir = os.path.join(GF_TEST_DIR, 'mg1655_test/5')
         data_dir = os.path.join(GF_TEST_DIR,
                 'small_mg1655_data/1kb_ins_cov_80')
+        self._run_genome_finish_test(data_dir)
+
+    def test_1kb_insertion_cov_40(self):
+        data_dir = os.path.join(GF_TEST_DIR,
+                'small_mg1655_data/1kb_ins_cov_40')
         self._run_genome_finish_test(data_dir)
