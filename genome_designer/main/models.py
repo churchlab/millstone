@@ -1303,27 +1303,6 @@ class Variant(UniqueUidModelMixin):
         ref_genome_jbrowse = self.reference_genome.get_client_jbrowse_link()
         location_param = '&loc=' + str(self.position)
         full_href = ref_genome_jbrowse + location_param
-
-        track_labels = []
-        vccd_list = self.variantcallercommondata_set.all()
-
-        # Unclear what jbrowse link to give if multiple alts,
-        # for now only yield contig track if one alt
-        if len(vccd_list) == 1:
-
-            # See if the alt is associated with a contig
-            contig_uid_list = vccd_list[0].data.get('INFO_contig_uid', False)
-            if contig_uid_list:
-                contig = Contig.objects.get(uid=contig_uid_list[0])
-                bam_dataset = get_dataset_with_type(
-                        contig,
-                        Dataset.TYPE.BWA_SV_INDICANTS)
-                track_labels.append(bam_dataset.internal_string(contig))
-
-        if track_labels:
-            track_string = '&tracks=' + ','.join(track_labels)
-            full_href += track_string
-
         return '<a href="' + full_href + '">jbrowse</a>'
 
     @classmethod
