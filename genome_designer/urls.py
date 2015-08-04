@@ -175,8 +175,6 @@ urlpatterns = patterns('',
         'main.xhr_handlers.contigs_has_insertion_location'),
     url(r'^_/contigs/find_insertion_location$',
         'main.xhr_handlers.contigs_find_insertion_location'),
-    url(r'^_/contigs/place_in_ref$',
-        'main.xhr_handlers.contigs_place_in_ref'),
     url(r'^_/contigs/download$',
             'main.xhr_handlers.contigs_download'),
 

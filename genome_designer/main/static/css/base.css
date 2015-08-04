@@ -596,3 +596,7 @@ border-color: #d0e3f0;
 background-color: #dff0d8;
 border-color: #d6e9c6;
 }
+
+.gd-nav-text {
+  padding: 12px 15px;
+}

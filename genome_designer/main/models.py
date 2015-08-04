@@ -106,6 +106,9 @@ class Dataset(UniqueUidModelMixin):
         BWA_DISCORDANT = 'BWA BAM Discordant Paired Reads'
         BWA_SPLIT = 'BWA BAM Split Reads'
         BWA_UNMAPPED = 'BWA Unmapped Reads'
+        BWA_CLIPPED = 'BWA Clipped Reads'
+        BWA_PILED = 'BWA Piled Reads'
+        BWA_SV_INDICANTS = 'BWA Structural Variant Indicating Reads'
         BWA_FOR_DE_NOVO_ASSEMBLY = 'BWA for De Novo Assembly'
         BWA_ALIGN_ERROR = 'BWA Alignment Error'
         VCF_FREEBAYES = 'Freebayes VCF'
@@ -115,6 +118,7 @@ class Dataset(UniqueUidModelMixin):
         VCF_USERINPUT = 'User VCF'
         VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
         VCF_LUMPY_SNPEFF = 'Lumpy SNPEff VCF'
+        VCF_DE_NOVO_ASSEMBLED_CONTIGS = 'De Novo Assemblied Contigs VCF'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
         LUMPY_INSERT_METRICS_HISTOGRAM = 'Lumpy Insert Metrics Histogram'
         LUMPY_INSERT_METRICS_MEAN_STDEV = 'Lumpy Insert Metrics Mean Stdev'
@@ -136,6 +140,9 @@ class Dataset(UniqueUidModelMixin):
         TYPE.BWA_ALIGN : 'experimentsampletoalignment_set',
         TYPE.BWA_DISCORDANT : 'experimentsampletoalignment_set',
         TYPE.BWA_SPLIT : 'experimentsampletoalignment_set',
+        TYPE.BWA_CLIPPED : 'experimentsampletoalignment_set',
+        TYPE.BWA_PILED : 'experimentsampletoalignment_set',
+        TYPE.BWA_SV_INDICANTS : 'experimentsampletoalignment_set',
         TYPE.BWA_ALIGN_ERROR : 'alignmentgroup_set',
         TYPE.VCF_FREEBAYES : 'alignmentgroup_set',
         TYPE.VCF_PINDEL : 'alignmentgroup_set',
@@ -145,6 +152,7 @@ class Dataset(UniqueUidModelMixin):
         TYPE.VCF_LUMPY_SNPEFF: 'alignmentgroup_set',
         TYPE.VCF_USERINPUT : 'variantset_set',
         TYPE.VCF_FREEBAYES_SNPEFF : 'alignmentgroup_set',
+        TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS: 'alignment_group_set',
         TYPE.FASTQC1_HTML: 'experimentsample_set',
         TYPE.FASTQC2_HTML: 'experimentsample_set',
     }
@@ -718,12 +726,12 @@ class Contig(UniqueUidModelMixin):
         return self.metadata.get('chromosome', '')
 
     @property
-    def ref_insertion_pos(self):
-        return self.metadata.get('ref_insertion_pos', '')
+    def reference_insertion_endpoints(self):
+        return self.metadata.get('reference_insertion_endpoints', '')
 
     @property
-    def insertion_sequence_endpoints(self):
-        return self.metadata.get('insertion_sequence_endpoints', '')
+    def contig_insertion_endpoints(self):
+        return self.metadata.get('contig_insertion_endpoints', '')
 
     @classmethod
     def get_field_order(clazz, **kwargs):
@@ -735,10 +743,9 @@ class Contig(UniqueUidModelMixin):
             {'field': 'num_bases', 'verbose': 'Contig Length'},
             {'field': 'coverage', 'verbose': 'Average Coverage'},
             {'field': 'timestamp'},
-            {'field': 'chromosome', 'verbose': 'Chromosome'},
-            {'field': 'ref_insertion_pos',
-                    'verbose': 'Reference Insertion Position'},
-            {'field': 'insertion_sequence_endpoints'}
+            {'field': 'chromosome'},
+            {'field': 'reference_insertion_endpoints'},
+            {'field': 'contig_insertion_endpoints'}
         ]
 
 

@@ -50,11 +50,23 @@ def index_bam(bam):
     subprocess.call(cmd, shell=True, executable=settings.BASH_PATH)
 
 
-def sort_bam(input_bam, output_bam=None):
+def sort_bam_by_name(input_bam, output_bam=None):
     if output_bam is None:
         output_bam = input_bam
 
     cmd = "{samtools} sort -n {input_bam} {output_bam_prefix}".format(
+            samtools=settings.SAMTOOLS_BINARY,
+            input_bam=input_bam,
+            output_bam_prefix=os.path.splitext(output_bam)[0])
+
+    subprocess.call(cmd, shell=True, executable=settings.BASH_PATH)
+
+
+def sort_bam_by_coordinate(input_bam, output_bam=None):
+    if output_bam is None:
+        output_bam = input_bam
+
+    cmd = "{samtools} sort {input_bam} {output_bam_prefix}".format(
             samtools=settings.SAMTOOLS_BINARY,
             input_bam=input_bam,
             output_bam_prefix=os.path.splitext(output_bam)[0])
@@ -213,7 +225,7 @@ def minimal_bwa_align(reads, ref_fasta, data_dir):
     subprocess.call(cmd, shell=True, executable=settings.BASH_PATH)
 
     # 4. samtools sort alignment.bam
-    sort_bam(alignment_bam)
+    sort_bam_by_coordinate(alignment_bam)
 
     # 5. Index it
     index_bam(alignment_bam)

@@ -1,17 +1,20 @@
 import subprocess
 import os
-import shutil
 import pickle
-import re
 
 from Bio import SeqIO
 from django.conf import settings
+import numpy as np
 import pysam
 
 from genome_finish import __path__ as gf_path_list
+from genome_finish.insertion_placement_read_trkg import extract_left_and_right_clipped_read_dicts
+from main.models import Variant
+from main.models import VariantSet
 from settings import SAMTOOLS_BINARY
 from settings import BASH_PATH
 from utils.bam_utils import clipping_stats
+from variants.variant_sets import update_variant_in_set_memberships
 
 GENOME_FINISH_PATH = gf_path_list[0]
 VELVETH_BINARY = settings.TOOLS_DIR + '/velvet/velveth'
@@ -50,6 +53,95 @@ def get_clipped_reads(bam_filename, output_filename, clipping_threshold=None):
             [os.path.splitext(output_filename)[0]])
 
 
+def get_piled_reads(input_bam_path, output_bam_path,
+        clipping_threshold=None):
+    """Creates bam of reads that have more than clipping_threshold bases
+    of clipping and are stacked 3 standard deviations higher than the average
+    pileup of clipped reads.  If no clipping_threshold specified, clipping
+    stats for the alignment are calculated and the clipping_threshold is set
+    to the mean + one stddev of the per read clipping of a sample of
+    10000 reads.
+    """
+    if clipping_threshold is None:
+        stats = clipping_stats(input_bam_path, sample_size=10000)
+        clipping_threshold = int(stats['mean'] + stats['std'])
+
+    input_af = pysam.AlignmentFile(input_bam_path, 'rb')
+    output_af = pysam.AlignmentFile(output_bam_path, 'wb',
+            template=input_af)
+    lr_clipped = extract_left_and_right_clipped_read_dicts(
+            input_af,
+            clipping_threshold=clipping_threshold)
+    input_af.close()
+
+    for clipped_dict in [
+            lr_clipped['left_clipped'], lr_clipped['right_clipped']]:
+        stack_counts = map(len, clipped_dict.values())
+        mean_stacking = np.mean(stack_counts)
+        std_stacking = np.std(stack_counts)
+        stacking_cutoff = mean_stacking + 3 * std_stacking
+        for read_list in clipped_dict.values():
+            if len(read_list) > stacking_cutoff:
+                for read in read_list:
+                    output_af.write(read)
+    output_af.close()
+
+
+def get_clipped_reads_smart(input_bam_path, output_bam_path,
+        clipping_threshold=8):
+
+    """Gets reads not overlapping their adaptor with a terminal
+    segment of clipping with average phred scores above the cutoff
+    """
+
+    CLIPPED_AVG_PHRED_CUTOFF = 20
+
+    SOFT_CLIP = 4
+    HARD_CLIP = 5
+    CLIP = [SOFT_CLIP, HARD_CLIP]
+
+    input_af = pysam.AlignmentFile(input_bam_path, 'rb')
+    output_af = pysam.AlignmentFile(output_bam_path, 'wb',
+                template=input_af)
+
+    for read in input_af:
+        # If no cigartuples, i.e. unmapped, continue
+        if read.cigartuples is None:
+            continue
+
+        if read.is_secondary or read.is_supplementary:
+            continue
+
+        # TODO: Account for template length
+        # adapter_overlap = max(read.template_length - query_alignment_length, 0)
+
+        # If template size less than length of read, continue
+        if abs(read.tlen) < 1.1 * read.query_length:
+            continue
+
+        # Determine left and right clipped counts
+        left_clipping = (read.cigartuples[0][1]
+                if read.cigartuples[0][0] in CLIP else 0)
+        right_clipping = (read.cigartuples[-1][1]
+                if read.cigartuples[-1][0] in CLIP else 0)
+
+        # Write reads to file if clipped bases have average phred score
+        # above cutoff
+        if left_clipping > clipping_threshold:
+            clipped_phred_scores = read.query_qualities[:left_clipping]
+            if np.mean(clipped_phred_scores) > CLIPPED_AVG_PHRED_CUTOFF:
+                output_af.write(read)
+                continue
+        if right_clipping > clipping_threshold:
+            clipped_phred_scores = read.query_qualities[-right_clipping:]
+            if np.mean(clipped_phred_scores) > CLIPPED_AVG_PHRED_CUTOFF:
+                output_af.write(read)
+                continue
+
+    output_af.close()
+    input_af.close()
+
+
 def get_match_counts(bam_filename):
     cmd = ' | '.join([
             '{samtools} view -h {bam_filename}',
@@ -64,7 +156,10 @@ def get_match_counts(bam_filename):
     return pickle.loads(output)
 
 
-def get_insertion_location(bam_path):
+def get_insertion_location_from_bam(bam_path):
+    """Attempts to find the insertion locations of a contig
+    using the alignment of that contig to the reference
+    """
 
     BAM_CSOFT_CLIP = 4
     BAM_CHARD_CLIP = 5
@@ -72,6 +167,9 @@ def get_insertion_location(bam_path):
 
     samfile = pysam.AlignmentFile(bam_path)
     contig_length = 0
+
+    left_read = None
+    right_read = None
     for read in samfile:
         contig_length = max(contig_length, read.query_length)
         if read.cigartuples[0][0] not in clip_codes:
@@ -103,7 +201,7 @@ def get_insertion_location(bam_path):
             }
             return locations_dict
 
-    return {'error_string', error_string}
+    return {'error_string': error_string}
 
 
 def make_sliced_fasta(fasta_path, seqrecord_id, left_index, right_index,
@@ -130,28 +228,6 @@ def make_sliced_fasta(fasta_path, seqrecord_id, left_index, right_index,
         SeqIO.write(seqrecord, fh, 'fasta')
 
     return sliced_fasta_path
-
-
-def get_local_contig_placement(ref_fasta, contig_fasta):
-    cmd = ' '.join([
-            os.path.join(settings.TOOLS_DIR, 'seqan/place_contig'),
-            '-ref', ref_fasta,
-            '-read', contig_fasta
-        ])
-
-    output_raw = subprocess.check_output(cmd, shell=True, executable=BASH_PATH)
-    output_raw = output_raw.strip('\n')
-    output_list = output_raw.split('\n')
-
-    assert len(output_list) == 3, ('output generated by place_contig script ' +
-            'not in expected format of 3 newline delimited integers.  ' +
-            'output was split as:' + str(output_list))
-
-    return {
-        'ref_split_pos': int(output_list[0]),
-        'contig_start_pos': int(output_list[1]),
-        'contig_end_pos': int(output_list[2])
-    }
 
 
 def get_unmapped_reads(bam_filename, output_filename):
@@ -208,72 +284,83 @@ def _parse_sam_line(line):
 
 
 def add_paired_mates(input_sam_path, source_bam_filename, output_sam_path):
-    """Creates a file at output_sam_path that contains all the reads in
-    input_sam_path, as well as all of their paired mates.
 
-    The resulting sam is not sorted and may contain duplicates. Clients
-    should filter elsewhere.
+    sam_file = pysam.AlignmentFile(input_sam_path)
+    input_qnames_to_read = {}
+    for read in sam_file:
+        input_qnames_to_read[read.qname] = True
+    sam_file.close()
 
-    TODO: This is currently nasty inefficient. Is there a better way to do
-    this, e.g. leverage indexing somehow?
+    original_alignmentfile = pysam.AlignmentFile(source_bam_filename, "rb")
+    output_alignmentfile = pysam.AlignmentFile(
+            output_sam_path, "wh", template=original_alignmentfile)
+    for read in original_alignmentfile:
+        if input_qnames_to_read.get(read.qname, False):
+            if not read.is_secondary and not read.is_supplementary:
+                output_alignmentfile.write(read)
+    output_alignmentfile.close()
+    original_alignmentfile.close()
 
-    TODO: This is potentially memory-overwhelming. Need to think about
-    the de novo assembly feature more carefully before making it user-facing.
 
-    TODO: dbg 7/13/15: brian will replace this with pysam for speed.
+def filter_out_unpaired_reads(input_bam_path, output_bam_path):
+
+    input_af = pysam.AlignmentFile(input_bam_path, 'rb')
+
+    # Build qname -> flag list dictionary
+    read_flags = {}
+    for read in input_af:
+        if read.qname not in read_flags:
+            read_flags[read.qname] = [read.flag]
+        else:
+            read_flags[read.qname].append(read.flag)
+
+    # Build qname -> is_paired dictionary
+    reads_with_pairs = {}
+    not_primary_alignment_flag = 256
+    supplementary_alignment_flag = 2048
+    for qname, flags in read_flags.items():
+        primary_count = 0
+        for f in flags:
+            if (not (f & not_primary_alignment_flag) and
+                    not (f & supplementary_alignment_flag)):
+                primary_count += 1
+        if primary_count == 2:
+            reads_with_pairs[qname] = True
+
+    # Write reads in input to output if not in bad_quality_names
+    output_af = pysam.AlignmentFile(output_bam_path, "wb",
+            template=input_af)
+    input_af.reset()
+    for read in input_af:
+        if read.qname in reads_with_pairs:
+            output_af.write(read)
+    output_af.close()
+    input_af.close()
+
+
+def filter_low_qual_read_pairs(input_bam_path, output_bam_path):
+    """Filters out reads with average phred scores below cutoff
     """
-    # Strategy:
-    # 1. Copy input to output, to preserve existing reads.
-    # 2. Load all ids into a dictionary, storing information about whether
-    #    both pairs are already in the output.
-    #    NOTE: This step could potentially overwhelm memory for large datasets.
-    # 3. Loop through the bam file, checking against the id dictionary to
-    #    see whether or not we want to keep that data.
 
-    # 1. Copy input to output, to preserve existing reads.
-    shutil.copyfile(input_sam_path, output_sam_path)
+    AVG_PHRED_CUTOFF = 20
 
-    # 2. Create dictionary of read ids.
-    read_id_to_flags_map = {}
-    with open(input_sam_path) as fh:
-        for line in fh:
-            if re.match('@', line):
-                continue
-            parsed_line = _parse_sam_line(line)
-            read_id = parsed_line['read_id']
-            flags_value = parsed_line['flags']
-            if read_id not in read_id_to_flags_map:
-                read_id_to_flags_map[read_id] = []
-            if flags_value not in read_id_to_flags_map[read_id]:
-                read_id_to_flags_map[read_id].append(flags_value)
-            assert 1 <= len(read_id_to_flags_map[read_id]) <= 2
+    # Put qnames with average phred scores below the cutoff into dictionary
+    bad_quality_qnames = {}
+    input_af = pysam.AlignmentFile(input_bam_path, "rb")
+    for read in input_af:
+        avg_phred = np.mean(read.query_qualities)
+        if avg_phred < AVG_PHRED_CUTOFF:
+            bad_quality_qnames[read.qname] = True
 
-    # 3. Loop through bam file, appending lines whose pairs aren't already
-    #    present.
-    with open(output_sam_path, 'a') as output_fh:
-        # Use samtools to read the bam.
-        read_bam_cmd = [
-            SAMTOOLS_BINARY,
-            'view',
-            # -F 0x100 option filters out secondary alignments
-            '-F', '0x100',
-            source_bam_filename
-        ]
-        samtools_proc = subprocess.Popen(read_bam_cmd, stdout=subprocess.PIPE)
-
-        for sam_line in samtools_proc.stdout:
-            # Use flags as unique identifier for each read (i.e. which of the
-            # pairs for a read id that we are looking at.
-            parsed_line = _parse_sam_line(sam_line)
-            read_id = parsed_line['read_id']
-            flags = parsed_line['flags']
-            if read_id not in read_id_to_flags_map:
-                continue
-            observed_flags = read_id_to_flags_map[read_id]
-            if flags not in observed_flags:
-                output_fh.write(sam_line)
-                # Update flags in case we encounter same one again.
-                observed_flags.append(flags)
+    # Write reads in input to output if not in bad_quality_names
+    output_af = pysam.AlignmentFile(output_bam_path, "wb",
+            template=input_af)
+    input_af.reset()
+    for read in input_af:
+        if not bad_quality_qnames.get(read.qname, False):
+            output_af.write(read)
+    output_af.close()
+    input_af.close()
 
 
 def run_velvet(reads, output_dir, opt_dict=None):
@@ -306,3 +393,91 @@ def run_velvet(reads, output_dir, opt_dict=None):
             ['-' + key + ' ' + str(opt_dict['velvetg'][key])
              for key in opt_dict['velvetg']])
     subprocess.check_call(cmd, shell=True, executable=BASH_PATH)
+
+
+def create_de_novo_variants_set(alignment_group, variant_set_label):
+
+    ref_genome = alignment_group.reference_genome
+
+    # Get de novo variants
+    de_novo_variants = []
+    for variant in Variant.objects.filter(
+            reference_genome=ref_genome):
+        for vccd in variant.variantcallercommondata_set.all():
+            if 'INFO_contig_uid' in vccd.data:
+                de_novo_variants.append(variant)
+                continue
+
+    variant_set = VariantSet.objects.create(
+            reference_genome=ref_genome,
+            label='de_novo_variants')
+
+
+    update_variant_in_set_memberships(
+        ref_genome,
+        [variant.uid for variant in de_novo_variants],
+        'add',
+        variant_set.uid)
+
+    return variant_set
+
+
+def get_coverage_stats(bam_path):
+    """Returns a dictionary with chromosome seqrecord_ids as keys and
+    subdictionaries as values.
+
+    Each subdictionary has three keys: length, mean, and std which hold the
+    particular chromosome's length, mean read coverage, and standard
+    deviation of read coverage
+    """
+    alignment_af = pysam.AlignmentFile(bam_path)
+    chrom_list = alignment_af.references
+    chrom_lens = alignment_af.lengths
+
+    c_starts = [0]*len(chrom_list)
+    c_ends = chrom_lens
+
+    chrom_cov_lists = []
+    for chrom, c_start, c_end in zip(chrom_list, c_starts, c_ends):
+
+        chrom_cov_lists.append([])
+        cov_list = chrom_cov_lists[-1]
+        for pileup_col in alignment_af.pileup(chrom,
+                start=c_start, end=c_end, truncate=True):
+
+            depth = pileup_col.nsegments
+            cov_list.append(depth)
+    alignment_af.close()
+
+    sub_dict_tup_list = zip(
+            chrom_lens,
+            map(np.mean, chrom_cov_lists),
+            map(np.std, chrom_cov_lists))
+
+    sub_dict_list = map(
+            lambda tup: dict(zip(['length', 'mean', 'std'], tup)),
+            sub_dict_tup_list)
+
+    chrom_cov_dict = dict(zip(chrom_list, sub_dict_list))
+
+    return chrom_cov_dict
+
+
+def get_avg_genome_coverage(bam_path):
+    """Returns a float which is the average genome coverage, calculated as
+    the average length-weighted read coverage over all chromosomes
+    """
+
+    coverage_stats = get_coverage_stats(bam_path)
+
+    len_weighted_coverage = 0
+    total_len = 0
+
+    for sub_dict in coverage_stats.values():
+        length = sub_dict['length']
+        avg_coverage = sub_dict['mean']
+
+        len_weighted_coverage += length * avg_coverage
+        total_len += length
+
+    return float(len_weighted_coverage) / total_len

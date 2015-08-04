@@ -413,7 +413,7 @@ CL__MIN_DEPTH = 4
 CL__MIN_LOWMAPQ_DEPTH = 8
 
 # minimum read fraction that has low map quality for call
-CL__MAX_LOWMAP_FRAC = 0.3
+CL__MAX_LOWMAP_FRAC = 0.5
 
 # Distance between adjacent features, below which to merge them
 CL__MERGE_DIST = 25

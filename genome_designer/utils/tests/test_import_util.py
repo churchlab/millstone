@@ -381,10 +381,10 @@ class TestImportVariantSetFromVCFFile(TestCase):
         # Test models.
         user = User.objects.create_user(TEST_USERNAME, password=TEST_PASSWORD,
                 email=TEST_EMAIL)
-        self.test_project = Project.objects.create(owner=user.get_profile(),
+        test_project = Project.objects.create(owner=user.get_profile(),
                 title='Test Project')
         self.ref_genome = ReferenceGenome.objects.create(
-                project=self.test_project,
+                project=test_project,
                 label='refgenome')
         Chromosome.objects.create(
             reference_genome=self.ref_genome,
@@ -448,10 +448,8 @@ class TestImportVariantSetFromVCFFile(TestCase):
                 reference_genome=self.ref_genome,
                 label=variant_set_name)
 
-        # Verify a variant alternate got data dictionary populated
-        a_variant = variant_set.variants.all()[0]
-        a_variant_alternate = a_variant.variantalternate_set.all()[0]
-        self.assertTrue(a_variant_alternate.data)
+        # Verify that variants were created
+        self.assertTrue(variant_set.variants.all())
 
 
 class TestFastQC(TestCase):
