@@ -113,14 +113,6 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/ia8z8ib0fxnsaft/samblaster'
         ]
     },
-    'seqan': {
-        'Linux': [
-            'https://www.dropbox.com/s/4vel0v42cmh5nqk/place_contig'
-        ],
-        'Darwin': [
-            'https://www.dropbox.com/s/5q49fy7w1j5u4bg/place_contig'
-        ]
-    },
     'velvet': {
         'Darwin': [
             'https://www.dropbox.com/s/ff3g2j46tr8rf2w/velvet-darwin.zip'
@@ -139,8 +131,7 @@ TOOLS_TO_EXECUTABLES = {
     'pindel': ['pindel', 'pindel2vcf'],
     'tabix': ['tabix', 'bgzip'],
     'freebayes': ['freebayes', 'vcfstreamsort', 'vcfuniq'],
-    'velvet': ['velvetg', 'velveth'],
-    'seqan': ['place_contig']
+    'velvet': ['velvetg', 'velveth']
 }
 
 

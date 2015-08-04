@@ -1,0 +1,24 @@
+{% extends "tab_base.html" %}
+
+{% block content%}
+  <div class="gd-header h1">
+    Contig: {{contig.label}}
+  </div>
+
+  <a href="#" id="gd-contig-download-fasta">Download FASTA</a><br>
+
+  <form id="gd-download-form" action="/_/contigs/download"
+  method="GET">
+  <!-- NOTE: Populated dynamically in js. -->
+  </form>
+
+  <script type="text/javascript">
+    VIEW_TAG = 'CONTIG';
+    var contig_uid = "{{contig.uid}}";
+
+    {% autoescape off %}
+        INIT_JS_DATA = {{init_js_data}};    
+    {% endautoescape %}
+
+  </script>
+{% endblock %}

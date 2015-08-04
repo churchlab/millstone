@@ -12,7 +12,7 @@ from utils.samtools_utils import run_mpileup
 
 
 def analyze_coverage(sample_alignment, output_dir, coverage_only=True):
-    ref_genome_fasta_location = get_dataset_with_type(
+    input_ref_genome_fasta_location = get_dataset_with_type(
             sample_alignment.alignment_group.reference_genome,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 

@@ -31,13 +31,6 @@ gd.ContigControlsComponent = gd.DataTableControlsComponent.extend({
     this.addDropdownOption(findInsertionLocationOptionHtml);
     $('.gd-id-contigs-find-insertion-location').click(_.bind(
         this.handleFindInsertionLocation, this));
-
-    // Option to place contig.
-    var placeInRefOptionHtml = ('<a href="#" class="gd-id-contigs-place' +
-        '-in-ref">Make New Reference with Contig Incorported</a>');
-    this.addDropdownOption(placeInRefOptionHtml);
-    $('.gd-id-contigs-place-in-ref').click(_.bind(
-        this.handlePlaceInRef, this));
   },
 
   /** Send request to generate contigs with default parameters **/
@@ -128,70 +121,6 @@ gd.ContigControlsComponent = gd.DataTableControlsComponent.extend({
     }
     
     this.trigger('MODELS_UPDATED');
-  },
-
-  handlePlaceInRef: function() {
-
-    var contigUidList = this.datatableComponent.getCheckedRowUids();
-
-    // If nothing to do, show message.
-    if (!contigUidList.length) {
-      alert('Please select a contig to incorporate');
-      return;
-    }
-
-    // If multiple selected, show message
-    if (contigUidList.length > 1) {
-      alert('Please select only one contig to incorporate');
-      return;
-    }
-
-    var getData = {
-        contigUidList: contigUidList
-    };
-
-    $.get('/_/contigs/has_insertion_location', {data:JSON.stringify(getData)},
-        _.bind(function(response){
-          var hasInsertionEndpoints = response.has_insertion_location;
-          if (!hasInsertionEndpoints) {
-            alert('The contig you selected does not yet have ' +
-                'insertion location data associated.  Before incorporating ' +
-                'it in a new genome, please find insertion location data ' +
-                'for it by selecting "Find Insertion Location" from the ' +
-                'dropdown')
-            return;
-          }
-          this.handlePlaceInRefLabelPrompt();
-        }, this))
-  },
-
-  handlePlaceInRefLabelPrompt: function() {
-    // Get new genome name
-    var newGenomeLabel = prompt(
-        'Enter a name for the new genome:', 'new_genome_name');
-    while (newGenomeLabel == '') {
-      var newGenomeLabel = prompt(
-          'Please enter a non-zero length name for the new genome',
-          'new_genome_name');
-    }
-    if (newGenomeLabel == null) {
-      return;
-    }
-
-    this.enterLoadingState();
-
-    var contigUidList = this.datatableComponent.getCheckedRowUids();
-    var postData = {
-        'newGenomeLabel': newGenomeLabel,
-        'contigUidList': contigUidList,
-    };
-
-    $.post('/_/contigs/place_in_ref', JSON.stringify(postData),
-        _.bind(this.handlePlaceInRefResponse, this));
-  },
-
-  handlePlaceInRefResponse: function(response) {
-    this.exitLoadingState();
   },
 
   /** Sends request to delete selected contigs. */
