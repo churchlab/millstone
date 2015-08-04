@@ -238,7 +238,13 @@ def extract_contig_reads(contig, read_category='all'):
     sort_bam_by_coordinate(extracted_reads_bam_file, coordinate_sorted_bam)
     index_bam(coordinate_sorted_bam)
 
-    # Add the bam file to contig as BWA_SV_INDICANTS dataset
+    # Add the bam file to contig as BWA_SV_INDICANTS dataset, overwriting it
+    # if it already exists
+    dataset_query = contig.dataset_set.filter(
+            type=Dataset.TYPE.BWA_SV_INDICANTS)
+    if dataset_query.count():
+        dataset_query[0].delete()
+
     add_dataset_to_entity(contig,
             Dataset.TYPE.BWA_SV_INDICANTS,
             Dataset.TYPE.BWA_SV_INDICANTS,

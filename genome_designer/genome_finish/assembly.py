@@ -39,6 +39,10 @@ VELVET_COVERAGE_CUTOFF = 30
 VELVET_HASH_LENGTH = 21
 VELVET_MIN_CONTIG_LENGTH = 200
 
+# EXPERIMENTALLY BEST COVERAGE RATIOS
+VELVET_CONTIG_COVERAGE_EXPECTED = 0.8
+VELVET_CONTIG_COVERAGE_CUTOFF = 0.1
+
 DEFAULT_VELVET_OPTS = {
     'velveth': {
         'hash_length': VELVET_HASH_LENGTH
@@ -102,19 +106,20 @@ def generate_contigs(sample_alignment,
     velvet_opts['velvetg']['ins_length'] = ins_length
     velvet_opts['velvetg']['ins_length_sd'] = ins_length_sd
 
-    # Find expected kmer coverage
+    # Find expected coverage
     alignment_dataset = sample_alignment.dataset_set.get(
             type=Dataset.TYPE.BWA_ALIGN)
     avg_read_coverage = get_avg_genome_coverage(
             alignment_dataset.get_absolute_location())
 
-    ideal_cov = kmer_coverage(avg_read_coverage, ins_length,
+    # Calculate expected coverage in kmers
+    genome_kmer_coverage = kmer_coverage(avg_read_coverage, ins_length,
             velvet_opts['velveth']['hash_length'])
-    exp_cov = 0.75 * ideal_cov
+    exp_cov = genome_kmer_coverage * VELVET_CONTIG_COVERAGE_EXPECTED
     velvet_opts['velvetg']['exp_cov'] = exp_cov
 
-    # Set cov cutoff to half expected
-    cov_cutoff = ideal_cov / 2
+    # # Set cov cutoff
+    cov_cutoff = genome_kmer_coverage * VELVET_CONTIG_COVERAGE_CUTOFF
     velvet_opts['velvetg']['cov_cutoff'] = cov_cutoff
 
     # Update velvet_opts with input_velvet_opts
@@ -311,11 +316,11 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
         subprocess.check_call(cmd, shell=True, executable=settings.BASH_PATH,
                 stderr=error_output_fh)
 
-    ins_length = velvet_opts['velvetg']['ins_length']
-    exp_cov = velvet_opts['velvetg']['exp_cov']
-    ins_length_sd = velvet_opts['velvetg']['ins_length_sd']
-    cov_cutoff = velvet_opts['velvetg']['cov_cutoff']
-    min_contig_lgth = velvet_opts['velvetg']['min_contig_lgth']
+    ins_length = velvet_opts['velvetg'].get('ins_length', None)
+    exp_cov = velvet_opts['velvetg'].get('exp_cov', None)
+    ins_length_sd = velvet_opts['velvetg'].get('ins_length_sd', None)
+    cov_cutoff = velvet_opts['velvetg'].get('cov_cutoff', None)
+    min_contig_lgth = velvet_opts['velvetg'].get('min_contig_lgth', None)
 
     arg_list = [
             VELVETG_BINARY,
@@ -324,7 +329,7 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
             '-exp_cov', str(exp_cov),
             '-ins_length_sd', str(ins_length_sd),
             '-cov_cutoff', str(cov_cutoff),
-            '-max_coverage', str(3 * exp_cov),
+            # '-max_coverage', str(3 * exp_cov),
             '-min_contig_lgth', str(min_contig_lgth),
             '-read_trkg', 'yes']
 
