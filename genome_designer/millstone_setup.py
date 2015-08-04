@@ -131,7 +131,7 @@ TOOLS_TO_EXECUTABLES = {
     'pindel': ['pindel', 'pindel2vcf'],
     'tabix': ['tabix', 'bgzip'],
     'freebayes': ['freebayes', 'vcfstreamsort', 'vcfuniq'],
-    'velvet': ['velvetg', 'velveth']
+    'velvet': ['velvetg', 'velveth', 'extractContigReads.pl']
 }
 
 

@@ -149,7 +149,7 @@ def extract_contig_reads(contig, read_category='all'):
 
     extract_contig_reads_executable = os.path.join(
             settings.TOOLS_DIR,
-            'velvet/contrib/extractContigReads/extractContigReads.pl')
+            'velvet/extractContigReads.pl')
 
     assembly_dir = contig.metadata['assembly_dir']
 
