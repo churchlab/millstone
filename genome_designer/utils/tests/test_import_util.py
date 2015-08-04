@@ -448,10 +448,8 @@ class TestImportVariantSetFromVCFFile(TestCase):
                 reference_genome=self.ref_genome,
                 label=variant_set_name)
 
-        # Verify a variant alternate got data dictionary populated
-        a_variant = variant_set.variants.all()[0]
-        a_variant_alternate = a_variant.variantalternate_set.all()[0]
-        self.assertTrue(a_variant_alternate.data)
+        # Verify that variants were created
+        self.assertTrue(variant_set.variants.all())
 
 
 class TestFastQC(TestCase):
