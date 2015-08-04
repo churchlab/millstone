@@ -18,6 +18,7 @@ from Bio import SeqIO
 from celery import task
 from django.conf import settings
 from django.db import transaction
+import vcf
 
 from main.celery_util import assert_celery_running
 from main.exceptions import ValidationException
@@ -37,6 +38,7 @@ from utils import uppercase_underscore
 from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from utils.jbrowse_util import add_genbank_file_track
 from variants.vcf_parser import get_or_create_variant
+from variants.vcf_parser import update_filter_key_map
 
 
 IMPORT_FORMAT_TO_DATASET_TYPE = {
@@ -895,12 +897,62 @@ def import_variant_set_from_vcf(ref_genome, variant_set_name, variant_set_file):
     dataset = copy_and_add_dataset_source(variant_set, dataset_type,
             dataset_type, variant_set_file)
 
-    # Now read the variant set file.
-    _read_variant_set_file_as_csv(variant_set_file, ref_genome, dataset,
-            variant_set)
+    # Now try read the variant set file using PyVCF. If this throws
+    # an error, for example because the vcf comes from our 'upload from file'
+    # interface which does not make INFO or FORMAT columns, use the more
+    # forgiving _read_variant_file_as_csv.
+    # Perhaps rethink the 'upload from file' interface to generate
+    # Null values for these columns
+    # _read_variant_set_file(variant_set_file, ref_genome, dataset,
+    #             variant_set)
+    try:
+        _read_variant_set_file(variant_set_file, ref_genome, dataset,
+                variant_set)
+    except Exception:
+        _read_variant_set_file_as_csv(variant_set_file, ref_genome, dataset,
+                variant_set)
 
     # These actions invalidate the materialized view.
     ref_genome.invalidate_materialized_view()
+
+
+def _read_variant_set_file(variant_set_file, ref_genome, dataset,
+        variant_set):
+
+    # First count the number of records to give helpful status debug output.
+    record_count = 0
+    with open(variant_set_file) as fh:
+        vcf_reader = vcf.Reader(fh)
+        for record in vcf_reader:
+            record_count += 1
+
+    # Now iterate through the vcf file again and parse the data.
+    # NOTE: Do not save handles to the Variants, else suffer the wrath of a
+    # memory leak when parsing a large vcf file.
+    with open(variant_set_file) as fh:
+        vcf_reader = vcf.Reader(fh)
+
+        # First, update the reference_genome's key list with any new
+        # keys from this VCF.
+        reference_genome = ReferenceGenome.objects.get(id=ref_genome.id)
+        # Update the reference genome and grab it from the db again.
+        update_filter_key_map(reference_genome, vcf_reader)
+
+        for record_idx, record in enumerate(vcf_reader):
+            print 'vcf_parser: Parsing %d out of %d' % (
+                    record_idx + 1, record_count)
+
+            # Get or create the Variant for this record. This step
+            # also generates the alternate objects and assigns their
+            # data fields as well.
+            variant, alt_list = get_or_create_variant(reference_genome,
+                    record, dataset)
+
+            # Create a link between the Variant and the VariantSet if
+            # it doesn't exist.
+            VariantToVariantSet.objects.get_or_create(
+                    variant=variant,
+                    variant_set=variant_set)
 
 
 def _read_variant_set_file_as_csv(variant_set_file, reference_genome,
