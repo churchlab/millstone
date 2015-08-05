@@ -11,6 +11,10 @@ import re
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
+from main.model_utils import get_dataset_with_type
+from main.models import Contig
+from main.models import Dataset
+from main.models import Variant
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
@@ -130,12 +134,34 @@ def create_variant_links_field(variant_as_dict, reference_genome,
         else:
             es_list = [es for es in es_field if es is not None]
 
+    # Find variant-specific bam tracks
+    variant = Variant.objects.get(uid=variant_as_dict['UID'])
+    variant_bam_track_labels = []
+    variant_coverage_track_labels = []
+    vccd_list = variant.variantcallercommondata_set.all()
+
+    for vccd in vccd_list:
+        # See if the variant is associated with a contig
+        contig_uid_list = vccd.data.get('INFO_contig_uid', False)
+        if contig_uid_list:
+            contig = Contig.objects.get(uid=contig_uid_list[0])
+            bam_dataset = get_dataset_with_type(
+                    contig,
+                    Dataset.TYPE.BWA_SV_INDICANTS)
+            variant_bam_track_labels.append(
+                    bam_dataset.internal_string(contig))
+            variant_coverage_track_labels.append(
+                    bam_dataset.internal_string(contig) + '_COVERAGE')
+
     # BAM JBROWSE
     jbrowse_bam_tracks = list(chain.from_iterable([
             jbrowse_track_names['vcf'] +
             [es + s for s in jbrowse_track_names['bam']] +
             [es + s for s in jbrowse_track_names['callable_loci_bed']]
                     for es in es_list]))
+
+    # Add variant-specific bam tracks
+    jbrowse_bam_tracks.extend(list(set(variant_bam_track_labels)))
 
     jbrowse_bam_href = create_jbrowse_link_for_variant_object(
             variant_as_dict, reference_genome, jbrowse_bam_tracks)
@@ -146,6 +172,9 @@ def create_variant_links_field(variant_as_dict, reference_genome,
             [es + s for s in jbrowse_track_names['bam_coverage']] +
             [es + s for s in jbrowse_track_names['callable_loci_bed']]
                     for es in es_list]))
+
+    # Add variant-specific coverage tracks
+    jbrowse_bam_tracks.extend(list(set(variant_coverage_track_labels)))
 
     jbrowse_bam_coverage_href = create_jbrowse_link_for_variant_object(
             variant_as_dict, reference_genome, jbrowse_bam_coverage_tracks)
