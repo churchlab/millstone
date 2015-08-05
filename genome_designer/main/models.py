@@ -1249,6 +1249,9 @@ class Variant(UniqueUidModelMixin):
 
     ref_value = models.TextField('Ref')
 
+    # User specified data fields corresponding to the variant
+    data = PostgresJsonField()
+
     def __init__(self, *args, **kwargs): 
         """If we are passed an alt_value field, we need to get_or_create
         VariantAlternate objects corresponding to them, and link them  up to
@@ -1297,6 +1300,12 @@ class Variant(UniqueUidModelMixin):
         """ Return a base string for each alternate for this variant. """
 
         return [alt.alt_value for alt in self.variantalternate_set.all()]
+
+    @property
+    def variant_specific_tracks(self):
+        return self.data.get(
+                'variant_specific_tracks',
+                {'alignment': [], 'coverage': []})
 
     @property
     def jbrowse_link(self):
