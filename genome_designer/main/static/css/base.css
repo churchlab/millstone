@@ -164,7 +164,7 @@ input.gd-form-tall {
 
 /* TODO: make this stretch properly - doesn't seem easy;*/
 #gd-new-filter-input {
-  width: 300px;
+  width: 250px;
 }
 
 /* nav-pills bottom margin for the inside of modals */
