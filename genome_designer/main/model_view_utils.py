@@ -11,6 +11,7 @@ import re
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
+from main.models import Variant
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
@@ -130,9 +131,13 @@ def create_variant_links_field(variant_as_dict, reference_genome,
         else:
             es_list = [es for es in es_field if es is not None]
 
+    variant = Variant.objects.get(uid=variant_as_dict['UID'])
+    variant_specific_tracks = variant.variant_specific_tracks
+
     # BAM JBROWSE
     jbrowse_bam_tracks = list(chain.from_iterable([
             jbrowse_track_names['vcf'] +
+            variant_specific_tracks['alignment'] +
             [es + s for s in jbrowse_track_names['bam']] +
             [es + s for s in jbrowse_track_names['callable_loci_bed']]
                     for es in es_list]))
@@ -143,6 +148,7 @@ def create_variant_links_field(variant_as_dict, reference_genome,
     # BAM COVERAGE JBROWSE
     jbrowse_bam_coverage_tracks = list(chain.from_iterable([
             jbrowse_track_names['vcf'] +
+            variant_specific_tracks['coverage'] +
             [es + s for s in jbrowse_track_names['bam_coverage']] +
             [es + s for s in jbrowse_track_names['callable_loci_bed']]
                     for es in es_list]))

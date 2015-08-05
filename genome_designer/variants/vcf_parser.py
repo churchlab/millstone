@@ -82,6 +82,7 @@ def parse_vcf(vcf_dataset, alignment_group):
     # Now iterate through the vcf file again and parse the data.
     # NOTE: Do not save handles to the Variants, else suffer the wrath of a
     # memory leak when parsing a large vcf file.
+    variant_list = []
     with open(vcf_dataset.get_absolute_location()) as fh:
         vcf_reader = vcf.Reader(fh)
 
@@ -116,8 +117,9 @@ def parse_vcf(vcf_dataset, alignment_group):
             # Get or create the Variant for this record. This step
             # also generates the alternate objects and assigns their
             # data fields as well.
-            get_or_create_variant(reference_genome,
+            variant, _ = get_or_create_variant(reference_genome,
                     record, vcf_dataset, alignment_group, query_cache)
+            variant_list.append(variant)
 
             # For large VCFs, the cached SQL object references can exhaust memory
             # so we explicitly clear them here. Our efficiency doesn't really suffer.
@@ -129,6 +131,8 @@ def parse_vcf(vcf_dataset, alignment_group):
 
     # Force invalidate materialized view here.
     reference_genome.invalidate_materialized_view()
+
+    return variant_list
 
 
 def extract_raw_data_dict(vcf_record):

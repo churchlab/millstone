@@ -37,6 +37,16 @@ def get_insertion_placement_positions(contig, strategy='all_reads'):
             return {'error_string':
                     'No clipped reads were assembled into the contig'}
 
+    contig_reads_dataset_exists = bool(
+            contig.dataset_set.filter(
+                    type=Dataset.TYPE.BWA_SV_INDICANTS).count())
+
+    if strategy == 'all_reads' and not contig_reads_dataset_exists:
+        make_contig_reads_dataset(contig, contig_reads)
+
+        # Add bam track
+        add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
+
     extracted_clipped_read_dicts = extract_left_and_right_clipped_read_dicts(
             contig_reads)
     left_clipped = extracted_clipped_read_dicts['left_clipped']
@@ -218,17 +228,25 @@ def extract_contig_reads(contig, read_category='all'):
         contig.metadata['chromosome'] = contig_seqrecord_id
         contig.save()
 
+    sam_file.close()
+    return sv_indicant_reads_in_contig
+
+
+def make_contig_reads_dataset(contig, sv_indicant_reads_in_contig):
 
     # Get bam filename
     extracted_reads_bam_file = os.path.join(
             contig.get_model_data_dir(),
-            'sv_indicants_' + read_category + '.bam')
+            'sv_indicants.bam')
+
+    bwa_align_bam = contig.experiment_sample_to_alignment.dataset_set.get(
+            type=Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+    sam_file = pysam.AlignmentFile(bwa_align_bam)
 
     # Write extracted reads into bam file
     extracted_reads_alignment_file = pysam.AlignmentFile(
             extracted_reads_bam_file, "wb", template=sam_file)
     sam_file.close()
-
 
     for read in sv_indicant_reads_in_contig:
         extracted_reads_alignment_file.write(read)
@@ -251,11 +269,6 @@ def extract_contig_reads(contig, read_category='all'):
             Dataset.TYPE.BWA_SV_INDICANTS,
             Dataset.TYPE.BWA_SV_INDICANTS,
             filesystem_location=coordinate_sorted_bam)
-
-    # Add bam track
-    add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
-
-    return sv_indicant_reads_in_contig
 
 
 def extract_left_and_right_clipped_read_dicts(sv_indicant_reads_in_contig,
