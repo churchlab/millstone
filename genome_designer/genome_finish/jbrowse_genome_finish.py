@@ -1,10 +1,86 @@
+from collections import defaultdict
 import os
+import re
 
 from settings import JBROWSE_DATA_URL_ROOT
 from settings import S3_BUCKET
 
 from main.model_utils import get_dataset_with_type
+from main.models import Dataset
+
 from utils.jbrowse_util import write_tracklist_json
+
+
+def align_contig_reads_to_contig(contig):
+
+    # Get reads
+    contig_reads_fasta = os.path.join(
+            contig.get_model_data_dir(),
+            'extracted_reads.fa')
+
+    p1 = re.compile('>(\S+)/(\d)')
+    contig_reads = defaultdict(list)
+    with open(contig_reads_fasta) as fh:
+        for line in fh:
+            m1 = p1.match(line)
+            if m1:
+                read_id = m1.group(1)
+                read_number = int(m1.group(2))
+                contig_reads[read_id].append(read_number)
+
+    sample = contig.experiment_sample_to_alignment.experiment_sample
+    source_fq1 = sample.dataset_set.get(
+            Dataset.TYPE.FASTQ1).get_absolute_location()
+    source_fq2 = sample.dataset_set.get(
+            Dataset.TYPE.FASTQ2).get_absolute_location()
+
+    output_fq1 = os.path.join(
+            contig.get_model_data_dir(),
+            'reads.1.fq')
+    output_fq2 = os.path.join(
+            contig.get_model_data_dir(),
+            'reads.2.fq')
+
+    # Go through fastqs and write reads in ROI to file
+    p1 = re.compile('@(\S+)')
+    for input_fq_path, output_fq_path in [
+            (source_fq1, output_fq1), (source_fq2, output_fq2)]:
+        counter = 0
+        if desired_coverage:
+            iterator = iter(include_read)
+        with open(input_fq_path, 'r') as in_fh, open(output_fq_path, 'w') as out_fh:
+            for line in in_fh:
+                m1 = p1.match(line)
+                if m1:
+                    qname = m1.group(1)
+                    if qname in qnames_in_region:
+                        if desired_coverage:
+                            if iterator.next():
+                                out_fh.write(line)
+                                out_fh.write(in_fh.next())
+                                out_fh.write(in_fh.next())
+                                out_fh.write(in_fh.next())
+                        else:
+                            out_fh.write(line)
+                            out_fh.write(in_fh.next())
+                            out_fh.write(in_fh.next())
+                            out_fh.write(in_fh.next())
+
+def write_bam_to_fastqs(reads, fastq_path):
+    """Writes the aligned portion of each read into a fastq
+    """
+
+    query_alignment_seqrecords = []
+    for read in reads:
+        query_alignment_seqrecords.append(SeqRecord(
+                Seq(read.query_alignment_sequence, IUPAC.ambiguous_dna),
+                letter_annotations={
+                        'phred_quality': read.query_alignment_qualities},
+                id=read.query_name,
+                description=''))
+
+    with open(fastq_path, 'w') as fastq_handle:
+        SeqIO.write(query_alignment_seqrecords, fastq_handle, 'fastq')
 
 
 def add_contig_reads_bam_track(contig, alignment_type):

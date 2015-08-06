@@ -267,7 +267,8 @@ def contig_view(request, project_uid, contig_uid):
         'project': project,
         'tab_root': TAB_ROOT__DATA,
         'contig': contig,
-        'init_js_data': init_js_data
+        'jbrowse_link': contig.get_client_jbrowse_link(),
+        'init_js_data': init_js_data,
     }
     return render(request, 'contig.html', context)
 
@@ -660,14 +661,26 @@ def compile_jbrowse_and_redirect(request):
     regexp_str = (r'/jbrowse/gd_data/projects/(?P<project_uid>\w+)' +
             r'/ref_genomes/(?P<ref_genome_uid>\w+)/jbrowse')
     uid_match = re.match(regexp_str, data_string)
-    assert uid_match, "Incorrect URL passed in data key to redirect_jbrowse"
 
-    reference_genome = get_object_or_404(ReferenceGenome,
-        project__owner=request.user.get_profile(),
-        uid=uid_match.group('ref_genome_uid'))
+    regexp_str = (r'/jbrowse/gd_data/projects/(?P<project_uid>\w+)' +
+            r'/contigs/(?P<contig_uid>\w+)/jbrowse')
+    contig_uid_match = re.match(regexp_str, data_string)
 
-    # Recompile the tracklist from components and symlink subdirs
-    compile_tracklist_json(reference_genome)
+    assert (uid_match or contig_uid_match,
+            "Incorrect URL passed in data key to redirect_jbrowse")
+
+    if uid_match:
+        reference_genome = get_object_or_404(ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=uid_match.group('ref_genome_uid'))
+        # Recompile the tracklist from components and symlink subdirs
+        compile_tracklist_json(reference_genome)
+    else:
+        contig = get_object_or_404(Contig,
+            parent_reference_genome__project__owner=request.user.get_profile(),
+            uid=contig_uid_match.group('contig_uid'))
+        # Recompile the tracklist from components and symlink subdirs
+        compile_tracklist_json(contig)
 
     # Finally, pass the GET along to the jbrowse static page.
     get_values = urllib.urlencode(request.GET).replace('+', '%20')

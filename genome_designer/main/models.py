@@ -716,6 +716,37 @@ class Contig(UniqueUidModelMixin):
         # Check whether the data dir exists, and create it if not.
         return ensure_exists_0775_dir(self.get_model_data_dir())
 
+    def get_jbrowse_directory_path(self):
+        """Returns the full path to the root of JBrowse data for this
+        Contig.
+        """
+        return os.path.join(self.get_model_data_dir(), 'jbrowse')
+
+    def ensure_jbrowse_dir(self):
+        """Ensures that the jbrowse data dir exists."""
+        return ensure_exists_0775_dir(self.get_jbrowse_directory_path())
+
+    def get_client_jbrowse_data_path(self):
+        if self.parent_reference_genome.project.is_s3_backed():
+            assert False, "url is incorrect."
+        else:
+            return os.path.join(
+                    '/jbrowse/gd_data/',
+                    'projects',
+                    str(self.parent_reference_genome.project.uid),
+                    'contigs',
+                    str(self.uid),
+                    'jbrowse')
+
+    def get_client_jbrowse_link(self):
+        """Returns the link to jbrowse redirect for this Contig.
+
+        Example url for user with uid 'abc', and project id 'xyz', and
+        refgenome id 456:
+            '/redirect_jbrowse?data=gd_data/abc/projects/xyz/contigs/456/jbrowse/'
+        """
+        return '/redirect_jbrowse?data=' + self.get_client_jbrowse_data_path()
+
     @property
     def href(self):
         """Link to url view for this model.
