@@ -171,9 +171,6 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
             cassette_sequence = str(contig_seqrecord.seq[
                     contig_left:contig_right])
 
-        # import ipdb
-        # ipdb.set_trace()
-
         if contig_left > contig_right:
             continue
 
