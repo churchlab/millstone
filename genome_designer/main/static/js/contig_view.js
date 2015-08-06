@@ -13,9 +13,11 @@ gd.ContigView = Backbone.View.extend({
   render: function() {
     $('#gd-contig-download-fasta').click(
         _.bind(this.handleDownload, this));
+    $('#gd-contig-jbrowse').click(
+        _.bind(this.handleJbrowse, this));
   },
 
-  /** Starts a download of the reference genome in the file format passed. */
+  /** Starts a download of the contig. */
   handleDownload: function() {
     var formJqueryObj = $('#gd-download-form');
 
@@ -30,12 +32,43 @@ gd.ContigView = Backbone.View.extend({
     formJqueryObj.submit();
   },
 
+   /** Makes jbrowse tracks for contig and redirects to jbrowse. */
+  handleJbrowse: function() {
+
+    var getData = {
+        contigUid: INIT_JS_DATA.entity.uid
+    };
+
+    this.enterLoadingState();
+
+    $.get('/_/contigs/make_contig_jbrowse_tracks', getData,
+          _.bind(function(response) {
+              this.exitLoadingState();
+              window.location.href = JBROWSE_LINK;}, this))
+  },
+
   /** Helper method to append input value to form. */
   _appendInputFieldToForm: function(formJqueryObj, name, value) {
     formJqueryObj.append(_.template(
         '<input type="hidden" name="<%= name %>" value="<%= value %>">',
         {name: name, value: value}
     ));
+  },
+
+   /** Puts UI in the loading state. */
+  enterLoadingState: function() {
+    $(".gd-id-form-submit-button")
+        .prop('disabled', true);
+
+    this.loadingSpinner = new gd.Spinner();
+    this.loadingSpinner.spin();
+  },
+
+  /** Puts UI in the loading state. */
+  exitLoadingState: function() {
+    $(".gd-id-form-submit-button")
+        .prop('disabled', false);
+    this.loadingSpinner.stop();
   },
 
 });

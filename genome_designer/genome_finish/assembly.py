@@ -425,9 +425,6 @@ def evaluate_contigs(contig_list):
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
             vcf_path)
 
-    # import ipdb
-    # ipdb.set_trace()
-
     # Make variants from vcf
     variant_list = parse_vcf(vcf_dataset, ag)
 

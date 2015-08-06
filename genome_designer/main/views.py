@@ -677,7 +677,8 @@ def compile_jbrowse_and_redirect(request):
         compile_tracklist_json(reference_genome)
     else:
         contig = get_object_or_404(Contig,
-            parent_reference_genome__project__owner=request.user.get_profile(),
+            parent_reference_genome__project__owner=(
+                    request.user.get_profile()),
             uid=contig_uid_match.group('contig_uid'))
         # Recompile the tracklist from components and symlink subdirs
         compile_tracklist_json(contig)

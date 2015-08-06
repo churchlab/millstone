@@ -111,7 +111,7 @@ def simple_align_paired_with_bwa_mem(reads_fq, reference_fasta,
             ]),
             shell=True, executable=settings.BASH_PATH)
 
-    # Align clipped query alignment fastq to contig
+    # Align the fastqs to the reference
     align_input_args = ' '.join([
             '%s/bwa/bwa' % settings.TOOLS_DIR,
             'mem',
@@ -133,14 +133,11 @@ def simple_align_paired_with_bwa_mem(reads_fq, reference_fasta,
 
 def add_contig_reads_to_contig_bam_track(contig, alignment_type):
     """Update the JBrowse track config file, trackList.json, for this
-    ReferenceGenome with a track for the given sample_alignment and
-    alignment_type.
+    Contig with a track for the alignment of its reads to itself
     """
-    # Get the bam file location from the the Dataset of the genome
+    # Get the bam file location from the the Dataset of the contig
     # keyed by the alignment_type.
     bam_dataset = get_dataset_with_type(contig, alignment_type)
-
-    # assert bam_dataset.is_indexed()
 
     # Figure out the url that JBrowse would use to show the data, e.g.:
     #     /jbrowse/gd_data/projects/58a62c7d/genomes/8dc829ec/align.bam
@@ -156,7 +153,6 @@ def add_contig_reads_to_contig_bam_track(contig, alignment_type):
         urlTemplate = os.path.join(JBROWSE_DATA_URL_ROOT,
             bam_dataset.filesystem_location)
 
-    # doing label as ES_AG because SA isn't currently used in the variant view
     label = bam_dataset.internal_string(
             contig)
 

@@ -49,6 +49,8 @@ from main.models import VariantSet
 from main.models import S3File
 from genome_finish import assembly
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
+from genome_finish.jbrowse_genome_finish import align_contig_reads_to_contig
+from genome_finish.jbrowse_genome_finish import add_contig_reads_to_contig_bam_track
 from utils.combine_reference_genomes import combine_list_allformats
 from utils.data_export_util import export_melted_variant_view
 from utils.data_export_util import export_project_as_zip
@@ -59,6 +61,7 @@ from utils.import_util import import_reference_genome_from_ncbi
 from utils.import_util import import_samples_from_targets_file
 from utils.import_util import import_variant_set_from_vcf
 from utils.import_util import run_fastqc_on_sample_fastq
+from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from utils.optmage_util import ReplicationOriginParams
 from utils.optmage_util import print_mage_oligos
 from utils.reference_genome_maker_util import generate_new_reference_genome
@@ -255,6 +258,24 @@ def ref_genomes_download(request):
     response['Content-Length'] = os.path.getsize(file_path)
 
     return response
+
+
+@login_required
+@require_GET
+def make_contig_jbrowse_tracks(request):
+    """Downloads fasta file of contig sequence
+    """
+    contig = get_object_or_404(
+            Contig, uid=request.GET['contigUid'])
+
+    if not contig.dataset_set.filter(
+            type=Dataset.TYPE.BWA_ALIGN).exists():
+        prepare_jbrowse_ref_sequence(contig)
+        align_contig_reads_to_contig(contig)
+        add_contig_reads_to_contig_bam_track(contig, Dataset.TYPE.BWA_ALIGN)
+
+    # Return success response.
+    return HttpResponse(json.dumps({}), content_type='application/json')
 
 
 @login_required
