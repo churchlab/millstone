@@ -12,18 +12,18 @@ from main.models import AlignmentGroup
 from main.models import Chromosome
 from main.models import Dataset
 from main.models import ExperimentSample
-from main.models import ExperimentSampleToAlignment
 from main.models import Variant
 from main.models import VariantAlternate
 from main.models import VariantCallerCommonData
 from main.testing_util import create_common_entities
+from main.testing_util import create_recoli_sv_data_from_vcf
+from main.testing_util import create_sample_and_alignment
+from main.testing_util import TEST_DATA_DIR
 from utils.import_util import copy_and_add_dataset_source
 from utils.import_util import import_reference_genome_from_local_file
 from variants.vcf_parser import parse_alignment_group_vcf
 from variants.vcf_parser import parse_vcf
 
-
-TEST_DATA_DIR = os.path.join(settings.PWD, 'test_data')
 
 TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
@@ -286,13 +286,13 @@ class TestVCFParser(TestCase):
                 LUMPY_4_SAMPLES_2_DELETIONS_VCF)
 
         # Create samples corresponding to sample ids in vcf.
-        _create_sample_and_alignment(
+        create_sample_and_alignment(
                 self.project, alignment_group, DELETION_SAMPLE_1_UID)
-        _create_sample_and_alignment(
+        create_sample_and_alignment(
                 self.project, alignment_group, DELETION_SAMPLE_2_UID)
-        _create_sample_and_alignment(
+        create_sample_and_alignment(
                 self.project, alignment_group, DELETION_SAMPLE_3_UID)
-        _create_sample_and_alignment(
+        create_sample_and_alignment(
                 self.project, alignment_group, DELETION_SAMPLE_4_UID)
 
         # Now we have everything we need to parse the vcf.
@@ -309,17 +309,8 @@ class TestVCFParser(TestCase):
         v_9999_vccd = v_9999.variantcallercommondata_set.all()[0]
         self.assertTrue(v_9999_vccd.data['IS_SV'])
 
-
-###############################################################################
-# Helper Functions
-###############################################################################
-
-def _create_sample_and_alignment(project, alignment_group, sample_uid):
-    sample = ExperimentSample.objects.create(
-            uid=sample_uid, project=project, label=sample_uid)
-    sample_alignment = ExperimentSampleToAlignment.objects.create(
-            alignment_group=alignment_group, experiment_sample=sample)
-    return {
-        'sample': sample,
-        'sample_alignment': sample_alignment
-    }
+    def test_parser__sv_lumpy__and_check_output(self):
+        """Populates db from lumpy-generated vcf and makes various checks
+        on the output.
+        """
+        create_recoli_sv_data_from_vcf(self.project)
