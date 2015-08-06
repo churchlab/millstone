@@ -171,6 +171,9 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
             cassette_sequence = str(contig_seqrecord.seq[
                     contig_left:contig_right])
 
+        # import ipdb
+        # ipdb.set_trace()
+
         if ref_left > ref_right:
             bases_to_peel_back = ref_left - ref_right
             ref_genome_fasta = get_dataset_with_type(
