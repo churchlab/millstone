@@ -666,8 +666,8 @@ def compile_jbrowse_and_redirect(request):
             r'/contigs/(?P<contig_uid>\w+)/jbrowse')
     contig_uid_match = re.match(regexp_str, data_string)
 
-    assert (uid_match or contig_uid_match,
-            "Incorrect URL passed in data key to redirect_jbrowse")
+    assert uid_match or contig_uid_match, \
+            "Incorrect URL passed in data key to redirect_jbrowse"
 
     if uid_match:
         reference_genome = get_object_or_404(ReferenceGenome,

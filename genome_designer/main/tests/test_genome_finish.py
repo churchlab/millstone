@@ -17,9 +17,9 @@ from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
+from main.testing_util import are_fastas_same
 import main.xhr_handlers as xhr_handlers
 from pipeline.pipeline_runner import run_pipeline
-from utils import are_fastas_same
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import import_reference_genome_from_local_file
 from utils.reference_genome_maker_util import generate_new_reference_genome
@@ -119,11 +119,10 @@ class TestGenomeFinishMG1655(TestCase):
 
         # Get set of de novo variants
         variant_set = create_de_novo_variants_set(ag, 'de_novo_variants')
-        if not variant_set.variants.all():
-            raise Exception(
-                'No placeable contigs found.  ' +
-                str(len(contigs)) + ' found with lengths:' +
-                ', '.join([str(c.num_bases) for c in contigs]))
+        self.assertTrue(variant_set.variants.exists(),
+            'No placeable contigs found.  ' +
+            str(len(contigs)) + ' found with lengths:' +
+            ', '.join([str(c.num_bases) for c in contigs]))
 
         # Make new reference genome
         new_ref_genome_params = {'label': 'new_ref'}
@@ -139,9 +138,7 @@ class TestGenomeFinishMG1655(TestCase):
         fastas_same, indexes = are_fastas_same(
                 target_fasta, new_ref_genome_fasta)
 
-        if not fastas_same:
-            raise Exception(
-                'Fastas dissimilar at indexes:', indexes)
+        self.assertTrue(fastas_same, 'Fastas dissimilar at indexes:', indexes)
 
     def test_1kb_insertion(self):
         data_dir = os.path.join(GF_TEST_DIR, 'small_mg1655_data/1kb_ins')
@@ -166,3 +163,18 @@ class TestGenomeFinishMG1655(TestCase):
         data_dir = os.path.join(GF_TEST_DIR,
                 'small_mg1655_data/1kb_ins_del_1000')
         self._run_genome_finish_test(data_dir)
+
+    # def test_4kb_ins_50kb_ref(self):
+    #     data_dir = os.path.join(GF_TEST_DIR,
+    #             'mg1655_test/12')
+    #     self._run_genome_finish_test(data_dir)
+
+    # def test_10kb_ins_100kb_ref(self):
+    #     data_dir = os.path.join(GF_TEST_DIR,
+    #             'mg1655_test/13')
+    #     self._run_genome_finish_test(data_dir)
+
+    # def test_10kb_ins_100kb_ref_2(self):
+    #     data_dir = os.path.join(GF_TEST_DIR,
+    #             'mg1655_test/14')
+    #     self._run_genome_finish_test(data_dir)

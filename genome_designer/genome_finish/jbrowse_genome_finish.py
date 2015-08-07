@@ -37,21 +37,30 @@ def align_contig_reads_to_contig(contig):
     sample = contig.experiment_sample_to_alignment.experiment_sample
     source_fq1 = sample.dataset_set.get(
             type=Dataset.TYPE.FASTQ1).get_absolute_location()
-    source_fq2 = sample.dataset_set.get(
-            type=Dataset.TYPE.FASTQ2).get_absolute_location()
+    source_fq2_query = sample.dataset_set.filter(
+            type=Dataset.TYPE.FASTQ2)
+    is_paired_end = source_fq2_query.exists()
+    if is_paired_end:
+        source_fq2 = source_fq2_query[0].get_absolute_location()
 
     # Make filenames for contig read fastqs
     output_fq1 = os.path.join(
             contig.get_model_data_dir(),
             'reads.1.fq')
-    output_fq2 = os.path.join(
-            contig.get_model_data_dir(),
-            'reads.2.fq')
+    if is_paired_end:
+        output_fq2 = os.path.join(
+                contig.get_model_data_dir(),
+                'reads.2.fq')
 
     # Go through source fastqs and write reads in contig_reads to file
+    source_fq_list = [source_fq1]
+    output_fq_list = [output_fq1]
+    if is_paired_end:
+        source_fq_list.append(source_fq2)
+        output_fq_list.append(output_fq2)
+
     p1 = re.compile('@(\S+)')
-    for input_fq_path, output_fq_path in [
-            (source_fq1, output_fq1), (source_fq2, output_fq2)]:
+    for input_fq_path, output_fq_path in zip(source_fq_list, output_fq_list):
         with open(input_fq_path, 'r') as in_fh, \
              open(output_fq_path, 'w') as out_fh:
             for line in in_fh:
@@ -59,11 +68,6 @@ def align_contig_reads_to_contig(contig):
                 if m1:
                     qname = m1.group(1)
                     if qname in contig_reads:
-                        out_fh.write(line)
-                        out_fh.write(in_fh.next())
-                        out_fh.write(in_fh.next())
-                        out_fh.write(in_fh.next())
-                    else:
                         out_fh.write(line)
                         out_fh.write(in_fh.next())
                         out_fh.write(in_fh.next())
@@ -76,7 +80,7 @@ def align_contig_reads_to_contig(contig):
             contig.get_model_data_dir(),
             'reads_to_contig.bam')
     simple_align_paired_with_bwa_mem(
-            [output_fq1, output_fq2],
+            output_fq_list,
             contig_fasta,
             contig_reads_to_contig_bam)
 
@@ -112,22 +116,23 @@ def simple_align_paired_with_bwa_mem(reads_fq, reference_fasta,
             shell=True, executable=settings.BASH_PATH)
 
     # Align the fastqs to the reference
-    align_input_args = ' '.join([
+    align_input_args = [
             '%s/bwa/bwa' % settings.TOOLS_DIR,
             'mem',
-            reference_fasta,
-            reads_fq[0],
-            reads_fq[1]])
+            reference_fasta]
+
+    align_input_args.extend(reads_fq)
+    align_input_cmd = ' '.join(align_input_args)
 
     # To skip saving the SAM file to disk directly, pipe output directly to
     # make a BAM file.
-    align_input_args += (' | ' + settings.SAMTOOLS_BINARY +
+    align_input_cmd += (' | ' + settings.SAMTOOLS_BINARY +
             ' view -bS -')
 
     # Run alignment
     with open(output_bam_path, 'w') as fh:
         subprocess.check_call(
-                align_input_args, stdout=fh,
+                align_input_cmd, stdout=fh,
                 shell=True, executable=settings.BASH_PATH)
 
 

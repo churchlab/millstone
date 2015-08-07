@@ -16,30 +16,6 @@ from django.conf import settings
 SNPEFF_MIN_LINE_LEN = 20
 
 
-def are_fastas_same(fasta_1, fasta_2):
-    """"Returns tuple ((bool)fastas equal, (list)indexes of dissimilarity)
-    """
-
-    with open(fasta_1, 'r') as fasta_1_fh, \
-         open(fasta_2, 'r') as fasta_2_fh:
-
-        fasta_1_seqrecord_list = list(SeqIO.parse(fasta_1_fh, 'fasta'))
-        fasta_2_seqrecord_list = list(SeqIO.parse(fasta_2_fh, 'fasta'))
-
-        assert len(fasta_1_seqrecord_list) == 1
-        assert len(fasta_2_seqrecord_list) == 1
-
-        seq_1 = fasta_1_seqrecord_list[0].seq
-        seq_2 = fasta_2_seqrecord_list[0].seq
-
-        if str(seq_1) == str(seq_2):
-            return (True, [])
-        else:
-            eq = map(lambda x, y: x == y, seq_1, seq_2)
-            indexes = [i for i, x in enumerate(eq) if x == 0]
-            return (False, indexes)
-
-
 def make_temp_file(label, extension):
     if not os.path.exists(settings.TEMP_FILE_ROOT):
         os.mkdir(settings.TEMP_FILE_ROOT)

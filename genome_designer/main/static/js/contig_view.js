@@ -44,7 +44,8 @@ gd.ContigView = Backbone.View.extend({
     $.get('/_/contigs/make_contig_jbrowse_tracks', getData,
           _.bind(function(response) {
               this.exitLoadingState();
-              window.location.href = JBROWSE_LINK;}, this))
+              window.location.href = JBROWSE_LINK;
+          }, this));
   },
 
   /** Helper method to append input value to form. */
