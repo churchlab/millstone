@@ -274,8 +274,11 @@ def make_contig_jbrowse_tracks(request):
         align_contig_reads_to_contig(contig)
         add_contig_reads_to_contig_bam_track(contig, Dataset.TYPE.BWA_ALIGN)
 
+    jbrowse_link = contig.get_client_jbrowse_link()
+
     # Return success response.
-    return HttpResponse(json.dumps({}), content_type='application/json')
+    return HttpResponse(json.dumps({'jbrowse_link': jbrowse_link}),
+            content_type='application/json')
 
 
 @login_required

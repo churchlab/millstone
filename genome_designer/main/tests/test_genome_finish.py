@@ -163,18 +163,3 @@ class TestGenomeFinishMG1655(TestCase):
         data_dir = os.path.join(GF_TEST_DIR,
                 'small_mg1655_data/1kb_ins_del_1000')
         self._run_genome_finish_test(data_dir)
-
-    # def test_4kb_ins_50kb_ref(self):
-    #     data_dir = os.path.join(GF_TEST_DIR,
-    #             'mg1655_test/12')
-    #     self._run_genome_finish_test(data_dir)
-
-    # def test_10kb_ins_100kb_ref(self):
-    #     data_dir = os.path.join(GF_TEST_DIR,
-    #             'mg1655_test/13')
-    #     self._run_genome_finish_test(data_dir)
-
-    # def test_10kb_ins_100kb_ref_2(self):
-    #     data_dir = os.path.join(GF_TEST_DIR,
-    #             'mg1655_test/14')
-    #     self._run_genome_finish_test(data_dir)

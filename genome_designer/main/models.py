@@ -745,7 +745,16 @@ class Contig(UniqueUidModelMixin):
         refgenome id 456:
             '/redirect_jbrowse?data=gd_data/abc/projects/xyz/contigs/456/jbrowse/'
         """
-        return '/redirect_jbrowse?data=' + self.get_client_jbrowse_data_path()
+        bam_dataset = self.dataset_set.get(type=Dataset.TYPE.BWA_ALIGN)
+        bam_label = bam_dataset.internal_string(self)
+        coverage_label = bam_dataset.internal_string(self) + '_COVERAGE'
+        track_labels = (settings.JBROWSE_DEFAULT_TRACKS +
+                [bam_label, coverage_label])
+
+        link = '/redirect_jbrowse?data=' + self.get_client_jbrowse_data_path()
+        link += '&tracks=' + ','.join(track_labels)
+        return link
+
 
     @property
     def href(self):

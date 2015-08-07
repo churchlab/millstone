@@ -43,8 +43,9 @@ gd.ContigView = Backbone.View.extend({
 
     $.get('/_/contigs/make_contig_jbrowse_tracks', getData,
           _.bind(function(response) {
+              var jbrowseLink = response.jbrowse_link;
               this.exitLoadingState();
-              window.location.href = JBROWSE_LINK;
+              window.location.href = jbrowseLink;
           }, this));
   },
 

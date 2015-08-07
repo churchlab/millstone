@@ -426,7 +426,7 @@ FLAG__PRINT_MAGE_OLIGOS_ENABLED = True
 
 FLAG__GENERATE_NEW_REFERENCE_GENOME_ENABLED = True
 
-FLAG__GENOME_FINISHING_ENABLED = False
+FLAG__GENOME_FINISHING_ENABLED = True
 
 ###############################################################################
 # S3

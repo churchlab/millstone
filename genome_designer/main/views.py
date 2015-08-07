@@ -267,7 +267,6 @@ def contig_view(request, project_uid, contig_uid):
         'project': project,
         'tab_root': TAB_ROOT__DATA,
         'contig': contig,
-        'jbrowse_link': contig.get_client_jbrowse_link(),
         'init_js_data': init_js_data,
     }
     return render(request, 'contig.html', context)
