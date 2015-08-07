@@ -77,9 +77,11 @@ class TestGenomeFinishMG1655(TestCase):
         # Run alignment of sample to reference
         alignment_group_label = 'test_alignment'
         sample_list = [sample]
+        print 'Aligning'
         alignment_group, _, _ = run_pipeline(
                 alignment_group_label, ref_genome, sample_list,
                 perform_variant_calling=False, alignment_options={})
+        print 'Done aligning'
 
         # Get resulting ExperimentSampleToAlignment
         sample_align = ExperimentSampleToAlignment.objects.get(
@@ -107,7 +109,7 @@ class TestGenomeFinishMG1655(TestCase):
 
         return contigs
 
-    def _run_genome_finish_test(self, data_dir):
+    def _run_genome_finish_test(self, data_dir, mismatch_tolerance=0):
 
         contigs = self._perform_assembly(data_dir)
 
@@ -119,10 +121,13 @@ class TestGenomeFinishMG1655(TestCase):
 
         # Get set of de novo variants
         variant_set = create_de_novo_variants_set(ag, 'de_novo_variants')
+
+        contigs_found_error_str = (str(len(contigs)) + ' found with lengths:' +
+            ', '.join([str(c.num_bases) for c in contigs]))
+
         self.assertTrue(variant_set.variants.exists(),
             'No placeable contigs found.  ' +
-            str(len(contigs)) + ' found with lengths:' +
-            ', '.join([str(c.num_bases) for c in contigs]))
+            contigs_found_error_str)
 
         # Make new reference genome
         new_ref_genome_params = {'label': 'new_ref'}
@@ -138,7 +143,15 @@ class TestGenomeFinishMG1655(TestCase):
         fastas_same, indexes = are_fastas_same(
                 target_fasta, new_ref_genome_fasta)
 
-        self.assertTrue(fastas_same, 'Fastas dissimilar at indexes:', indexes)
+        indexes_str = str(indexes) if len(indexes) < 50 else (
+                str(indexes[:50]) + '...')
+
+        self.assertTrue(len(indexes) <= mismatch_tolerance,
+                'Fastas dissimilar at indexes:' +
+                indexes_str + '\n' +
+                contigs_found_error_str)
+
+        print 'Fastas dissimilar at indexes:' + indexes_str
 
     def test_1kb_insertion(self):
         data_dir = os.path.join(GF_TEST_DIR, 'small_mg1655_data/1kb_ins')
@@ -163,3 +176,13 @@ class TestGenomeFinishMG1655(TestCase):
         data_dir = os.path.join(GF_TEST_DIR,
                 'small_mg1655_data/1kb_ins_del_1000')
         self._run_genome_finish_test(data_dir)
+
+    def test_4kb_ins_50kb_ref(self):
+        data_dir = os.path.join(GF_TEST_DIR,
+                'mg1655_test/12')
+        self._run_genome_finish_test(data_dir)
+
+    def test_10kb_ins_100kb_ref(self):
+        data_dir = os.path.join(GF_TEST_DIR,
+                'mg1655_test/13')
+        self._run_genome_finish_test(data_dir, 8)
