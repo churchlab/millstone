@@ -346,10 +346,6 @@ def merge_variant_data(alignment_group):
         merge_freebayes_parallel(alignment_group)
         merge_lumpy_vcf(alignment_group)
     except:
-        alignment_group.status = AlignmentGroup.STATUS.FAILED
-        alignment_group.end_time = datetime.now()
-        alignment_group.save(update_fields=['end_time', 'status'])
-
         # Log error.
         vcf_output_root = get_or_create_vcf_output_dir(alignment_group)
         merge_variant_data_error_path = os.path.join(
@@ -357,6 +353,12 @@ def merge_variant_data(alignment_group):
         with open(merge_variant_data_error_path, 'w') as error_output_fh:
             import traceback
             error_output_fh.write(traceback.format_exc())
+
+        # Set AlignmentGroup status to failed.
+        alignment_group.status = AlignmentGroup.STATUS.FAILED
+        alignment_group.end_time = datetime.now()
+        alignment_group.save(update_fields=['end_time', 'status'])
+
 
 
 @task
