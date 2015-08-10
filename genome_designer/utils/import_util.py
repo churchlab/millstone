@@ -167,8 +167,27 @@ def import_reference_genome_from_local_file(project, label, file_location,
 
     # Copy the source file to the ReferenceGenome data location.
     dataset_type = IMPORT_FORMAT_TO_DATASET_TYPE[import_format]
-    copy_and_add_dataset_source(reference_genome, dataset_type,
-            dataset_type, file_location)
+
+    file_suffix = file_location.rsplit('/', 1)[-1]
+
+    # Substitute non-alphanumeric characters in filename with underscores
+    sanitized_file_suffix = re.sub('[\W]', '_', file_suffix)
+
+    # Move/copy file to reference genome model dir
+    dest_path = os.path.join(
+            reference_genome.get_model_data_dir(),
+            sanitized_file_suffix)
+    if move:
+        shutil.move(file_location, dest_path)
+    else:
+        shutil.copy(file_location, dest_path)
+
+    # Add the dataset to the reference genome
+    add_dataset_to_entity(
+            reference_genome,
+            label,
+            dataset_type,
+            dest_path)
 
     return reference_genome
 
@@ -1189,5 +1208,5 @@ def sanitize_sequence_dataset(dataset):
     with open(clean_file_path, 'w') as clean_fh:
         SeqIO.write(seq_record_list, clean_fh, parse_format)
 
-    dataset.filesystem_location = clean_file_path
+    dataset.filesystem_location = clean_filesystem_location(clean_file_path)
     dataset.save()
