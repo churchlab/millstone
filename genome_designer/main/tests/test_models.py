@@ -364,13 +364,3 @@ class TestChromosome(TestCase):
         # Assert correct number of bases
         assert(test_yeast_genome.num_bases == sum([chrom.num_bases for chrom in
                 Chromosome.objects.filter(reference_genome=test_yeast_genome)]))
-
-        # Assert correct chromosome labels
-        expected_chrom_names = [
-                'gi|448092123|ref|NC_020215.1|',
-                'gi|448096713|ref|NC_020216.1|',
-                'gi|448100869|ref|NC_020217.1|']
-
-        assert(set([chrom.seqrecord_id for chrom in Chromosome.objects.filter(
-                        reference_genome=test_yeast_genome)])
-               == set(expected_chrom_names))

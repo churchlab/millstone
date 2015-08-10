@@ -30,6 +30,7 @@ from main.testing_util import create_common_entities
 from main.testing_util import TEST_EMAIL
 from main.testing_util import TEST_PASSWORD
 from main.testing_util import TEST_USERNAME
+from main.xhr_handlers import create_ref_genome_from_browser_upload
 from main.xhr_handlers import create_variant_set
 from main.xhr_handlers import ref_genomes_concatenate
 from main.xhr_handlers import samples_upload_through_browser_sample_data
@@ -75,6 +76,10 @@ TEST_FA_DIR = os.path.join(
 TEST_FASTA_1_PATH = os.path.join(TEST_FA_DIR, 'random_fasta_1.fa')
 TEST_FASTA_2_PATH = os.path.join(TEST_FA_DIR, 'random_fasta_2.fa')
 TEST_2_CHROM_FASTA_PATH = os.path.join(GD_ROOT, 'test_data', 'two_chromosome.fa')
+TEST_DIRTY_GENBANK_PATH = os.path.join(
+        GD_ROOT,
+        'test_data',
+        'dirty_genbank (spaces).gb')
 
 
 class TestGetVariantList(TestCase):
@@ -554,3 +559,32 @@ class TestReferenceGenomeConcatenation(TestCase):
         """
         self._generate_test_instance([TEST_FASTA_1_PATH,
                                       TEST_2_CHROM_FASTA_PATH])
+
+
+class TestUploadReferenceGenome(TestCase):
+
+    def setUp(self):
+        """Override.
+        """
+        self.common_entities = create_common_entities()
+
+    def test_upload_dirty_genbank(self):
+        project = self.common_entities['project']
+        request = HttpRequest()
+        request.POST = {
+            'projectUid': project.uid,
+            'refGenomeLabel': 'test_label',
+            'importFileFormat': 'genbank'
+        }
+        request.method = 'POST'
+        request.user = self.common_entities['user']
+        authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
+        self.assertTrue(request.user.is_authenticated())
+
+        request.FILES['refGenomeFile'] = UploadedFile(
+                file=open(TEST_DIRTY_GENBANK_PATH),
+                name='dirty_genbank.gb')
+
+        response = create_ref_genome_from_browser_upload(request)
+        self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
+        self.assertFalse(json.loads(response.content).get('error', False))

@@ -24,6 +24,7 @@ from models import VariantSet
 from models import VariantToVariantSet
 from utils.import_util import prepare_ref_genome_related_datasets
 from utils.import_util import add_chromosomes
+from utils.import_util import sanitize_sequence_dataset
 from variants.dynamic_snp_filter_key_map import initialize_filter_key_map
 from variants.dynamic_snp_filter_key_map import update_sample_filter_key_map
 
@@ -115,6 +116,7 @@ def post_add_seq_to_ref_genome(sender, instance, **kwargs):
         dataset = model.objects.get(pk=pk)
         if dataset.status == Dataset.STATUS.NOT_STARTED:
             continue
+        sanitize_sequence_dataset(dataset)
         prepare_ref_genome_related_datasets(instance, dataset)
         add_chromosomes(instance, dataset)
 

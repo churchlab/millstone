@@ -1150,3 +1150,44 @@ def prepare_ref_genome_related_datasets(ref_genome, dataset):
     ref_genome_fasta = get_dataset_with_type(ref_genome,
             Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
     ensure_bwa_index(ref_genome_fasta)
+
+
+def sanitize_sequence_dataset(dataset):
+
+    dataset_type_to_parse_format = {
+        Dataset.TYPE.REFERENCE_GENOME_FASTA: 'fasta',
+        Dataset.TYPE.REFERENCE_GENOME_GENBANK: 'genbank'
+    }
+
+    if dataset.type not in dataset_type_to_parse_format:
+        return
+
+    dirty_file_path = dataset.get_absolute_location()
+    parse_format = dataset_type_to_parse_format[dataset.type]
+
+    needs_santizing = False
+    with open(dirty_file_path, 'r') as dirty_fh:
+        for seq_record in SeqIO.parse(dirty_fh, parse_format):
+            if len(seq_record.id) > 16:
+                needs_santizing = True
+                break
+
+    if not needs_santizing:
+        return
+
+    prefix, ext = os.path.splitext(dirty_file_path)
+    clean_file_path = prefix + '.clean' + ext
+
+    seq_record_list = []
+    with open(dirty_file_path, 'r') as dirty_fh:
+        for seq_record in SeqIO.parse(dirty_fh, parse_format):
+            seq_record.id = seq_record.id[:16]
+            seq_record.name = seq_record.id
+            seq_record_list.append(seq_record)
+
+
+    with open(clean_file_path, 'w') as clean_fh:
+        SeqIO.write(seq_record_list, clean_fh, parse_format)
+
+    dataset.filesystem_location = clean_file_path
+    dataset.save()
