@@ -30,6 +30,7 @@ from main.testing_util import create_common_entities
 from main.testing_util import TEST_EMAIL
 from main.testing_util import TEST_PASSWORD
 from main.testing_util import TEST_USERNAME
+from main.xhr_handlers import create_ref_genome_from_browser_upload
 from main.xhr_handlers import create_variant_set
 from main.xhr_handlers import ref_genomes_concatenate
 from main.xhr_handlers import samples_upload_through_browser_sample_data
@@ -40,8 +41,10 @@ from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__TOTAL
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__SET_LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__KEY_MAP
+from pipeline.pipeline_runner import run_pipeline
 from variants.dynamic_snp_filter_key_map import update_filter_key_map
 from utils.import_util import _create_sample_and_placeholder_dataset
+from utils.import_util import add_dataset_to_entity
 from utils.import_util import import_reference_genome_from_local_file
 from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_1
 from utils.import_util import SAMPLE_BROWSER_UPLOAD_KEY__READ_2
@@ -75,6 +78,26 @@ TEST_FA_DIR = os.path.join(
 TEST_FASTA_1_PATH = os.path.join(TEST_FA_DIR, 'random_fasta_1.fa')
 TEST_FASTA_2_PATH = os.path.join(TEST_FA_DIR, 'random_fasta_2.fa')
 TEST_2_CHROM_FASTA_PATH = os.path.join(GD_ROOT, 'test_data', 'two_chromosome.fa')
+
+LONG_ID_GENBANK = os.path.join(
+        GD_ROOT,
+        'test_data',
+        'long_id_genbank.gb')
+
+TEST_GENBANK = os.path.join(
+        GD_ROOT,
+        'test_data',
+        'test_genbank.gb')
+
+TEST_DIRTY_FQ_1 = os.path.join(
+        GD_ROOT,
+        'test_data',
+        'dirty_genbank_reads.1.fq')
+
+TEST_DIRTY_FQ_2 = os.path.join(
+        GD_ROOT,
+        'test_data',
+        'dirty_genbank_reads.2.fq')
 
 
 class TestGetVariantList(TestCase):
@@ -554,3 +577,95 @@ class TestReferenceGenomeConcatenation(TestCase):
         """
         self._generate_test_instance([TEST_FASTA_1_PATH,
                                       TEST_2_CHROM_FASTA_PATH])
+
+
+class TestUploadReferenceGenome(TestCase):
+
+    def setUp(self):
+        """Override.
+        """
+        self.common_entities = create_common_entities()
+
+    def test_upload_long_id_genbank(self):
+        project = self.common_entities['project']
+        ref_genome_label = 'dirty_upload'
+        request = HttpRequest()
+        request.POST = {
+            'projectUid': project.uid,
+            'refGenomeLabel': ref_genome_label,
+            'importFileFormat': 'genbank'
+        }
+        request.method = 'POST'
+        request.user = self.common_entities['user']
+        authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
+        self.assertTrue(request.user.is_authenticated())
+
+        request.FILES['refGenomeFile'] = UploadedFile(
+                file=open(LONG_ID_GENBANK),
+                name='dirty_genbank.gb')
+
+        response = create_ref_genome_from_browser_upload(request)
+        self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
+        self.assertFalse(json.loads(response.content).get('error', False))
+
+    def test_run_alignment_with_spaces_in_genbank_filename(self):
+        project = self.common_entities['project']
+        ref_genome_label = 'dirty_upload'
+        request = HttpRequest()
+        request.POST = {
+            'projectUid': project.uid,
+            'refGenomeLabel': ref_genome_label,
+            'importFileFormat': 'genbank'
+        }
+        request.method = 'POST'
+        request.user = self.common_entities['user']
+        authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
+        self.assertTrue(request.user.is_authenticated())
+
+        request.FILES['refGenomeFile'] = UploadedFile(
+                file=open(TEST_GENBANK),
+                name='dirty_genbank (spaces).gb')
+
+        response = create_ref_genome_from_browser_upload(request)
+        self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
+        self.assertFalse(json.loads(response.content).get('error', False))
+
+        # Get reference genome
+        ref_genome = ReferenceGenome.objects.get(
+                project=project,
+                label=ref_genome_label)
+
+        # Create sample model
+        sample = ExperimentSample.objects.create(
+                project=project,
+                label='test_sample')
+
+        # Add fastq datasets to sample
+        add_dataset_to_entity(
+                sample,
+                Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1,
+                filesystem_location=TEST_DIRTY_FQ_1)
+
+        # Add fastq datasets to sample
+        add_dataset_to_entity(
+                sample,
+                Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2,
+                filesystem_location=TEST_DIRTY_FQ_2)
+
+        # Run alignment of sample to reference
+        alignment_group_label = 'test_alignment'
+        sample_list = [sample]
+
+        result = run_pipeline(
+                alignment_group_label, ref_genome, sample_list)
+
+        alignment_group = result[0]
+        alignment_async_result = result[1]
+        variant_calling_async_result = result[2]
+        alignment_async_result.get()
+        variant_calling_async_result.get()
+        alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
+        self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
+                alignment_group.status)
