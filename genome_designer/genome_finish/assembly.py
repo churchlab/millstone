@@ -426,4 +426,35 @@ def evaluate_contigs(contig_list):
             vcf_path)
 
     # Make variants from vcf
-    parse_vcf(vcf_dataset, ag)
+    variant_list = parse_vcf(vcf_dataset, ag)
+
+    # Add variant specific track data
+    for variant in variant_list:
+        variant_bam_track_labels = []
+        variant_coverage_track_labels = []
+        vccd_list = variant.variantcallercommondata_set.all()
+
+        for vccd in vccd_list:
+            # See if the variant is associated with a contig
+            contig_uid_list = vccd.data.get('INFO_contig_uid', False)
+            if contig_uid_list:
+                contig = Contig.objects.get(uid=contig_uid_list[0])
+                bam_dataset = get_dataset_with_type(
+                        contig,
+                        Dataset.TYPE.BWA_SV_INDICANTS)
+                variant_bam_track_labels.append(
+                        bam_dataset.internal_string(contig))
+                variant_coverage_track_labels.append(
+                        bam_dataset.internal_string(contig) + '_COVERAGE')
+
+        # Remove potential duplicates
+        variant_bam_track_labels = list(set(
+                variant_bam_track_labels))
+        variant_coverage_track_labels = list(set(
+                variant_coverage_track_labels))
+
+        variant.data['variant_specific_tracks'] = {
+            'alignment': variant_bam_track_labels,
+            'coverage': variant_coverage_track_labels
+        }
+        variant.save()

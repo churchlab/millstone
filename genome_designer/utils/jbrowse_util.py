@@ -314,7 +314,7 @@ def add_vcf_track_given_dataset(
     write_tracklist_json(reference_genome, raw_dict_obj, label)
 
 
-def _vcf_to_vcftabix(vcf_dataset):
+def _vcf_to_vcftabix(vcf_dataset, force_redo=True):
     """Compresses and indexes a vcf using samtools tabix.
 
     Creates a new Dataset model instance for this compressed version, with the
@@ -324,6 +324,8 @@ def _vcf_to_vcftabix(vcf_dataset):
     Args:
         vcf_dataset: Dataset pointing to a vcf, or its compressed version.
             Index may or may not exist.
+        force_redo: If True, this function will delete existing compressed set
+            and re-run compression.
 
     Returns:
         Dataset that points to compressed version of input vcf_dataset, if it
@@ -335,7 +337,7 @@ def _vcf_to_vcftabix(vcf_dataset):
     ###     2. Create index if it doesn't exist.
 
     ### 1. Get or create compressed Dataset.
-    if vcf_dataset.is_compressed():
+    if vcf_dataset.is_compressed() and not force_redo:
         compressed_dataset = vcf_dataset
     else:
         # Check for existing compressed version using related model.
@@ -345,6 +347,12 @@ def _vcf_to_vcftabix(vcf_dataset):
                 entity=related_model,
                 type=vcf_dataset.type,
                 compressed=True)
+
+        if compressed_dataset is not None and force_redo:
+            compressed_dataset.delete_underlying_data()
+            compressed_dataset.delete()
+            compressed_dataset = None
+
         # If there is no compressed dataset, then make it
         if compressed_dataset is None:
             compressed_dataset = vcf_dataset.make_compressed('.bgz')

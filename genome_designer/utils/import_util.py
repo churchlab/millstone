@@ -232,11 +232,9 @@ def generate_fasta_from_genbank(ref_genome):
     # Get the individual records, each corresponding to a chromosome.
     genome_records = list(SeqIO.parse(genbank_path, 'genbank'))
 
-    # SnpEFF takes the name attr, but the BioPython uses the id attr to make its
-    # fasta file, so overwrite the name with the id when converting to fasta,
-    # as the id should remain consistent among all file formats of the genome
-    # so that each Chromosome model's seqrecord_id attribute can be used
-    # to reference its corresponding genome_record in every file format
+    # SnpEFF takes the name attr, but the BioPython uses the id attr to make
+    # its fasta file, so overwrite the id with the name when converting to
+    # fasta. Jbrowse and SnpEFF go by the name.
     for genome_record in genome_records:
         genome_record.name = genome_record.id
 
@@ -289,7 +287,7 @@ def generate_gff_from_genbank(ref_genome):
     # GFF file, so overwrite the id with the name when converting to GFF.
 
     for genome_record in genome_records:
-        genome_record.id = genome_record.name
+        genome_record.name = genome_record.id
 
     GFF.write(genome_records, open(gff_filename, 'w'))
 

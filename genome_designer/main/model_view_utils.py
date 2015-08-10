@@ -3,7 +3,6 @@ model_view_utils - Functions to decorate model_view output before sending
 to datatables.
 """
 
-from math import floor
 from itertools import chain
 from itertools import groupby
 import re
@@ -11,6 +10,7 @@ import re
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
+from main.models import Variant
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
@@ -130,9 +130,13 @@ def create_variant_links_field(variant_as_dict, reference_genome,
         else:
             es_list = [es for es in es_field if es is not None]
 
+    variant = Variant.objects.get(uid=variant_as_dict['UID'])
+    variant_specific_tracks = variant.variant_specific_tracks
+
     # BAM JBROWSE
     jbrowse_bam_tracks = list(chain.from_iterable([
             jbrowse_track_names['vcf'] +
+            variant_specific_tracks['alignment'] +
             [es + s for s in jbrowse_track_names['bam']] +
             [es + s for s in jbrowse_track_names['callable_loci_bed']]
                     for es in es_list]))
@@ -143,6 +147,7 @@ def create_variant_links_field(variant_as_dict, reference_genome,
     # BAM COVERAGE JBROWSE
     jbrowse_bam_coverage_tracks = list(chain.from_iterable([
             jbrowse_track_names['vcf'] +
+            variant_specific_tracks['coverage'] +
             [es + s for s in jbrowse_track_names['bam_coverage']] +
             [es + s for s in jbrowse_track_names['callable_loci_bed']]
                     for es in es_list]))
@@ -220,9 +225,18 @@ def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
 
         alt_strs = []
         for alt, group in alt_counts:
+
+            # Handle SVs of type e.g. <DEL> or <INV>. These are rendered funny
+            # in html so just drop brackets here rather than mucking around
+            # with escaping html.
             maybe_surrounding_brackets_match = re.match(r'<([\w]+)>', alt)
             if maybe_surrounding_brackets_match:
                 alt = maybe_surrounding_brackets_match.group(1)
+
+            # Check if BND type and add wrapper of the form BND(<...>)
+            if re.match('N]', alt) or re.search('\[N', alt):
+                alt = 'BND({orig_alt})'.format(orig_alt=alt)
+
             group = list(group)
             num_het = sum([alt_het[1] for alt_het in group])
             alt_string = ' %s (%d)' % (alt, len(list(group)) - maybe_dec)

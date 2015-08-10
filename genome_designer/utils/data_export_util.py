@@ -210,7 +210,7 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
             # + 1 to insert AFTER end of reference
             pos = ref_left + 1
             ref_value = str(ref_seqrecord.seq[
-                    ref_left+1: ref_right])
+                    ref_left + 1: ref_right + 1])
             alt_value = cassette_sequence
 
         elif ref_right == ref_left:

@@ -18,6 +18,7 @@ from main.models import ReferenceGenome
 from main.models import ExperimentSampleToAlignment
 from utils.import_util import copy_and_add_dataset_source
 from variants.vcf_parser import parse_alignment_group_vcf
+from variants.vcf_parser import parse_vcf
 
 
 TEST_USERNAME = 'gmcdev'
@@ -25,6 +26,8 @@ TEST_PASSWORD = 'g3n3d3z'
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 TEST_PROJECT_NAME = 'recoli'
 TEST_REF_GENOME_LABEL = 'mg1655'
+
+TEST_DATA_DIR = os.path.join(settings.PWD, 'test_data')
 
 TEST_GENOME_SNPS = os.path.join(settings.PWD, 'test_data',
         'fake_genome_and_reads',
@@ -163,15 +166,61 @@ def create_common_entities_w_variants():
 
 
 def create_sample_and_alignment(
-        project, alignment_group, sample_uid, bwa_alignment):
+        project, alignment_group, sample_uid, bwa_alignment=None):
     sample = ExperimentSample.objects.create(
             uid=sample_uid, project=project, label=sample_uid)
     sample_alignment = ExperimentSampleToAlignment.objects.create(
             alignment_group=alignment_group, experiment_sample=sample)
-    copy_and_add_dataset_source(
-            sample_alignment, Dataset.TYPE.BWA_ALIGN, Dataset.TYPE.BWA_ALIGN,
-            bwa_alignment)
+    if bwa_alignment is not None:
+        copy_and_add_dataset_source(
+                sample_alignment, Dataset.TYPE.BWA_ALIGN, Dataset.TYPE.BWA_ALIGN,
+                bwa_alignment)
     return {
         'sample': sample,
         'sample_alignment': sample_alignment
     }
+
+
+def create_recoli_sv_data_from_vcf(project):
+    """Populate database with SVs from lumpy vcf.
+    """
+    VCF_PARSER_TEST_DATA_DIR = os.path.join(TEST_DATA_DIR, 'vcf_parser_test_data')
+
+    LUMPY_4_SAMPLES_RECOLI_VCF = os.path.join(
+            VCF_PARSER_TEST_DATA_DIR, 'lumpy_4_samples_recoli.vcf')
+
+    SAMPLE_1_UID = '3990b0f4'
+    SAMPLE_2_UID = '0e250e34'
+    SAMPLE_3_UID = '396ea926'
+    SAMPLE_4_UID = '4a09d3dd'
+
+    reference_genome = ReferenceGenome.objects.create(
+            project=project, label='myref')
+
+    Chromosome.objects.create(
+            reference_genome=reference_genome,
+            label='the chrom',
+            seqrecord_id='U00096.2',
+            num_bases=5000000000)
+
+    alignment_group = AlignmentGroup.objects.create(
+            label='Alignment 1', reference_genome=reference_genome,
+            aligner=AlignmentGroup.ALIGNER.BWA)
+
+    # Connect lumpy vcf as Dataset.
+    lumpy_vcf_dataset = copy_and_add_dataset_source(
+            alignment_group, Dataset.TYPE.VCF_LUMPY, Dataset.TYPE.VCF_LUMPY,
+            LUMPY_4_SAMPLES_RECOLI_VCF)
+
+    # Create samples corresponding to sample ids in vcf.
+    create_sample_and_alignment(
+            project, alignment_group, SAMPLE_1_UID)
+    create_sample_and_alignment(
+            project, alignment_group, SAMPLE_2_UID)
+    create_sample_and_alignment(
+            project, alignment_group, SAMPLE_3_UID)
+    create_sample_and_alignment(
+            project, alignment_group, SAMPLE_4_UID)
+
+    # Now we have everything we need to parse the vcf.
+    parse_vcf(lumpy_vcf_dataset, alignment_group)
