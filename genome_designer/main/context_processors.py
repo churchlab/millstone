@@ -48,11 +48,13 @@ def _get_free_disk_space_str():
     parts = df_output.split('\n')[1].split()
     size = parts[1]
     available = parts[3]
-    capacity = parts[4]
+
+    size_int = int(re.match(r'[0-9]+', size).group())
+    available_int = int(re.match(r'[0-9]+', available).group())
+    capacity_int = size_int * 100 / available_int
 
     # Maybe add red error text style to capacity.
     available_str = available
-    capacity_int = int(re.match(r'[0-9]+', capacity).group())
     if capacity_int < 10:
         available_str = (
                 '<span class="gd-error-text">' + available_str + '</span>')
