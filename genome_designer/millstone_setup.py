@@ -139,6 +139,8 @@ def setup(arglist):
     if len(arglist) == 0:
         download_tools()
         setup_jbrowse()
+    elif 'tools' in arglist:
+        download_tools()
     else:
         if 'jbrowse' in arglist:
             setup_jbrowse()

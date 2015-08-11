@@ -8,6 +8,7 @@ reasonable separation point is to separate page actions from Ajax actions.
 import copy
 import json
 import os
+import re
 from StringIO import StringIO
 import tempfile
 
