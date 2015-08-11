@@ -458,7 +458,7 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
             'urlTemplate': urlTemplate,
             'label': label,
             'type': 'JBrowse/View/Track/Alignments2',
-            'chuckSizeLimit': 10000000, #double the default chunk size
+            'chunkSizeLimit': 10000000,  # double the default chunk size
             'key': key,
             'category': 'BAM Tracks',
             'style' : {
