@@ -215,18 +215,19 @@ def extract_contig_reads(contig, read_category='all'):
             else:
                 ref_id_to_count[read.reference_id] += 1
 
-    tid_count_sorted = sorted(
-            ref_id_to_count.items(), key=lambda x: x[1], reverse=True)
+    if mapped_count:
+        tid_count_sorted = sorted(
+                ref_id_to_count.items(), key=lambda x: x[1], reverse=True)
 
-    mode_chrom_tid = tid_count_sorted[0][0]
-    mode_chrom_percentage = (tid_count_sorted[0][1] /
-            float(mapped_count))
+        mode_chrom_tid = tid_count_sorted[0][0]
+        mode_chrom_percentage = (tid_count_sorted[0][1] /
+                float(mapped_count))
 
-    # Set field
-    if mode_chrom_percentage > 0.8:
-        contig_seqrecord_id = sam_file.getrname(mode_chrom_tid)
-        contig.metadata['chromosome'] = contig_seqrecord_id
-        contig.save()
+        # Set field
+        if mode_chrom_percentage > 0.8:
+            contig_seqrecord_id = sam_file.getrname(mode_chrom_tid)
+            contig.metadata['chromosome'] = contig_seqrecord_id
+            contig.save()
 
     sam_file.close()
     return sv_indicant_reads_in_contig

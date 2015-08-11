@@ -5,6 +5,7 @@
     Contig: {{contig.label}}
   </div>
 
+  <a href="#" id="gd-contig-jbrowse">JBrowse</a><br>
   <a href="#" id="gd-contig-download-fasta">Download FASTA</a><br>
 
   <form id="gd-download-form" action="/_/contigs/download"
@@ -17,7 +18,7 @@
     var contig_uid = "{{contig.uid}}";
 
     {% autoescape off %}
-        INIT_JS_DATA = {{init_js_data}};    
+        INIT_JS_DATA = {{init_js_data}}; 
     {% endautoescape %}
 
   </script>
