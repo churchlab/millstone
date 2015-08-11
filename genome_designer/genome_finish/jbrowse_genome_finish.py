@@ -46,7 +46,7 @@ def add_contig_reads_bam_track(contig, alignment_type):
                 'urlTemplate': urlTemplate,
                 'label': label,
                 'type': 'JBrowse/View/Track/Alignments2',
-                'chuckSizeLimit': 10000000, # double the default chunk size
+                'chunkSizeLimit': 10000000, # double the default chunk size
                 'key': key,
                 'category': 'Contig BAM Tracks',
                 'style': {
