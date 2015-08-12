@@ -931,10 +931,14 @@ class ExperimentSample(UniqueUidModelMixin):
             if not fastqc_dataset:
                 continue
 
-            links.append('<a href="{}">Read {}</a>'.format(
-                    reverse('main.views.fastqc_view',
-                            args=(self.project.uid, self.uid, read_num)),
-                    read_num))
+            links.append(
+                    '<a href="{url}" target="_blank">'
+                    'Read {read_num}</a>'.format(
+                            url=reverse(
+                                    'main.views.fastqc_view',
+                                    args=(self.project.uid, self.uid,
+                                            read_num)),
+                            read_num=read_num))
 
         return ', '.join(links)
 
