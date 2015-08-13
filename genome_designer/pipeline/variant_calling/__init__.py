@@ -111,10 +111,17 @@ def find_variants_with_tool(alignment_group, variant_params_dict):
 
     # Run the tool
     common_params.update(tool_kwargs)
-    tool_succeeded = tool_function(
-            vcf_output_dir=tool_dir,
-            vcf_output_filename=vcf_output_filename,
-            **common_params)
+    try:
+        tool_succeeded = tool_function(
+                vcf_output_dir=tool_dir,
+                vcf_output_filename=vcf_output_filename,
+                **common_params)
+    except:
+        alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
+        alignment_group.status = AlignmentGroup.STATUS.FAILED
+        alignment_group.save(update_fields=['status'])
+        return False  # failed
+
     if not tool_succeeded:
         return False
 
