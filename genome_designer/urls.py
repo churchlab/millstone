@@ -177,6 +177,8 @@ urlpatterns = patterns('',
         'main.xhr_handlers.contigs_find_insertion_location'),
     url(r'^_/contigs/download$',
             'main.xhr_handlers.contigs_download'),
+    url(r'^_/contigs/make_contig_jbrowse_tracks$',
+            'main.xhr_handlers.make_contig_jbrowse_tracks'),
 
     ###########################################################################
     # Template XHR's

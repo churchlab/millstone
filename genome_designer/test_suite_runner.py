@@ -68,7 +68,7 @@ def setup_test_environment_common():
     """Common setup procedures.
     """
     # Catch leftover .pyc from, say, changing git branches.
-    assert_no_orphaned_pyc_files('.')
+    remove_orphaned_pyc_files('.')
 
     # Make sure the startup function works.
     # As of implementation, this function adds a custom function to
@@ -83,7 +83,7 @@ def handle_post_syncdb_startup(sender, **kwargs):
     startup.run()
 
 
-def assert_no_orphaned_pyc_files(start_dir):
+def remove_orphaned_pyc_files(start_dir):
     """Walk from the start directory through python pkg dirs, looking for
     .pyc files with no corresponding .py file.
 
@@ -117,8 +117,6 @@ def assert_no_orphaned_pyc_files(start_dir):
                     full_orphan_path = os.path.join(dirpath, filename)
                     orphaned_files.append(full_orphan_path)
 
-    if len(orphaned_files):
-        raise AssertionError, (
-                "The following files are orphaned .pyc files:\n\n%s\n\n" %
-                        '\n'.join(orphaned_files) +
-                "Perhaps you moved the file and meant to delete them?")
+    for f in orphaned_files:
+        print 'Removing leftover .pyc file %s' % f
+        os.remove(f)
