@@ -1,5 +1,6 @@
 <!-- Control Box -->
-<div id='{{table_id}}-control' class="gd-datatable-control btn-group">
+<div id='{{table_id}}-control'>
+  <div class="gd-datatable-control btn-group">
   <a class="btn dropdown-toggle btn-primary" data-toggle="dropdown" href="#">
     New
     <span class="caret"></span>
@@ -7,6 +8,11 @@
   <ul class="dropdown-menu">
     <li role="presentation"><a role="menuitem" tabindex="-1" href="#gd-contig-assemble-modal" data-toggle="modal">Assemble Contigs</a></li>
   </ul>
+  </div>
+  {% for sample_label, status in assembly_status_tuples %}
+    <span id="gd-ag-status-text" class="gd-ag-status-text">{{sample_label}} : {{status}}</span>
+  {% endfor %}
+
 </div>
 
 {% include "controls/generate_contigs_modal.html" %}

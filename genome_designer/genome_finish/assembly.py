@@ -5,6 +5,7 @@ import subprocess
 import re
 
 from Bio import SeqIO
+from celery import task
 from django.conf import settings
 import numpy as np
 
@@ -18,6 +19,7 @@ from genome_finish.millstone_de_novo_fns import get_avg_genome_coverage
 from genome_finish.millstone_de_novo_fns import get_unmapped_reads
 from main.models import Contig
 from main.models import Dataset
+from main.models import ExperimentSampleToAlignment
 from main.model_utils import get_dataset_with_type
 from pipeline.read_alignment import get_insert_size_mean_and_stdev
 from utils.bam_utils import concatenate_bams
@@ -57,6 +59,18 @@ DEFAULT_VELVET_OPTS = {
 NUM_CONTIGS_TO_EVALUATE = 1000
 
 
+def run_de_novo_assembly_pipeline(sample_alignment,
+        sv_read_classes={}, input_velvet_opts={},
+        overwrite=False):
+
+    sample_alignment.data['assembly_status'] = (
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
+    sample_alignment.save()
+
+    generate_contigs_async_task = generate_contigs.si(sample_alignment)
+    generate_contigs_async_task.apply_async()
+
+
 def kmer_coverage(C, L, k):
     """Converts contig coverage to kmer coverage
 
@@ -68,6 +82,7 @@ def kmer_coverage(C, L, k):
     return C * (L - k + 1) / float(L)
 
 
+@task
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=False):
@@ -133,6 +148,11 @@ def generate_contigs(sample_alignment,
     contig_files = assemble_with_velvet(
             data_dir, velvet_opts, sv_indicants_bam,
             sample_alignment)
+
+
+    sample_alignment.data['assembly_status'] = (
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.COMPLETED)
+    sample_alignment.save()
 
     return contig_files
 

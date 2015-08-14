@@ -47,7 +47,7 @@ from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
-from genome_finish import assembly
+from genome_finish.assembly import run_de_novo_assembly_pipeline
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.jbrowse_genome_finish import align_contig_reads_to_contig
 from genome_finish.jbrowse_genome_finish import add_contig_reads_to_contig_bam_track
@@ -1123,9 +1123,36 @@ def get_contigs(request):
             'experiment_sample_to_alignment__in': sample_to_align_query
     }
 
-    response_data = adapt_model_to_frontend(Contig, filters)
+    contig_list = Contig.objects.filter(**filters)
+    response_data = adapt_model_to_frontend(Contig,
+            obj_list=contig_list)
 
-    return HttpResponse(response_data, content_type='application/json')
+    # Add bit to indicate whether any assemblies are running.
+    # NOTE: We do this wonky json.loads(), modify, json.dumps() becaause
+    # adapt_model_to_frontend() has the suboptimal interface of returning
+    # a json packaged object. It would be better to change this, but would
+    # require making this change safely everywhere else, but since we are
+    # lacking test coverage I'm not going to do that right now.
+    response_data_dict = json.loads(response_data)
+    response_data_dict['clientShouldRefresh'] = _are_any_assemblies_running(
+            sample_to_align_query)
+    response_data = json.dumps(response_data_dict)
+
+    return HttpResponse(response_data,
+            content_type='application/json')
+
+
+def _are_any_assemblies_running(sample_alignment_query):
+    """Determines whether any assemblies in the list are running.
+    """
+    ASSEMBLY_RUNNING_STATUSES = [
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING]
+
+    for sample_alignment in sample_alignment_query:
+        status = sample_alignment.data.get('assembly_status', False)
+        if status and status in ASSEMBLY_RUNNING_STATUSES:
+            return True
+    return False
 
 
 @login_required
@@ -1347,17 +1374,11 @@ def generate_contigs(request):
             uid=sample_alignment_uid)
 
     # Generate a list of fasta file paths to the contigs
-    contig_filepaths = assembly.generate_contigs(
+    run_de_novo_assembly_pipeline(
             experiment_sample_to_alignment)
 
-    # Check if contigs exist
-    are_no_contigs = all([os.stat(contig_filepath).st_size == 0
-            for contig_filepath in contig_filepaths])
-
-    result = {'is_contig_file_empty': are_no_contigs}
-
     return HttpResponse(
-        json.dumps(result), content_type='application/json')
+        json.dumps({}), content_type='application/json')
 
 
 if settings.S3_ENABLED:
