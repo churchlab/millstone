@@ -6,9 +6,11 @@
 
  $(document).ajaxError(function (e, xhr, options) {
   var url = e.currentTarget.URL;
-  alert(
-      'Server Error. Please file an issue at ' +
-      'https://github.com/churchlab/millstone/issues/new. ' +
-      'Describe what you were trying to do, and include the following ' +
-      'offending URL: ' + url);
- });
+  if (xhr.status == 500) {
+      alert(
+          'Server Error. Please file an issue at ' +
+          'https://github.com/churchlab/millstone/issues/new. ' +
+          'Describe what you were trying to do, and include the following ' +
+          'offending URL: ' + url);
+  }
+});
