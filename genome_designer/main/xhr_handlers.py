@@ -29,6 +29,7 @@ from django.views.decorators.http import require_POST
 #from debug.debug_util import FakeException
 from main.adapters import adapt_model_to_frontend
 from main.adapters import adapt_experiment_samples_to_frontend
+from main.adapters import adapt_sample_alignments_to_frontend_for_assembly
 from main.exceptions import ValidationException
 from main.model_views import adapt_gene_list_to_frontend
 from main.model_views import get_all_fields
@@ -863,6 +864,21 @@ def get_variant_set_list(request):
 
 @login_required
 @require_GET
+def get_sample_alignments_for_assembly(request):
+
+    alignment_uid = request.GET.get('alignmentGroupUid')
+    alignment = get_object_or_404(AlignmentGroup,
+            uid=alignment_uid)
+
+    response_data = adapt_sample_alignments_to_frontend_for_assembly(
+            {'alignment_group': alignment})
+
+    return HttpResponse(response_data,
+            content_type='application/json')
+
+
+@login_required
+@require_GET
 def get_samples(request):
 
     project_uid = request.GET.get('projectUid')
@@ -1357,7 +1373,7 @@ def generate_new_ref_genome_for_variant_set(request):
     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
-@require_GET
+@require_POST
 @login_required
 def generate_contigs(request):
     """
@@ -1365,17 +1381,22 @@ def generate_contigs(request):
     unmapped and split reads of the passed ExperimentSampleToAlignment
     """
 
-    # Retrieve ExperimentSampleToAlignment
-    sample_alignment_uid = request.GET.get('sampleAlignmentUid')
-    experiment_sample_to_alignment = get_object_or_404(
-            ExperimentSampleToAlignment,
-            alignment_group__reference_genome__project__owner=(
-                    request.user.get_profile()),
-            uid=sample_alignment_uid)
+    # Retrieve ExperimentSampleToAlignment uid list
+    request_data = json.loads(request.body)
+    sample_alignment_uid_list = request_data.get('sampleAlignmentUidList', [])
+    if len(sample_alignment_uid_list) == 0:
+        raise Http404
 
-    # Generate a list of fasta file paths to the contigs
-    run_de_novo_assembly_pipeline(
-            experiment_sample_to_alignment)
+    for uid in sample_alignment_uid_list:
+        experiment_sample_to_alignment = get_object_or_404(
+                ExperimentSampleToAlignment,
+                alignment_group__reference_genome__project__owner=(
+                        request.user.get_profile()),
+                uid=uid)
+
+        # Kick off async assembly
+        run_de_novo_assembly_pipeline(
+                experiment_sample_to_alignment)
 
     return HttpResponse(
         json.dumps({}), content_type='application/json')

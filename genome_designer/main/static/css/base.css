@@ -439,6 +439,12 @@ div.dataTables_paginate ul.pagination {
   color: white;
 }
 
+.gd-datatable-explanation-text {
+ /* font-weight: bold;
+  font-size: 14px;
+  margin-left: 10px;*/
+}
+
 .gd-ag-status-text {
   font-weight: bold;
   margin-left: 10px;

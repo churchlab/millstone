@@ -69,6 +69,15 @@ pre_delete.connect(pre_project_delete, sender=Project,
         dispatch_uid='project_delete')
 
 
+# Delete all associated variant caller data when a contig is deleted.
+def post_contig_delete(sender, instance, **kwargs):
+    vccd = instance.variant_caller_common_data
+    if vccd:
+        vccd.delete()
+post_delete.connect(post_contig_delete, sender=Contig,
+        dispatch_uid='contig_delete')
+
+
 # When a new ReferenceGenome is created, create its data dir.
 def post_ref_genome_create(sender, instance, created, **kwargs):
     """Upon creation, create necessary data for jbrowse and snpeff."""

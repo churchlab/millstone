@@ -12,6 +12,7 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
 
   render: function() {
     this.redrawDatatable();
+    this.redrawSamplesDatatable();
   },
 
   /** Draws or redraws the table. */
@@ -36,6 +37,26 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
         _.bind(this.decorateControls, this));
   },
 
+  redrawSamplesDatatable: function() {
+    if (this.samplesDatatableComponent) {
+      this.samplesDatatableComponent.destroy();
+    }
+
+    var samplesRequestData = {
+        alignmentGroupUid: this.model.attributes.alignmentGroupUid
+    };
+
+    this.samplesDatatableComponent = new gd.DataTableComponent({
+        el: $('#samples-datatable-hook'),
+        serverTarget: '/_/sample_alignments_for_assembly',
+        controlsTemplate: '/_/templates/sample_alignment_list_for_assembly_controls',
+        requestData: samplesRequestData,
+    });
+
+    this.listenToOnce(this.samplesDatatableComponent, 'DONE_CONTROLS_REDRAW',
+        _.bind(this.samplesDecorateControls, this));
+  },
+
   decorateControls: function() {
     if (this.contigControlsComponent) {
       this.contigControlsComponent.destroy();
@@ -49,5 +70,20 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
 
     this.listenToOnce(this.contigControlsComponent, 'MODELS_UPDATED',
         _.bind(this.redrawDatatable, this));
+  },
+
+  samplesDecorateControls: function() {
+    if (this.sampleAssemblyControlsComponent) {
+      this.sampleAssemblyControlsComponent.destroy();
+    }
+
+    this.sampleAssemblyControlsComponent = new gd.SampleAssemblyControlsComponent({
+      el: '#samples-datatable-hook-control',
+      datatableComponent: this.samplesDatatableComponent,
+      alignmentGroupUid: this.model.attributes.alignmentGroupUid
+    });
+
+    this.listenToOnce(this.sampleAssemblyControlsComponent, 'MODELS_UPDATED',
+        _.bind(this.redrawSamplesDatatable, this));
   }
 });
