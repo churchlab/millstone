@@ -115,6 +115,22 @@ def contig_list_controls(request):
             render_to_string('controls/contig_list_controls.html', context))
 
 
+def sample_alignment_list_for_assembly_controls(request):
+    """Returns the Sample Alignment list for assembly control box.
+    """
+
+    # If the request passed a tableId, then give it to Django to decorate the
+    # controls.
+    context = {
+            'table_id': request.GET.get('tableId',
+                    'reference-genome-list-datatable'),
+    }
+
+    return HttpResponse(render_to_string(
+            'controls/sample_alignment_list_for_assembly_controls.html',
+            context))
+
+
 def sample_list_controls(request):
     """Returns the Sample List control box.
     """

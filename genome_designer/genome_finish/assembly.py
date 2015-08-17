@@ -68,7 +68,9 @@ def run_de_novo_assembly_pipeline(sample_alignment,
     sample_alignment.save()
 
     generate_contigs_async_task = generate_contigs.si(sample_alignment)
-    generate_contigs_async_task.apply_async()
+    async_result = generate_contigs_async_task.apply_async()
+
+    return async_result
 
 
 def kmer_coverage(C, L, k):
@@ -459,6 +461,8 @@ def evaluate_contigs(contig_list):
             contig_uid_list = vccd.data.get('INFO_contig_uid', False)
             if contig_uid_list:
                 contig = Contig.objects.get(uid=contig_uid_list[0])
+                contig.variant_caller_common_data = vccd
+                contig.save()
                 bam_dataset = get_dataset_with_type(
                         contig,
                         Dataset.TYPE.BWA_SV_INDICANTS)

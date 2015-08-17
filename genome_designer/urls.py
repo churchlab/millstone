@@ -167,6 +167,9 @@ urlpatterns = patterns('',
     url(r'^_/single_ref_genome$',
             'main.xhr_handlers.get_single_ref_genome'),
 
+    url(r'^_/sample_alignments_for_assembly$',
+            'main.xhr_handlers.get_sample_alignments_for_assembly'),
+
     url(r'^_/contigs$',
         'main.xhr_handlers.get_contigs'),
     url(r'^_/contigs/delete$',
@@ -199,6 +202,8 @@ urlpatterns = patterns('',
             'main.template_xhrs.sample_list_controls'),
     url(r'^_/templates/contig_list_controls$',
             'main.template_xhrs.contig_list_controls'),
+    url(r'^_/templates/sample_alignment_list_for_assembly_controls$',
+            'main.template_xhrs.sample_alignment_list_for_assembly_controls'),
     url(r'^_/templates/create_new_empty_variant_set$',
             'main.template_xhrs.create_new_empty_variant_set'),
 
