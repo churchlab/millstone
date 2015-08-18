@@ -1387,16 +1387,17 @@ def generate_contigs(request):
     if len(sample_alignment_uid_list) == 0:
         raise Http404
 
-    for uid in sample_alignment_uid_list:
-        experiment_sample_to_alignment = get_object_or_404(
-                ExperimentSampleToAlignment,
-                alignment_group__reference_genome__project__owner=(
-                        request.user.get_profile()),
-                uid=uid)
+    sample_alignment_list = ExperimentSampleToAlignment.objects.filter(
+            alignment_group__reference_genome__project__owner=(
+                    request.user.get_profile()),
+            uid__in=sample_alignment_uid_list)
 
-        # Kick off async assembly
-        run_de_novo_assembly_pipeline(
-                experiment_sample_to_alignment)
+    if len(sample_alignment_list) != len(sample_alignment_uid_list):
+        raise Http404
+
+    # Kick off async assembly
+    run_de_novo_assembly_pipeline(
+            sample_alignment_list)
 
     return HttpResponse(
         json.dumps({}), content_type='application/json')

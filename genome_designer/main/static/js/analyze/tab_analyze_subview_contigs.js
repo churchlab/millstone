@@ -74,9 +74,6 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
   },
 
   samplesDecorateControls: function() {
-    if (this.sampleAssemblyControlsComponent) {
-      this.sampleAssemblyControlsComponent.destroy();
-    }
 
     this.sampleAssemblyControlsComponent = new gd.SampleAssemblyControlsComponent({
       el: '#samples-datatable-hook-control',

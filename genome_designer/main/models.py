@@ -1211,6 +1211,7 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
         """
         The status of an Assembly
         """
+        QUEUED = 'QUEUED TO ASSEMBLE'
         ASSEMBLING = 'ASSEMBLING'
         COMPLETED = 'COMPLETED'
         FAILED = 'FAILED'
