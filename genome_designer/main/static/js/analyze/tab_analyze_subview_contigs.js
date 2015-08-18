@@ -51,6 +51,7 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
         serverTarget: '/_/sample_alignments_for_assembly',
         controlsTemplate: '/_/templates/sample_alignment_list_for_assembly_controls',
         requestData: samplesRequestData,
+        extraDatatableParams: {'iDisplayLength': 10}
     });
 
     this.listenToOnce(this.samplesDatatableComponent, 'DONE_CONTROLS_REDRAW',

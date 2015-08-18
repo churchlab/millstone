@@ -7,7 +7,6 @@ import re
 from Bio import SeqIO
 from celery import task
 from django.conf import settings
-import numpy as np
 
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.millstone_de_novo_fns import add_paired_mates
