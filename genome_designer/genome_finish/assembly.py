@@ -58,15 +58,17 @@ DEFAULT_VELVET_OPTS = {
 NUM_CONTIGS_TO_EVALUATE = 1000
 
 
-def run_de_novo_assembly_pipeline(sample_alignment,
+def run_de_novo_assembly_pipeline(sample_alignment_list,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=False):
 
-    sample_alignment.data['assembly_status'] = (
-            ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
-    sample_alignment.save()
+    for sample_alignment in sample_alignment_list:
+        sample_alignment.data['assembly_status'] = (
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED)
+        sample_alignment.save()
 
-    generate_contigs_async_task = generate_contigs.si(sample_alignment)
+    generate_contigs_async_task = generate_contigs_multi_sample.si(
+            sample_alignment_list)
     async_result = generate_contigs_async_task.apply_async()
 
     return async_result
@@ -84,9 +86,23 @@ def kmer_coverage(C, L, k):
 
 
 @task
+def generate_contigs_multi_sample(sample_alignment_list):
+    """Generate contigs for each ExperimentSampleToAlignment in
+    the passed list in the order that they are displayed in the UI
+    """
+    for sample_alignment in sorted(sample_alignment_list,
+            key=lambda x: x.experiment_sample.label):
+        generate_contigs(sample_alignment)
+
+
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=False):
+
+    # Set assembly status for UI
+    sample_alignment.data['assembly_status'] = (
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
+    sample_alignment.save()
 
     # Grab reference genome fasta path, ensure indexed
     reference_genome = sample_alignment.alignment_group.reference_genome
