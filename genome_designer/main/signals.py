@@ -72,6 +72,7 @@ pre_delete.connect(pre_project_delete, sender=Project,
 # Delete all associated variant caller data when a contig is deleted.
 def post_contig_delete(sender, instance, **kwargs):
     vccd = instance.variant_caller_common_data
+    vccd.variant.reference_genome.invalidate_materialized_view()
     if vccd.variant.variantcallercommondata_set.count() == 1:
         vccd.variant.delete()
     else:
