@@ -98,26 +98,34 @@ CUSTOM_SAVED_QUERY_LIST = [
     'INFO_EFF_IMPACT = HIGH',
 ]
 
+@transaction.commit_on_success
+def add_fake_variants_to_genome(ref_genome, chromosome, num_variants):
+    """
+    Add many fake variants to a fake genome in order to test
+    features like pagination.
+    """
 
-def create_fake_variants_and_variant_sets(ref_genome):
+    for var_count in range(num_variants):
+
+        variant = Variant.objects.create(
+                type=Variant.TYPE.TRANSITION,
+                reference_genome=ref_genome,
+                chromosome=chromosome,
+                position=random.randint(1, chromosome.num_bases),
+                ref_value='A')
+
+        variant.variantalternate_set.add(VariantAlternate.objects.create(
+                variant=variant,
+                alt_value='G'))
+
+def create_fake_variants_and_variant_sets(ref_genome, num_variants= 100):
 
     chrom_0 = Chromosome.objects.get(reference_genome=ref_genome)
 
-    @transaction.commit_on_success
-    def _create_fake_variants():
-        for var_count in range(100):
-            variant = Variant.objects.create(
-                    type=Variant.TYPE.TRANSITION,
-                    reference_genome=ref_genome,
-                    chromosome=chrom_0,
-                    position=random.randint(1, chrom_0.num_bases),
-                    ref_value='A')
-
-            variant.variantalternate_set.add(VariantAlternate.objects.create(
-                    variant=variant,
-                    alt_value='G'))
-
-    _create_fake_variants()
+    add_fake_variants_to_genome(
+            ref_genome=ref_genome,
+            chromosome=chrom_0,
+            num_variants=num_variants)
 
     ### Add fake variants to a set
     @transaction.commit_on_success
@@ -140,24 +148,23 @@ def create_fake_variants_and_variant_sets(ref_genome):
         for var in variant_list:
 
             #add variant to one of two sets, depending on var position
-            if var.position < 50:
-                if var.position < 25:
-                    vvs1 = VariantToVariantSet.objects.create(
-                        variant=var,
-                        variant_set=var_set1)
+            if var.position < 25:
+                vvs1 = VariantToVariantSet.objects.create(
+                    variant=var,
+                    variant_set=var_set1)
 
-                    #add a sample to the association if the variant is odd
-                    if var.position % 2:
-                        vvs1.sample_variant_set_association.add(sample_1)
+                #add a sample to the association if the variant is odd
+                if var.position % 2:
+                    vvs1.sample_variant_set_association.add(sample_1)
 
-                if var.position > 20:
-                    vvs2 = VariantToVariantSet.objects.create(
-                        variant=var,
-                        variant_set=var_set2)
+            if var.position > 20:
+                vvs2 = VariantToVariantSet.objects.create(
+                    variant=var,
+                    variant_set=var_set2)
 
-                    #add a sample to the association if the variant is even
-                    if not var.position % 2:
-                        vvs2.sample_variant_set_association.add(sample_1)
+                #add a sample to the association if the variant is even
+                if not var.position % 2:
+                    vvs2.sample_variant_set_association.add(sample_1)
 
         # Make sure that both sets have at least one variant.
         guaranteed_var = Variant.objects.create(
