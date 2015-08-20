@@ -157,7 +157,10 @@ else {
 			},
 
 			"fnUpdate": function ( oSettings, fnDraw ) {
-				var iListLength = 5;
+				// dbg: iListLength sets the number of pages to display in the
+				// pagination list. It was 5, we are setting it to 3 for
+				// millstone to fit within the variant view box.
+				var iListLength = 3;
 				var oPaging = oSettings.oInstance.fnPagingInfo();
 				var an = oSettings.aanFeatures.p;
 				var i, ien, j, sClass, iStart, iEnd, iHalf=Math.floor(iListLength/2);
