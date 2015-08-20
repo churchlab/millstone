@@ -36,7 +36,7 @@ Cloning the AMI
 
 2. In the Choose AMI tab, select Community AMIs in the left panel, then
    search for "millstone", or search directly using our beta release ami
-   id: ami-4b8d5220.
+   id: ami-271aa94c.
 
 3. On the 'Choose instance type' tab, select an instance according to
    your needs. We recommend m3.medium (select General Purpose on the
