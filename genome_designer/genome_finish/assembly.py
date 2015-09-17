@@ -5,8 +5,8 @@ import subprocess
 import re
 
 from Bio import SeqIO
+from celery import task
 from django.conf import settings
-import numpy as np
 
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.millstone_de_novo_fns import add_paired_mates
@@ -18,6 +18,7 @@ from genome_finish.millstone_de_novo_fns import get_avg_genome_coverage
 from genome_finish.millstone_de_novo_fns import get_unmapped_reads
 from main.models import Contig
 from main.models import Dataset
+from main.models import ExperimentSampleToAlignment
 from main.model_utils import get_dataset_with_type
 from pipeline.read_alignment import get_insert_size_mean_and_stdev
 from utils.bam_utils import concatenate_bams
@@ -57,6 +58,22 @@ DEFAULT_VELVET_OPTS = {
 NUM_CONTIGS_TO_EVALUATE = 1000
 
 
+def run_de_novo_assembly_pipeline(sample_alignment_list,
+        sv_read_classes={}, input_velvet_opts={},
+        overwrite=False):
+
+    for sample_alignment in sample_alignment_list:
+        sample_alignment.data['assembly_status'] = (
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED)
+        sample_alignment.save()
+
+    generate_contigs_async_task = generate_contigs_multi_sample.si(
+            sample_alignment_list)
+    async_result = generate_contigs_async_task.apply_async()
+
+    return async_result
+
+
 def kmer_coverage(C, L, k):
     """Converts contig coverage to kmer coverage
 
@@ -68,9 +85,24 @@ def kmer_coverage(C, L, k):
     return C * (L - k + 1) / float(L)
 
 
+@task
+def generate_contigs_multi_sample(sample_alignment_list):
+    """Generate contigs for each ExperimentSampleToAlignment in
+    the passed list in the order that they are displayed in the UI
+    """
+    for sample_alignment in sorted(sample_alignment_list,
+            key=lambda x: x.experiment_sample.label):
+        generate_contigs(sample_alignment)
+
+
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=False):
+
+    # Set assembly status for UI
+    sample_alignment.data['assembly_status'] = (
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
+    sample_alignment.save()
 
     # Grab reference genome fasta path, ensure indexed
     reference_genome = sample_alignment.alignment_group.reference_genome
@@ -133,6 +165,11 @@ def generate_contigs(sample_alignment,
     contig_files = assemble_with_velvet(
             data_dir, velvet_opts, sv_indicants_bam,
             sample_alignment)
+
+
+    sample_alignment.data['assembly_status'] = (
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.COMPLETED)
+    sample_alignment.save()
 
     return contig_files
 
@@ -439,6 +476,8 @@ def evaluate_contigs(contig_list):
             contig_uid_list = vccd.data.get('INFO_contig_uid', False)
             if contig_uid_list:
                 contig = Contig.objects.get(uid=contig_uid_list[0])
+                contig.variant_caller_common_data = vccd
+                contig.save()
                 bam_dataset = get_dataset_with_type(
                         contig,
                         Dataset.TYPE.BWA_SV_INDICANTS)

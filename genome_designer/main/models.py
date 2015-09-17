@@ -691,6 +691,10 @@ class Contig(UniqueUidModelMixin):
     experiment_sample_to_alignment = models.ForeignKey(
             'ExperimentSampleToAlignment')
 
+    # The variant caller common data object associated
+    variant_caller_common_data = models.ForeignKey('VariantCallerCommonData',
+            blank=True, null=True)
+
     # Contig metadata field for storing key-value pairs of contig
     # related information e.g. metadata['is_from_de_novo_assembly']=True
     metadata = PostgresJsonField()
@@ -765,10 +769,6 @@ class Contig(UniqueUidModelMixin):
                 args=(self.parent_reference_genome.project.uid, self.uid))
 
     @property
-    def timestamp(self):
-        return self.metadata.get('timestamp', '')
-
-    @property
     def coverage(self):
         return self.metadata.get('coverage', '')
 
@@ -784,6 +784,10 @@ class Contig(UniqueUidModelMixin):
     def contig_insertion_endpoints(self):
         return self.metadata.get('contig_insertion_endpoints', '')
 
+    @property
+    def experiment_sample(self):
+        return self.experiment_sample_to_alignment.experiment_sample.label
+
     @classmethod
     def get_field_order(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
@@ -791,9 +795,9 @@ class Contig(UniqueUidModelMixin):
         """
         return [
             {'field': 'label'},
+            {'field': 'experiment_sample'},
             {'field': 'num_bases', 'verbose': 'Contig Length'},
             {'field': 'coverage', 'verbose': 'Average Coverage'},
-            {'field': 'timestamp'},
             {'field': 'chromosome'},
             {'field': 'reference_insertion_endpoints'},
             {'field': 'contig_insertion_endpoints'}
@@ -1200,6 +1204,17 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
     experiment_sample = models.ForeignKey('ExperimentSample')
 
     dataset_set = models.ManyToManyField('Dataset', blank=True, null=True)
+
+    data = PostgresJsonField()
+
+    class ASSEMBLY_STATUS:
+        """
+        The status of an Assembly
+        """
+        QUEUED = 'QUEUED TO ASSEMBLE'
+        ASSEMBLING = 'ASSEMBLING'
+        COMPLETED = 'COMPLETED'
+        FAILED = 'FAILED'
 
     @property
     def status(self):

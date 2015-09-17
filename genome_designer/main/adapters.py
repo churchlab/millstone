@@ -14,6 +14,7 @@ from django.db.models.query import QuerySet
 
 from main.constants import UNDEFINED_STRING
 from main.models import ExperimentSample
+from main.models import ExperimentSampleToAlignment
 
 OBJ_LIST = 'obj_list'
 
@@ -145,6 +146,67 @@ def adapt_experiment_samples_to_frontend(filters={}, obj_list=None, **kwargs):
         'field_config': obj_field_config
     })
 
+
+def adapt_sample_alignments_to_frontend_for_assembly(filters={}):
+    """ The sample metadata fields require their own custom adapter. """
+    # Get all objects that pass the filter.
+    obj_list = ExperimentSampleToAlignment.objects.filter(
+            **filters).order_by('experiment_sample__label')
+
+    json_fields = {}
+    for obj in obj_list:
+        json_field_dicts = dict(
+                [(key, {'field': key}) for key in obj.data.keys()])
+        json_fields.update(json_field_dicts)
+
+    # A list of dicts with object data, where each dict is one object
+    # and all the fields required for front-end display.
+    fe_obj_list = []
+    for obj in obj_list:
+        # default to empty string
+        obj_json_fields = dict((field, '') for field in json_fields)
+        obj_json_fields.update(obj.data)
+        fe_obj_list.append(adapt_model_instance_to_frontend(obj,
+                field_info=obj_json_fields))
+
+    # Get a list of fields required for displaying the objects, in the order
+    # in which they should be displayed.
+    field_dict_list = ExperimentSampleToAlignment.get_field_order()
+    field_dict_list.extend(json_fields.values())
+
+    # Select fields to display to frontend
+    FIELDS_TO_DISPLAY = ['assembly_status', 'experiment_sample']
+
+    field_dict_list_filtered = [i for i in field_dict_list
+            if i['field'] in FIELDS_TO_DISPLAY]
+
+    field_dict_list = field_dict_list_filtered
+
+    # Each field is a dict with two keys, 'field' for field name and 'verbose'
+    # for display name. Get each. If 'verbose' is missing, then make verbose
+    # be the field with _'s turned to spaces and Title Cased.
+    field_list = [fdict['field'] for fdict in field_dict_list]
+
+    # Get the verbose field names, which will be used as column headers.
+    def _get_verbose(fdict):
+        if 'verbose' in fdict:
+            return fdict['verbose']
+        else:
+            return string.capwords(fdict['field'], '_').replace('_', ' ')
+    field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
+
+    # A list of dicts containing the order of each column and the field titles
+    # for each column, used for configuring jquery.datatables.js
+    obj_field_config = [{
+        'mData': name,
+        'sTitle': verbose_name
+    } for (name, verbose_name) in zip(field_list, field_verbose_names)]
+
+    # Package the result.
+    return json.dumps({
+        OBJ_LIST: fe_obj_list,
+        'field_config': obj_field_config
+    })
 
 
 def adapt_model_instance_to_frontend(model_instance, field_info={}, **kwargs):

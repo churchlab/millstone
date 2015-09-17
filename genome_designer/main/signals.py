@@ -5,6 +5,7 @@ See: https://docs.djangoproject.com/en/dev/topics/signals/.
 """
 from Bio import SeqIO
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from django.db.models.signals import m2m_changed
 from django.db.models.signals import post_save
@@ -67,6 +68,23 @@ def pre_project_delete(sender, instance, **kwargs):
     instance.delete_model_data_dir()
 pre_delete.connect(pre_project_delete, sender=Project,
         dispatch_uid='project_delete')
+
+
+# Delete all associated variant caller data when a contig is deleted.
+def post_contig_delete(sender, instance, **kwargs):
+    # In case vccd has already been deleted
+    try:
+        vccd = instance.variant_caller_common_data
+    except ObjectDoesNotExist:
+        return
+
+    vccd.variant.reference_genome.invalidate_materialized_view()
+    if vccd.variant.variantcallercommondata_set.count() == 1:
+        vccd.variant.delete()
+    else:
+        vccd.delete()
+post_delete.connect(post_contig_delete, sender=Contig,
+        dispatch_uid='contig_delete')
 
 
 # When a new ReferenceGenome is created, create its data dir.

@@ -14,6 +14,7 @@ from django.template import RequestContext
 from django.template.loader import render_to_string
 
 from main.models import AlignmentGroup
+from main.models import ExperimentSampleToAlignment
 from main.models import ReferenceGenome
 from main.models import Project
 from main.models import SavedVariantFilterQuery
@@ -98,8 +99,36 @@ def contig_list_controls(request):
                     alignment_group.experimentsampletoalignment_set.all()]
     }
 
+    sample_alignment_query = ExperimentSampleToAlignment.objects.filter(
+            alignment_group=alignment_group)
+
+    assembly_status_tuples = []
+    for sample_alignment in sample_alignment_query:
+        status = sample_alignment.data.get('assembly_status', False)
+        if status:
+            assembly_status_tuples.append(
+                    (sample_alignment.experiment_sample.label, status))
+
+    context['assembly_status_tuples'] = assembly_status_tuples
+
     return HttpResponse(
             render_to_string('controls/contig_list_controls.html', context))
+
+
+def sample_alignment_list_for_assembly_controls(request):
+    """Returns the Sample Alignment list for assembly control box.
+    """
+
+    # If the request passed a tableId, then give it to Django to decorate the
+    # controls.
+    context = {
+            'table_id': request.GET.get('tableId',
+                    'reference-genome-list-datatable'),
+    }
+
+    return HttpResponse(render_to_string(
+            'controls/sample_alignment_list_for_assembly_controls.html',
+            context))
 
 
 def sample_list_controls(request):

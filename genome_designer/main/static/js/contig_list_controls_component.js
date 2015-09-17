@@ -11,9 +11,6 @@ gd.ContigControlsComponent = gd.DataTableControlsComponent.extend({
   },
 
   decorateControls: function() {
-    $('#gd-contig-assemble-submit').click(
-        _.bind(this.handleAssembleContigs, this));
-
     this.drawDropdownOptions();
   },
 
@@ -31,45 +28,6 @@ gd.ContigControlsComponent = gd.DataTableControlsComponent.extend({
     this.addDropdownOption(findInsertionLocationOptionHtml);
     $('.gd-id-contigs-find-insertion-location').click(_.bind(
         this.handleFindInsertionLocation, this));
-  },
-
-  /** Send request to generate contigs with default parameters **/
-  handleAssembleContigs: function() {
-    var requestData = this.prepareRequestData('gd-contig-assemble');
-    sample_alignment_uid = requestData['sample_selector']
-
-    var postData = {
-        sampleAlignmentUid: sample_alignment_uid
-    };
-
-    this.enterLoadingState();
-
-    $.get('/_/alignments/generate_contigs', postData,
-        _.bind(this.handleGenerateContigsResponse, this));
-  },
-
-  handleGenerateContigsResponse: function(response) {
-    this.exitLoadingState();
-    $('.modal').modal('hide');
-
-    if (response.is_contig_file_empty == 1) {
-      alert('No evidence for structural variants in this alignment');
-    } else {
-      this.trigger('MODELS_UPDATED');
-    };
-  },
-
-  /** Parses the form files and prepares the data. */
-  prepareRequestData: function(formId) {
-    var requestData = {}
-
-    // This works correctly for all inputs except radio buttons
-    var formInputs = $('#' + formId + ' :input');
-    _.each(formInputs, function(inputObj) {
-      requestData[inputObj.name] = inputObj.value;
-    });
-
-    return requestData;
   },
 
   /** Sends request to find insertion location. */

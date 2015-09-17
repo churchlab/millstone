@@ -213,6 +213,8 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
 
     // Remove anything left there.
     $('#gd-datatable-hook').empty();
+    // Remove anything left there.
+    $('#samples-datatable-hook').empty();
   },
 
 

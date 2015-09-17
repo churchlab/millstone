@@ -503,6 +503,13 @@ div.dataTables_paginate ul.pagination {
   margin-bottom: 5px;
 }
 
+.gd-datatable-controls-title {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px;
+    text-align: center;
+}
+
 .gd-alignment-create-new-project-text {
   background-color: yellow;
   font-weight: bold;

@@ -29,6 +29,7 @@ from django.views.decorators.http import require_POST
 #from debug.debug_util import FakeException
 from main.adapters import adapt_model_to_frontend
 from main.adapters import adapt_experiment_samples_to_frontend
+from main.adapters import adapt_sample_alignments_to_frontend_for_assembly
 from main.exceptions import ValidationException
 from main.model_views import adapt_gene_list_to_frontend
 from main.model_views import get_all_fields
@@ -47,7 +48,7 @@ from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
-from genome_finish import assembly
+from genome_finish.assembly import run_de_novo_assembly_pipeline
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.jbrowse_genome_finish import align_contig_reads_to_contig
 from genome_finish.jbrowse_genome_finish import add_contig_reads_to_contig_bam_track
@@ -863,6 +864,21 @@ def get_variant_set_list(request):
 
 @login_required
 @require_GET
+def get_sample_alignments_for_assembly(request):
+
+    alignment_uid = request.GET.get('alignmentGroupUid')
+    alignment = get_object_or_404(AlignmentGroup,
+            uid=alignment_uid)
+
+    response_data = adapt_sample_alignments_to_frontend_for_assembly(
+            {'alignment_group': alignment})
+
+    return HttpResponse(response_data,
+            content_type='application/json')
+
+
+@login_required
+@require_GET
 def get_samples(request):
 
     project_uid = request.GET.get('projectUid')
@@ -1123,9 +1139,36 @@ def get_contigs(request):
             'experiment_sample_to_alignment__in': sample_to_align_query
     }
 
-    response_data = adapt_model_to_frontend(Contig, filters)
+    contig_list = Contig.objects.filter(**filters)
+    response_data = adapt_model_to_frontend(Contig,
+            obj_list=contig_list)
 
-    return HttpResponse(response_data, content_type='application/json')
+    # Add bit to indicate whether any assemblies are running.
+    # NOTE: We do this wonky json.loads(), modify, json.dumps() becaause
+    # adapt_model_to_frontend() has the suboptimal interface of returning
+    # a json packaged object. It would be better to change this, but would
+    # require making this change safely everywhere else, but since we are
+    # lacking test coverage I'm not going to do that right now.
+    response_data_dict = json.loads(response_data)
+    response_data_dict['clientShouldRefresh'] = _are_any_assemblies_running(
+            sample_to_align_query)
+    response_data = json.dumps(response_data_dict)
+
+    return HttpResponse(response_data,
+            content_type='application/json')
+
+
+def _are_any_assemblies_running(sample_alignment_query):
+    """Determines whether any assemblies in the list are running.
+    """
+    ASSEMBLY_RUNNING_STATUSES = [
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING]
+
+    for sample_alignment in sample_alignment_query:
+        status = sample_alignment.data.get('assembly_status', False)
+        if status and status in ASSEMBLY_RUNNING_STATUSES:
+            return True
+    return False
 
 
 @login_required
@@ -1330,7 +1373,7 @@ def generate_new_ref_genome_for_variant_set(request):
     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
-@require_GET
+@require_POST
 @login_required
 def generate_contigs(request):
     """
@@ -1338,26 +1381,26 @@ def generate_contigs(request):
     unmapped and split reads of the passed ExperimentSampleToAlignment
     """
 
-    # Retrieve ExperimentSampleToAlignment
-    sample_alignment_uid = request.GET.get('sampleAlignmentUid')
-    experiment_sample_to_alignment = get_object_or_404(
-            ExperimentSampleToAlignment,
+    # Retrieve ExperimentSampleToAlignment uid list
+    request_data = json.loads(request.body)
+    sample_alignment_uid_list = request_data.get('sampleAlignmentUidList', [])
+    if len(sample_alignment_uid_list) == 0:
+        raise Http404
+
+    sample_alignment_list = ExperimentSampleToAlignment.objects.filter(
             alignment_group__reference_genome__project__owner=(
                     request.user.get_profile()),
-            uid=sample_alignment_uid)
+            uid__in=sample_alignment_uid_list)
 
-    # Generate a list of fasta file paths to the contigs
-    contig_filepaths = assembly.generate_contigs(
-            experiment_sample_to_alignment)
+    if len(sample_alignment_list) != len(sample_alignment_uid_list):
+        raise Http404
 
-    # Check if contigs exist
-    are_no_contigs = all([os.stat(contig_filepath).st_size == 0
-            for contig_filepath in contig_filepaths])
-
-    result = {'is_contig_file_empty': are_no_contigs}
+    # Kick off async assembly
+    run_de_novo_assembly_pipeline(
+            sample_alignment_list)
 
     return HttpResponse(
-        json.dumps(result), content_type='application/json')
+        json.dumps({}), content_type='application/json')
 
 
 if settings.S3_ENABLED:
