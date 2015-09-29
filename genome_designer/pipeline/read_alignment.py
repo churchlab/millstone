@@ -106,13 +106,6 @@ def align_with_bwa_mem(alignment_group, sample_alignment):
         else:
             is_paired_end = False
 
-        # There are two steps to alignment with bwa.
-        #     1. Call 'bwa aln' to generate SA coordinate indices. Note that
-        #        we run a separate bwa aln for each end, and do so in parallel
-        #        when paired end reads.
-        #     2. Call 'bwa sampe' (paired-end) or 'bwa samse' (single-end) to
-        #        generate SAM output.
-
         # 1. Generate SA coordinates.
         read_fq_1_path, read_fq_1_fn = os.path.split(input_reads_1_fq_path)
 
