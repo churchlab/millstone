@@ -69,17 +69,28 @@ def get_callable_loci(
         c_ends = chrom_lens
 
     for chrom, c_start, c_end in zip(chrom_list, c_starts, c_ends):
+
+        # holds the name of the bed flag we are currently walking through,
+        # if there is one, else None.
         curr_flag = None
+
+        # holds the expected next bed position
         next_pos = c_start
+
+        # holds the start of the current bed record.
         bed_start = c_start
 
         for pileup_col in bamfile.pileup(chrom,
                 start=c_start, end=c_end, truncate=True):
 
+            # number of segments aligned to this position
             depth = pileup_col.nsegments
+            # number of poorly mapped segments
             badmapq = 0
+            # number of segments who also map somewhere else
             altaligns = 0
 
+            # fill in badmapq & altaligns
             for p in pileup_col.pileups:
                 a = p.alignment
                 tag_as = a.get_tag('AS')
@@ -88,6 +99,9 @@ def get_callable_loci(
                 altaligns += tag_as <= tag_xs
 
             # NO_COVERAGE
+            # if we've previously skipped from next_pos to the current pileup_col.pos,
+            # then end previous flag at next_pos-1 and fill in a NO_COVERAGE bed flag
+            # from next_pos to the current pileup_col.pos.
             if next_pos != pileup_col.pos:
                 if curr_flag != 'NO_COVERAGE':
                     _save_bed_line(chrom, bed_start, next_pos-1, curr_flag)
@@ -95,6 +109,8 @@ def get_callable_loci(
                 curr_flag = None
 
             # LOW_COVERAGE
+            # if we're starting a new LOW_COVERAGE, then write the last flag
+            # and start a new one here by setting bed_start and curr_flag
             if depth < MIN_DEPTH:
                 if curr_flag != 'LOW_COVERAGE':
                     _save_bed_line(
@@ -102,8 +118,11 @@ def get_callable_loci(
                     bed_start = pileup_col.pos
                     curr_flag = 'LOW_COVERAGE'
 
-            if depth >= MIN_LOWMAPQ_DEPTH:
+            # GOOD COVERAGE - either POOR_MAPQ, NONUNIQUE, or no flag
+            elif depth >= MIN_LOWMAPQ_DEPTH:
                 # POOR_MAPQ
+                # if we're starting a new POOR_MAPQ, then write the last flag
+                # and start a new one here by setting bed_start and curr_flag
                 if badmapq >= MAX_LOWMAP_FRAC*depth:
                     if curr_flag != 'POOR_MAP_QUALITY':
                         _save_bed_line(
@@ -112,6 +131,8 @@ def get_callable_loci(
                         curr_flag = 'POOR_MAP_QUALITY'
 
                 # NONUNIQUE
+                # if we're starting a new NONUNIQUE, then write the last flag
+                # and start a new one here by setting bed_start and curr_flag
                 elif altaligns >= MAX_LOWMAP_FRAC*depth:
                     if curr_flag != 'NONUNIQUE_ALIGNMENTS':
                         _save_bed_line(
@@ -119,10 +140,12 @@ def get_callable_loci(
                         bed_start = pileup_col.pos
                         curr_flag = 'NONUNIQUE_ALIGNMENTS'
 
-            # END PREVIOUS FLAG
-            elif curr_flag:
-                _save_bed_line(chrom, bed_start, pileup_col.pos, curr_flag)
-                curr_flag = None
+                # NO FLAG
+                # If depth > MIN_LOWMAPQ_DEPTH and alignments are sufficiently
+                # unique, then end the current flag
+                elif curr_flag:
+                    _save_bed_line(chrom, bed_start, pileup_col.pos, curr_flag)
+                    curr_flag = None
 
             next_pos = pileup_col.pos +1
 
