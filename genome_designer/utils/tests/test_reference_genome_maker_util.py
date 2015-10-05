@@ -85,4 +85,4 @@ class TestReferenceGenomeMakerUtil(TestCase):
             self.assertEqual('G', str(new_ref_genome_seq_record[position - 1]))
 
         # Assert new genome is annotated.
-        new_ref_genome.is_annotated()
+        self.assertTrue(new_ref_genome.is_annotated())
