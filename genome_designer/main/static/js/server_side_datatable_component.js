@@ -27,6 +27,9 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
     this.displayableFieldConfig = this.makeDisplayableFieldConfig(
         this.options.fieldConfig);
 
+    // Default nothing.
+    this.numTotalVariants = 0;
+
     // The server target for updates.
     this.serverTarget = this.options.serverTarget;
 
@@ -172,11 +175,8 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
     if (this.options.extraDatatableParams) {
       _.extend(datatableParams, this.options.extraDatatableParams);
     }
-    
-    this.datatable = $('#' + this.datatableId).dataTable(datatableParams);
 
-    // Draw the entity-specific controls that listen for this trigger
-    this.trigger('DONE_TABLE_REDRAW');
+    this.datatable = $('#' + this.datatableId).dataTable(datatableParams);
 
     // Draw the control buttons at the top-left of the dable component,
     // if passed, the proper template. 
