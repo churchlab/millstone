@@ -6,9 +6,9 @@ reasonable separation point is to separate page actions from Ajax actions.
 """
 
 import copy
+from datetime import datetime
 import json
 import os
-import re
 from StringIO import StringIO
 import tempfile
 
@@ -617,9 +617,11 @@ VARIANT_LIST_REQUEST_KEY__REF_GENOME_UID = 'refGenomeUid'
 
 VARIANT_LIST_RESPONSE_KEY__LIST = 'variant_list_json'
 VARIANT_LIST_RESPONSE_KEY__TOTAL = 'num_total_variants'
+VARIANT_LIST_RESPONSE_KEY__TIME = 'time_for_last_result'
 VARIANT_LIST_RESPONSE_KEY__SET_LIST = 'variant_set_list_json'
 VARIANT_LIST_RESPONSE_KEY__KEY_MAP = 'variant_key_filter_map_json'
 VARIANT_LIST_RESPONSE_KEY__ERROR = 'error'
+
 
 # Uncomment this and @profile statement to profile. This is the entry point
 # to a monster SQL call so leaving this debugging code here commented out is
@@ -696,6 +698,8 @@ def get_variant_list(request):
         else:
             query_args['sort_by_column'] = ''
 
+        query_start_time = datetime.now()
+
         # Get the list of Variants (or melted representation) to display.
         lookup_variant_result = lookup_variants(query_args, reference_genome,
                 alignment_group=alignment_group)
@@ -706,7 +710,7 @@ def get_variant_list(request):
         variant_list_json = adapt_variant_to_frontend(variant_list,
                 reference_genome, query_args['visible_key_names'],
                 melted=query_args['is_melted'])
-        
+
         # Get all VariantSets that exist for this ReferenceGenome.
         variant_set_list = VariantSet.objects.filter(
                 reference_genome=reference_genome)
@@ -720,10 +724,13 @@ def get_variant_list(request):
                 variant_key_map_with_active_fields_marked,
                 query_args['visible_key_names'])
 
+        time_for_last_result = (datetime.now() - query_start_time).total_seconds()
+
         # Package up the response.
         response_data = {
             VARIANT_LIST_RESPONSE_KEY__LIST: variant_list_json,
             VARIANT_LIST_RESPONSE_KEY__TOTAL: num_total_variants,
+            VARIANT_LIST_RESPONSE_KEY__TIME: time_for_last_result,
             VARIANT_LIST_RESPONSE_KEY__SET_LIST: adapt_model_to_frontend(VariantSet,
                     obj_list=variant_set_list),
             VARIANT_LIST_RESPONSE_KEY__KEY_MAP: json.dumps(

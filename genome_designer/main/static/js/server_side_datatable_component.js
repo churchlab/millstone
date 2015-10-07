@@ -30,12 +30,17 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
     // Default nothing.
     this.numTotalVariants = 0;
 
+    // Default 0.
+    this.timeForLastResult = 0;
+
     // The server target for updates.
     this.serverTarget = this.options.serverTarget;
 
     // Function that injects additional params for the server-side request.
     this.serverParamsInjector = this.options.serverParamsInjector;
 
+    // Initial render although the 0 results to show.
+    // Toss up whether or not UI loading is better with or without this.
     this.render();
   },
 
@@ -49,11 +54,13 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
 
 
   /** Used for updating an already rendered datatable with new data. */
-  update: function(newObjList, newFieldConfig, numTotalVariants) {
+  update: function(newObjList, newFieldConfig, numTotalVariants,
+      timeForLastResult) {
     this.displayableObjList = this.makeDisplayableObjectList(newObjList);
     this.displayableFieldConfig = this.makeDisplayableFieldConfig(
         newFieldConfig);
     this.numTotalVariants = numTotalVariants;
+    this.timeForLastResult = timeForLastResult;
     this.render();
   },
 
