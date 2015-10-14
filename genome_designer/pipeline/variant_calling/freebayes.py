@@ -4,8 +4,11 @@
 import errno
 import fileinput
 import glob
+import tempfile
 import os
+import shutil
 import subprocess
+import vcf
 
 from celery import task
 from django.conf import settings
@@ -20,6 +23,8 @@ from pipeline.variant_calling.constants import TOOL_FREEBAYES
 
 from pipeline.variant_effects import run_snpeff
 from utils import uppercase_underscore
+
+VCF_AF_HEADER = '##FORMAT=<ID=AF,Number=A,Type=Float,Description="Alternate allele observation frequency, AO/(RO+AO)">'
 
 
 def freebayes_regions(ref_genome,
@@ -97,7 +102,7 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
         '--pvar', '0.001',
         '--ploidy', str(alignment_ploidy),
         '--min-alternate-fraction', '.3',
-        '--hwe-priors-off',
+        '--no-population-priors',
         # '--binomial-obs-priors-off',
         '--use-mapping-quality',
         '--min-base-quality', '25',
@@ -115,13 +120,81 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
 
     print ' '.join(full_command)
 
-    # Run Lumpy Express.
+    # Run Freebayes.
     with open(vcf_output_filename + '.error', 'w') as error_output_fh:
         with open(vcf_output_filename, 'w') as fh:
             subprocess.check_call(
                     full_command, stdout=fh, stderr=error_output_fh)
 
     return True # success
+
+def process_freebayes_region_vcf(vcf_output_filename):
+    """
+    Processes vcf before region merging.
+
+    IF AO and RO are available for an allele, also add alt allele
+    percentages (AF), as percentage of total depth can be a good way to filter
+    het/hom calls.
+    """
+
+    # store the modified VCF in this temporary file, then move it to overwrite
+    # the original file when done adding this field.
+    temp_fh = tempfile.NamedTemporaryFile(delete=False)
+
+    with open(vcf_output_filename, 'r') as vcf_input_fh:
+
+        vcf_reader = vcf.Reader(vcf_input_fh)
+
+        # Generate extra header row for AF = AO/(RO+AO).
+        vcf_reader._header_lines.append(VCF_AF_HEADER)
+
+        key, val = vcf.parser._vcf_metadata_parser().read_format(VCF_AF_HEADER)
+        vcf_reader.formats[key] = val
+
+        # A list of all the FORMAT genotype keys, in order
+        format_keys = vcf_reader.formats.keys()
+
+        vcf_writer = vcf.Writer(temp_fh, vcf_reader)
+
+        # Write the old records with the new AF FORMAT field
+        for record in vcf_reader:
+
+            # This simply appends ':AF' to the record format field
+            record.add_format('AF')
+
+            # check if there are multiple alternate alleles
+            multi_alts = len(record.ALT) > 1
+
+            for sample in record.samples:
+
+                # Get alt allele frequencies for each alternate allele.
+                af = 0.0
+                # if multiple alternate alleles:
+                if multi_alts:
+                    total_obs = float(sum(sample['AO']) + sample['RO'])
+
+                    if total_obs > 0:
+                        af = [float(ao) / total_obs for ao in sample['AO']]
+
+                # if a single alternate allele:
+                else:
+                    total_obs = float(sample['AO'] + sample['RO'])
+
+                    if total_obs > 0:
+                        af = float(sample['AO']) / total_obs
+
+                # new namedtuple with the additional format field
+                CallData = collections.namedtuple(
+                        'CallData',
+                        sample.data._fields+('AF',))
+
+                sample.data = CallData(*sample.data, AF=af)
+
+            vcf_writer.write_record(record)
+
+    # close the writer and move the temp file over the original to replace it
+    vcf_writer.close()
+    shutil.move(temp_fh.name, vcf_output_filename)
 
 
 def merge_freebayes_parallel(alignment_group):
