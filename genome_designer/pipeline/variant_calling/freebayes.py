@@ -1,6 +1,7 @@
 """Wrapper for running Freebayes.
 """
 
+import collections
 import errno
 import fileinput
 import glob
@@ -24,8 +25,7 @@ from pipeline.variant_calling.constants import TOOL_FREEBAYES
 from pipeline.variant_effects import run_snpeff
 from utils import uppercase_underscore
 
-VCF_AF_HEADER = '##FORMAT=<ID=AF,Number=A,Type=Float,Description="Alternate allele observation frequency, AO/(RO+AO)">'
-
+VCF_AF_HEADER = '##FORMAT=<ID=AF,Number=1,Type=Float,Description="Alternate allele observation frequency, AO/(RO+AO)">'
 
 def freebayes_regions(ref_genome,
         region_size=settings.FREEBAYES_REGION_SIZE):
@@ -126,6 +126,9 @@ def run_freebayes(fasta_ref, sample_alignments, vcf_output_dir,
             subprocess.check_call(
                     full_command, stdout=fh, stderr=error_output_fh)
 
+    # add the allele frequency FORMAT field to the vcf.
+    process_freebayes_region_vcf(vcf_output_filename)
+
     return True # success
 
 def process_freebayes_region_vcf(vcf_output_filename):
@@ -168,20 +171,23 @@ def process_freebayes_region_vcf(vcf_output_filename):
             for sample in record.samples:
 
                 # Get alt allele frequencies for each alternate allele.
-                af = 0.0
-                # if multiple alternate alleles:
-                if multi_alts:
-                    total_obs = float(sum(sample['AO']) + sample['RO'])
+                try:
+                    # TODO: Right now, summing multiple alternate alleles because
+                    # we turn arrays into strings in the UI.
+                    if multi_alts:
+                        total_obs = float(sum(sample['AO']) + sample['RO'])
 
-                    if total_obs > 0:
-                        af = [float(ao) / total_obs for ao in sample['AO']]
+                        if total_obs > 0:
+                            af = sum([float(ao) / total_obs for ao in sample['AO']])
 
-                # if a single alternate allele:
-                else:
-                    total_obs = float(sample['AO'] + sample['RO'])
+                    # if a single alternate allele:
+                    else:
+                        total_obs = float(sample['AO'] + sample['RO'])
 
-                    if total_obs > 0:
-                        af = float(sample['AO']) / total_obs
+                        if total_obs > 0:
+                            af = float(sample['AO']) / total_obs
+                except:
+                    af = 0.0
 
                 # new namedtuple with the additional format field
                 CallData = collections.namedtuple(
@@ -194,7 +200,9 @@ def process_freebayes_region_vcf(vcf_output_filename):
 
     # close the writer and move the temp file over the original to replace it
     vcf_writer.close()
+
     shutil.move(temp_fh.name, vcf_output_filename)
+    print 'moved from {} to {}'.format(temp_fh.name, vcf_output_filename)
 
 
 def merge_freebayes_parallel(alignment_group):

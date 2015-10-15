@@ -116,10 +116,11 @@ def find_variants_with_tool(alignment_group, variant_params_dict):
                 vcf_output_dir=tool_dir,
                 vcf_output_filename=vcf_output_filename,
                 **common_params)
-    except:
+    except Exception as exc:
         alignment_group = AlignmentGroup.objects.get(id=alignment_group.id)
         alignment_group.status = AlignmentGroup.STATUS.FAILED
         alignment_group.save(update_fields=['status'])
+        print 'Tool failed: ' + str(exc)
         return False  # failed
 
     if not tool_succeeded:
