@@ -1,0 +1,74 @@
+##fileformat=VCFv4.2
+##source=LUMPY
+##SAMPLE=<ID=f849d0f8>
+##SAMPLE=<ID=4affe043>
+##SAMPLE=<ID=5a373339>
+##SAMPLE=<ID=d2a36df9>
+##SAMPLE=<ID=47344426>
+##SAMPLE=<ID=3dbec0fb>
+##SAMPLE=<ID=74f4ad31>
+##SAMPLE=<ID=9ec7362c>
+##SAMPLE=<ID=4bf7b892>
+##SAMPLE=<ID=5c30ff98>
+##SAMPLE=<ID=626e6d2a>
+##SAMPLE=<ID=827ffd6b>
+##SAMPLE=<ID=7c5b836e>
+##SAMPLE=<ID=72634c45>
+##SAMPLE=<ID=883f0e1b>
+##SAMPLE=<ID=5b2377ee>
+##SAMPLE=<ID=2332187d>
+##SAMPLE=<ID=3718a823>
+##SAMPLE=<ID=87904edf>
+##SAMPLE=<ID=578eabc8>
+##SnpEffVersion="3.3f (build 2013-07-16), by Pablo Cingolani"
+##SnpEffCmd="SnpEff  -i vcf -o vcf -ud 50 167abcb7 /home/ubuntu/millstone/genome_designer/conf/../temp_data/projects/d78d4ddb/alignment_groups/cc62967a/vcf/lumpy/BWA_BAM.vcf "
+##INFO=<ID=SVTYPE,Number=A,Type=String,Description="Type of structural variant">
+##INFO=<ID=SVLEN,Number=A,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=STRANDS,Number=.,Type=String,Description="Strand orientation of the adjacency in BEDPE format (DEL:+-, DUP:-+, INV:++/--)">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Confidence interval around END for imprecise variants">
+##INFO=<ID=CIPOS95,Number=2,Type=Integer,Description="Confidence interval (95%) around POS for imprecise variants">
+##INFO=<ID=CIEND95,Number=2,Type=Integer,Description="Confidence interval (95%) around END for imprecise variants">
+##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakends">
+##INFO=<ID=EVENT,Number=1,Type=String,Description="ID of event associated to breakend">
+##INFO=<ID=SECONDARY,Number=0,Type=Flag,Description="Secondary breakend in a multi-line variants">
+##INFO=<ID=SU,Number=.,Type=Integer,Description="Number of pieces of evidence supporting the variant across all samples">
+##INFO=<ID=PE,Number=.,Type=Integer,Description="Number of paired-end reads supporting the variant across all samples">
+##INFO=<ID=SR,Number=.,Type=Integer,Description="Number of split reads supporting the variant across all samples">
+##INFO=<ID=EV,Number=.,Type=String,Description="Type of LUMPY evidence contributing to the variant call">
+##INFO=<ID=PRPOS,Number=.,Type=String,Description="LUMPY probability curve of the POS breakend">
+##INFO=<ID=PREND,Number=.,Type=String,Description="LUMPY probability curve of the END breakend">
+##INFO=<ID=SNAME,Number=.,Type=String,Description="Source sample name">
+##INFO=<ID=ALG,Number=1,Type=String,Description="Evidence PDF aggregation algorithm">
+##INFO=<ID=EFF,Number=.,Type=String,Description="Predicted effects for this variant.Format: 'Effect ( Effect_Impact | Functional_Class | Codon_Change | Amino_Acid_change| Amino_Acid_length | Gene_Name | Transcript_BioType | Gene_Coding | Transcript_ID | Exon  | GenotypeNum [ | ERRORS | WARNINGS ] )' ">
+##INFO=<ID=EFF_EFFECT,Number=A,Type=String,Description="Effect type of Variant.">
+##INFO=<ID=EFF_IMPACT,Number=A,Type=String,Description="Effect impact {High, Moderate, Low, Modifier}.">
+##INFO=<ID=EFF_CLASS,Number=A,Type=String,Description="Functional class {NONE, SILENT, MISSENSE, NONSENSE}.">
+##INFO=<ID=EFF_CONTEXT,Number=A,Type=String,Description="old_codon/new_codon OR distance to transcript.">
+##INFO=<ID=EFF_AA,Number=A,Type=String,Description="Amino acid change: old_AA AA_position/new_AA.">
+##INFO=<ID=EFF_TRLEN,Number=A,Type=Integer,Description="Length of protein in amino acids.">
+##INFO=<ID=EFF_GENE,Number=A,Type=String,Description="Gene Name.">
+##INFO=<ID=EFF_BIOTYPE,Number=A,Type=String,Description="Transcript bioType, if available.">
+##INFO=<ID=EFF_CODING,Number=A,Type=String,Description="Either CODING or NONCODING.">
+##INFO=<ID=EFF_TR,Number=A,Type=String,Description="Transcript ID (usually ENSEMBL IDs).">
+##INFO=<ID=EFF_RANK,Number=A,Type=String,Description="Exon rank or Intron rank.">
+##INFO=<ID=EFF_GT,Number=A,Type=String,Description="Genotype number corresponding to this effect.">
+##INFO=<ID=EFF_ERR,Number=A,Type=String,Description="Any Errors.">
+##INFO=<ID=EFF_WARN,Number=A,Type=String,Description="Any Warnings.">
+##INFO=<ID=HOMLEN,Number=.,Type=Integer,Description="Length of base pair identical micro-homology at event breakpoints">
+##INFO=<ID=HOMSEQ,Number=.,Type=String,Description="Sequence of base pair identical micro-homology at event breakpoints">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired-end reads supporting the variant">
+##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of split reads supporting the variant">
+##FORMAT=<ID=BD,Number=1,Type=Integer,Description="Amount of BED evidence supporting the variant">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Number of pieces of evidence supporting the variant">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DUP,Description="Duplication">
+##ALT=<ID=INV,Description="Inversion">
+##ALT=<ID=DUP:TANDEM,Description="Tandem duplication">
+##ALT=<ID=INS,Description="Insertion of novel sequence">
+##ALT=<ID=CNV,Description="Copy number variable region">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	f849d0f8	4affe043	5a373339	d2a36df9	47344426	3dbec0fb	74f4ad31	9ec7362c	4bf7b892	5c30ff98	626e6d2a	827ffd6b	7c5b836e	72634c45	883f0e1b	5b2377ee	2332187d	3718a823	87904edf	578eabc8
+Chromosome	3894997	.	N	<DEL>	.	PASS	SVTYPE=DEL;STRANDS=+-:27;SVLEN=-6931;END=3901928;CIPOS=-8,10;CIEND=-2,0;CIPOS95=0,0;CIEND95=0,0;SU=27;PE=11;SR=16;PRPOS=1.63112e-67,1.02616e-58,6.45562e-50,4.06197e-41,2.55535e-32,6.39791e-24,1.60125e-15,4.00706e-07,0.999999,3.95404e-07,1.56303e-13,6.18356e-20,2.4446e-26,9.6721e-33,3.82675e-39,1.51333e-45,5.98676e-52,2.3686e-58,9.36854e-65;PREND=1.56387e-13,3.95522e-07,1;SNAME=5c30ff98;EVENT=884;ALG=SUM;EFF=DOWNSTREAM(MODIFIER||||418|hemA||CODING|b1210||1),FRAME_SHIFT(HIGH||-|-1|360|prfA||CODING|b1211|1|1),INTERGENIC(MODIFIER||||||||||1),UPSTREAM(MODIFIER||||277|prmC||CODING|b1212||1),UPSTREAM(MODIFIER||||360|prfA||CODING|b1211||1);EFF_IMPACT=MODIFIER,HIGH,MODIFIER,MODIFIER,MODIFIER;EFF_CODING=CODING,CODING,.,CODING,CODING;EFF_CLASS=.,.,.,.,.;EFF_WARN=.,.,.,.,.;EFF_AA=.,-1,.,.,.;EFF_GT=1,1,1,1,1;EFF_TR=b1210,b1211,.,b1212,b1211;EFF_BIOTYPE=.,.,.,.,.;EFF_CONTEXT=.,-,.,.,.;EFF_TRLEN=418,360,.,277,360;EFF_EFFECT=DOWNSTREAM,FRAME_SHIFT,INTERGENIC,UPSTREAM,UPSTREAM;EFF_ERR=.,.,.,.,.;EFF_RANK=.,1,.,.,.;EFF_GENE=hemA,prfA,.,prmC,prfA;HOMLEN=1;HOMSEQ=A	GT:DP	./.:0	./.:0	./.:0	./.:0	./.:0	./.:0	./.:0	./.:0	./.:0    1/1:27	./.:0	./.:0	./.:0	./.:0	./.:0	./.:0	./.:0	./.:0	./.:0	./.:0

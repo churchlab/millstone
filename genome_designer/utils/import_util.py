@@ -921,14 +921,14 @@ def import_variant_set_from_vcf(ref_genome, variant_set_name,
     # forgiving _read_variant_file_as_csv.
     # Perhaps rethink the 'upload from file' interface to generate
     # Null values for these columns
-    # _read_variant_set_file(variant_set_file, ref_genome, dataset,
+    _read_variant_set_file(variant_set_file, ref_genome, dataset,
+                variant_set)
+    # try:
+    #     _read_variant_set_file(variant_set_file, ref_genome, dataset,
     #             variant_set)
-    try:
-        _read_variant_set_file(variant_set_file, ref_genome, dataset,
-                variant_set)
-    except Exception:
-        _read_variant_set_file_as_csv(variant_set_file, ref_genome, dataset,
-                variant_set)
+    # except Exception:
+    #     _read_variant_set_file_as_csv(variant_set_file, ref_genome, dataset,
+    #             variant_set)
 
     # These actions invalidate the materialized view.
     ref_genome.invalidate_materialized_view()
