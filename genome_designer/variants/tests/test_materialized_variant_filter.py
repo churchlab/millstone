@@ -610,7 +610,13 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
         # self.assertEqual('chromosome= chrom1',
         #         evaluator.symbol_to_expression_map['B'])
 
-
+    def test_symbolify__decimals(self):
+        """Tests presence of decimal in value to be evaluated.
+        """
+        query_args = {'filter_string': 'AF > 0.5'}
+        evaluator = VariantFilterEvaluator(query_args, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('A')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
 
 
 class TestMinimal(BaseTestVariantFilterTestCase):
