@@ -39,6 +39,7 @@ from main.xhr_handlers import VARIANT_LIST_REQUEST_KEY__FILTER_STRING
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__ERROR
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__TOTAL
+from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__TIME
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__SET_LIST
 from main.xhr_handlers import VARIANT_LIST_RESPONSE_KEY__KEY_MAP
 from pipeline.pipeline_runner import run_pipeline
@@ -196,6 +197,7 @@ class TestGetVariantList(TestCase):
             VARIANT_LIST_RESPONSE_KEY__LIST,
             VARIANT_LIST_RESPONSE_KEY__TOTAL,
             VARIANT_LIST_RESPONSE_KEY__SET_LIST,
+            VARIANT_LIST_RESPONSE_KEY__TIME,
             VARIANT_LIST_RESPONSE_KEY__KEY_MAP,
         ])
         self.assertEqual(EXPECTED_RESPONSE_KEYS, set(response_data.keys()),
@@ -274,6 +276,7 @@ class TestGetVariantList(TestCase):
             VARIANT_LIST_RESPONSE_KEY__LIST,
             VARIANT_LIST_RESPONSE_KEY__TOTAL,
             VARIANT_LIST_RESPONSE_KEY__SET_LIST,
+            VARIANT_LIST_RESPONSE_KEY__TIME,
             VARIANT_LIST_RESPONSE_KEY__KEY_MAP,
         ])
         self.assertEqual(EXPECTED_RESPONSE_KEYS, set(response_data.keys()),

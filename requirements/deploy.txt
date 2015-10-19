@@ -2,5 +2,5 @@
 -r common.txt
 
 git+git://github.com/churchlab/django-celery-testworker.git@b9007154bba8a5da1c39826b34bf3191a5087a7e
-git+git://github.com/churchlab/optmage.git@1d3f5cbb5dd80ac179a49db3c9ee3b4bbc56f06b
+git+git://github.com/churchlab/optmage.git@e9245dcef429a431c01d5ef3e54d4b90f4f99e11
 git+git://github.com/churchlab/reference_genome_maker.git@79b8bf66b56d3b9680a7cffd54501e59276595ee

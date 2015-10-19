@@ -83,3 +83,6 @@ class TestReferenceGenomeMakerUtil(TestCase):
         # Assert mutations are there.
         for position in range(10, 111, 10):
             self.assertEqual('G', str(new_ref_genome_seq_record[position - 1]))
+
+        # Assert new genome is annotated.
+        self.assertTrue(new_ref_genome.is_annotated())

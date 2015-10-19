@@ -91,6 +91,12 @@ gd.VariantsTableComponent = Backbone.View.extend({
     // Manually handle error alert close.
     $('#gd-snp-filter-error-close-btn').click(
         _.bind(this.handleErrorAlertClose, this));
+
+    // Write in number of seconds since last load.
+    if (this.datatableComponent.timeForLastResult > 0) {
+      $('#gd-snp-filter-time').text(
+          '(query time: ' + this.datatableComponent.timeForLastResult +' sec)');
+    }
   },
 
   afterMaterializedViewReady: function() {
@@ -181,6 +187,8 @@ gd.VariantsTableComponent = Backbone.View.extend({
 
     var numTotalVariants = Number(response.num_total_variants);
 
+    var timeForLastResult = Number(response.time_for_last_result);
+
     // Parse VariantSet data.
     this.variantSetList = JSON.parse(response.variant_set_list_json).obj_list;
 
@@ -188,7 +196,7 @@ gd.VariantsTableComponent = Backbone.View.extend({
     this.variantKeyMap = JSON.parse(response.variant_key_filter_map_json);
 
     this.datatableComponent.update(this.variantList, this.fieldConfig,
-        numTotalVariants);
+        numTotalVariants, timeForLastResult);
 
     // Does this need to be called every time?
     this.drawDropdowns();

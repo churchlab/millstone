@@ -64,10 +64,18 @@ def generate_new_reference_genome(variant_set, new_ref_genome_params):
         reference_genome.dataset_set.add(dataset)
 
         # Prepare params for calling referece_genome_maker.
-        original_fasta_path = original_ref_genome.dataset_set.get(
-                type=Dataset.TYPE.REFERENCE_GENOME_FASTA).\
+        # If the old genome is annotated, use it, otherwise, use the FASTA.
+        # The BioPython SeqRecord should be the same either way.
+        if original_ref_genome.is_annotated():
+            original_genome_path = original_ref_genome.dataset_set.get(
+                    type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).\
                         get_absolute_location()
-        sequence_record = SeqIO.read(original_fasta_path, 'fasta')
+            sequence_record = SeqIO.read(original_genome_path, 'genbank')
+        else:
+            original_genome_path = original_ref_genome.dataset_set.get(
+                    type=Dataset.TYPE.REFERENCE_GENOME_FASTA).\
+                        get_absolute_location()
+            sequence_record = SeqIO.read(original_genome_path, 'fasta')
 
         filename_prefix = generate_safe_filename_prefix_from_label(
                 new_ref_genome_label)

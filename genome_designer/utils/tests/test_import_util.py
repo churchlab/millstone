@@ -451,6 +451,22 @@ class TestImportVariantSetFromVCFFile(TestCase):
         # Verify that variants were created
         self.assertTrue(variant_set.variants.all())
 
+    def test_import_variant_set__sv(self):
+        """Using Tenaillon deletion as test data.
+        """
+        VARIANT_SET_NAME = 'test_variant_set'
+        TARGETS_TEMPLATE_FILEPATH = os.path.join(IMPORT_UTIL_TEST_DATA,
+                'tenaillon_ancestor.vcf.txt')
+        import_variant_set_from_vcf(
+                self.ref_genome, VARIANT_SET_NAME, TARGETS_TEMPLATE_FILEPATH)
+
+        variant_set = VariantSet.objects.get(
+                reference_genome=self.ref_genome,
+                label=VARIANT_SET_NAME)
+
+        # Verify that variants were created
+        self.assertTrue(variant_set.variants.all())
+
 
 class TestFastQC(TestCase):
     """Tests running fastqc util.

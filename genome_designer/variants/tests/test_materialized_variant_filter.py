@@ -600,17 +600,24 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
         self.assertEqual('position > 5',
                 evaluator.symbol_to_expression_map['A'])
 
-        #query_args = {'filter_string': 'position>5 & chromosome= chrom1'}
-        query_args = {'filter_string': 'position>5'}
+        query_args = {'filter_string': 'position>5 & GT= 2'}
         evaluator = VariantFilterEvaluator(query_args, self.ref_genome)
-        #EXPECTED_SYMBOLIC_REP = sympify('A & B')
-        #self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
-        self.assertEqual('position>5',
+        EXPECTED_SYMBOLIC_REP = sympify('A & B')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
+        self.assertEqual('position>5 ',
                 evaluator.symbol_to_expression_map['A'])
-        # self.assertEqual('chromosome= chrom1',
-        #         evaluator.symbol_to_expression_map['B'])
+        self.assertEqual('GT= 2',
+                evaluator.symbol_to_expression_map['B'])
 
-
+    def test_symbolify__decimals(self):
+        """Tests presence of decimal in value to be evaluated.
+        """
+        query_args = {'filter_string': 'AF > 0.5'}
+        evaluator = VariantFilterEvaluator(query_args, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('A')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
+        self.assertEqual('AF > 0.5',
+                evaluator.symbol_to_expression_map['A'])
 
 
 class TestMinimal(BaseTestVariantFilterTestCase):

@@ -147,8 +147,13 @@ class TestSNPCallers(TestCase):
 
         # Run the pipeline.
         variant_params = VARIANT_TOOL_PARAMS_MAP['freebayes']
-        find_variants_with_tool(self.alignment_group, variant_params,
+        find_var_success = find_variants_with_tool(
+                self.alignment_group,
+                variant_params,
                 project=self.project)
+
+        self.assertTrue(find_var_success,
+                'Freebayes Call (find_variants_with_tool) Failed.')
 
         # Check that the alignment group has a freebayes vcf dataset associated
         # with it.
@@ -163,10 +168,14 @@ class TestSNPCallers(TestCase):
         with open(vcf_dataset.get_absolute_location()) as vcf_fh:
             try:
                 reader = vcf.Reader(vcf_fh)
-                reader.next()
+                record = reader.next()
             except:
                 self.fail("Not valid vcf")
 
+            # Make sure the vcf has AF field
+            self.assertTrue('AF' in reader.formats.keys(),
+                    "VCF missing AF FORMAT field; " +
+                    " process_freebayes_region_vcf() failed")
 
     def _freebayes_tester(self, haploid=False):
         """

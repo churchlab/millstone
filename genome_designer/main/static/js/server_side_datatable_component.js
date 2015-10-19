@@ -27,12 +27,20 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
     this.displayableFieldConfig = this.makeDisplayableFieldConfig(
         this.options.fieldConfig);
 
+    // Default nothing.
+    this.numTotalVariants = 0;
+
+    // Default 0.
+    this.timeForLastResult = 0;
+
     // The server target for updates.
     this.serverTarget = this.options.serverTarget;
 
     // Function that injects additional params for the server-side request.
     this.serverParamsInjector = this.options.serverParamsInjector;
 
+    // Initial render although the 0 results to show.
+    // Toss up whether or not UI loading is better with or without this.
     this.render();
   },
 
@@ -46,11 +54,13 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
 
 
   /** Used for updating an already rendered datatable with new data. */
-  update: function(newObjList, newFieldConfig, numTotalVariants) {
+  update: function(newObjList, newFieldConfig, numTotalVariants,
+      timeForLastResult) {
     this.displayableObjList = this.makeDisplayableObjectList(newObjList);
     this.displayableFieldConfig = this.makeDisplayableFieldConfig(
         newFieldConfig);
     this.numTotalVariants = numTotalVariants;
+    this.timeForLastResult = timeForLastResult;
     this.render();
   },
 
@@ -172,11 +182,8 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
     if (this.options.extraDatatableParams) {
       _.extend(datatableParams, this.options.extraDatatableParams);
     }
-    
-    this.datatable = $('#' + this.datatableId).dataTable(datatableParams);
 
-    // Draw the entity-specific controls that listen for this trigger
-    this.trigger('DONE_TABLE_REDRAW');
+    this.datatable = $('#' + this.datatableId).dataTable(datatableParams);
 
     // Draw the control buttons at the top-left of the dable component,
     // if passed, the proper template. 

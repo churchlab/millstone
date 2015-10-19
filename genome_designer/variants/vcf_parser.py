@@ -361,6 +361,7 @@ def extract_sample_data_dict(s):
         'QA',
         'QR',
         'RO',
+        'AF'
     ]
     if hasattr(s, 'data'):
         for key in SAMPLE_DATA_FIELDS:

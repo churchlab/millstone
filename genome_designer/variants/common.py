@@ -85,7 +85,7 @@ SAMPLE_SCOPE_REGEX_NAMED = re.compile(
 
 # Recognizes a pattern of the form 'key op value'.
 EXPRESSION_REGEX = re.compile(
-        '(\w+\s*[=><!]{1}[=]{0,1}\s*\"{0,1}\'{0,1}[\w\s]+\"{0,1}\'{0,1})')
+        '(\w+\s*[=><!]{1}[=]{0,1}\s*\"{0,1}\'{0,1}[\w\s\.]+\"{0,1}\'{0,1})')
 
 # Recognizes statements about set.
 SET_REGEX = re.compile('((?:NOT_){0,1}IN_SET\([\w]+\))')

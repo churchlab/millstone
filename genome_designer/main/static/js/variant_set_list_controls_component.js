@@ -93,7 +93,8 @@ gd.VariantsetsControlsComponent = gd.DataTableControlsComponent.extend({
    * containing a list of Variants.
    */
   handleFormSubmitFromFile: function() {
-    $('#gd-variant-set-form-from-file-submit').addClass('disabled');
+    var submitButtonEl = $('#gd-variant-set-form-from-file-submit');
+    submitButtonEl.prop('disabled', true);
 
     // We validate by parsing the input elements, but then use the HTML5
     // FormData API to actually send the data to the server. FormData
@@ -101,12 +102,14 @@ gd.VariantsetsControlsComponent = gd.DataTableControlsComponent.extend({
     var formDataForValidation = this.prepareRequestData(
         'gd-variant-set-create-form-from-file');
     if (!this.validateCreateFromFileRequestData(formDataForValidation)) {
+      submitButtonEl.prop('disabled', false);
       return;
     }
 
     var onSuccess = function(responseData) {
       if ('error' in responseData && responseData.error.length) {
         alert('Error creating variant set: ' + responseData.error);
+        submitButtonEl.prop('disabled', false);
         return;
       }
 
@@ -131,11 +134,15 @@ gd.VariantsetsControlsComponent = gd.DataTableControlsComponent.extend({
 
   /** Handles creating a new empty Variant set. */
   handleFormSubmitEmpty: function() {
+    var submitButtonEl = $('#gd-variant-set-form-empty-submit');
+    submitButtonEl.prop('disabled', true);
+
     // Parse the inputs.
     var requestData = this.prepareRequestData('gd-variant-set-form-empty');
 
     // Validate the request client-side.
     if (!this.validateCreateEmptyRequestData(requestData)) {
+      submitButtonEl.prop('disabled', false);
       return;
     }
 
@@ -144,6 +151,7 @@ gd.VariantsetsControlsComponent = gd.DataTableControlsComponent.extend({
       // Check for error and show in ui. Don't reload the page.
       if (responseData.error.length) {
         alert('Error creating variant set: ' + responseData.error);
+        submitButtonEl.prop('disabled', false);
         return;
       }
 
