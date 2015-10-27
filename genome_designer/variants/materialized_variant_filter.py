@@ -75,7 +75,7 @@ class VariantFilterEvaluator(object):
             assert isinstance(scope, FilterScope)
 
         # Load args into arguments directly
-        self.filter_string = query_args.get('filter_string', None)
+        self.filter_string = query_args.get('filter_string', '')
         self.is_melted = query_args.get('is_melted', True)
         self.sort_by_column = query_args.get('sort_by_column', None)
         self.sort_by_direction = query_args.get('sort_by_direction', True)
