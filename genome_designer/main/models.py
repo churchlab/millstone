@@ -1458,7 +1458,10 @@ class VariantAlternate(UniqueUidModelMixin, VisibleFieldMixin):
     data = PostgresJsonField()
 
     def __unicode__(self):
-        return 'var: ' + str(self.variant) + ', alt:' + self.alt_value
+        alt_value = self.alt_value
+        if len(self.alt_value) > 10:
+            alt_value = alt_value[:10] + '...'
+        return 'var: ' + str(self.variant) + ', alt:' + alt_value
 
     # TODO: Do we want to explicitly link each VariantAlternate to
     # it's variant index in each VCCD object or VE object?
