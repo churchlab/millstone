@@ -759,6 +759,9 @@ class Contig(UniqueUidModelMixin):
         link += '&tracks=' + ','.join(track_labels)
         return link
 
+    def get_ref_jbrowse_link(self, loc):
+        return (self.parent_reference_genome.get_client_jbrowse_link() +
+                '&loc=' + str(loc))
 
     @property
     def href(self):
@@ -776,7 +779,56 @@ class Contig(UniqueUidModelMixin):
     def chromosome(self):
         return self.metadata.get('chromosome', '')
 
+    def get_contig_reads_track(self):
+        bam_dataset = get_dataset_with_type(
+                self,
+                Dataset.TYPE.BWA_SV_INDICANTS)
+        return bam_dataset.internal_string(self)
+
     @property
+    def reference_endpoint_links(self):
+        endpoints = self.metadata.get('reference_insertion_endpoints', None)
+        potential_endpoints = self.metadata.get(
+                'potential_reference_endpoints', None)
+
+        if endpoints:
+            assert len(endpoints) == 2
+            left_ep = [(endpoints[0], -1)]
+            right_ep = [(endpoints[1], -1)]
+        elif potential_endpoints:
+            left_ep = potential_endpoints['left']
+            right_ep = potential_endpoints['right']
+        else:
+            left_ep = None
+            right_ep = None
+
+        def _get_href(ep):
+            print 'ep:', ep, '\n'
+            loc, count = ep
+            if count == -1:
+                return ('<a href="' + self.get_ref_jbrowse_link(loc) +
+                    '&tracks=' + self.get_contig_reads_track() +
+                    '">' + str(loc) + '</a>')
+            else:
+                return ('<a href="' + self.get_ref_jbrowse_link(loc) +
+                    '&tracks=' + self.get_contig_reads_track() +
+                    '">' + str(loc) + '(' + str(count) + ')</a>')
+
+        if left_ep:
+            left_ep_links = map(_get_href, left_ep)
+        else:
+            left_ep_links = ['']
+        if right_ep:
+            right_ep_links = map(_get_href, right_ep)
+        else:
+            right_ep_links = ['']
+
+        html = ('Left Endpoints:' + ','.join(left_ep_links) +
+                ' Right Endpoints:' + ','.join(right_ep_links))
+
+        return html
+
+    @property   
     def reference_insertion_endpoints(self):
         return self.metadata.get('reference_insertion_endpoints', '')
 
@@ -799,7 +851,7 @@ class Contig(UniqueUidModelMixin):
             {'field': 'num_bases', 'verbose': 'Contig Length'},
             {'field': 'coverage', 'verbose': 'Average Coverage'},
             {'field': 'chromosome'},
-            {'field': 'reference_insertion_endpoints'},
+            {'field': 'reference_endpoint_links'},
             {'field': 'contig_insertion_endpoints'}
         ]
 
