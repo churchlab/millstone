@@ -20,6 +20,7 @@ from utils.import_util import add_dataset_to_entity
 
 ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF = 0.5
 REVERSED_COMPLEMENTARITY_FRACTION_CUTOFF = 0.75
+ENDPOINT_FRACTION = 0.8
 
 
 def get_insertion_placement_positions(contig, strategy='all_reads'):
@@ -52,32 +53,59 @@ def get_insertion_placement_positions(contig, strategy='all_reads'):
     left_clipped = extracted_clipped_read_dicts['left_clipped']
     right_clipped = extracted_clipped_read_dicts['right_clipped']
 
-    ref_insertion_endpoints = find_ref_insertion_endpoints(
-            left_clipped, right_clipped)
+    # ref_endpoints = find_ref_insertion_endpoints(
+    #         left_clipped, right_clipped)
+
+    # Right clipped reads indicate left endpoint
+    left_ref_endpoints = get_top_clipped_locs(right_clipped)
+
+    # Left clipped reads indicate right endpoint
+    right_ref_endpoints = get_top_clipped_locs(left_clipped)
+
+    contig.metadata['potential_reference_endpoints'] = {
+        'left': left_ref_endpoints,
+        'right': right_ref_endpoints
+    }
+    contig.save()
+
+    ref_insertion_endpoints = {}
+    if are_ref_endpoints_placeable(left_ref_endpoints):
+        ref_insertion_endpoints['left'] = left_ref_endpoints[0][0]
+    else:
+        ref_insertion_endpoints['left'] = None
+
+    if are_ref_endpoints_placeable(right_ref_endpoints):
+        ref_insertion_endpoints['right'] = right_ref_endpoints[0][0]
+    else:
+        ref_insertion_endpoints['right'] = None
 
     # Handle case of no endpoints found
-    if (ref_insertion_endpoints['left'] is None and
-            ref_insertion_endpoints['right'] is None):
-        return {'error_string': ('Could not find left or right reference ' +
+    error = None
+    if (not ref_insertion_endpoints['left'] and
+            not ref_insertion_endpoints['right']):
+        error = {'error_string': ('Could not find left or right reference ' +
                 'insertion endpoints using ' + str(len(contig_reads)) +
                 ' clipped reads')}
-    elif ref_insertion_endpoints['left'] is None:
-        return {'error_string': ('Could not find left reference ' +
+    elif not ref_insertion_endpoints['left']:
+        error = {'error_string': ('Could not find left reference ' +
                 'insertion endpoint using ' + str(len(contig_reads)) +
                 ' clipped reads')}
-    elif ref_insertion_endpoints['right'] is None:
-        return {'error_string': ('Could not find right reference ' +
+    elif not ref_insertion_endpoints['right']:
+        error = {'error_string': ('Could not find right reference ' +
                 'insertion endpoint using ' + str(len(contig_reads)) +
                 ' clipped reads')}
     elif (ref_insertion_endpoints['left'] - ref_insertion_endpoints['right'] >
             0.5 * contig.num_bases):
-        return {'error_string': ('Left insertion endpoint found too far ' +
+        error = {'error_string': ('Left insertion endpoint found too far ' +
                 'before right insertion endpoint')}
     elif (ref_insertion_endpoints['right'] - ref_insertion_endpoints['left'] >
             10 * contig.num_bases):
-        return {'error_string': ('Distance between left and right ' +
+        error = {'error_string': ('Distance between left and right ' +
                 'reference insertion endpoints more than 10x contig' +
                 'length')}
+
+    if error:
+        return error
 
     left_clipped_same_end = left_clipped[ref_insertion_endpoints['right']]
     right_clipped_same_end = right_clipped[ref_insertion_endpoints['left']]
@@ -302,48 +330,38 @@ def extract_left_and_right_clipped_read_dicts(sv_indicant_reads_in_contig,
     }
 
 
-def find_ref_insertion_endpoints(left_clipped, right_clipped):
-    """ left_clipped and right_clipped are dictionaries with lists of
-    reads as values and the reference start and end of the clipped alignment
-    as keys respectively
+def are_ref_endpoints_placeable(endpoints):
+    """endpoints is a list of tuples of the form
+    (loc, clipped_read_count) sorted by decreasing clipped_key_count
     """
-    # Find positions in reference of most left clipping points
-    left_clipped_list_sorted = sorted(
-            left_clipped.items(), key=lambda x: len(x[1]), reverse=True)
+    first = endpoints[0][1] if len(endpoints) > 0 else 0
+    second = endpoints[1][1] if len(endpoints) > 1 else 0
+    if not first * (1 - ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF) > second:
+        return False
 
-    highest_clip_consensus = (len(left_clipped_list_sorted[0][1])
-            if len(left_clipped_list_sorted) > 0 else 0)
-    second_highest_clip_consensus = (len(left_clipped_list_sorted[1][1])
-            if len(left_clipped_list_sorted) > 1 else 0)
-
-    if (highest_clip_consensus - second_highest_clip_consensus
-            > (ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF *
-                    highest_clip_consensus)):
-        ref_ins_right_end = left_clipped_list_sorted[0][0]
-    else:
-        ref_ins_right_end = None
+    return True
 
 
-    # Same for right clipping
-    right_clipped_list_sorted = sorted(
-            right_clipped.items(), key=lambda x: len(x[1]), reverse=True)
+def get_top_clipped_locs(clipped_dict):
+    """clipped_dict is a dictionary with clipping locations as
+    keys and a list of reads as values
+    """
+    # Convert the dictionary into a list of tuples of the form
+    # (loc, #reads) sorted in decreasing order of #reads
+    clipped_count_list = sorted(
+            [(loc, len(reads)) for loc, reads in clipped_dict.items()],
+            key=lambda t: t[1], reverse=True)
 
-    highest_clip_consensus = (len(right_clipped_list_sorted[0][1])
-            if len(right_clipped_list_sorted) > 0 else 0)
-    second_highest_clip_consensus = (len(right_clipped_list_sorted[1][1])
-            if len(right_clipped_list_sorted) > 1 else 0)
+    # Count up the total number of reads
+    total = sum(count for loc, count in clipped_count_list)
 
-    if (highest_clip_consensus - second_highest_clip_consensus
-            > (ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF *
-                    highest_clip_consensus)):
-        ref_ins_left_end = right_clipped_list_sorted[0][0]
-    else:
-        ref_ins_left_end = None
-
-    return {
-        'left': ref_ins_left_end,
-        'right': ref_ins_right_end
-    }
+    # Return the list that comprises ENDPOINT_FRACTION of the total reads
+    included = 0
+    i = 0
+    while included / float(total) < ENDPOINT_FRACTION:
+        included += clipped_count_list[i][1]
+        i += 1
+    return clipped_count_list[:i]
 
 
 def write_read_query_alignments_to_fastq(reads, fastq_path):
