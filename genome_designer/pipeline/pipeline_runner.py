@@ -24,6 +24,7 @@ from pipeline.variant_calling import find_variants_with_tool
 from pipeline.variant_calling import VARIANT_TOOL_PARAMS_MAP
 from pipeline.variant_calling import TOOL_FREEBAYES
 from pipeline.variant_calling import TOOL_LUMPY
+from pipeline.variant_calling import TOOL_PINDEL
 from pipeline.variant_calling.common import get_or_create_vcf_output_dir
 from pipeline.variant_calling.freebayes import merge_freebayes_parallel
 from pipeline.variant_calling.freebayes import freebayes_regions
@@ -249,7 +250,7 @@ def _construct_variant_caller_group(alignment_group, variant_calling_options):
                 parallel_tasks.append(find_variants_with_tool.si(
                         alignment_group, region_params,
                         project=ref_genome.project))
-        elif tool == TOOL_LUMPY:
+        elif tool in [TOOL_LUMPY, TOOL_PINDEL]:
             sample_alignment_list = (
                     alignment_group.experimentsampletoalignment_set.all())
 
