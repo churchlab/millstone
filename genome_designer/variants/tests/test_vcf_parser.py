@@ -39,6 +39,9 @@ VCF_PARSER_TEST_DATA_DIR = os.path.join(TEST_DATA_DIR, 'vcf_parser_test_data')
 LUMPY_4_SAMPLES_2_DELETIONS_VCF = os.path.join(
         VCF_PARSER_TEST_DATA_DIR, 'lumpy_4_samples_2_deletions.vcf')
 
+TEST_VARIANTS_IMPORT_VCF = os.path.join(
+        TEST_DATA_DIR, 'fix_recoli_variants_snpeff.vcf')
+
 
 class TestVCFParser(TestCase):
 
