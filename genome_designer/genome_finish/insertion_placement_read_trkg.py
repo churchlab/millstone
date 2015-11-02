@@ -438,7 +438,116 @@ def get_reads_with_mode_attribute(clipped_alignment_bam, get_attr_function):
     return endpoint
 
 
+def is_contig_reverse_complement(contig, alignment_bam):
+    
+    # Check if contig is reverse complement
+    total_mapped_count = 0
+    reversed_complementarity_count = 0
+    sam_file = pysam.AlignmentFile(alignment_bam)
+    for read in sam_file:
+        if not read.is_unmapped:
+            total_mapped_count += 1
+            if read.is_reverse:
+                reversed_complementarity_count += 1
+
+    if total_mapped_count == 0:
+        return {'error_string':
+                'Could not find sufficient homology to reference in contig'}
+
+    return (reversed_complementarity_count / total_mapped_count >
+            REVERSED_COMPLEMENTARITY_FRACTION_CUTOFF)
+
+
+def write_contig_reverse_complement(contig):
+
+    # Only perform alignment of right_clipped to contig
+    contig_fasta = contig.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
+    rc_contig_fasta = (os.path.splitext(contig_fasta)[0] +
+            '.reverse_complement.fa')
+    contig_seqrecord = SeqIO.parse(contig_fasta, 'fasta').next()
+    contig_seqrecord.seq = contig_seqrecord.seq.reverse_complement()
+    SeqIO.write(contig_seqrecord, rc_contig_fasta, 'fasta')
+
+    return rc_contig_fasta
+
+
+def find_contig_endpoint(contig, clipped_same_end, direction):
+
+    assert direction in ['left', 'right']
+
+    # Write clipped query alignment sequences to fastq
+    contig_dir = contig.get_model_data_dir()
+    clipped_query_alignment_fq = os.path.join(
+            contig_dir,
+            'clipped_query_alignment_seqs.fq')
+    write_read_query_alignments_to_fastq(
+            clipped_same_end,
+            clipped_query_alignment_fq)
+
+    # Get BAM filename for alignment
+    clipped_to_contig_bam = os.path.join(
+            contig_dir,
+            'clipped_to_contig.bwa_align.bam')
+
+    # Get contig fasta
+    contig_fasta = contig.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
+    align_to = None
+    is_reverse = contig.metadata.get('is_reverse', None)
+    if is_reverse is None:
+        simple_align_with_bwa_mem(
+                clipped_query_alignment_fq, contig_fasta,
+                clipped_to_contig_bam)
+        is_reverse = is_contig_reverse_complement(contig,
+                clipped_to_contig_bam)
+
+        if is_reverse:
+            contig.metadata['is_reverse'] = True
+            contig.save()
+            rc_contig_fasta = write_contig_reverse_complement(contig)
+            align_to = rc_contig_fasta
+
+    else:
+        if is_reverse:
+            rc_contig_fasta = (os.path.splitext(contig_fasta)[0] +
+                    '.reverse_complement.fa')
+            align_to = rc_contig_fasta
+        else:
+            align_to = contig_fasta
+
+    if align_to:
+        simple_align_with_bwa_mem(
+                clipped_query_alignment_fq, align_to,
+                clipped_to_contig_bam)
+
+    # Find contig endpoints
+    if direction == 'right':
+        return get_reads_with_mode_attribute(
+                clipped_to_contig_bam, lambda r: r.reference_end)
+    else:
+        return get_reads_with_mode_attribute(
+                clipped_to_contig_bam, lambda r: r.reference_start)
+
+
 def find_contig_insertion_endpoints(contig,
+        left_clipped_same_end, right_clipped_same_end):
+    """ left_clipped_same_end/right_clipped_same_end are lists of
+    left and right clipped reads all with the same left/right
+    alignment endpoint, corresponding to the reference insertion
+    right/left endpoint
+    """
+    contig_ins_left_end = find_contig_endpoint(contig, right_clipped_same_end, 'right')
+    contig_ins_right_end = find_contig_endpoint(contig, left_clipped_same_end, 'left')
+
+    return {
+        'left': contig_ins_left_end,
+        'right': contig_ins_right_end
+    }
+
+def find_contig_insertion_endpoints_old(contig,
         left_clipped_same_end, right_clipped_same_end):
     """ left_clipped_same_end/right_clipped_same_end are lists of
     left and right clipped reads all with the same left/right
