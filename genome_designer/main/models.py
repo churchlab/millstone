@@ -44,6 +44,8 @@ from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Model
 
+# from genome_finish.insertion_placement_read_trkg import Junction
+from genome_finish.contig_display_utils import create_contig_junction_links
 from model_utils import assert_unique_types
 from model_utils import ensure_exists_0775_dir
 from model_utils import get_dataset_with_type
@@ -699,6 +701,18 @@ class Contig(UniqueUidModelMixin):
     # related information e.g. metadata['is_from_de_novo_assembly']=True
     metadata = PostgresJsonField()
 
+    def __getattr__(self, name):
+        """Automatically called if an attribute is not found in the typical
+        place.
+
+        Our implementation checks the metadata dict, raises AttributeError if
+        not found
+        """
+        try:
+            return self.metadata[name]
+        except:
+            raise AttributeError
+
     def get_model_data_root(self):
         """Get the root location for all data of this type in the project.
         """
@@ -744,10 +758,6 @@ class Contig(UniqueUidModelMixin):
 
     def get_client_jbrowse_link(self):
         """Returns the link to jbrowse redirect for this Contig.
-
-        Example url for user with uid 'abc', and project id 'xyz', and
-        refgenome id 456:
-            '/redirect_jbrowse?data=gd_data/abc/projects/xyz/contigs/456/jbrowse/'
         """
         bam_dataset = self.dataset_set.get(type=Dataset.TYPE.BWA_ALIGN)
         bam_label = bam_dataset.internal_string(self)
@@ -758,7 +768,6 @@ class Contig(UniqueUidModelMixin):
         link = '/redirect_jbrowse?data=' + self.get_client_jbrowse_data_path()
         link += '&tracks=' + ','.join(track_labels)
         return link
-
 
     @property
     def href(self):
@@ -776,13 +785,21 @@ class Contig(UniqueUidModelMixin):
     def chromosome(self):
         return self.metadata.get('chromosome', '')
 
-    @property
-    def reference_insertion_endpoints(self):
-        return self.metadata.get('reference_insertion_endpoints', '')
+    def get_contig_reads_track(self):
+        bam_dataset = get_dataset_with_type(
+                self,
+                Dataset.TYPE.BWA_SV_INDICANTS)
+        return str(bam_dataset.internal_string(self))
 
     @property
-    def contig_insertion_endpoints(self):
-        return self.metadata.get('contig_insertion_endpoints', '')
+    def left_junctions_html(self):
+        junctions = self.metadata.get('left_junctions', '')
+        return create_contig_junction_links(self, junctions)
+
+    @property
+    def right_junctions_html(self):
+        junctions = self.metadata.get('right_junctions', '')
+        return create_contig_junction_links(self, junctions)
 
     @property
     def experiment_sample(self):
@@ -799,8 +816,10 @@ class Contig(UniqueUidModelMixin):
             {'field': 'num_bases', 'verbose': 'Contig Length'},
             {'field': 'coverage', 'verbose': 'Average Coverage'},
             {'field': 'chromosome'},
-            {'field': 'reference_insertion_endpoints'},
-            {'field': 'contig_insertion_endpoints'}
+            {'field': 'left_junctions_html', 'verbose':
+                    'Left Junctions<br>(Reference &rarr; Contig)'},
+            {'field': 'right_junctions_html', 'verbose':
+                    'Right Junctions<br>(Reference &rarr; Contig)'}
         ]
 
 

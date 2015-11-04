@@ -11,6 +11,7 @@ from Bio.SeqRecord import SeqRecord
 from django.conf import settings
 import pysam
 
+from genome_finish.contig_display_utils import Junction
 from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from main.models import Dataset
 from utils import make_temp_file
@@ -20,6 +21,7 @@ from utils.import_util import add_dataset_to_entity
 
 ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF = 0.5
 REVERSED_COMPLEMENTARITY_FRACTION_CUTOFF = 0.75
+ENDPOINT_FRACTION = 0.8
 
 
 def get_insertion_placement_positions(contig, strategy='all_reads'):
@@ -52,32 +54,75 @@ def get_insertion_placement_positions(contig, strategy='all_reads'):
     left_clipped = extracted_clipped_read_dicts['left_clipped']
     right_clipped = extracted_clipped_read_dicts['right_clipped']
 
-    ref_insertion_endpoints = find_ref_insertion_endpoints(
-            left_clipped, right_clipped)
+    # Right clipped reads indicate left endpoint
+    left_ref_endpoints = get_top_clipped_locs(right_clipped)
+
+    # Left clipped reads indicate right endpoint
+    right_ref_endpoints = get_top_clipped_locs(left_clipped)
+
+    left_junctions = []
+    for ref_endpoint, ref_count in left_ref_endpoints:
+        contig_endpoint, contig_count = find_contig_endpoint(
+                contig, right_clipped[ref_endpoint], 'right')
+
+        left_junctions.append(Junction(
+                ref_endpoint, ref_count, contig_endpoint, contig_count))
+
+    right_junctions = []
+    for ref_endpoint, ref_count in right_ref_endpoints:
+        contig_endpoint, contig_count = find_contig_endpoint(
+                contig, left_clipped[ref_endpoint], 'left')
+
+        right_junctions.append(Junction(
+                ref_endpoint, ref_count, contig_endpoint, contig_count))
+
+    contig.metadata['left_junctions'] = left_junctions
+    contig.metadata['right_junctions'] = right_junctions
+
+    contig.metadata['potential_reference_endpoints'] = {
+        'left': left_ref_endpoints,
+        'right': right_ref_endpoints
+    }
+    contig.save()
+
+    ref_insertion_endpoints = {}
+    if are_ref_endpoints_placeable(left_ref_endpoints):
+        ref_insertion_endpoints['left'] = left_ref_endpoints[0][0]
+    else:
+        ref_insertion_endpoints['left'] = None
+
+    if are_ref_endpoints_placeable(right_ref_endpoints):
+        ref_insertion_endpoints['right'] = right_ref_endpoints[0][0]
+    else:
+        ref_insertion_endpoints['right'] = None
 
     # Handle case of no endpoints found
-    if (ref_insertion_endpoints['left'] is None and
-            ref_insertion_endpoints['right'] is None):
-        return {'error_string': ('Could not find left or right reference ' +
+    error = None
+    if (not ref_insertion_endpoints['left'] and
+            not ref_insertion_endpoints['right']):
+        error = {'error_string': ('Could not find left or right reference ' +
                 'insertion endpoints using ' + str(len(contig_reads)) +
                 ' clipped reads')}
-    elif ref_insertion_endpoints['left'] is None:
-        return {'error_string': ('Could not find left reference ' +
+    elif not ref_insertion_endpoints['left']:
+        error = {'error_string': ('Could not find left reference ' +
                 'insertion endpoint using ' + str(len(contig_reads)) +
                 ' clipped reads')}
-    elif ref_insertion_endpoints['right'] is None:
-        return {'error_string': ('Could not find right reference ' +
+    elif not ref_insertion_endpoints['right']:
+        error = {'error_string': ('Could not find right reference ' +
                 'insertion endpoint using ' + str(len(contig_reads)) +
                 ' clipped reads')}
     elif (ref_insertion_endpoints['left'] - ref_insertion_endpoints['right'] >
             0.5 * contig.num_bases):
-        return {'error_string': ('Left insertion endpoint found too far ' +
+        error = {'error_string': ('Left insertion endpoint found too far ' +
                 'before right insertion endpoint')}
     elif (ref_insertion_endpoints['right'] - ref_insertion_endpoints['left'] >
             10 * contig.num_bases):
-        return {'error_string': ('Distance between left and right ' +
+        error = {'error_string': ('Distance between left and right ' +
                 'reference insertion endpoints more than 10x contig' +
                 'length')}
+
+    if error:
+        return error
 
     left_clipped_same_end = left_clipped[ref_insertion_endpoints['right']]
     right_clipped_same_end = right_clipped[ref_insertion_endpoints['left']]
@@ -302,48 +347,38 @@ def extract_left_and_right_clipped_read_dicts(sv_indicant_reads_in_contig,
     }
 
 
-def find_ref_insertion_endpoints(left_clipped, right_clipped):
-    """ left_clipped and right_clipped are dictionaries with lists of
-    reads as values and the reference start and end of the clipped alignment
-    as keys respectively
+def are_ref_endpoints_placeable(endpoints):
+    """endpoints is a list of tuples of the form
+    (loc, clipped_read_count) sorted by decreasing clipped_key_count
     """
-    # Find positions in reference of most left clipping points
-    left_clipped_list_sorted = sorted(
-            left_clipped.items(), key=lambda x: len(x[1]), reverse=True)
+    first = endpoints[0][1] if len(endpoints) > 0 else 0
+    second = endpoints[1][1] if len(endpoints) > 1 else 0
+    if not first * (1 - ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF) > second:
+        return False
 
-    highest_clip_consensus = (len(left_clipped_list_sorted[0][1])
-            if len(left_clipped_list_sorted) > 0 else 0)
-    second_highest_clip_consensus = (len(left_clipped_list_sorted[1][1])
-            if len(left_clipped_list_sorted) > 1 else 0)
-
-    if (highest_clip_consensus - second_highest_clip_consensus
-            > (ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF *
-                    highest_clip_consensus)):
-        ref_ins_right_end = left_clipped_list_sorted[0][0]
-    else:
-        ref_ins_right_end = None
+    return True
 
 
-    # Same for right clipping
-    right_clipped_list_sorted = sorted(
-            right_clipped.items(), key=lambda x: len(x[1]), reverse=True)
+def get_top_clipped_locs(clipped_dict):
+    """clipped_dict is a dictionary with clipping locations as
+    keys and a list of reads as values
+    """
+    # Convert the dictionary into a list of tuples of the form
+    # (loc, #reads) sorted in decreasing order of #reads
+    clipped_count_list = sorted(
+            [(loc, len(reads)) for loc, reads in clipped_dict.items()],
+            key=lambda t: t[1], reverse=True)
 
-    highest_clip_consensus = (len(right_clipped_list_sorted[0][1])
-            if len(right_clipped_list_sorted) > 0 else 0)
-    second_highest_clip_consensus = (len(right_clipped_list_sorted[1][1])
-            if len(right_clipped_list_sorted) > 1 else 0)
+    # Count up the total number of reads
+    total = sum(count for loc, count in clipped_count_list)
 
-    if (highest_clip_consensus - second_highest_clip_consensus
-            > (ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF *
-                    highest_clip_consensus)):
-        ref_ins_left_end = right_clipped_list_sorted[0][0]
-    else:
-        ref_ins_left_end = None
-
-    return {
-        'left': ref_ins_left_end,
-        'right': ref_ins_right_end
-    }
+    # Return the list that comprises ENDPOINT_FRACTION of the total reads
+    included = 0
+    i = 0
+    while included / float(total) < ENDPOINT_FRACTION:
+        included += clipped_count_list[i][1]
+        i += 1
+    return clipped_count_list[:i]
 
 
 def write_read_query_alignments_to_fastq(reads, fastq_path):
@@ -413,57 +448,19 @@ def get_reads_with_mode_attribute(clipped_alignment_bam, get_attr_function):
     if (highest_consensus - second_highest_consensus >
             (ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF *
                     highest_consensus)):
-        endpoint = alignment_ref_clip_positions_sorted[0][0]
+        endpoint = alignment_ref_clip_positions_sorted[0][0], highest_consensus
     else:
-        endpoint = None
+        endpoint = None, None
 
     return endpoint
 
 
-def find_contig_insertion_endpoints(contig,
-        left_clipped_same_end, right_clipped_same_end):
-    """ left_clipped_same_end/right_clipped_same_end are lists of
-    left and right clipped reads all with the same left/right
-    alignment endpoint, corresponding to the reference insertion
-    right/left endpoint
-    """
-
-    # Write left and right clipped query alignment sequences to fastq
-    contig_dir = contig.get_model_data_dir()
-    right_clipped_query_alignment_fq = os.path.join(
-            contig_dir,
-            'right_clipped_query_alignment_seqs.fq')
-    write_read_query_alignments_to_fastq(
-            right_clipped_same_end,
-            right_clipped_query_alignment_fq)
-
-    left_clipped_query_alignment_fq = os.path.join(
-            contig_dir,
-            'left_clipped_query_alignment_seqs.fq')
-    write_read_query_alignments_to_fastq(
-            left_clipped_same_end,
-            left_clipped_query_alignment_fq)
-
-    # Get BAM filenames for right_clipped and left_clipped alignments
-    right_clipped_to_contig_bam = os.path.join(
-            contig_dir,
-            'right_clipped_to_contig.bwa_align.bam')
-    left_clipped_to_contig_bam = os.path.join(
-            contig_dir,
-            'left_clipped_to_contig.bwa_align.bam')
-
-
-    # Only perform alignment of right_clipped to contig
-    contig_fasta = contig.dataset_set.get(
-            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-    simple_align_with_bwa_mem(
-            right_clipped_query_alignment_fq, contig_fasta,
-            right_clipped_to_contig_bam)
-
+def is_contig_reverse_complement(contig, alignment_bam):
+    
     # Check if contig is reverse complement
     total_mapped_count = 0
     reversed_complementarity_count = 0
-    sam_file = pysam.AlignmentFile(right_clipped_to_contig_bam)
+    sam_file = pysam.AlignmentFile(alignment_bam)
     for read in sam_file:
         if not read.is_unmapped:
             total_mapped_count += 1
@@ -474,39 +471,95 @@ def find_contig_insertion_endpoints(contig,
         return {'error_string':
                 'Could not find sufficient homology to reference in contig'}
 
-    if (reversed_complementarity_count / total_mapped_count >
-            REVERSED_COMPLEMENTARITY_FRACTION_CUTOFF):
-        contig.metadata['is_reverse'] = True
-        contig.save()
+    return (reversed_complementarity_count / total_mapped_count >
+            REVERSED_COMPLEMENTARITY_FRACTION_CUTOFF)
 
-    # Write reverse complement of contig to file if is reverse
-    if contig.metadata.get('is_reverse', False):
-        rc_contig_fasta = (os.path.splitext(contig_fasta)[0] +
-                '.reverse_complement.fa')
-        contig_seqrecord = SeqIO.parse(contig_fasta, 'fasta').next()
-        contig_seqrecord.seq = contig_seqrecord.seq.reverse_complement()
-        SeqIO.write(contig_seqrecord, rc_contig_fasta, 'fasta')
 
-        # Redo right_clipped alignment to reverse complement of contig
+def write_contig_reverse_complement(contig):
+
+    # Only perform alignment of right_clipped to contig
+    contig_fasta = contig.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
+    rc_contig_fasta = (os.path.splitext(contig_fasta)[0] +
+            '.reverse_complement.fa')
+    contig_seqrecord = SeqIO.parse(contig_fasta, 'fasta').next()
+    contig_seqrecord.seq = contig_seqrecord.seq.reverse_complement()
+    SeqIO.write(contig_seqrecord, rc_contig_fasta, 'fasta')
+
+    return rc_contig_fasta
+
+
+def find_contig_endpoint(contig, clipped_same_end, direction):
+
+    assert direction in ['left', 'right']
+
+    # Write clipped query alignment sequences to fastq
+    contig_dir = contig.get_model_data_dir()
+    clipped_query_alignment_fq = os.path.join(
+            contig_dir,
+            'clipped_query_alignment_seqs.fq')
+    write_read_query_alignments_to_fastq(
+            clipped_same_end,
+            clipped_query_alignment_fq)
+
+    # Get BAM filename for alignment
+    clipped_to_contig_bam = os.path.join(
+            contig_dir,
+            'clipped_to_contig.bwa_align.bam')
+
+    # Get contig fasta
+    contig_fasta = contig.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
+    align_to = None
+    is_reverse = contig.metadata.get('is_reverse', None)
+    if is_reverse is None:
         simple_align_with_bwa_mem(
-                right_clipped_query_alignment_fq, rc_contig_fasta,
-                right_clipped_to_contig_bam)
+                clipped_query_alignment_fq, contig_fasta,
+                clipped_to_contig_bam)
+        is_reverse = is_contig_reverse_complement(contig,
+                clipped_to_contig_bam)
 
-        # Perform left_clipped alignmnet to reverse complement of contig
-        simple_align_with_bwa_mem(
-                left_clipped_query_alignment_fq, rc_contig_fasta,
-                left_clipped_to_contig_bam)
+        if is_reverse:
+            contig.metadata['is_reverse'] = True
+            contig.save()
+            rc_contig_fasta = write_contig_reverse_complement(contig)
+            align_to = rc_contig_fasta
+
     else:
-        # Perform left_clipped alignmnet to contig
+        if is_reverse:
+            rc_contig_fasta = (os.path.splitext(contig_fasta)[0] +
+                    '.reverse_complement.fa')
+            align_to = rc_contig_fasta
+        else:
+            align_to = contig_fasta
+
+    if align_to:
         simple_align_with_bwa_mem(
-                left_clipped_query_alignment_fq, contig_fasta,
-                left_clipped_to_contig_bam)
+                clipped_query_alignment_fq, align_to,
+                clipped_to_contig_bam)
 
     # Find contig endpoints
-    contig_ins_left_end = get_reads_with_mode_attribute(
-            right_clipped_to_contig_bam, lambda r: r.reference_end)
-    contig_ins_right_end = get_reads_with_mode_attribute(
-            left_clipped_to_contig_bam, lambda r: r.reference_start)
+    if direction == 'right':
+        return get_reads_with_mode_attribute(
+                clipped_to_contig_bam, lambda r: r.reference_end)
+    else:
+        return get_reads_with_mode_attribute(
+                clipped_to_contig_bam, lambda r: r.reference_start)
+
+
+def find_contig_insertion_endpoints(contig,
+        left_clipped_same_end, right_clipped_same_end):
+    """ left_clipped_same_end/right_clipped_same_end are lists of
+    left and right clipped reads all with the same left/right
+    alignment endpoint, corresponding to the reference insertion
+    right/left endpoint
+    """
+    contig_ins_left_end, _ = find_contig_endpoint(contig,
+            right_clipped_same_end, 'right')
+    contig_ins_right_end, _ = find_contig_endpoint(contig,
+            left_clipped_same_end, 'left')
 
     return {
         'left': contig_ins_left_end,
