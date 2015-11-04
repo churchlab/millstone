@@ -44,6 +44,8 @@ from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Model
 
+# from genome_finish.insertion_placement_read_trkg import Junction
+from genome_finish.contig_display_utils import create_contig_junction_links
 from model_utils import assert_unique_types
 from model_utils import ensure_exists_0775_dir
 from model_utils import get_dataset_with_type
@@ -699,6 +701,18 @@ class Contig(UniqueUidModelMixin):
     # related information e.g. metadata['is_from_de_novo_assembly']=True
     metadata = PostgresJsonField()
 
+    def __getattr__(self, name):
+        """Automatically called if an attribute is not found in the typical
+        place.
+
+        Our implementation checks the metadata dict, raises AttributeError if
+        not found
+        """
+        try:
+            return self.metadata[name]
+        except:
+            raise AttributeError
+
     def get_model_data_root(self):
         """Get the root location for all data of this type in the project.
         """
@@ -744,10 +758,6 @@ class Contig(UniqueUidModelMixin):
 
     def get_client_jbrowse_link(self):
         """Returns the link to jbrowse redirect for this Contig.
-
-        Example url for user with uid 'abc', and project id 'xyz', and
-        refgenome id 456:
-            '/redirect_jbrowse?data=gd_data/abc/projects/xyz/contigs/456/jbrowse/'
         """
         bam_dataset = self.dataset_set.get(type=Dataset.TYPE.BWA_ALIGN)
         bam_label = bam_dataset.internal_string(self)
@@ -758,10 +768,6 @@ class Contig(UniqueUidModelMixin):
         link = '/redirect_jbrowse?data=' + self.get_client_jbrowse_data_path()
         link += '&tracks=' + ','.join(track_labels)
         return link
-
-    def get_ref_jbrowse_link(self, loc):
-        return (self.parent_reference_genome.get_client_jbrowse_link() +
-                '&loc=' + str(loc))
 
     @property
     def href(self):
@@ -783,58 +789,17 @@ class Contig(UniqueUidModelMixin):
         bam_dataset = get_dataset_with_type(
                 self,
                 Dataset.TYPE.BWA_SV_INDICANTS)
-        return bam_dataset.internal_string(self)
+        return str(bam_dataset.internal_string(self))
 
     @property
-    def reference_endpoint_links(self):
-        endpoints = self.metadata.get('reference_insertion_endpoints', None)
-        potential_endpoints = self.metadata.get(
-                'potential_reference_endpoints', None)
-
-        if endpoints:
-            assert len(endpoints) == 2
-            left_ep = [(endpoints[0], -1)]
-            right_ep = [(endpoints[1], -1)]
-        elif potential_endpoints:
-            left_ep = potential_endpoints['left']
-            right_ep = potential_endpoints['right']
-        else:
-            left_ep = None
-            right_ep = None
-
-        def _get_href(ep):
-            print 'ep:', ep, '\n'
-            loc, count = ep
-            if count == -1:
-                return ('<a href="' + self.get_ref_jbrowse_link(loc) +
-                    '&tracks=' + self.get_contig_reads_track() +
-                    '">' + str(loc) + '</a>')
-            else:
-                return ('<a href="' + self.get_ref_jbrowse_link(loc) +
-                    '&tracks=' + self.get_contig_reads_track() +
-                    '">' + str(loc) + '(' + str(count) + ')</a>')
-
-        if left_ep:
-            left_ep_links = map(_get_href, left_ep)
-        else:
-            left_ep_links = ['']
-        if right_ep:
-            right_ep_links = map(_get_href, right_ep)
-        else:
-            right_ep_links = ['']
-
-        html = ('Left Endpoints:' + ','.join(left_ep_links) +
-                ' Right Endpoints:' + ','.join(right_ep_links))
-
-        return html
-
-    @property   
-    def reference_insertion_endpoints(self):
-        return self.metadata.get('reference_insertion_endpoints', '')
+    def left_junctions_html(self):
+        junctions = self.metadata.get('left_junctions', '')
+        return create_contig_junction_links(self, junctions)
 
     @property
-    def contig_insertion_endpoints(self):
-        return self.metadata.get('contig_insertion_endpoints', '')
+    def right_junctions_html(self):
+        junctions = self.metadata.get('right_junctions', '')
+        return create_contig_junction_links(self, junctions)
 
     @property
     def experiment_sample(self):
@@ -851,8 +816,10 @@ class Contig(UniqueUidModelMixin):
             {'field': 'num_bases', 'verbose': 'Contig Length'},
             {'field': 'coverage', 'verbose': 'Average Coverage'},
             {'field': 'chromosome'},
-            {'field': 'reference_endpoint_links'},
-            {'field': 'contig_insertion_endpoints'}
+            {'field': 'left_junctions_html', 'verbose':
+                    'Left Junctions<br>(Reference &rarr; Contig)'},
+            {'field': 'right_junctions_html', 'verbose':
+                    'Right Junctions<br>(Reference &rarr; Contig)'}
         ]
 
 
