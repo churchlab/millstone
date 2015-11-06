@@ -1,6 +1,7 @@
 from collections import namedtuple
 
-Junction = namedtuple('Junction', ['ref', 'ref_count', 'contig', 'contig_count'])
+Junction = namedtuple('Junction',
+        ['ref', 'ref_count', 'contig', 'contig_count'])
 
 
 def get_ref_jbrowse_link(contig, loc):
@@ -22,6 +23,8 @@ def make_html_list(li, css_class='list-unstyled'):
 
 def create_contig_junction_links(contig, junctions):
     link_list = ['<span>&rarr;</span>'.join(
-            [decorate_with_link_to_loc(contig, j.ref, '%s(%s)' % (j.ref, j.ref_count)),
-            '%s(%s)' % (j.contig, j.contig_count)]) for j in map(Junction._make, junctions)]
+            [decorate_with_link_to_loc(contig, j.ref,
+                    '%s(%s)' % (j.ref, j.ref_count)),
+            '%s(%s)' % (j.contig, j.contig_count)])
+            for j in map(Junction._make, junctions)]
     return make_html_list(link_list)

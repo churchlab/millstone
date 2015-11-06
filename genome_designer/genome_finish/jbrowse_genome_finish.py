@@ -12,7 +12,16 @@ from main.models import Dataset
 from utils.bam_utils import sort_bam_by_coordinate
 from utils.bam_utils import index_bam
 from utils.import_util import add_dataset_to_entity
+from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from utils.jbrowse_util import write_tracklist_json
+
+
+def maybe_create_reads_to_contig_bam(contig):
+    if not contig.dataset_set.filter(
+            type=Dataset.TYPE.BWA_ALIGN).exists():
+        prepare_jbrowse_ref_sequence(contig)
+        align_contig_reads_to_contig(contig)
+        add_contig_reads_to_contig_bam_track(contig, Dataset.TYPE.BWA_ALIGN)
 
 
 def align_contig_reads_to_contig(contig):
