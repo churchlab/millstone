@@ -50,8 +50,7 @@ from main.models import VariantSet
 from main.models import S3File
 from genome_finish.assembly import run_de_novo_assembly_pipeline
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
-from genome_finish.jbrowse_genome_finish import align_contig_reads_to_contig
-from genome_finish.jbrowse_genome_finish import add_contig_reads_to_contig_bam_track
+from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
 from utils.combine_reference_genomes import combine_list_allformats
 from utils.data_export_util import export_melted_variant_view
 from utils.data_export_util import export_project_as_zip
@@ -264,17 +263,13 @@ def ref_genomes_download(request):
 @login_required
 @require_GET
 def make_contig_jbrowse_tracks(request):
-    """Downloads fasta file of contig sequence
+    """Aligns the reads comprising the assembly of the contig to the contig
+    and creates a corresponding bam track in jbrowse
     """
     contig = get_object_or_404(
             Contig, uid=request.GET['contigUid'])
 
-    if not contig.dataset_set.filter(
-            type=Dataset.TYPE.BWA_ALIGN).exists():
-        prepare_jbrowse_ref_sequence(contig)
-        align_contig_reads_to_contig(contig)
-        add_contig_reads_to_contig_bam_track(contig, Dataset.TYPE.BWA_ALIGN)
-
+    maybe_create_reads_to_contig_bam(contig)
     jbrowse_link = contig.get_client_jbrowse_link()
 
     # Return success response.

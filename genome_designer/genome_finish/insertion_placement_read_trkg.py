@@ -13,8 +13,8 @@ import pysam
 
 from genome_finish.contig_display_utils import Junction
 from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
+from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
 from main.models import Dataset
-from utils import make_temp_file
 from utils.bam_utils import index_bam
 from utils.bam_utils import sort_bam_by_coordinate
 from utils.import_util import add_dataset_to_entity
@@ -48,6 +48,20 @@ def get_insertion_placement_positions(contig, strategy='all_reads'):
 
         # Add bam track
         add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
+
+    # Align extracted reads to contig, check if assembled as reverse
+    # complement relative to the reference
+    maybe_create_reads_to_contig_bam(contig)
+    reads_to_contig_bam = contig.dataset_set.get(
+            type=Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+    reads_to_contig_dict = dictify(pysam.AlignmentFile(reads_to_contig_bam))
+    reads_to_ref_dict = dictify(contig_reads)
+
+    is_reverse = is_contig_reverse_complement(reads_to_ref_dict,
+            reads_to_contig_dict)
+    contig.metadata['is_reverse'] = is_reverse
+    if is_reverse:
+        write_contig_reverse_complement(contig)
 
     extracted_clipped_read_dicts = extract_left_and_right_clipped_read_dicts(
             contig_reads)
@@ -175,6 +189,46 @@ def mapped_mates_of_unmapped_reads(contig):
 
     print len(found_mates), 'mapped mates found'
     return found_mates
+
+
+def dictify(reads_iterator):
+    id_to_reads = defaultdict(list)
+    for read in reads_iterator:
+        id_to_reads[read.qname].append(read)
+    return id_to_reads
+
+
+def only_primary(reads):
+    return [read for read in reads if not
+            (read.is_supplementary or read.is_secondary)]
+
+
+def is_contig_reverse_complement(reads_to_ref_dict, reads_to_contig_dict):
+    direction_agreement = 0
+    direction_disagreement = 0
+    for qname, reads in reads_to_ref_dict.items():
+        reads = only_primary(reads)
+        if all([read.is_unmapped for read in reads]):
+            continue
+        same_reads_to_contig = only_primary(
+                reads_to_contig_dict[reads[0].qname])
+        for read in reads:
+            if read.is_unmapped:
+                continue
+            if read.is_read1:
+                correspondant = next((read for read in same_reads_to_contig
+                        if read.is_read1), None)
+            else:
+                correspondant = next((read for read in same_reads_to_contig
+                        if read.is_read2), None)
+            if correspondant:
+                if read.is_reverse == correspondant.is_reverse:
+                    direction_agreement += 1
+                else:
+                    direction_disagreement += 1
+
+    return (direction_disagreement / (direction_disagreement +
+            direction_agreement) > REVERSED_COMPLEMENTARITY_FRACTION_CUTOFF)
 
 
 def extract_contig_reads(contig, read_category='all'):
@@ -381,16 +435,31 @@ def get_top_clipped_locs(clipped_dict):
     return clipped_count_list[:i]
 
 
-def write_read_query_alignments_to_fastq(reads, fastq_path):
+def write_read_query_alignments_to_fastq(reads, fastq_path,
+        read_attr_class='query_alignment'):
     """Writes the aligned portion of each read into a fastq
     """
+
+    read_attr_funcs = {
+        'query_alignment': {
+            'seq': lambda x: x.query_alignment_sequence,
+            'qual': lambda x: x.query_alignment_qualities
+        },
+        'query': {
+            'seq': lambda x: x.query_sequence,
+            'qual': lambda x: x.query_qualities
+        }
+    }
+
+    assert read_attr_class in read_attr_funcs
+    get_read_attr = read_attr_funcs[read_attr_class]
 
     query_alignment_seqrecords = []
     for read in reads:
         query_alignment_seqrecords.append(SeqRecord(
-                Seq(read.query_alignment_sequence, IUPAC.ambiguous_dna),
+                Seq(get_read_attr['seq'](read), IUPAC.ambiguous_dna),
                 letter_annotations={
-                        'phred_quality': read.query_alignment_qualities},
+                        'phred_quality': get_read_attr['qual'](read)},
                 id=read.query_name,
                 description=''))
 
@@ -448,41 +517,25 @@ def get_reads_with_mode_attribute(clipped_alignment_bam, get_attr_function):
     if (highest_consensus - second_highest_consensus >
             (ENDPOINT_MODE_DIFFERENCE_FACTOR_CUTOFF *
                     highest_consensus)):
-        endpoint = alignment_ref_clip_positions_sorted[0][0], highest_consensus
+        endpoint = (alignment_ref_clip_positions_sorted[0][0],
+                highest_consensus)
     else:
         endpoint = None, None
 
     return endpoint
 
 
-def is_contig_reverse_complement(contig, alignment_bam):
-    
-    # Check if contig is reverse complement
-    total_mapped_count = 0
-    reversed_complementarity_count = 0
-    sam_file = pysam.AlignmentFile(alignment_bam)
-    for read in sam_file:
-        if not read.is_unmapped:
-            total_mapped_count += 1
-            if read.is_reverse:
-                reversed_complementarity_count += 1
-
-    if total_mapped_count == 0:
-        return {'error_string':
-                'Could not find sufficient homology to reference in contig'}
-
-    return (reversed_complementarity_count / total_mapped_count >
-            REVERSED_COMPLEMENTARITY_FRACTION_CUTOFF)
+def get_contig_rc_fasta_path(contig):
+    contig_fasta = contig.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    return (os.path.splitext(contig_fasta)[0] +
+            '.reverse_complement.fa')
 
 
 def write_contig_reverse_complement(contig):
-
-    # Only perform alignment of right_clipped to contig
     contig_fasta = contig.dataset_set.get(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-
-    rc_contig_fasta = (os.path.splitext(contig_fasta)[0] +
-            '.reverse_complement.fa')
+    rc_contig_fasta = get_contig_rc_fasta_path(contig)
     contig_seqrecord = SeqIO.parse(contig_fasta, 'fasta').next()
     contig_seqrecord.seq = contig_seqrecord.seq.reverse_complement()
     SeqIO.write(contig_seqrecord, rc_contig_fasta, 'fasta')
@@ -512,28 +565,10 @@ def find_contig_endpoint(contig, clipped_same_end, direction):
     contig_fasta = contig.dataset_set.get(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
-    align_to = None
-    is_reverse = contig.metadata.get('is_reverse', None)
-    if is_reverse is None:
-        simple_align_with_bwa_mem(
-                clipped_query_alignment_fq, contig_fasta,
-                clipped_to_contig_bam)
-        is_reverse = is_contig_reverse_complement(contig,
-                clipped_to_contig_bam)
-
-        if is_reverse:
-            contig.metadata['is_reverse'] = True
-            contig.save()
-            rc_contig_fasta = write_contig_reverse_complement(contig)
-            align_to = rc_contig_fasta
-
+    if contig.is_reverse:
+        align_to = get_contig_rc_fasta_path(contig)
     else:
-        if is_reverse:
-            rc_contig_fasta = (os.path.splitext(contig_fasta)[0] +
-                    '.reverse_complement.fa')
-            align_to = rc_contig_fasta
-        else:
-            align_to = contig_fasta
+        align_to = contig_fasta
 
     if align_to:
         simple_align_with_bwa_mem(
