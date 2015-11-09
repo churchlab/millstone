@@ -227,6 +227,9 @@ def is_contig_reverse_complement(reads_to_ref_dict, reads_to_contig_dict):
                 else:
                     direction_disagreement += 1
 
+    if not (direction_agreement or direction_disagreement):
+        return False
+
     return (direction_disagreement / (direction_disagreement +
             direction_agreement) > REVERSED_COMPLEMENTARITY_FRACTION_CUTOFF)
 
