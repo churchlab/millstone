@@ -1,17 +1,30 @@
 from collections import namedtuple
 
+import settings
+
+
 Junction = namedtuple('Junction',
         ['ref', 'ref_count', 'contig', 'contig_count'])
 
 
 def get_ref_jbrowse_link(contig, loc):
-        return (contig.parent_reference_genome.get_client_jbrowse_link() +
-                '&loc=' + str(loc))
+    sample_alignment = contig.experiment_sample_to_alignment
+    bam_dataset = sample_alignment.dataset_set.get(
+            type='BWA BAM')
+
+    sample_bam_track = '_'.join([
+            bam_dataset.internal_string(sample_alignment.experiment_sample),
+            str(sample_alignment.alignment_group.uid)])
+
+    track_labels = settings.JBROWSE_DEFAULT_TRACKS + [sample_bam_track]
+    return (contig.parent_reference_genome.get_client_jbrowse_link() +
+            '&loc=' + str(loc) +
+            '&tracks=' + ','.join(track_labels))
 
 
 def decorate_with_link_to_loc(contig, loc, text):
     return ('<a href="' + get_ref_jbrowse_link(contig, loc) +
-        '&tracks=' + contig.get_contig_reads_track() +
+        ',' + contig.get_contig_reads_track() +
         '" target="_blank">' + text + '</a>')
 
 
