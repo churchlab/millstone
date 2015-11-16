@@ -386,7 +386,9 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
 
         contig_node_number = int(
                 contig_number_pattern.findall(seq_record.description)[0])
-        contig_label = 'Contig_' + str(contig_node_number)
+        contig_label = '%s_%s' % (
+                sample_alignment.experiment_sample.label,
+                contig_node_number)
 
         # Create an insertion model for the contig
         contig = Contig.objects.create(
