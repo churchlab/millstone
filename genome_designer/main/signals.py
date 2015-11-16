@@ -75,7 +75,9 @@ def post_contig_delete(sender, instance, **kwargs):
     # In case vccd has already been deleted
     try:
         vccd = instance.variant_caller_common_data
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, AttributeError):
+        return
+    if vccd is None:
         return
 
     vccd.variant.reference_genome.invalidate_materialized_view()

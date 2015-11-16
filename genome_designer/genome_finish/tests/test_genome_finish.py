@@ -39,11 +39,20 @@ class TestGenomeFinishMG1655(TestCase):
         self.project = Project.objects.create(
             owner=self.user.get_profile(), title='Test Project')
 
-    def _perform_assembly(self, data_dir):
+    def populate_dict_from_dir(self, data_dir):
+        return {
+            'ref_fasta': os.path.join(data_dir, 'ref.fa'),
+            'fq_1': os.path.join(data_dir, 'reads.1.fq'),
+            'fq_2': os.path.join(data_dir, 'reads.2.fq'),
+            'target_fasta': os.path.join(data_dir, 'no_ins_ref.fa')
+        }
 
-        ref_fasta = os.path.join(data_dir, 'ref.fa')
-        fq_1 = os.path.join(data_dir, 'reads.1.fq')
-        fq_2 = os.path.join(data_dir, 'reads.2.fq')
+
+    def _perform_assembly(self, data_dict):
+
+        ref_fasta = data_dict['ref_fasta']
+        fq_1 = data_dict['fq_1']
+        fq_2 = data_dict['fq_2']
 
         # Import reference genome
         ref_genome = import_reference_genome_from_local_file(
@@ -90,9 +99,9 @@ class TestGenomeFinishMG1655(TestCase):
 
         return contigs
 
-    def _run_genome_finish_test(self, data_dir, mismatch_tolerance=0):
+    def _run_genome_finish_test(self, data_dict, mismatch_tolerance=0):
 
-        contigs = self._perform_assembly(data_dir)
+        contigs = self._perform_assembly(data_dict)
 
         # Assert contigs were generated
         self.assertTrue(contigs.count() > 0)
@@ -116,7 +125,7 @@ class TestGenomeFinishMG1655(TestCase):
                 variant_set, new_ref_genome_params)
 
         # Verify insertion was placed correctly
-        target_fasta = os.path.join(data_dir, 'no_ins_ref.fa')
+        target_fasta = data_dict['target_fasta']
         new_ref_genome_fasta = get_dataset_with_type(
                 new_ref_genome, Dataset.TYPE.REFERENCE_GENOME_FASTA
                 ).get_absolute_location()
@@ -134,24 +143,34 @@ class TestGenomeFinishMG1655(TestCase):
 
     def test_1kb_insertion(self):
         data_dir = os.path.join(GF_TEST_DIR, 'small_mg1655_data/1kb_ins')
-        self._run_genome_finish_test(data_dir)
+        self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
 
     def test_1kb_insertion_cov_80(self):
         data_dir = os.path.join(GF_TEST_DIR,
                 'small_mg1655_data/1kb_ins_cov_80')
-        self._run_genome_finish_test(data_dir)
+        self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
 
     def test_1kb_insertion_cov_40(self):
         data_dir = os.path.join(GF_TEST_DIR,
                 'small_mg1655_data/1kb_ins_cov_40')
-        self._run_genome_finish_test(data_dir)
+        self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
 
     def test_1kb_insertion_del_30(self):
         data_dir = os.path.join(GF_TEST_DIR,
                 'small_mg1655_data/1kb_ins_del_30')
-        self._run_genome_finish_test(data_dir)
+        self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
 
     def test_1kb_insertion_del_1000(self):
         data_dir = os.path.join(GF_TEST_DIR,
                 'small_mg1655_data/1kb_ins_del_1000')
-        self._run_genome_finish_test(data_dir)
+        self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
+
+    def test_gzip_reads(self):
+        data_dir = os.path.join(GF_TEST_DIR, 'gz_reads')
+        data_dict = {k: os.path.join(data_dir, f) for k, f in
+                [('ref_fasta', 'del_genome.fa'), ('target_fasta', 'genome.fa'),
+                ('fq_1', 'simngs_reads.1.fq.gz'),
+                ('fq_2', 'simngs_reads.2.fq.gz')]
+        }
+
+        self._run_genome_finish_test(data_dict)

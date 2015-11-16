@@ -432,7 +432,7 @@ def get_top_clipped_locs(clipped_dict):
     # Return the list that comprises ENDPOINT_FRACTION of the total reads
     included = 0
     i = 0
-    while included / float(total) < ENDPOINT_FRACTION:
+    while included < ENDPOINT_FRACTION * total:
         included += clipped_count_list[i][1]
         i += 1
     return clipped_count_list[:i]

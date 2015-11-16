@@ -196,7 +196,8 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     sv_indicant_class_to_generator = {
             Dataset.TYPE.BWA_PILED: get_piled_reads,
             Dataset.TYPE.BWA_CLIPPED: get_clipped_reads_smart,
-            Dataset.TYPE.BWA_UNMAPPED: get_unmapped_reads
+            Dataset.TYPE.BWA_UNMAPPED: lambda i, o: get_unmapped_reads(
+                    i, o, avg_phred_cutoff=20)
     }
 
     default_sv_indicant_classes = {
@@ -382,11 +383,16 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     contigs_fasta = os.path.join(data_dir, 'contigs.fa')
     contig_files.append(contigs_fasta)
 
-    for seq_record in SeqIO.parse(contigs_fasta, 'fasta'):
+    records = list(SeqIO.parse(contigs_fasta, 'fasta'))
+    digits = len(str(len(records)))
+    for seq_record in records:
 
         contig_node_number = int(
                 contig_number_pattern.findall(seq_record.description)[0])
-        contig_label = 'Contig_' + str(contig_node_number)
+        leading_zeros = digits - len(str(contig_node_number))
+        contig_label = '%s_%s' % (
+                sample_alignment.experiment_sample.label,
+                leading_zeros * '0' + str(contig_node_number))
 
         # Create an insertion model for the contig
         contig = Contig.objects.create(
