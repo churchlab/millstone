@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-import settings
+from django.conf import settings
 
 
 Junction = namedtuple('Junction',
@@ -9,6 +9,10 @@ Junction = namedtuple('Junction',
 
 def get_ref_jbrowse_link(contig, loc):
     sample_alignment = contig.experiment_sample_to_alignment
+    # This is a workaround to using type=Dataset.TYPE.BWA_ALIGN, because this
+    # file is imported by main/models.py, so importing Dataset here causes a
+    # circular import error.
+    # TODO(gleb): Figure out better organization
     bam_dataset = sample_alignment.dataset_set.get(
             type='BWA BAM')
 

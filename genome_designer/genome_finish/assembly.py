@@ -383,13 +383,16 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     contigs_fasta = os.path.join(data_dir, 'contigs.fa')
     contig_files.append(contigs_fasta)
 
-    for seq_record in SeqIO.parse(contigs_fasta, 'fasta'):
+    records = list(SeqIO.parse(contigs_fasta, 'fasta'))
+    digits = len(str(len(records)))
+    for seq_record in records:
 
         contig_node_number = int(
                 contig_number_pattern.findall(seq_record.description)[0])
+        leading_zeros = digits - len(str(contig_node_number))
         contig_label = '%s_%s' % (
                 sample_alignment.experiment_sample.label,
-                contig_node_number)
+                leading_zeros * '0' + str(contig_node_number))
 
         # Create an insertion model for the contig
         contig = Contig.objects.create(
