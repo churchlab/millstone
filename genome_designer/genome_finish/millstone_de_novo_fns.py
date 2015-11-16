@@ -230,13 +230,24 @@ def make_sliced_fasta(fasta_path, seqrecord_id, left_index, right_index,
     return sliced_fasta_path
 
 
-def get_unmapped_reads(bam_filename, output_filename):
+def get_unmapped_reads(bam_filename, output_filename, avg_phred_cutoff=None):
+
+    if avg_phred_cutoff is not None:
+        intermediate_filename = '_unfiltered'.join(
+                os.path.splitext(output_filename))
+    else:
+        intermediate_filename = output_filename
+
     cmd = '{samtools} view -h -b -f 0x4 {bam_filename}'.format(
             samtools=SAMTOOLS_BINARY,
             bam_filename=bam_filename)
-    with open(output_filename, 'w') as output_fh:
+    with open(intermediate_filename, 'w') as output_fh:
         subprocess.call(
                 cmd, stdout=output_fh, shell=True, executable=BASH_PATH)
+
+    if avg_phred_cutoff is not None:
+        filter_low_qual_read_pairs(intermediate_filename, output_filename,
+                avg_phred_cutoff)
 
 
 def get_split_reads(bam_filename, output_filename):
@@ -338,18 +349,17 @@ def filter_out_unpaired_reads(input_bam_path, output_bam_path):
     input_af.close()
 
 
-def filter_low_qual_read_pairs(input_bam_path, output_bam_path):
+def filter_low_qual_read_pairs(input_bam_path, output_bam_path,
+        avg_phred_cutoff=20):
     """Filters out reads with average phred scores below cutoff
     """
-
-    AVG_PHRED_CUTOFF = 20
 
     # Put qnames with average phred scores below the cutoff into dictionary
     bad_quality_qnames = {}
     input_af = pysam.AlignmentFile(input_bam_path, "rb")
     for read in input_af:
         avg_phred = np.mean(read.query_qualities)
-        if avg_phred < AVG_PHRED_CUTOFF:
+        if avg_phred < avg_phred_cutoff:
             bad_quality_qnames[read.qname] = True
 
     # Write reads in input to output if not in bad_quality_names
