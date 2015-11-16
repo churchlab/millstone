@@ -1,4 +1,5 @@
 from collections import defaultdict
+import gzip
 import os
 import re
 import subprocess
@@ -70,7 +71,14 @@ def align_contig_reads_to_contig(contig):
 
     p1 = re.compile('@(\S+)')
     for input_fq_path, output_fq_path in zip(source_fq_list, output_fq_list):
-        with open(input_fq_path, 'r') as in_fh, \
+        if input_fq_path.endswith('.fq'):
+            file_like = open(input_fq_path)
+        elif input_fq_path.endswith('.gz'):
+            file_like = gzip.open(input_fq_path)
+        else:
+            raise Exception('Compression type not supported')
+
+        with file_like as in_fh, \
              open(output_fq_path, 'w') as out_fh:
             for line in in_fh:
                 m1 = p1.match(line)
