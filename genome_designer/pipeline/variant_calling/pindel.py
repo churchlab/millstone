@@ -91,13 +91,20 @@ def postprocess_pindel_vcf(vcf_file):
         # Update some headers stuff.
         common_postprocess_vcf(vcf_reader)
 
+        # Iterate through the records in the input file, keeping only those
+        # that pass all filters.
         with open(temp_vcf_filename, 'w') as output_fh:
             vcf_writer = vcf.Writer(output_fh, vcf_reader)
             for record in vcf_reader:
-                assert 'SVLEN' in record.__dict__['INFO']
+                # At least one sample must have gt_type > 0.
+                # TODO(gleb): I'm not sure if gt_type is properly set. Debug by
+                # inspecting the backup file created above.
+                if not any([s.gt_type > 0 for s in record.samples]):
+                    continue
 
                 # pindel uses negative SVLEN for deletions; make them positive
                 # always have one entry
+                assert 'SVLEN' in record.__dict__['INFO']
                 svlen = abs(record.__dict__['INFO']['SVLEN'][0])
                 record.__dict__['INFO']['SVLEN'] = [svlen]
 
