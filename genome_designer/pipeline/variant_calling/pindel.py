@@ -2,6 +2,7 @@
 """
 
 import os
+import shutil
 import subprocess
 
 from django.conf import settings
@@ -69,34 +70,52 @@ def run_pindel(fasta_ref, sample_alignments, vcf_output_dir,
     return True # success
 
 
-
 def postprocess_pindel_vcf(vcf_file):
     """Process vcfs output by Pindel, so that the information is
     customized to whatever is needed in Millstone, and the format is
     the same as that of Freebayes.
+
+    Args:
+        vcf_file: This is typically the output of pindel2vcf. This file is
+            over-written by this function.
     """
-    vcf_reader = vcf.Reader(open(vcf_file))
+    # First create a backup file.
+    shutil.copyfile(vcf_file, vcf_file + '.prepostprocess')
 
-    common_postprocess_vcf(vcf_reader)
+    temp_vcf_filename = vcf_file + '.tmp'
 
-    # Write the modified VCF to a temp file.
-    vcf_writer = vcf.Writer(open(vcf_file + '.tmp', 'a'), vcf_reader)
-    for record in vcf_reader:
-        if 'SVLEN' not in record.__dict__['INFO']:
-            continue  # should not happen
+    with open(vcf_file) as input_fh:
+        # Use the original file as the template.
+        vcf_reader = vcf.Reader(input_fh)
 
-        # pindel uses negative SVLEN for deletions; make them positive
-        # always have one entry
-        svlen = abs(record.__dict__['INFO']['SVLEN'][0])
-        record.__dict__['INFO']['SVLEN'] = [svlen]
+        # Update some headers stuff.
+        common_postprocess_vcf(vcf_reader)
 
-        if svlen < 10:  # ignore small variants
-            continue
+        with open(temp_vcf_filename, 'w') as output_fh:
+            vcf_writer = vcf.Writer(output_fh, vcf_reader)
+            for record in vcf_reader:
+                assert 'SVLEN' in record.__dict__['INFO']
 
-        # update METHOD field
-        record.__dict__['INFO']['METHOD'] = 'PINDEL'
+                # pindel uses negative SVLEN for deletions; make them positive
+                # always have one entry
+                svlen = abs(record.__dict__['INFO']['SVLEN'][0])
+                record.__dict__['INFO']['SVLEN'] = [svlen]
 
-        vcf_writer.write_record(record)
+                # Filter out small variants. These should be handled by Freebayes.
+                if svlen < 10:
+                    continue
 
-    # move temporary file back
-    subprocess.check_call(['mv', vcf_file + '.tmp', vcf_file])
+                # Update METHOD field.
+                record.__dict__['INFO']['METHOD'] = 'PINDEL'
+
+                # If REF is super long, truncate to first char.
+                if len(record.REF) > 10:
+                    record.REF = record.REF[0]
+
+                # Set ALT to SVTYPE.
+                record.ALT = ['<{svtype}>'.format(svtype=record.__dict__['INFO']['SVTYPE'][0])]
+
+                vcf_writer.write_record(record)
+
+    # Replace original filepath with modified temp file.
+    shutil.move(temp_vcf_filename, vcf_file)
