@@ -214,6 +214,9 @@ def process_vcf_post_l_merge(l_merge_output_vcf_path, processed_vcf_path):
                             vcf.model._Call(record, sample_id, sample_data))
                 record.samples = record_samples
 
+                # update METHOD field
+                record.__dict__['INFO']['METHOD'] = 'LUMPY'
+
                 vcf_writer.write_record(record)
 
 
