@@ -120,6 +120,7 @@ class Dataset(UniqueUidModelMixin):
         VCF_USERINPUT = 'User VCF'
         VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
         VCF_LUMPY_SNPEFF = 'Lumpy SNPEff VCF'
+        VCF_PINDEL_SNPEFF = 'Pindel SNPEff VCF'
         VCF_DE_NOVO_ASSEMBLED_CONTIGS = 'De Novo Assemblied Contigs VCF'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
         LUMPY_INSERT_METRICS_HISTOGRAM = 'Lumpy Insert Metrics Histogram'

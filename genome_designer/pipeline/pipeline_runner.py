@@ -29,6 +29,7 @@ from pipeline.variant_calling.common import get_or_create_vcf_output_dir
 from pipeline.variant_calling.freebayes import merge_freebayes_parallel
 from pipeline.variant_calling.freebayes import freebayes_regions
 from pipeline.variant_calling.lumpy import merge_lumpy_vcf
+from pipeline.variant_calling.pindel import merge_pindel_vcf
 
 
 # List of variant callers to use. At time of writing, this was not hooked
@@ -346,6 +347,7 @@ def merge_variant_data(alignment_group):
     try:
         merge_freebayes_parallel(alignment_group)
         merge_lumpy_vcf(alignment_group)
+        merge_pindel_vcf(alignment_group)
     except:
         # Log error.
         vcf_output_root = get_or_create_vcf_output_dir(alignment_group)

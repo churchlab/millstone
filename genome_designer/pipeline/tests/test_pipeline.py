@@ -23,6 +23,9 @@ TEST_USERNAME = 'gmcdev'
 TEST_PASSWORD = 'g3n3d3z'
 TEST_EMAIL = 'gmcdev@genomedesigner.freelogy.org'
 
+FAKE_GENOME_AND_READS_DIR = os.path.join(
+        settings.PWD, 'test_data', 'fake_genome_and_reads')
+
 TEST_FASTA = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         'test_genome.fa')
 
@@ -31,6 +34,12 @@ TEST_FASTQ1 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
 
 TEST_FASTQ2 = os.path.join(settings.PWD, 'test_data', 'fake_genome_and_reads',
         '38d786f2', 'test_genome_1.snps.simLibrary.2.fq')
+
+TEST_SAMPLE_2_FASTQ1 = os.path.join(FAKE_GENOME_AND_READS_DIR,
+        '9b19e708', 'test_genome_2.snps.simLibrary.1.fq')
+
+TEST_SAMPLE_2_FASTQ2 = os.path.join(FAKE_GENOME_AND_READS_DIR,
+        '9b19e708', 'test_genome_2.snps.simLibrary.2.fq')
 
 
 class TestAlignmentPipeline(TransactionTestCase):
@@ -55,12 +64,20 @@ class TestAlignmentPipeline(TransactionTestCase):
         # Create a sample.
         self.experiment_sample = ExperimentSample.objects.create(
                 project=self.project, label='sample1')
-
-        # Add fastq files to first sample.
         copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ1,
                 Dataset.TYPE.FASTQ1, TEST_FASTQ1)
         copy_and_add_dataset_source(self.experiment_sample, Dataset.TYPE.FASTQ2,
                 Dataset.TYPE.FASTQ2, TEST_FASTQ2)
+
+        # Create second sample.
+        self.experiment_sample_2 = ExperimentSample.objects.create(
+                project=self.project, label='sample2')
+        copy_and_add_dataset_source(
+                self.experiment_sample_2, Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1, TEST_SAMPLE_2_FASTQ1)
+        copy_and_add_dataset_source(
+                self.experiment_sample_2, Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2, TEST_SAMPLE_2_FASTQ2)
 
         # Create a sample with a single fastq
         self.experiment_sample_single_fastq = ExperimentSample.objects.create(
@@ -184,3 +201,18 @@ class TestAlignmentPipeline(TransactionTestCase):
                 reference_genome=alignment_group.reference_genome, position=205)
         v_205_va = v_205.variantalternate_set.all()[0]
         self.assertEqual('tolC', v_205_va.data['INFO_EFF_GENE'])
+
+    def test_run_pipeline__multiple_samples(self):
+        """End-to-end test of pipeline. Fails if any errors.
+        """
+        sample_list = [self.experiment_sample, self.experiment_sample_2]
+        result = run_pipeline(
+                'name_placeholder', self.reference_genome, sample_list)
+        alignment_group = result[0]
+        alignment_async_result = result[1]
+        variant_calling_async_result = result[2]
+        alignment_async_result.get()
+        variant_calling_async_result.get()
+        alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
+        self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
+                alignment_group.status)

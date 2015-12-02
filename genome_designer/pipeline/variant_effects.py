@@ -119,7 +119,8 @@ SNPEFF_ALT_RE = re.compile(r''.join([
 MAP_VCF_SOURCE_TOOL_TO_ORIGINAL_VCF_DATASET_TYPE = {
     # TODO: Use constants once circular imports issue is resolved.
     'freebayes': Dataset.TYPE.VCF_FREEBAYES,
-    'lumpy': Dataset.TYPE.VCF_LUMPY
+    'lumpy': Dataset.TYPE.VCF_LUMPY,
+    'pindel': Dataset.TYPE.VCF_PINDEL
 }
 
 

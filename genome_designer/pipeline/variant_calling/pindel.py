@@ -1,6 +1,7 @@
 """Wrapper for running pindel.
 """
 
+import glob
 import os
 import shutil
 import subprocess
@@ -9,8 +10,15 @@ from django.conf import settings
 import vcf
 
 from main.model_utils import get_dataset_with_type
+from main.models import Dataset
 from pipeline.read_alignment import get_insert_size_mean_and_stdev
+from pipeline.variant_calling.common import add_vcf_dataset
 from pipeline.variant_calling.common import common_postprocess_vcf
+from pipeline.variant_calling.common import get_common_tool_params
+from pipeline.variant_calling.common import process_vcf_dataset
+from pipeline.variant_calling.constants import TOOL_PINDEL
+from pipeline.variant_effects import run_snpeff
+from utils import uppercase_underscore
 
 
 def run_pindel(fasta_ref, sample_alignments, vcf_output_dir,
@@ -126,3 +134,50 @@ def postprocess_pindel_vcf(vcf_file):
 
     # Replace original filepath with modified temp file.
     shutil.move(temp_vcf_filename, vcf_file)
+
+
+def merge_pindel_vcf(alignment_group):
+    """Merge pindel outputs run on individual samples into a single vcf.
+
+    Returns the new Dataset. If no Pindel files, returns None.
+    """
+    common_params = get_common_tool_params(alignment_group)
+    partial_vcf_output_dir = os.path.join(
+            common_params['output_dir'], TOOL_PINDEL)
+
+    # Glob all the partial (region-specific) vcf files.
+    # Assert that there is at least one.
+    vcf_output_filename_prefix = os.path.join(partial_vcf_output_dir,
+            uppercase_underscore(common_params['alignment_type']) +
+            '.partial.*.vcf')
+    partial_vcf_files = glob.glob(vcf_output_filename_prefix)
+    if not len(partial_vcf_files):
+        return None
+
+    merged_vcf_filepath = os.path.join(
+            partial_vcf_output_dir,
+            uppercase_underscore(common_params['alignment_type']) + '.vcf')
+    vcf_combine_cmd_list = [settings.VCF_COMBINE_BINARY] + partial_vcf_files
+    with open(merged_vcf_filepath, 'w') as vcf_combine_out_fh:
+        subprocess.check_call(vcf_combine_cmd_list, stdout=vcf_combine_out_fh)
+
+    # Create Dataset pointing to merged vcf file.
+    vcf_dataset_type = Dataset.TYPE.VCF_PINDEL
+    vcf_dataset = add_vcf_dataset(
+            alignment_group, vcf_dataset_type, merged_vcf_filepath)
+
+    # If genome is annotated then run snpeff now,
+    # then update the vcf_output_filename and vcf_dataset_type.
+    if alignment_group.reference_genome.is_annotated():
+        vcf_ouput_filename_merged_snpeff = run_snpeff(
+                alignment_group, TOOL_PINDEL)
+        if vcf_ouput_filename_merged_snpeff is not None:
+            vcf_dataset_type = Dataset.TYPE.VCF_PINDEL_SNPEFF
+            vcf_dataset = add_vcf_dataset(
+                    alignment_group, vcf_dataset_type,
+                    vcf_ouput_filename_merged_snpeff)
+
+    # Parse VCF to add variants to database.
+    process_vcf_dataset(alignment_group, vcf_dataset_type)
+
+    return vcf_dataset

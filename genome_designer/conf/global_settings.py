@@ -362,8 +362,7 @@ JBROWSE_MAX_COVERAGE_TRACKS = 10
 ENABLED_VARIANT_CALLERS = [
     'freebayes',
     'lumpy',
-    #'pindel',
-    #'delly'
+    'pindel',
 ]
 
 # Path to snpeff java jar.

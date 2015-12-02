@@ -129,7 +129,8 @@ def find_variants_with_tool(alignment_group, variant_params_dict):
     # Certain tools require merging and so are responsible for their own
     # vcf processing.
     does_vcf_processing_occur_elsewhere = (
-            is_parallel_tool and tool_name in [TOOL_FREEBAYES, TOOL_LUMPY])
+            is_parallel_tool and tool_name in [
+                    TOOL_FREEBAYES, TOOL_LUMPY, TOOL_PINDEL])
     if does_vcf_processing_occur_elsewhere:
         return True
 

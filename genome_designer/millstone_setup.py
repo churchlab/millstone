@@ -113,6 +113,14 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/ia8z8ib0fxnsaft/samblaster'
         ]
     },
+    'vcflib': {
+        'Darwin': [
+            'https://www.dropbox.com/s/efbprgj2fmgy5ck/vcflib-32be8fc-darwin.zip'
+        ],
+        'Linux': [
+            'https://www.dropbox.com/s/8wzv39ifu3d7pts/vcflib-32be8fc-linux.zip'
+        ]
+    },
     'velvet': {
         'Darwin': [
             'https://www.dropbox.com/s/ff3g2j46tr8rf2w/velvet-darwin.zip'
@@ -131,7 +139,8 @@ TOOLS_TO_EXECUTABLES = {
     'pindel': ['pindel', 'pindel2vcf'],
     'tabix': ['tabix', 'bgzip'],
     'freebayes': ['freebayes', 'vcfstreamsort', 'vcfuniq'],
-    'velvet': ['velvetg', 'velveth', 'extractContigReads.pl']
+    'velvet': ['velvetg', 'velveth', 'extractContigReads.pl'],
+    'vcflib': ['*'],
 }
 
 
