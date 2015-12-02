@@ -166,16 +166,17 @@ def merge_pindel_vcf(alignment_group):
     vcf_dataset = add_vcf_dataset(
             alignment_group, vcf_dataset_type, merged_vcf_filepath)
 
+    # TODO(gleb): There is a bug here. Uncomment when fixed.
     # If genome is annotated then run snpeff now,
     # then update the vcf_output_filename and vcf_dataset_type.
-    if alignment_group.reference_genome.is_annotated():
-        vcf_ouput_filename_merged_snpeff = run_snpeff(
-                alignment_group, TOOL_PINDEL)
-        if vcf_ouput_filename_merged_snpeff is not None:
-            vcf_dataset_type = Dataset.TYPE.VCF_PINDEL_SNPEFF
-            vcf_dataset = add_vcf_dataset(
-                    alignment_group, vcf_dataset_type,
-                    vcf_ouput_filename_merged_snpeff)
+    # if alignment_group.reference_genome.is_annotated():
+    #     vcf_ouput_filename_merged_snpeff = run_snpeff(
+    #             alignment_group, TOOL_PINDEL)
+    #     if vcf_ouput_filename_merged_snpeff is not None:
+    #         vcf_dataset_type = Dataset.TYPE.VCF_PINDEL_SNPEFF
+    #         vcf_dataset = add_vcf_dataset(
+    #                 alignment_group, vcf_dataset_type,
+    #                 vcf_ouput_filename_merged_snpeff)
 
     # Parse VCF to add variants to database.
     process_vcf_dataset(alignment_group, vcf_dataset_type)
