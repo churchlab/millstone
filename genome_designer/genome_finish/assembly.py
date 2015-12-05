@@ -8,6 +8,7 @@ from Bio import SeqIO
 from celery import task
 from django.conf import settings
 
+from genome_finish.graph_contig_placement import graph_contig_placement
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.millstone_de_novo_fns import add_paired_mates
 from genome_finish.millstone_de_novo_fns import filter_low_qual_read_pairs
@@ -433,26 +434,14 @@ def evaluate_contigs(contig_list):
     # Sort contig_list by highest length weighted coverage
     contig_list.sort(key=_length_weighted_coverage, reverse=True)
 
-    placeable_contigs = []
-    for i, contig in enumerate(contig_list[:NUM_CONTIGS_TO_EVALUATE]):
-        print 'Evaluating contig ', i, ':', contig.label
-        insertion_placement_positions = get_insertion_placement_positions(
-                contig, strategy='all_reads')
-
-        if 'error_string' not in insertion_placement_positions:
-            contig.metadata['contig_insertion_endpoints'] = (
-                    insertion_placement_positions['contig']['left'],
-                    insertion_placement_positions['contig']['right'])
-            contig.metadata['reference_insertion_endpoints'] = (
-                insertion_placement_positions['reference']['left'],
-                insertion_placement_positions['reference']['right'])
-            contig.save()
-            placeable_contigs.append(contig)
+    # Get placeable contigs using graph-based placement
+    placeable_contigs = graph_contig_placement(contig_list)
 
     if not placeable_contigs:
         return
 
     # Get path for contigs vcf
+    contig = contig_list[0]
     ag = contig.experiment_sample_to_alignment.alignment_group
     vcf_path = os.path.join(
             ag.get_model_data_dir(),
@@ -484,13 +473,6 @@ def evaluate_contigs(contig_list):
                 contig = Contig.objects.get(uid=contig_uid_list[0])
                 contig.variant_caller_common_data = vccd
                 contig.save()
-                bam_dataset = get_dataset_with_type(
-                        contig,
-                        Dataset.TYPE.BWA_SV_INDICANTS)
-                variant_bam_track_labels.append(
-                        bam_dataset.internal_string(contig))
-                variant_coverage_track_labels.append(
-                        bam_dataset.internal_string(contig) + '_COVERAGE')
 
         # Remove potential duplicates
         variant_bam_track_labels = list(set(
