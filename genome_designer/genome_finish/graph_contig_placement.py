@@ -7,17 +7,26 @@ from django.conf import settings
 import networkx as nx
 import pysam
 
+from genome_finish.contig_display_utils import Junction
+from genome_finish.insertion_placement_read_trkg import extract_contig_reads
+from genome_finish.insertion_placement_read_trkg import make_contig_reads_dataset
 from genome_finish.insertion_placement_read_trkg import simple_align_with_bwa_mem
+from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from main.models import Contig
 from main.models import Dataset
 
-MAX_DELETION = 500
+MAX_DELETION = 1200
 MAX_DUP = 10
 InsertionVertices = namedtuple('InsertionVertices',
         ['exit_ref', 'enter_contig', 'exit_contig', 'enter_ref'])
 
 
 def graph_contig_placement(contig_list):
+
+    # Make a bam track on the reference for each contig that shows only the
+    # reads that assembled the contig and their mates
+    for contig in contig_list:
+        make_contig_reads_to_ref_alignments(contig)
 
     # Make Assembly dir
     assembly_dir = contig_list[0].metadata['assembly_dir']
@@ -102,6 +111,7 @@ def graph_contig_placement(contig_list):
         contig.metadata['chromosome'] = contig_alignmentfile.getrname(
                 read.reference_id)
         contig.metadata['is_reverse'] = read.is_reverse
+        set_contig_junctions(contig, match_regions)
         contig.save()
 
     # Add inter-contig sequence edges
@@ -113,6 +123,7 @@ def graph_contig_placement(contig_list):
 
     placeable_contigs = []
     G.ref_intervals = ref_intervals
+    G.contig_intervals_list = contigs_intervals
     iv_list = novel_seq_ins_walk(G)
     for insertion_vertices in iv_list:
         contig_uid = insertion_vertices.enter_contig.seq_uid
@@ -121,6 +132,45 @@ def graph_contig_placement(contig_list):
         placeable_contigs.append(contig)
 
     return placeable_contigs
+
+
+def set_contig_junctions(contig, match_region_list):
+    left_junctions = []
+    right_junctions = []
+    for i, match_region in enumerate(match_region_list):
+        if match_region.read_start != 0:
+
+            prev_match = match_region_list[i-1] if i != 0 else None
+            if prev_match:
+                new_seq_length = match_region.read_start - prev_match.read_end
+            else:
+                new_seq_length = match_region.read_start
+
+            right_junctions.append(Junction(
+                    match_region.ref_start, match_region.length,
+                    match_region.read_start, new_seq_length))
+
+        if match_region.read_end != contig.num_bases:
+
+            next_match = (match_region_list[i+1] if
+                    i != len(match_region_list) - 1 else None)
+            if next_match:
+                new_seq_length = match_region.read_end - next_match.read_start
+            else:
+                new_seq_length = contig.num_bases - match_region.read_end
+
+            left_junctions.append(Junction(
+                    match_region.ref_end, match_region.length,
+                    match_region.read_end, new_seq_length))
+
+    for key, data in [('left_junctions', left_junctions),
+            ('right_junctions', right_junctions)]:
+
+        if isinstance(contig.metadata.get(key), list):
+            contig.metadata[key].extend(data)
+        else:
+            contig.metadata[key] = data
+    contig.save()
 
 
 def set_contig_placement_params(contig, insertion_vertices):
@@ -207,6 +257,7 @@ def get_match_regions(read):
     cigar_codes = {
         0: 'M',
         1: 'I',
+        2: 'D',
         4: 'C',
         5: 'C'
     }
@@ -220,7 +271,10 @@ def get_match_regions(read):
     match_regions = []
     print read.cigarstring
     for code, length in read.cigartuples:
-        cigar = cigar_codes[code]
+        cigar = cigar_codes.get(code, None)
+        if cigar is None:
+            print 'Cigar code:', code, 'not recognized in read', read
+            continue
 
         if cigar == 'M' and not matching:
             match_ref_start = ref_pos
@@ -253,3 +307,18 @@ def get_match_regions(read):
                     matching_length))
 
     return match_regions
+
+
+def make_contig_reads_to_ref_alignments(contig):
+
+    # Get the reads aligned to ref that assembled the contig
+    contig_reads = extract_contig_reads(contig, 'all')
+
+    if len(contig_reads) == 0:
+        raise Exception('No reads were extracted from contig ' + contig.label)
+
+    # Add contig reads to contig dataset set as dataset type BWA_SV_INDICANTS
+    make_contig_reads_dataset(contig, contig_reads)
+
+    # Add bam track
+    add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
