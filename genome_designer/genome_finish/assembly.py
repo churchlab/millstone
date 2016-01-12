@@ -61,7 +61,7 @@ NUM_CONTIGS_TO_EVALUATE = 1000
 
 def run_de_novo_assembly_pipeline(sample_alignment_list,
         sv_read_classes={}, input_velvet_opts={},
-        overwrite=False):
+        overwrite=True):
 
     for sample_alignment in sample_alignment_list:
         sample_alignment.data['assembly_status'] = (
@@ -98,7 +98,7 @@ def generate_contigs_multi_sample(sample_alignment_list):
 
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
-        overwrite=False):
+        overwrite=True):
 
     # Set assembly status for UI
     sample_alignment.data['assembly_status'] = (
@@ -196,13 +196,14 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
 
     sv_indicant_class_to_generator = {
             Dataset.TYPE.BWA_PILED: get_piled_reads,
-            Dataset.TYPE.BWA_CLIPPED: get_clipped_reads_smart,
+            Dataset.TYPE.BWA_CLIPPED: lambda i, o: get_clipped_reads_smart(
+                    i, o, phred_encoding=sample_alignment.data.get('phred_encoding', None)),
             Dataset.TYPE.BWA_UNMAPPED: lambda i, o: get_unmapped_reads(
                     i, o, avg_phred_cutoff=20)
     }
 
     default_sv_indicant_classes = {
-            Dataset.TYPE.BWA_PILED: True,
+            Dataset.TYPE.BWA_PILED: False,
             Dataset.TYPE.BWA_CLIPPED: True,
             Dataset.TYPE.BWA_SPLIT: True,
             Dataset.TYPE.BWA_UNMAPPED: True,
@@ -436,6 +437,10 @@ def evaluate_contigs(contig_list):
 
     # Get placeable contigs using graph-based placement
     placeable_contigs = graph_contig_placement(contig_list)
+
+    # Mark placeable contigs
+    for contig in placeable_contigs:
+        contig.metadata['is_placeable'] = True
 
     if not placeable_contigs:
         return
