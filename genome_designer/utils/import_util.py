@@ -618,6 +618,8 @@ def run_fastqc_on_sample_fastq(
         print 'FastQC Failed for {}:\n{}'.format(
                     fastq_filename, fastqc_output)
 
+    set_phred_encoding(fastqc_filename, experiment_sample)
+
     fastqc_dataset = add_dataset_to_entity(experiment_sample,
             dataset_type, dataset_type, fastqc_filename)
     fastqc_dataset.status = Dataset.STATUS.READY
@@ -647,6 +649,31 @@ def _get_fastqc_path(fastq_dataset):
         unzipped_fastq_filename = os.path.splitext(unzipped_fastq_filename)[0]
 
     return unzipped_fastq_filename + '_fastqc.html'
+
+
+def set_phred_encoding(fastqc_filename, experiment_sample):
+    fastqc_filename_base = os.path.splitext(fastqc_filename)[0]
+    fastqc_data_zip_path = fastqc_filename_base + '.zip'
+    zip_archive_text_file = (fastqc_filename_base.split('/')[-1] +
+            '/fastqc_data.txt')
+
+    if not os.path.exists(fastqc_data_zip_path):
+        experiment_sample.data['phred_encoding'] = None
+    else:
+        unzip_process = subprocess.Popen([
+                'unzip', '-ca',
+                fastqc_data_zip_path,
+                zip_archive_text_file],
+                stdout=subprocess.PIPE)
+
+        output = subprocess.check_output(
+                ['grep', '-m', '1', 'Encoding'],
+                stdin=unzip_process.stdout)
+
+        encoding = output.strip().split('\t')[1]
+
+        experiment_sample.data['phred_encoding'] = encoding
+    experiment_sample.save()
 
 
 def create_sample_models_for_eventual_upload(project, targets_file):
