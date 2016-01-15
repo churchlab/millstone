@@ -124,10 +124,6 @@ def get_clipped_reads_smart(input_bam_path, output_bam_path,
         # TODO: Account for template length
         # adapter_overlap = max(read.template_length - query_alignment_length, 0)
 
-        # If template size less than length of read, continue
-        if abs(read.tlen) < 1.1 * read.query_length:
-            continue
-
         # Determine left and right clipped counts
         left_clipping = (read.cigartuples[0][1]
                 if read.cigartuples[0][0] in CLIP else 0)
