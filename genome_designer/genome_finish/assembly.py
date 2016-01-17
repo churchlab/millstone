@@ -456,7 +456,7 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     return contig_files
 
 
-def evaluate_contigs(contig_list):
+def evaluate_contigs(contig_list, skip_extracted_read_alignment=False):
 
     def _length_weighted_coverage(contig):
         return contig.num_bases * contig.coverage
@@ -465,7 +465,8 @@ def evaluate_contigs(contig_list):
     contig_list.sort(key=_length_weighted_coverage, reverse=True)
 
     # Get placeable contigs using graph-based placement
-    placeable_contigs = graph_contig_placement(contig_list)
+    placeable_contigs = graph_contig_placement(contig_list,
+            skip_extracted_read_alignment)
 
     # Mark placeable contigs
     for contig in placeable_contigs:

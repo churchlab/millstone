@@ -14,18 +14,20 @@ from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from main.models import Contig
 from main.models import Dataset
 
-MAX_DELETION = 1200
+MAX_DELETION = 2200
 MAX_DUP = 10
+MAX_REF_SELF_HOMOLOGY = 200
 InsertionVertices = namedtuple('InsertionVertices',
         ['exit_ref', 'enter_contig', 'exit_contig', 'enter_ref'])
 
 
-def graph_contig_placement(contig_list):
+def graph_contig_placement(contig_list, skip_extracted_read_alignment):
 
-    # Make a bam track on the reference for each contig that shows only the
-    # reads that assembled the contig and their mates
-    for contig in contig_list:
-        make_contig_reads_to_ref_alignments(contig)
+    if not skip_extracted_read_alignment:
+        # Make a bam track on the reference for each contig that shows only the
+        # reads that assembled the contig and their mates
+        for contig in contig_list:
+            make_contig_reads_to_ref_alignments(contig)
 
     # Make Assembly dir
     assembly_dir = contig_list[0].metadata['assembly_dir']
@@ -133,6 +135,13 @@ def add_alignment_to_graph(G, contig_alignment_bam):
             G.add_edge(previous_vertex, vertex)
             previous_vertex = vertex
 
+    # Add back edges in contigs
+    for contig_intervals in contigs_intervals.values():
+        previous_vertex = contig_intervals.vertices[0]
+        for vertex in contig_intervals.vertices[1:]:
+            G.add_edge(vertex, previous_vertex)
+            previous_vertex = vertex
+
     # G.ref_intervals = ref_intervals
     G.contig_intervals_list = contigs_intervals
 
@@ -224,20 +233,24 @@ def novel_seq_ins_walk(G):
         return [v for v in G.neighbors(vert) if v.seq_uid != ref_seq_uid]
 
     iv_list = []
-    for i, exit_ref in enumerate(G.ref_intervals.vertices):
+    for exit_ref in G.ref_intervals.vertices:
         for enter_contig in contig_neighbors(exit_ref):
-            exit_contig = enter_contig
-            while exit_contig:
+            queue = [enter_contig]
+            visited = []
+            while queue:
+                exit_contig = queue.pop()
                 for enter_ref in ref_neighbors(exit_contig):
                     deletion = enter_ref.pos - exit_ref.pos
-                    if -MAX_DUP <= deletion <= MAX_DELETION:
+                    ref_self_homology = enter_contig.pos - exit_contig.pos
+                    if (-MAX_DUP < deletion < MAX_DELETION and
+                            ref_self_homology < MAX_REF_SELF_HOMOLOGY):
                         iv_list.append(InsertionVertices(
                                 exit_ref, enter_contig, exit_contig,
                                 enter_ref))
                         break
-                exit_contig_list = contig_neighbors(exit_contig)
-                exit_contig = (exit_contig_list[0] if len(exit_contig_list)
-                        else None)
+                visited.append(exit_contig)
+                queue.extend([n for n in contig_neighbors(exit_contig)
+                        if n not in visited])
 
     return iv_list
 

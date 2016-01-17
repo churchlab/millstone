@@ -7,14 +7,18 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
+from genome_finish.assembly import evaluate_contigs
 from genome_finish.assembly import run_de_novo_assembly_pipeline
+from genome_finish.insertion_placement_read_trkg import simple_align_with_bwa_mem
 from genome_finish.millstone_de_novo_fns import create_de_novo_variants_set
 from main.model_utils import get_dataset_with_type
+from main.models import AlignmentGroup
 from main.models import Contig
 from main.models import Dataset
 from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
+from main.models import ReferenceGenome
 from main.testing_util import are_fastas_same
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import add_dataset_to_entity
@@ -175,3 +179,94 @@ class TestGenomeFinishMG1655(TestCase):
         }
 
         self._run_genome_finish_test(data_dict)
+
+
+class TestGraphWalk(TestCase):
+
+    def setUp(self):
+        # Useful models.
+        self.user = User.objects.create_user(
+            TEST_USERNAME, password=TEST_PASSWORD, email=TEST_EMAIL)
+        self.project = Project.objects.create(
+            owner=self.user.get_profile(), title='Test Project')
+
+    def _make_dummy_models(self):
+
+        reference_genome = ReferenceGenome.objects.create(
+                project=self.project,
+                label='test_reference_genome')
+
+
+        alignment_group = AlignmentGroup.objects.create(
+                reference_genome=reference_genome)
+
+        sample = ExperimentSample.objects.create(
+                project=self.project,
+                label='test_sample')
+
+        sample_alignment = ExperimentSampleToAlignment.objects.create(
+                alignment_group=alignment_group,
+                experiment_sample=sample)
+
+        return {'sample_alignment': sample_alignment,
+                'reference_genome': reference_genome,
+                'alignment_group': alignment_group}
+
+    def test_deletion(self):
+
+        test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data', 'deletion')
+        ref_fasta = os.path.join(test_dir, 'ref.fa')
+        contig_fasta_list = [os.path.join(test_dir, 'contigs.fa')]
+
+        dummy_models = self._make_dummy_models()
+        reference_genome = dummy_models['reference_genome']
+        sample_alignment = dummy_models['sample_alignment']
+        alignment_group = dummy_models['alignment_group']
+
+        add_dataset_to_entity(
+                reference_genome,
+                Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                filesystem_location=ref_fasta)
+
+        # Make data_dir directory to house genome_finishing files
+        assembly_dir = os.path.join(
+                sample_alignment.get_model_data_dir(),
+                'assembly')
+
+        # Make assembly directory
+        os.mkdir(assembly_dir)
+
+        data_dir = os.path.join(assembly_dir, '0')
+        os.mkdir(data_dir)
+
+        # Create contigs
+        contig_list = []
+        for i, contig_fasta in enumerate(contig_fasta_list):
+            contig = Contig.objects.create(
+                parent_reference_genome=reference_genome,
+                experiment_sample_to_alignment=sample_alignment,
+                label='test_contig_' + str(i))
+            add_dataset_to_entity(
+                    contig,
+                    Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                    Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                    filesystem_location=contig_fasta)
+            contig.metadata['assembly_dir'] = data_dir
+            contig.metadata['node_number'] = i
+            contig_list.append(contig)
+
+        # Place contigs and create variants
+        evaluate_contigs(contig_list, True)
+
+        # Get set of de novo variants
+        variant_set = create_de_novo_variants_set(
+                alignment_group, 'de_novo_variants')
+
+        self.assertTrue(variant_set.variants.exists())
+        self.assertEqual(len(variant_set.variants.all()), 1)
+
+        variant = variant_set.variants.all()[0]
+        self.assertEqual(variant.variantalternate_set.all()[0].alt_value,
+                '<DEL>')
+        self.assertEqual(len(variant.ref_value), 2000)
