@@ -27,10 +27,12 @@ from utils.bam_utils import index_bam
 from utils.bam_utils import make_bam
 from utils.bam_utils import make_sam
 from utils.bam_utils import rmdup
+from utils.bam_utils import sort_bam_by_coordinate
 from utils.bam_utils import sort_bam_by_name
 from utils.data_export_util import export_contig_list_as_vcf
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
+from utils.jbrowse_util import add_bam_file_track
 from variants.vcf_parser import parse_vcf
 
 # Default args for velvet assembly
@@ -131,6 +133,33 @@ def generate_contigs(sample_alignment,
     sv_indicants_bam = get_sv_indicating_reads(sample_alignment,
             sv_read_classes, overwrite=overwrite)
 
+    prev_dataset = get_dataset_with_type(
+            sample_alignment,
+            Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY)
+
+    if overwrite and prev_dataset:
+        prev_dataset.delete()
+
+    if overwrite or prev_dataset is None:
+
+        sv_indicants_sorted_bam = (os.path.splitext(sv_indicants_bam)[0] +
+                '.coordinate_sorted.bam')
+
+        # Bam needs to be coordinated sorted to index
+        sort_bam_by_coordinate(sv_indicants_bam, sv_indicants_sorted_bam)
+
+        # Bam needs to be indexed for jbrowse
+        index_bam(sv_indicants_sorted_bam)
+
+        add_dataset_to_entity(
+                sample_alignment,
+                Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY,
+                Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY,
+                filesystem_location=sv_indicants_sorted_bam)
+
+        add_bam_file_track(reference_genome,
+                sample_alignment, Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY)
+
     velvet_opts = dict(DEFAULT_VELVET_OPTS)
 
     # Find insertion metrics
@@ -203,7 +232,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     }
 
     default_sv_indicant_classes = {
-            Dataset.TYPE.BWA_PILED: False,
+            Dataset.TYPE.BWA_PILED: True,
             Dataset.TYPE.BWA_CLIPPED: True,
             Dataset.TYPE.BWA_SPLIT: True,
             Dataset.TYPE.BWA_UNMAPPED: True,
