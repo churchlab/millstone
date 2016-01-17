@@ -88,13 +88,22 @@ def get_piled_reads(input_bam_path, output_bam_path,
 
 
 def get_clipped_reads_smart(input_bam_path, output_bam_path,
-        clipping_threshold=8):
+        clipping_threshold=8, phred_encoding=None):
 
     """Gets reads not overlapping their adaptor with a terminal
     segment of clipping with average phred scores above the cutoff
     """
 
+    phred_encoding_to_shift = {
+        'Illumina 1.5': 31,
+        'Sanger / Illumina 1.9': 0
+    }
+
     CLIPPED_AVG_PHRED_CUTOFF = 20
+    if (phred_encoding is not None and
+        phred_encoding in phred_encoding_to_shift):
+
+        CLIPPED_AVG_PHRED_CUTOFF += phred_encoding_to_shift[phred_encoding]
 
     SOFT_CLIP = 4
     HARD_CLIP = 5
@@ -114,10 +123,6 @@ def get_clipped_reads_smart(input_bam_path, output_bam_path,
 
         # TODO: Account for template length
         # adapter_overlap = max(read.template_length - query_alignment_length, 0)
-
-        # If template size less than length of read, continue
-        if abs(read.tlen) < 1.1 * read.query_length:
-            continue
 
         # Determine left and right clipped counts
         left_clipping = (read.cigartuples[0][1]

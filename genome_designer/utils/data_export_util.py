@@ -16,6 +16,8 @@ import vcf
 from main.model_utils import get_dataset_with_type
 from main.models import Dataset
 from utils import lowercase_underscore
+# from variant_calling.common import common_postprocess_vcf
+from variants.dynamic_snp_filter_key_map import update_filter_key_map
 from variants.materialized_variant_filter import get_variants_that_pass_filter
 from variants.materialized_view_manager import MeltedVariantMaterializedViewManager
 
@@ -143,8 +145,22 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
     vcf_template.samples = [sample_uid]
     sample_indexes = {sample_uid: 0}
 
+    modified_header_lines = []
+    # Also add a field for METHOD.
+    method_header_line = '##INFO=<ID=METHOD,Number=1,Type=String,' + \
+        'Description="Type of approach used to detect SV">\n'
+    modified_header_lines.append(method_header_line)
+
+    vcf_template._header_lines.append(method_header_line)
+
+    # Now update the header lines in vcf_reader.infos map as well.
+    parser = vcf.parser._vcf_metadata_parser()
+    for header_line in modified_header_lines:
+        key, val = parser.read_info(header_line)
+        vcf_template.infos[key] = val
 
     vcf_writer = vcf.Writer(out_vcf_fh, vcf_template)
+
     for contig in contig_list:
         assert contig.chromosome
         assert contig.reference_insertion_endpoints
@@ -152,10 +168,6 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
 
         ref_left, ref_right = contig.reference_insertion_endpoints
         contig_left, contig_right = contig.contig_insertion_endpoints
-
-        # Only deletion
-        if contig_left > contig_right:
-            continue
 
         # Get Seqrecord
         contig_fasta = get_dataset_with_type(
@@ -174,6 +186,9 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
         else:
             cassette_sequence = str(contig_seqrecord.seq[
                     contig_left:contig_right])
+
+        if contig_left > contig_right:
+            ref_left -= contig_left - contig_right
 
         if ref_left > ref_right:
             bases_to_peel_back = ref_left - ref_right
@@ -222,6 +237,10 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
             ref_value = ''
             alt_value = cassette_sequence
 
+        # In case of no alt this contig represents a deletion which
+        # is represented by a '<DEL>' alt field in vcf format
+        alt_value = alt_value if alt_value else '<DEL>'
+
         record = vcf.model._Record(
                 contig.chromosome,
                 pos,
@@ -230,7 +249,10 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
                 (alt_value,),
                 1, # QUAL
                 [], # FILTER
-                {'contig_uid': contig.uid}, # INFO
+                {
+                    'contig_uid': contig.uid,
+                    'METHOD': 'DE_NOVO_ASSEMBLY'
+                }, # INFO
                 'GT:DP:RO:QR:AO:QA:GL', # FORMAT
                 sample_indexes, # sample_indexes
         )
@@ -240,6 +262,9 @@ def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
         record.samples = [vcf.model._Call(
                 record, sample_uid, placeholder_sample_data)]
         vcf_writer.write_record(record)
+
+    vcf_filename = out_vcf_fh.name
+    update_filter_key_map(contig_0.parent_reference_genome, vcf_filename)
 
 
 def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):

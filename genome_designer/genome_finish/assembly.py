@@ -8,6 +8,7 @@ from Bio import SeqIO
 from celery import task
 from django.conf import settings
 
+from genome_finish.graph_contig_placement import graph_contig_placement
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.millstone_de_novo_fns import add_paired_mates
 from genome_finish.millstone_de_novo_fns import filter_low_qual_read_pairs
@@ -26,10 +27,12 @@ from utils.bam_utils import index_bam
 from utils.bam_utils import make_bam
 from utils.bam_utils import make_sam
 from utils.bam_utils import rmdup
+from utils.bam_utils import sort_bam_by_coordinate
 from utils.bam_utils import sort_bam_by_name
 from utils.data_export_util import export_contig_list_as_vcf
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
+from utils.jbrowse_util import add_bam_file_track
 from variants.vcf_parser import parse_vcf
 
 # Default args for velvet assembly
@@ -60,7 +63,7 @@ NUM_CONTIGS_TO_EVALUATE = 1000
 
 def run_de_novo_assembly_pipeline(sample_alignment_list,
         sv_read_classes={}, input_velvet_opts={},
-        overwrite=False):
+        overwrite=True):
 
     for sample_alignment in sample_alignment_list:
         sample_alignment.data['assembly_status'] = (
@@ -97,7 +100,7 @@ def generate_contigs_multi_sample(sample_alignment_list):
 
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
-        overwrite=False):
+        overwrite=True):
 
     # Set assembly status for UI
     sample_alignment.data['assembly_status'] = (
@@ -129,6 +132,33 @@ def generate_contigs(sample_alignment,
     # Get a bam of sorted SV indicants with pairs
     sv_indicants_bam = get_sv_indicating_reads(sample_alignment,
             sv_read_classes, overwrite=overwrite)
+
+    prev_dataset = get_dataset_with_type(
+            sample_alignment,
+            Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY)
+
+    if overwrite and prev_dataset:
+        prev_dataset.delete()
+
+    if overwrite or prev_dataset is None:
+
+        sv_indicants_sorted_bam = (os.path.splitext(sv_indicants_bam)[0] +
+                '.coordinate_sorted.bam')
+
+        # Bam needs to be coordinated sorted to index
+        sort_bam_by_coordinate(sv_indicants_bam, sv_indicants_sorted_bam)
+
+        # Bam needs to be indexed for jbrowse
+        index_bam(sv_indicants_sorted_bam)
+
+        add_dataset_to_entity(
+                sample_alignment,
+                Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY,
+                Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY,
+                filesystem_location=sv_indicants_sorted_bam)
+
+        add_bam_file_track(reference_genome,
+                sample_alignment, Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY)
 
     velvet_opts = dict(DEFAULT_VELVET_OPTS)
 
@@ -195,7 +225,8 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
 
     sv_indicant_class_to_generator = {
             Dataset.TYPE.BWA_PILED: get_piled_reads,
-            Dataset.TYPE.BWA_CLIPPED: get_clipped_reads_smart,
+            Dataset.TYPE.BWA_CLIPPED: lambda i, o: get_clipped_reads_smart(
+                    i, o, phred_encoding=sample_alignment.data.get('phred_encoding', None)),
             Dataset.TYPE.BWA_UNMAPPED: lambda i, o: get_unmapped_reads(
                     i, o, avg_phred_cutoff=20)
     }
@@ -425,7 +456,7 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     return contig_files
 
 
-def evaluate_contigs(contig_list):
+def evaluate_contigs(contig_list, skip_extracted_read_alignment=False):
 
     def _length_weighted_coverage(contig):
         return contig.num_bases * contig.coverage
@@ -433,26 +464,19 @@ def evaluate_contigs(contig_list):
     # Sort contig_list by highest length weighted coverage
     contig_list.sort(key=_length_weighted_coverage, reverse=True)
 
-    placeable_contigs = []
-    for i, contig in enumerate(contig_list[:NUM_CONTIGS_TO_EVALUATE]):
-        print 'Evaluating contig ', i, ':', contig.label
-        insertion_placement_positions = get_insertion_placement_positions(
-                contig, strategy='all_reads')
+    # Get placeable contigs using graph-based placement
+    placeable_contigs = graph_contig_placement(contig_list,
+            skip_extracted_read_alignment)
 
-        if 'error_string' not in insertion_placement_positions:
-            contig.metadata['contig_insertion_endpoints'] = (
-                    insertion_placement_positions['contig']['left'],
-                    insertion_placement_positions['contig']['right'])
-            contig.metadata['reference_insertion_endpoints'] = (
-                insertion_placement_positions['reference']['left'],
-                insertion_placement_positions['reference']['right'])
-            contig.save()
-            placeable_contigs.append(contig)
+    # Mark placeable contigs
+    for contig in placeable_contigs:
+        contig.metadata['is_placeable'] = True
 
     if not placeable_contigs:
         return
 
     # Get path for contigs vcf
+    contig = contig_list[0]
     ag = contig.experiment_sample_to_alignment.alignment_group
     vcf_path = os.path.join(
             ag.get_model_data_dir(),
@@ -484,13 +508,6 @@ def evaluate_contigs(contig_list):
                 contig = Contig.objects.get(uid=contig_uid_list[0])
                 contig.variant_caller_common_data = vccd
                 contig.save()
-                bam_dataset = get_dataset_with_type(
-                        contig,
-                        Dataset.TYPE.BWA_SV_INDICANTS)
-                variant_bam_track_labels.append(
-                        bam_dataset.internal_string(contig))
-                variant_coverage_track_labels.append(
-                        bam_dataset.internal_string(contig) + '_COVERAGE')
 
         # Remove potential duplicates
         variant_bam_track_labels = list(set(
