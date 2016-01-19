@@ -151,11 +151,13 @@ def generate_contigs(sample_alignment,
         # Bam needs to be indexed for jbrowse
         index_bam(sv_indicants_sorted_bam)
 
-        add_dataset_to_entity(
+        for_assembly_dataset = add_dataset_to_entity(
                 sample_alignment,
                 Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY,
                 Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY,
                 filesystem_location=sv_indicants_sorted_bam)
+
+        for_assembly_dataset.save()
 
         add_bam_file_track(reference_genome,
                 sample_alignment, Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY)
