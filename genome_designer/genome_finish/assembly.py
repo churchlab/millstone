@@ -228,7 +228,9 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     sv_indicant_class_to_generator = {
             Dataset.TYPE.BWA_PILED: get_piled_reads,
             Dataset.TYPE.BWA_CLIPPED: lambda i, o: get_clipped_reads_smart(
-                    i, o, phred_encoding=sample_alignment.data.get('phred_encoding', None)),
+                    i, o,
+                    phred_encoding=sample_alignment.experiment_sample.data.get(
+                            'phred_encoding', None)),
             Dataset.TYPE.BWA_UNMAPPED: lambda i, o: get_unmapped_reads(
                     i, o, avg_phred_cutoff=20)
     }
