@@ -232,7 +232,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     }
 
     default_sv_indicant_classes = {
-            Dataset.TYPE.BWA_PILED: True,
+            Dataset.TYPE.BWA_PILED: False,
             Dataset.TYPE.BWA_CLIPPED: True,
             Dataset.TYPE.BWA_SPLIT: True,
             Dataset.TYPE.BWA_UNMAPPED: True,

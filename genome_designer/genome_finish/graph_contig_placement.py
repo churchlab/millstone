@@ -14,7 +14,7 @@ from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from main.models import Contig
 from main.models import Dataset
 
-MAX_DELETION = 2200
+MAX_DELETION = 50000
 MAX_DUP = 10
 MAX_REF_SELF_HOMOLOGY = 200
 InsertionVertices = namedtuple('InsertionVertices',
