@@ -212,11 +212,11 @@ class TestGraphWalk(TestCase):
                 'reference_genome': reference_genome,
                 'alignment_group': alignment_group}
 
-    def test_deletion(self):
+    def _run_contig_walk_test(self, test_dir):
 
-        test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data', 'deletion')
         ref_fasta = os.path.join(test_dir, 'ref.fa')
         contig_fasta_list = [os.path.join(test_dir, 'contigs.fa')]
+        target_fasta = os.path.join(test_dir, 'target.fa')
 
         dummy_models = self._make_dummy_models()
         reference_genome = dummy_models['reference_genome']
@@ -266,7 +266,32 @@ class TestGraphWalk(TestCase):
         self.assertTrue(variant_set.variants.exists())
         self.assertEqual(len(variant_set.variants.all()), 1)
 
-        variant = variant_set.variants.all()[0]
-        self.assertEqual(variant.variantalternate_set.all()[0].alt_value,
-                '<DEL>')
-        self.assertEqual(len(variant.ref_value), 2000)
+        # Make new reference genome
+        new_ref_genome_params = {'label': 'new_ref'}
+        new_ref_genome = generate_new_reference_genome(
+                variant_set, new_ref_genome_params)
+
+        # Verify insertion was placed correctly
+        new_ref_genome_fasta = get_dataset_with_type(
+                new_ref_genome, Dataset.TYPE.REFERENCE_GENOME_FASTA
+                ).get_absolute_location()
+
+        fastas_same, indexes = are_fastas_same(
+                target_fasta, new_ref_genome_fasta)
+
+        self.assertTrue(fastas_same)
+
+
+    def test_deletion(self):
+        test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data', 'deletion_3')
+        self._run_contig_walk_test(test_dir)
+
+    def test_homology_flanked_deletion(self):
+        test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+                'homology_flanked_deletion')
+        self._run_contig_walk_test(test_dir)
+
+    # def test_is_element(self):
+    #     test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+    #             'is_element')
+    #     self._run_contig_walk_test(test_dir)
