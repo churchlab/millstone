@@ -171,10 +171,8 @@ def generate_contigs(sample_alignment,
     velvet_opts['velvetg']['ins_length_sd'] = ins_length_sd
 
     # Find expected coverage
-    alignment_dataset = sample_alignment.dataset_set.get(
-            type=Dataset.TYPE.BWA_ALIGN)
     avg_read_coverage = get_avg_genome_coverage(
-            alignment_dataset.get_absolute_location())
+            sample_alignment)
 
     # Calculate expected coverage in kmers
     genome_kmer_coverage = kmer_coverage(avg_read_coverage, ins_length,
