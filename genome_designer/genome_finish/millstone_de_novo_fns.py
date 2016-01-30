@@ -420,7 +420,7 @@ def create_de_novo_variants_set(alignment_group, variant_set_label):
     for variant in Variant.objects.filter(
             reference_genome=ref_genome):
         for vccd in variant.variantcallercommondata_set.all():
-            if 'INFO_contig_uid' in vccd.data:
+            if vccd.data.get('INFO_METHOD', None) == 'DE_NOVO_ASSEMBLY':
                 de_novo_variants.append(variant)
                 continue
 

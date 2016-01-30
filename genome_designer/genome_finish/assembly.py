@@ -30,6 +30,7 @@ from utils.bam_utils import rmdup
 from utils.bam_utils import sort_bam_by_coordinate
 from utils.bam_utils import sort_bam_by_name
 from utils.data_export_util import export_contig_list_as_vcf
+from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
 from utils.jbrowse_util import add_bam_file_track
@@ -467,15 +468,12 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False):
     contig_list.sort(key=_length_weighted_coverage, reverse=True)
 
     # Get placeable contigs using graph-based placement
-    placeable_contigs = graph_contig_placement(contig_list,
+    placeable_contigs, var_dict_list = graph_contig_placement(contig_list,
             skip_extracted_read_alignment)
 
     # Mark placeable contigs
     for contig in placeable_contigs:
         contig.metadata['is_placeable'] = True
-
-    if not placeable_contigs:
-        return
 
     # Get path for contigs vcf
     contig = contig_list[0]
@@ -483,6 +481,27 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False):
     vcf_path = os.path.join(
             ag.get_model_data_dir(),
             'de_novo_assembled_contigs.vcf')
+    var_dict_vcf_path = os.path.join(
+            ag.get_model_data_dir(),
+            'de_novo_assembly_translocations.vcf')
+
+    if var_dict_list:
+        # Write variant dicts to vcf
+        export_var_dict_list_as_vcf(var_dict_list, var_dict_vcf_path,
+                contig.experiment_sample_to_alignment)
+
+        # Make dataset for contigs vcf
+        var_dict_vcf_dataset = add_dataset_to_entity(
+                ag,
+                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+                var_dict_vcf_path)
+
+        # Make variants from vcf
+        var_dict_variant_list = parse_vcf(var_dict_vcf_dataset, ag)
+
+    if not placeable_contigs:
+        return
 
     # Write contigs to vcf
     export_contig_list_as_vcf(placeable_contigs, vcf_path)

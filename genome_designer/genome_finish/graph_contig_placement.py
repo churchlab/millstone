@@ -82,10 +82,11 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment):
         set_contig_placement_params(contig, insertion_vertices)
         placeable_contigs.append(contig)
 
-    iv_pairs = translocation_walk(G)
-    pos_ref_alt_list = [parse_path_into_ref_alt(iv_pair, contig_qname_to_uid) for iv_pair in iv_pairs]
+    trans_iv_pairs = translocation_walk(G)
+    var_dict_list = [parse_path_into_ref_alt(iv_pair, contig_qname_to_uid)
+            for iv_pair in trans_iv_pairs]
 
-    return placeable_contigs
+    return placeable_contigs, var_dict_list
 
 
 def add_alignment_to_graph(G, contig_alignment_bam):
@@ -293,9 +294,6 @@ def translocation_walk(G):
                 queue.extend([n for n in contig_neighbors(exit_contig)
                         if n not in visited])
 
-    # def _is_forward(iv):
-    #     return iv.exit_ref < iv.enter_ref
-
     sorted_by_exit_ref = sorted(forward_edges + back_edges,
             key=lambda x: x.exit_ref.pos)
 
@@ -303,6 +301,7 @@ def translocation_walk(G):
             key=lambda x: x.enter_ref.pos)
 
     MAX_TRANS_LENGTH = 20000
+    MIN_TRANS_LENGTH = 20
 
     iv_pairs = []
     i = 0
@@ -317,7 +316,7 @@ def translocation_walk(G):
         while -MAX_DUP < deletion < MAX_DELETION:
 
             trans_length = exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
-            if 0 < trans_length < MAX_TRANS_LENGTH:
+            if MIN_TRANS_LENGTH < trans_length < MAX_TRANS_LENGTH:
                 iv_pairs.append((enter_iv, exit_iv))
 
             if j == len(sorted_by_enter_ref) - 1:
@@ -460,13 +459,15 @@ def parse_path_into_ref_alt(path_list, contig_qname_to_uid):
     ref_genome = ReferenceGenome.objects.get(uid=ref_uid)
     ref_fasta = get_fasta(ref_genome)
     with open(ref_fasta) as fh:
-        ref_seq = str(SeqIO.parse(fh, 'fasta').next().seq)
+        ref_seqrecord = SeqIO.parse(fh, 'fasta').next()
+        ref_seq = str(ref_seqrecord.seq)
+        ref_chromosome = ref_seqrecord.id
 
     def _seq_str(enter_vert, exit_vert):
         if enter_vert.seq_uid == ref_uid:
             return ref_seq[enter_vert.pos: exit_vert.pos]
 
-        contig_qname = enter_vert.enter_contig.seq_uid
+        contig_qname = enter_vert.seq_uid
         contig_uid = contig_qname_to_uid[contig_qname]
         contig = Contig.objects.get(uid=contig_uid)
         contig_fasta = get_fasta(contig)
@@ -521,4 +522,10 @@ def parse_path_into_ref_alt(path_list, contig_qname_to_uid):
                 alt_seq += seq
 
     ref_seq = ref_seq[ref_start: ref_end]
-    return ref_start, ref_seq, alt_seq
+
+    return {
+        'chromosome': ref_chromosome,
+        'pos': ref_start,
+        'ref_seq': ref_seq,
+        'alt_seq': alt_seq
+    }

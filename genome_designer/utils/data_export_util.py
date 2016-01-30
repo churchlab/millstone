@@ -118,6 +118,77 @@ EXPORT_CONTIGS_TEMPLATE_PATH = os.path.join(settings.PWD, 'test_data',
 PLACEHOLDER_SAMPLE_NAME = 'fake_sid'
 
 
+def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
+        sample_alignment):
+
+    # Allow dest input as path or filehandle.
+    if (isinstance(vcf_dest_path_or_filehandle, str) or
+            isinstance(vcf_dest_path_or_filehandle, unicode)):
+        out_vcf_fh = open(vcf_dest_path_or_filehandle, 'w')
+    else:
+        out_vcf_fh = vcf_dest_path_or_filehandle
+
+    # The vcf.Writer() requires a template vcf in order to structure itself.
+    # We read in a generic template to satisfy this.
+    with open(EXPORT_CONTIGS_TEMPLATE_PATH) as template_fh:
+        vcf_template = vcf.Reader(template_fh)
+
+    # Set samples and sample_indexes for template
+    sample_uid = sample_alignment.experiment_sample.uid
+
+    vcf_template.samples = [sample_uid]
+    sample_indexes = {sample_uid: 0}
+
+    modified_header_lines = []
+    # Also add a field for METHOD.
+    method_header_line = '##INFO=<ID=METHOD,Number=1,Type=String,' + \
+        'Description="Type of approach used to detect SV">\n'
+    modified_header_lines.append(method_header_line)
+
+    vcf_template._header_lines.append(method_header_line)
+
+    # Now update the header lines in vcf_reader.infos map as well.
+    parser = vcf.parser._vcf_metadata_parser()
+    for header_line in modified_header_lines:
+        key, val = parser.read_info(header_line)
+        vcf_template.infos[key] = val
+
+    vcf_writer = vcf.Writer(out_vcf_fh, vcf_template)
+
+
+    for i, var_dict in enumerate(var_dict_list):
+
+        # In the case of no alt, this variant is a deletion so
+        # it is represented by a '<DEL>' alt field in vcf format
+        alt_seq = var_dict['alt_seq']
+        alt_seq = alt_seq if alt_seq else '<DEL>'
+
+        record = vcf.model._Record(
+                var_dict['chromosome'],
+                var_dict['pos'],
+                i,
+                var_dict['ref_seq'],
+                (alt_seq,),
+                1, # QUAL
+                [], # FILTER
+                {
+                    'METHOD': 'DE_NOVO_ASSEMBLY'
+                }, # INFO
+                'GT:DP:RO:QR:AO:QA:GL', # FORMAT
+                sample_indexes, # sample_indexes
+        )
+        # Add a placeholder sample.
+        calldata_type = vcf.model.make_calldata_tuple(['GT'])
+        placeholder_sample_data = calldata_type(GT='1/1')
+        record.samples = [vcf.model._Call(
+                record, sample_uid, placeholder_sample_data)]
+        vcf_writer.write_record(record)
+
+    vcf_filename = out_vcf_fh.name
+    update_filter_key_map(sample_alignment.alignment_group.reference_genome,
+            vcf_filename)
+
+
 def export_contig_list_as_vcf(contig_list, vcf_dest_path_or_filehandle):
     """Exports a list of contigs as a vcf
     """
