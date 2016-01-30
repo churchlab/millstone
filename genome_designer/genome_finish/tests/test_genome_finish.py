@@ -215,8 +215,14 @@ class TestGraphWalk(TestCase):
     def _run_contig_walk_test(self, test_dir):
 
         ref_fasta = os.path.join(test_dir, 'ref.fa')
-        contig_fasta_list = [os.path.join(test_dir, 'contigs.fa')]
         target_fasta = os.path.join(test_dir, 'target.fa')
+        contig_fasta_list = []
+        i = 0
+        contig_fasta_path = os.path.join(test_dir, 'contig_' + str(i) + '.fa')
+        while os.path.exists(contig_fasta_path):
+            contig_fasta_list.append(contig_fasta_path)
+            i += 1
+            contig_fasta_path = os.path.join(test_dir, 'contig_' + str(i) + '.fa')
 
         dummy_models = self._make_dummy_models()
         reference_genome = dummy_models['reference_genome']
@@ -280,7 +286,6 @@ class TestGraphWalk(TestCase):
                 target_fasta, new_ref_genome_fasta)
 
         self.assertTrue(fastas_same)
-
 
     def test_deletion(self):
         test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
