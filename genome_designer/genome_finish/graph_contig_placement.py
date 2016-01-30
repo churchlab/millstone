@@ -80,6 +80,10 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment):
         set_contig_placement_params(contig, insertion_vertices)
         placeable_contigs.append(contig)
 
+    import ipdb
+    ipdb.set_trace()
+    iv_pairs = translocation_walk(G)
+
     return placeable_contigs
 
 
@@ -255,6 +259,76 @@ def novel_seq_ins_walk(G):
     return iv_list
 
 
+def translocation_walk(G):
+    ref_seq_uid = G.ref_intervals.vertices[0].seq_uid
+
+    def ref_neighbors(vert):
+        return [v for v in G.neighbors(vert) if v.seq_uid == ref_seq_uid]
+
+    def contig_neighbors(vert):
+        return [v for v in G.neighbors(vert) if v.seq_uid != ref_seq_uid]
+
+    forward_edges = []
+    back_edges = []
+
+    for exit_ref in G.ref_intervals.vertices:
+        for enter_contig in contig_neighbors(exit_ref):
+            queue = [enter_contig]
+            visited = []
+            while queue:
+                exit_contig = queue.pop()
+                for enter_ref in ref_neighbors(exit_contig):
+
+                    iv = InsertionVertices(
+                            exit_ref, enter_contig, exit_contig,
+                            enter_ref)
+
+                    if exit_ref.pos < enter_ref.pos:
+                        forward_edges.append(iv)
+                    else:
+                        back_edges.append(iv)
+
+                visited.append(exit_contig)
+                queue.extend([n for n in contig_neighbors(exit_contig)
+                        if n not in visited])
+
+    # def _is_forward(iv):
+    #     return iv.exit_ref < iv.enter_ref
+
+    sorted_by_exit_ref = sorted(forward_edges + back_edges,
+            key=lambda x: x.exit_ref.pos)
+
+    sorted_by_enter_ref = sorted(forward_edges + back_edges,
+            key=lambda x: x.enter_ref.pos)
+
+    MAX_TRANS_LENGTH = 20000
+
+    iv_pairs = []
+    i = 0
+    for enter_iv in sorted_by_exit_ref:
+        while (sorted_by_enter_ref[i].enter_ref.pos < enter_iv.exit_ref.pos and
+                i < len(sorted_by_enter_ref) -1 ):
+            i += 1
+
+        j = i
+        exit_iv = sorted_by_enter_ref[j]
+        deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
+        while -MAX_DUP < deletion < MAX_DELETION:
+
+            trans_length = exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
+            if 0 < trans_length < MAX_TRANS_LENGTH:
+                iv_pairs.append(enter_iv, exit_iv)
+
+            if j == len(sorted_by_enter_ref) - 1:
+                break
+
+            j += 1
+            exit_iv = sorted_by_enter_ref[j]
+            deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
+
+    return iv_pairs
+
+
 class SequenceVertex:
 
     def __init__(self, seq_uid, pos, parent):
@@ -366,3 +440,6 @@ def make_contig_reads_to_ref_alignments(contig):
 
     # Add bam track
     add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
+
+def parse_path_into_ref_alt(path_list):
+    pass
