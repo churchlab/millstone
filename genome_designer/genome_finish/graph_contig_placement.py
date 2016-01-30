@@ -82,9 +82,15 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment):
         set_contig_placement_params(contig, insertion_vertices)
         placeable_contigs.append(contig)
 
-    trans_iv_pairs = translocation_walk(G)
-    var_dict_list = [parse_path_into_ref_alt(iv_pair, contig_qname_to_uid)
-            for iv_pair in trans_iv_pairs]
+    # Perform translocation walk
+    if ref_genome.num_chromosomes == 1:
+
+        trans_iv_pairs = translocation_walk(G)
+        var_dict_list = [parse_path_into_ref_alt(iv_pair, contig_qname_to_uid)
+                for iv_pair in trans_iv_pairs]
+    else:
+        print 'Translocation walk not implemented for multi-chromosomal refs'
+        var_dict_list = []
 
     return placeable_contigs, var_dict_list
 
