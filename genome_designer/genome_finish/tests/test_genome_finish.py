@@ -283,7 +283,8 @@ class TestGraphWalk(TestCase):
 
 
     def test_deletion(self):
-        test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data', 'deletion_3')
+        test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+                'deletion')
         self._run_contig_walk_test(test_dir)
 
     def test_homology_flanked_deletion(self):
