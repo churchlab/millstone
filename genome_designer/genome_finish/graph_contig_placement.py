@@ -2,6 +2,7 @@ from collections import namedtuple
 import os
 import subprocess
 
+from Bio import SeqIO
 from django.conf import settings
 import networkx as nx
 import pysam
@@ -13,6 +14,7 @@ from genome_finish.insertion_placement_read_trkg import simple_align_with_bwa_me
 from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from main.models import Contig
 from main.models import Dataset
+from main.models import ReferenceGenome
 
 MAX_DELETION = 50000
 MAX_DUP = 10
@@ -80,9 +82,8 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment):
         set_contig_placement_params(contig, insertion_vertices)
         placeable_contigs.append(contig)
 
-    import ipdb
-    ipdb.set_trace()
     iv_pairs = translocation_walk(G)
+    pos_ref_alt_list = [parse_path_into_ref_alt(iv_pair, contig_qname_to_uid) for iv_pair in iv_pairs]
 
     return placeable_contigs
 
@@ -317,7 +318,7 @@ def translocation_walk(G):
 
             trans_length = exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
             if 0 < trans_length < MAX_TRANS_LENGTH:
-                iv_pairs.append(enter_iv, exit_iv)
+                iv_pairs.append((enter_iv, exit_iv))
 
             if j == len(sorted_by_enter_ref) - 1:
                 break
@@ -342,6 +343,18 @@ class SequenceVertex:
 
     def __hash__(self):
         return hash(self.uid)
+
+    def __cmp__(self, rhs):
+        if not isinstance(rhs, SequenceVertex):
+            return TypeError
+        if rhs.seq_uid != self.seq_uid:
+            return ValueError
+
+        if self.pos < rhs.pos:
+            return -1
+        if self.pos > rhs.pos:
+            return 1
+        return 0
 
 
 class SequenceIntervals:
@@ -441,5 +454,71 @@ def make_contig_reads_to_ref_alignments(contig):
     # Add bam track
     add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
 
-def parse_path_into_ref_alt(path_list):
-    pass
+def parse_path_into_ref_alt(path_list, contig_qname_to_uid):
+
+    ref_uid = path_list[0].exit_ref.seq_uid
+    ref_genome = ReferenceGenome.objects.get(uid=ref_uid)
+    ref_fasta = get_fasta(ref_genome)
+    with open(ref_fasta) as fh:
+        ref_seq = str(SeqIO.parse(fh, 'fasta').next().seq)
+
+    def _seq_str(enter_vert, exit_vert):
+        if enter_vert.seq_uid == ref_uid:
+            return ref_seq[enter_vert.pos: exit_vert.pos]
+
+        contig_qname = enter_vert.enter_contig.seq_uid
+        contig_uid = contig_qname_to_uid[contig_qname]
+        contig = Contig.objects.get(uid=contig_uid)
+        contig_fasta = get_fasta(contig)
+        with open(contig_fasta) as fh:
+            contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+        # Determine whether contig is reverse complement relative to reference
+        is_reverse = contig.metadata.get('is_reverse', False)
+
+        # Extract cassette sequence from contig
+        if is_reverse:
+            return str(contig_seqrecord.seq.reverse_complement()[
+                    enter_vert.pos:exit_vert.pos])
+        else:
+            return str(contig_seqrecord.seq[
+                    enter_vert.pos:exit_vert.pos])
+
+    path_list_concat = reduce(lambda x, y: x + y, path_list)
+    def _seq_interval_iter():
+        i = 1
+        while i <= len(path_list_concat) - 3:
+            yield path_list_concat[i:i+2]
+            i += 2
+
+    seq_list = []
+    for enter_vert, exit_vert in _seq_interval_iter():
+
+        seq_len = exit_vert.pos - enter_vert.pos
+
+        if seq_len < 0:
+            seq_list.append(seq_len)
+        elif seq_len > 0:
+            seq_list.append(_seq_str(enter_vert, exit_vert))
+        else:
+            seq_list.append('')
+
+    ref_start = path_list[0].exit_ref.pos
+    ref_end = path_list[-1].enter_ref.pos
+    is_first = True
+    alt_seq = ''
+    for seq in seq_list:
+        if is_first:
+            if isinstance(seq, int):
+                ref_start += seq
+            else:
+                alt_seq += seq
+                is_first = False
+        else:
+            if isinstance(seq, int):
+                alt_seq = alt_seq[:seq]
+            else:
+                alt_seq += seq
+
+    ref_seq = ref_seq[ref_start: ref_end]
+    return ref_start, ref_seq, alt_seq
