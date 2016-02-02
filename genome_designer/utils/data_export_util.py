@@ -165,7 +165,7 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
 
         record = vcf.model._Record(
                 var_dict['chromosome'],
-                var_dict['pos'],
+                var_dict['pos'] + 1,
                 i,
                 var_dict['ref_seq'],
                 (alt_seq,),
