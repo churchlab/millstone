@@ -449,7 +449,7 @@ def get_coverage_stats(sample_alignment):
 
     maybe_chrom_cov_dict = sample_alignment.data.get('chrom_cov_dict', None)
     if maybe_chrom_cov_dict is not None:
-        return chrom_cov_dict
+        return maybe_chrom_cov_dict
 
     bam_path = sample_alignment.dataset_set.get(type=Dataset.TYPE.BWA_ALIGN).get_absolute_location()
     alignment_af = pysam.AlignmentFile(bam_path)
