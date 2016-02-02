@@ -150,7 +150,7 @@ def get_callable_loci(
             next_pos = pileup_col.pos +1
 
         # END LAST FLAG
-        _save_bed_line(chrom, bed_start, pileup_col.pos-1, curr_flag)
+        _save_bed_line(chrom, bed_start, c_end, curr_flag)
 
     # combine and sort all bed lines by position
     all_bed_lines = list(itertools.chain(*bed_lines.values()))
