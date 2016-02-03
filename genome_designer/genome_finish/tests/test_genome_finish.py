@@ -180,6 +180,25 @@ class TestGenomeFinishMG1655(TestCase):
 
         self._run_genome_finish_test(data_dict)
 
+    # # The data for these tests is ~100MB so these tests are not run by default
+    # #
+    # # # Due to issues with false positive translocations, this test
+    # # # curently fails
+    # # def test_translocation(self):
+    # #     data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+    # #         'is_element_reads')
+    # #     self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
+
+    # def test_translocation_far_1(self):
+    #     data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+    #             'is_element_far_1')
+    #     self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
+
+    # def test_translocation_far_long(self):
+    #     data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+    #             'is_element_far_long')
+    #     self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
+
 
 class TestGraphWalk(TestCase):
 
@@ -222,7 +241,8 @@ class TestGraphWalk(TestCase):
         while os.path.exists(contig_fasta_path):
             contig_fasta_list.append(contig_fasta_path)
             i += 1
-            contig_fasta_path = os.path.join(test_dir, 'contig_' + str(i) + '.fa')
+            contig_fasta_path = os.path.join(test_dir,
+                    'contig_' + str(i) + '.fa')
 
         dummy_models = self._make_dummy_models()
         reference_genome = dummy_models['reference_genome']
@@ -263,7 +283,9 @@ class TestGraphWalk(TestCase):
             contig_list.append(contig)
 
         # Place contigs and create variants
-        evaluate_contigs(contig_list, True)
+        evaluate_contigs(contig_list,
+                skip_extracted_read_alignment=True,
+                use_read_alignment=False)
 
         # Get set of de novo variants
         variant_set = create_de_novo_variants_set(
@@ -296,8 +318,3 @@ class TestGraphWalk(TestCase):
         test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
                 'homology_flanked_deletion')
         self._run_contig_walk_test(test_dir)
-
-    # def test_is_element(self):
-    #     test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
-    #             'is_element')
-    #     self._run_contig_walk_test(test_dir)

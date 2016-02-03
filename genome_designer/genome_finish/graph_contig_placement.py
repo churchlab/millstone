@@ -8,6 +8,7 @@ import networkx as nx
 import pysam
 
 from genome_finish.contig_display_utils import Junction
+from genome_finish.millstone_de_novo_fns import get_coverage_stats
 from genome_finish.insertion_placement_read_trkg import extract_contig_reads
 from genome_finish.insertion_placement_read_trkg import make_contig_reads_dataset
 from genome_finish.insertion_placement_read_trkg import simple_align_with_bwa_mem
@@ -23,7 +24,8 @@ InsertionVertices = namedtuple('InsertionVertices',
         ['exit_ref', 'enter_contig', 'exit_contig', 'enter_ref'])
 
 
-def graph_contig_placement(contig_list, skip_extracted_read_alignment):
+def graph_contig_placement(contig_list, skip_extracted_read_alignment,
+        use_alignment_reads=True):
 
     if not skip_extracted_read_alignment:
         # Make a bam track on the reference for each contig that shows only the
@@ -75,12 +77,38 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment):
 
     placeable_contigs = []
     iv_list = novel_seq_ins_walk(G)
+    sample_alignment = contig_list[0].experiment_sample_to_alignment
+    if use_alignment_reads:
+        coverage_stats = get_coverage_stats(sample_alignment)
+        sample_alignment_bam = sample_alignment.dataset_set.get(
+            type=Dataset.TYPE.BWA_ALIGN).get_absolute_location()
     for insertion_vertices in iv_list:
+
         contig_qname = insertion_vertices.enter_contig.seq_uid
         contig_uid = contig_qname_to_uid[contig_qname]
         contig = Contig.objects.get(uid=contig_uid)
         set_contig_placement_params(contig, insertion_vertices)
-        placeable_contigs.append(contig)
+
+        if use_alignment_reads:
+            # Filter out deletions of good coverage regions
+            deletion_length = (insertion_vertices.enter_ref.pos -
+                    insertion_vertices.exit_ref.pos)
+
+            if deletion_length > 0:
+                deletion_cov = avg_coverage(
+                        sample_alignment_bam,
+                        contig.metadata['chromosome'],
+                        insertion_vertices.exit_ref.pos,
+                        insertion_vertices.enter_ref.pos)
+
+            chrom_cov_stats = coverage_stats[contig.metadata['chromosome']]
+            chrom_cov_mean = chrom_cov_stats['mean']
+            chrom_cov_std = chrom_cov_stats['std']
+            if deletion_length <= 0 or (
+                    deletion_cov < chrom_cov_mean - chrom_cov_std):
+                placeable_contigs.append(contig)
+        else:
+            placeable_contigs.append(contig)
 
     # Perform translocation walk
     if ref_genome.num_chromosomes == 1:
@@ -93,6 +121,18 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment):
         var_dict_list = []
 
     return placeable_contigs, var_dict_list
+
+
+def avg_coverage(bam, chromosome, start, end):
+
+    alignment_file = pysam.AlignmentFile(bam)
+    coverage_atcg = alignment_file.count_coverage(
+            str(chromosome), start, end)
+
+    avg_coverage = sum(max(atcg) for atcg in zip(*[coverage_atcg[i] for i in
+            range(4)])) / (end - start)
+
+    return avg_coverage
 
 
 def add_alignment_to_graph(G, contig_alignment_bam):
