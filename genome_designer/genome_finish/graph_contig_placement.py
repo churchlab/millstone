@@ -17,9 +17,12 @@ from main.models import Contig
 from main.models import Dataset
 from main.models import ReferenceGenome
 
-MAX_DELETION = 50000
+MAX_DELETION = 100000
 MAX_DUP = 10
 MAX_REF_SELF_HOMOLOGY = 200
+MAX_TRANS_LENGTH = 20000
+MIN_TRANS_LENGTH = 20
+MAX_TRANS_DELETION = 20000
 InsertionVertices = namedtuple('InsertionVertices',
         ['exit_ref', 'enter_contig', 'exit_contig', 'enter_ref'])
 
@@ -346,20 +349,17 @@ def translocation_walk(G):
     sorted_by_enter_ref = sorted(forward_edges + back_edges,
             key=lambda x: x.enter_ref.pos)
 
-    MAX_TRANS_LENGTH = 20000
-    MIN_TRANS_LENGTH = 20
-
     iv_pairs = []
     i = 0
     for enter_iv in sorted_by_exit_ref:
         while (sorted_by_enter_ref[i].enter_ref.pos < enter_iv.exit_ref.pos and
-                i < len(sorted_by_enter_ref) -1 ):
+                i < len(sorted_by_enter_ref) -1):
             i += 1
 
         j = i
         exit_iv = sorted_by_enter_ref[j]
         deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
-        while -MAX_DUP < deletion < MAX_DELETION:
+        while -MAX_DUP < deletion < MAX_TRANS_DELETION:
 
             trans_length = exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
             if MIN_TRANS_LENGTH < trans_length < MAX_TRANS_LENGTH:
