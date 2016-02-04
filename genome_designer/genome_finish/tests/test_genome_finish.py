@@ -180,24 +180,22 @@ class TestGenomeFinishMG1655(TestCase):
 
         self._run_genome_finish_test(data_dict)
 
-    # # The data for these tests is ~100MB so these tests are not run by default
-    # #
-    # # # Due to issues with false positive translocations, this test
-    # # # curently fails
-    # # def test_translocation(self):
-    # #     data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
-    # #         'is_element_reads')
-    # #     self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
-
-    # def test_translocation_far_1(self):
+    # # Due to issues with false positive translocations, this test
+    # # curently fails
+    # def test_translocation(self):
     #     data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
-    #             'is_element_far_1')
+    #         'is_element_reads')
     #     self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
 
-    # def test_translocation_far_long(self):
-    #     data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
-    #             'is_element_far_long')
-    #     self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
+    def test_translocation_far_1(self):
+        data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+                'is_element_far_1')
+        self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
+
+    def test_translocation_far_long(self):
+        data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+                'is_element_far_long')
+        self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
 
 
 class TestGraphWalk(TestCase):
