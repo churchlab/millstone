@@ -120,7 +120,16 @@ PLACEHOLDER_SAMPLE_NAME = 'fake_sid'
 
 def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
         sample_alignment):
+    """Exports a list of variants specified by dictionaries as a vcf.
 
+    Args:
+        var_dict_list: A list of dictionaries, each representing a variant,
+            with keys: chromosome, pos, ref_seq, alt_seq
+        vcf_dest_path_or_filehandle: A path or filehandle to write the
+            vcf to
+        sample_alignment: The ExperimentSampleToAlignment instance that
+            evidences the variants
+    """
     # Allow dest input as path or filehandle.
     if (isinstance(vcf_dest_path_or_filehandle, str) or
             isinstance(vcf_dest_path_or_filehandle, unicode)):

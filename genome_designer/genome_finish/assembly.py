@@ -499,7 +499,7 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
                 var_dict_vcf_path)
 
         # Make variants from vcf
-        var_dict_variant_list = parse_vcf(var_dict_vcf_dataset, ag)
+        parse_vcf(var_dict_vcf_dataset, ag)
 
     if not placeable_contigs:
         return
