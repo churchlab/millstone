@@ -30,6 +30,7 @@ from utils.bam_utils import rmdup
 from utils.bam_utils import sort_bam_by_coordinate
 from utils.bam_utils import sort_bam_by_name
 from utils.data_export_util import export_contig_list_as_vcf
+from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
 from utils.jbrowse_util import add_bam_file_track
@@ -151,11 +152,13 @@ def generate_contigs(sample_alignment,
         # Bam needs to be indexed for jbrowse
         index_bam(sv_indicants_sorted_bam)
 
-        add_dataset_to_entity(
+        for_assembly_dataset = add_dataset_to_entity(
                 sample_alignment,
                 Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY,
                 Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY,
                 filesystem_location=sv_indicants_sorted_bam)
+
+        for_assembly_dataset.save()
 
         add_bam_file_track(reference_genome,
                 sample_alignment, Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY)
@@ -169,10 +172,8 @@ def generate_contigs(sample_alignment,
     velvet_opts['velvetg']['ins_length_sd'] = ins_length_sd
 
     # Find expected coverage
-    alignment_dataset = sample_alignment.dataset_set.get(
-            type=Dataset.TYPE.BWA_ALIGN)
     avg_read_coverage = get_avg_genome_coverage(
-            alignment_dataset.get_absolute_location())
+            sample_alignment)
 
     # Calculate expected coverage in kmers
     genome_kmer_coverage = kmer_coverage(avg_read_coverage, ins_length,
@@ -226,13 +227,15 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     sv_indicant_class_to_generator = {
             Dataset.TYPE.BWA_PILED: get_piled_reads,
             Dataset.TYPE.BWA_CLIPPED: lambda i, o: get_clipped_reads_smart(
-                    i, o, phred_encoding=sample_alignment.data.get('phred_encoding', None)),
+                    i, o,
+                    phred_encoding=sample_alignment.experiment_sample.data.get(
+                            'phred_encoding', None)),
             Dataset.TYPE.BWA_UNMAPPED: lambda i, o: get_unmapped_reads(
                     i, o, avg_phred_cutoff=20)
     }
 
     default_sv_indicant_classes = {
-            Dataset.TYPE.BWA_PILED: True,
+            Dataset.TYPE.BWA_PILED: False,
             Dataset.TYPE.BWA_CLIPPED: True,
             Dataset.TYPE.BWA_SPLIT: True,
             Dataset.TYPE.BWA_UNMAPPED: True,
@@ -456,7 +459,8 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     return contig_files
 
 
-def evaluate_contigs(contig_list, skip_extracted_read_alignment=False):
+def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
+        use_read_alignment=True):
 
     def _length_weighted_coverage(contig):
         return contig.num_bases * contig.coverage
@@ -465,15 +469,12 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False):
     contig_list.sort(key=_length_weighted_coverage, reverse=True)
 
     # Get placeable contigs using graph-based placement
-    placeable_contigs = graph_contig_placement(contig_list,
-            skip_extracted_read_alignment)
+    placeable_contigs, var_dict_list = graph_contig_placement(contig_list,
+            skip_extracted_read_alignment, use_read_alignment)
 
     # Mark placeable contigs
     for contig in placeable_contigs:
         contig.metadata['is_placeable'] = True
-
-    if not placeable_contigs:
-        return
 
     # Get path for contigs vcf
     contig = contig_list[0]
@@ -481,6 +482,27 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False):
     vcf_path = os.path.join(
             ag.get_model_data_dir(),
             'de_novo_assembled_contigs.vcf')
+    var_dict_vcf_path = os.path.join(
+            ag.get_model_data_dir(),
+            'de_novo_assembly_translocations.vcf')
+
+    if var_dict_list:
+        # Write variant dicts to vcf
+        export_var_dict_list_as_vcf(var_dict_list, var_dict_vcf_path,
+                contig.experiment_sample_to_alignment)
+
+        # Make dataset for contigs vcf
+        var_dict_vcf_dataset = add_dataset_to_entity(
+                ag,
+                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+                var_dict_vcf_path)
+
+        # Make variants from vcf
+        parse_vcf(var_dict_vcf_dataset, ag)
+
+    if not placeable_contigs:
+        return
 
     # Write contigs to vcf
     export_contig_list_as_vcf(placeable_contigs, vcf_path)

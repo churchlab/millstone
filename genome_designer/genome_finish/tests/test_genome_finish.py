@@ -180,6 +180,23 @@ class TestGenomeFinishMG1655(TestCase):
 
         self._run_genome_finish_test(data_dict)
 
+    # # Due to issues with false positive translocations, this test
+    # # curently fails
+    # def test_translocation(self):
+    #     data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+    #         'is_element_reads')
+    #     self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
+
+    def test_translocation_far_1(self):
+        data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+                'is_element_far_1')
+        self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
+
+    def test_translocation_far_long(self):
+        data_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+                'is_element_far_long')
+        self._run_genome_finish_test(self.populate_dict_from_dir(data_dir))
+
 
 class TestGraphWalk(TestCase):
 
@@ -212,11 +229,18 @@ class TestGraphWalk(TestCase):
                 'reference_genome': reference_genome,
                 'alignment_group': alignment_group}
 
-    def test_deletion(self):
+    def _run_contig_walk_test(self, test_dir):
 
-        test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data', 'deletion')
         ref_fasta = os.path.join(test_dir, 'ref.fa')
-        contig_fasta_list = [os.path.join(test_dir, 'contigs.fa')]
+        target_fasta = os.path.join(test_dir, 'target.fa')
+        contig_fasta_list = []
+        i = 0
+        contig_fasta_path = os.path.join(test_dir, 'contig_' + str(i) + '.fa')
+        while os.path.exists(contig_fasta_path):
+            contig_fasta_list.append(contig_fasta_path)
+            i += 1
+            contig_fasta_path = os.path.join(test_dir,
+                    'contig_' + str(i) + '.fa')
 
         dummy_models = self._make_dummy_models()
         reference_genome = dummy_models['reference_genome']
@@ -257,7 +281,9 @@ class TestGraphWalk(TestCase):
             contig_list.append(contig)
 
         # Place contigs and create variants
-        evaluate_contigs(contig_list, True)
+        evaluate_contigs(contig_list,
+                skip_extracted_read_alignment=True,
+                use_read_alignment=False)
 
         # Get set of de novo variants
         variant_set = create_de_novo_variants_set(
@@ -266,7 +292,27 @@ class TestGraphWalk(TestCase):
         self.assertTrue(variant_set.variants.exists())
         self.assertEqual(len(variant_set.variants.all()), 1)
 
-        variant = variant_set.variants.all()[0]
-        self.assertEqual(variant.variantalternate_set.all()[0].alt_value,
-                '<DEL>')
-        self.assertEqual(len(variant.ref_value), 2000)
+        # Make new reference genome
+        new_ref_genome_params = {'label': 'new_ref'}
+        new_ref_genome = generate_new_reference_genome(
+                variant_set, new_ref_genome_params)
+
+        # Verify insertion was placed correctly
+        new_ref_genome_fasta = get_dataset_with_type(
+                new_ref_genome, Dataset.TYPE.REFERENCE_GENOME_FASTA
+                ).get_absolute_location()
+
+        fastas_same, indexes = are_fastas_same(
+                target_fasta, new_ref_genome_fasta)
+
+        self.assertTrue(fastas_same)
+
+    def test_deletion(self):
+        test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+                'deletion')
+        self._run_contig_walk_test(test_dir)
+
+    def test_homology_flanked_deletion(self):
+        test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
+                'homology_flanked_deletion')
+        self._run_contig_walk_test(test_dir)

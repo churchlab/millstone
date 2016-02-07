@@ -9,6 +9,7 @@ import pysam
 
 from genome_finish import __path__ as gf_path_list
 from genome_finish.insertion_placement_read_trkg import extract_left_and_right_clipped_read_dicts
+from main.models import Dataset
 from main.models import Variant
 from main.models import VariantSet
 from settings import SAMTOOLS_BINARY
@@ -419,7 +420,7 @@ def create_de_novo_variants_set(alignment_group, variant_set_label):
     for variant in Variant.objects.filter(
             reference_genome=ref_genome):
         for vccd in variant.variantcallercommondata_set.all():
-            if 'INFO_contig_uid' in vccd.data:
+            if vccd.data.get('INFO_METHOD', None) == 'DE_NOVO_ASSEMBLY':
                 de_novo_variants.append(variant)
                 continue
 
@@ -437,7 +438,7 @@ def create_de_novo_variants_set(alignment_group, variant_set_label):
     return variant_set
 
 
-def get_coverage_stats(bam_path):
+def get_coverage_stats(sample_alignment):
     """Returns a dictionary with chromosome seqrecord_ids as keys and
     subdictionaries as values.
 
@@ -445,6 +446,12 @@ def get_coverage_stats(bam_path):
     particular chromosome's length, mean read coverage, and standard
     deviation of read coverage
     """
+
+    maybe_chrom_cov_dict = sample_alignment.data.get('chrom_cov_dict', None)
+    if maybe_chrom_cov_dict is not None:
+        return maybe_chrom_cov_dict
+
+    bam_path = sample_alignment.dataset_set.get(type=Dataset.TYPE.BWA_ALIGN).get_absolute_location()
     alignment_af = pysam.AlignmentFile(bam_path)
     chrom_list = alignment_af.references
     chrom_lens = alignment_af.lengths
@@ -475,15 +482,17 @@ def get_coverage_stats(bam_path):
 
     chrom_cov_dict = dict(zip(chrom_list, sub_dict_list))
 
+    sample_alignment.data['chrom_cov_dict'] = chrom_cov_dict
+    sample_alignment.save()
     return chrom_cov_dict
 
 
-def get_avg_genome_coverage(bam_path):
+def get_avg_genome_coverage(sample_alignment):
     """Returns a float which is the average genome coverage, calculated as
     the average length-weighted read coverage over all chromosomes
     """
 
-    coverage_stats = get_coverage_stats(bam_path)
+    coverage_stats = get_coverage_stats(sample_alignment)
 
     len_weighted_coverage = 0
     total_len = 0

@@ -2,26 +2,33 @@ from collections import namedtuple
 import os
 import subprocess
 
+from Bio import SeqIO
 from django.conf import settings
 import networkx as nx
 import pysam
 
 from genome_finish.contig_display_utils import Junction
+from genome_finish.millstone_de_novo_fns import get_coverage_stats
 from genome_finish.insertion_placement_read_trkg import extract_contig_reads
 from genome_finish.insertion_placement_read_trkg import make_contig_reads_dataset
 from genome_finish.insertion_placement_read_trkg import simple_align_with_bwa_mem
 from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from main.models import Contig
 from main.models import Dataset
+from main.models import ReferenceGenome
 
-MAX_DELETION = 2200
+MAX_DELETION = 100000
 MAX_DUP = 10
 MAX_REF_SELF_HOMOLOGY = 200
+MAX_TRANS_LENGTH = 20000
+MIN_TRANS_LENGTH = 20
+MAX_TRANS_DELETION = 20000
 InsertionVertices = namedtuple('InsertionVertices',
         ['exit_ref', 'enter_contig', 'exit_contig', 'enter_ref'])
 
 
-def graph_contig_placement(contig_list, skip_extracted_read_alignment):
+def graph_contig_placement(contig_list, skip_extracted_read_alignment,
+        use_alignment_reads=True):
 
     if not skip_extracted_read_alignment:
         # Make a bam track on the reference for each contig that shows only the
@@ -73,14 +80,62 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment):
 
     placeable_contigs = []
     iv_list = novel_seq_ins_walk(G)
+    sample_alignment = contig_list[0].experiment_sample_to_alignment
+    if use_alignment_reads:
+        coverage_stats = get_coverage_stats(sample_alignment)
+        sample_alignment_bam = sample_alignment.dataset_set.get(
+            type=Dataset.TYPE.BWA_ALIGN).get_absolute_location()
     for insertion_vertices in iv_list:
+
         contig_qname = insertion_vertices.enter_contig.seq_uid
         contig_uid = contig_qname_to_uid[contig_qname]
         contig = Contig.objects.get(uid=contig_uid)
         set_contig_placement_params(contig, insertion_vertices)
-        placeable_contigs.append(contig)
 
-    return placeable_contigs
+        if use_alignment_reads:
+            # Filter out deletions of good coverage regions
+            deletion_length = (insertion_vertices.enter_ref.pos -
+                    insertion_vertices.exit_ref.pos)
+
+            if deletion_length > 0:
+                deletion_cov = avg_coverage(
+                        sample_alignment_bam,
+                        contig.metadata['chromosome'],
+                        insertion_vertices.exit_ref.pos,
+                        insertion_vertices.enter_ref.pos)
+
+            chrom_cov_stats = coverage_stats[contig.metadata['chromosome']]
+            chrom_cov_mean = chrom_cov_stats['mean']
+            chrom_cov_std = chrom_cov_stats['std']
+            if deletion_length <= 0 or (
+                    deletion_cov < chrom_cov_mean - chrom_cov_std):
+                placeable_contigs.append(contig)
+        else:
+            placeable_contigs.append(contig)
+
+    # Perform translocation walk
+    if ref_genome.num_chromosomes == 1:
+
+        trans_iv_pairs = translocation_walk(G)
+        var_dict_list = [parse_path_into_ref_alt(iv_pair, contig_qname_to_uid)
+                for iv_pair in trans_iv_pairs]
+    else:
+        print 'Translocation walk not implemented for multi-chromosomal refs'
+        var_dict_list = []
+
+    return placeable_contigs, var_dict_list
+
+
+def avg_coverage(bam, chromosome, start, end):
+
+    alignment_file = pysam.AlignmentFile(bam)
+    coverage_atcg = alignment_file.count_coverage(
+            str(chromosome), start, end)
+
+    avg_coverage = sum(max(atcg) for atcg in zip(*[coverage_atcg[i] for i in
+            range(4)])) / (end - start)
+
+    return avg_coverage
 
 
 def add_alignment_to_graph(G, contig_alignment_bam):
@@ -255,6 +310,71 @@ def novel_seq_ins_walk(G):
     return iv_list
 
 
+def translocation_walk(G):
+    ref_seq_uid = G.ref_intervals.vertices[0].seq_uid
+
+    def ref_neighbors(vert):
+        return [v for v in G.neighbors(vert) if v.seq_uid == ref_seq_uid]
+
+    def contig_neighbors(vert):
+        return [v for v in G.neighbors(vert) if v.seq_uid != ref_seq_uid]
+
+    forward_edges = []
+    back_edges = []
+
+    for exit_ref in G.ref_intervals.vertices:
+        for enter_contig in contig_neighbors(exit_ref):
+            queue = [enter_contig]
+            visited = []
+            while queue:
+                exit_contig = queue.pop()
+                for enter_ref in ref_neighbors(exit_contig):
+
+                    iv = InsertionVertices(
+                            exit_ref, enter_contig, exit_contig,
+                            enter_ref)
+
+                    if exit_ref.pos < enter_ref.pos:
+                        forward_edges.append(iv)
+                    else:
+                        back_edges.append(iv)
+
+                visited.append(exit_contig)
+                queue.extend([n for n in contig_neighbors(exit_contig)
+                        if n not in visited])
+
+    sorted_by_exit_ref = sorted(forward_edges + back_edges,
+            key=lambda x: x.exit_ref.pos)
+
+    sorted_by_enter_ref = sorted(forward_edges + back_edges,
+            key=lambda x: x.enter_ref.pos)
+
+    iv_pairs = []
+    i = 0
+    for enter_iv in sorted_by_exit_ref:
+        while (sorted_by_enter_ref[i].enter_ref.pos < enter_iv.exit_ref.pos and
+                i < len(sorted_by_enter_ref) -1):
+            i += 1
+
+        j = i
+        exit_iv = sorted_by_enter_ref[j]
+        deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
+        while -MAX_DUP < deletion < MAX_TRANS_DELETION:
+
+            trans_length = exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
+            if MIN_TRANS_LENGTH < trans_length < MAX_TRANS_LENGTH:
+                iv_pairs.append((enter_iv, exit_iv))
+
+            if j == len(sorted_by_enter_ref) - 1:
+                break
+
+            j += 1
+            exit_iv = sorted_by_enter_ref[j]
+            deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
+
+    return iv_pairs
+
+
 class SequenceVertex:
 
     def __init__(self, seq_uid, pos, parent):
@@ -268,6 +388,18 @@ class SequenceVertex:
 
     def __hash__(self):
         return hash(self.uid)
+
+    def __cmp__(self, rhs):
+        if not isinstance(rhs, SequenceVertex):
+            return TypeError
+        if rhs.seq_uid != self.seq_uid:
+            return ValueError
+
+        if self.pos < rhs.pos:
+            return -1
+        if self.pos > rhs.pos:
+            return 1
+        return 0
 
 
 class SequenceIntervals:
@@ -366,3 +498,80 @@ def make_contig_reads_to_ref_alignments(contig):
 
     # Add bam track
     add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
+
+def parse_path_into_ref_alt(path_list, contig_qname_to_uid):
+
+    ref_uid = path_list[0].exit_ref.seq_uid
+    ref_genome = ReferenceGenome.objects.get(uid=ref_uid)
+    ref_fasta = get_fasta(ref_genome)
+    with open(ref_fasta) as fh:
+        ref_seqrecord = SeqIO.parse(fh, 'fasta').next()
+        ref_seq = str(ref_seqrecord.seq)
+        ref_chromosome = ref_seqrecord.id
+
+    def _seq_str(enter_vert, exit_vert):
+        if enter_vert.seq_uid == ref_uid:
+            return ref_seq[enter_vert.pos: exit_vert.pos]
+
+        contig_qname = enter_vert.seq_uid
+        contig_uid = contig_qname_to_uid[contig_qname]
+        contig = Contig.objects.get(uid=contig_uid)
+        contig_fasta = get_fasta(contig)
+        with open(contig_fasta) as fh:
+            contig_seqrecord = SeqIO.parse(fh, 'fasta').next()
+
+        # Determine whether contig is reverse complement relative to reference
+        is_reverse = contig.metadata.get('is_reverse', False)
+
+        # Extract cassette sequence from contig
+        if is_reverse:
+            return str(contig_seqrecord.seq.reverse_complement()[
+                    enter_vert.pos:exit_vert.pos])
+        else:
+            return str(contig_seqrecord.seq[
+                    enter_vert.pos:exit_vert.pos])
+
+    path_list_concat = reduce(lambda x, y: x + y, path_list)
+    def _seq_interval_iter():
+        i = 1
+        while i <= len(path_list_concat) - 3:
+            yield path_list_concat[i:i+2]
+            i += 2
+
+    seq_list = []
+    for enter_vert, exit_vert in _seq_interval_iter():
+
+        seq_len = exit_vert.pos - enter_vert.pos
+
+        if seq_len < 0:
+            seq_list.append(seq_len)
+        elif seq_len > 0:
+            seq_list.append(_seq_str(enter_vert, exit_vert))
+        else:
+            seq_list.append('')
+
+    ref_start = path_list[0].exit_ref.pos
+    ref_end = path_list[-1].enter_ref.pos
+    is_first = True
+    alt_seq = ''
+    for seq in seq_list:
+        if is_first:
+            if isinstance(seq, int):
+                ref_start += seq
+            else:
+                alt_seq += seq
+                is_first = False
+        else:
+            if isinstance(seq, int):
+                alt_seq = alt_seq[:seq]
+            else:
+                alt_seq += seq
+
+    ref_seq = ref_seq[ref_start: ref_end]
+
+    return {
+        'chromosome': ref_chromosome,
+        'pos': ref_start,
+        'ref_seq': ref_seq,
+        'alt_seq': alt_seq
+    }
