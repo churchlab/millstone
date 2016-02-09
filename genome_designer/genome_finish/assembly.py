@@ -5,6 +5,7 @@ import subprocess
 import re
 
 from Bio import SeqIO
+from celery import group
 from celery import task
 from django.conf import settings
 
@@ -71,7 +72,7 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED)
         sample_alignment.save()
 
-    generate_contigs_async_task = generate_contigs_multi_sample.si(
+    generate_contigs_async_task = generate_contigs_multi_sample(
             sample_alignment_list)
     async_result = generate_contigs_async_task.apply_async()
 
@@ -89,19 +90,26 @@ def kmer_coverage(C, L, k):
     return C * (L - k + 1) / float(L)
 
 
-@task
 def generate_contigs_multi_sample(sample_alignment_list):
     """Generate contigs for each ExperimentSampleToAlignment in
     the passed list in the order that they are displayed in the UI
     """
+    generate_contigs_task_list = []
     for sample_alignment in sorted(sample_alignment_list,
             key=lambda x: x.experiment_sample.label):
-        generate_contigs(sample_alignment)
+        generate_contigs_task_list.append(
+                generate_contigs.si(sample_alignment))
 
+    task_signature = group(generate_contigs_task_list)
     for sample_alignment in sample_alignment_list:
-        parse_variants_from_vcf(sample_alignment)
+
+        task_signature = task_signature | parse_variants_from_vcf.si(
+                sample_alignment)
+
+    return task_signature
 
 
+@task
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=True):

@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from genome_finish.assembly import evaluate_contigs
+from genome_finish.assembly import parse_variants_from_vcf
 from genome_finish.assembly import run_de_novo_assembly_pipeline
 from genome_finish.insertion_placement_read_trkg import simple_align_with_bwa_mem
 from genome_finish.millstone_de_novo_fns import create_de_novo_variants_set
@@ -284,6 +285,7 @@ class TestGraphWalk(TestCase):
         evaluate_contigs(contig_list,
                 skip_extracted_read_alignment=True,
                 use_read_alignment=False)
+        parse_variants_from_vcf(sample_alignment)
 
         # Get set of de novo variants
         variant_set = create_de_novo_variants_set(
