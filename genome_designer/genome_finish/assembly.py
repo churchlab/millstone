@@ -23,6 +23,7 @@ from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from main.model_utils import get_dataset_with_type
 from pipeline.read_alignment import get_insert_size_mean_and_stdev
+from pipeline.read_alignment_util import ensure_bwa_index
 from utils.bam_utils import concatenate_bams
 from utils.bam_utils import index_bam
 from utils.bam_utils import make_bam
@@ -71,6 +72,12 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
         sample_alignment.data['assembly_status'] = (
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED)
         sample_alignment.save()
+
+    # Ensure reference genome fasta has bwa index
+    ref_genome = sample_alignment_list[0].alignment_group.reference_genome
+    ref_genome_fasta = ref_genome.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    ensure_bwa_index(ref_genome_fasta)
 
     generate_contigs_async_task = generate_contigs_multi_sample(
             sample_alignment_list)
