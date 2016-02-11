@@ -15,6 +15,8 @@ from genome_finish.contig_display_utils import Junction
 from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
 from main.models import Dataset
+from pipeline.read_alignment_util import ensure_bwa_index
+from pipeline.read_alignment_util import has_bwa_index
 from utils.bam_utils import index_bam
 from utils.bam_utils import sort_bam_by_coordinate
 from utils.import_util import add_dataset_to_entity
@@ -472,13 +474,8 @@ def write_read_query_alignments_to_fastq(reads, fastq_path,
 
 def simple_align_with_bwa_mem(reads_fq, reference_fasta, output_bam_path):
 
-    # Ensure reference fasta is indexed
-    subprocess.call(' '.join([
-            '%s/bwa/bwa' % settings.TOOLS_DIR,
-            'index',
-            reference_fasta
-            ]),
-            shell=True, executable=settings.BASH_PATH)
+    # Assert reference fasta is indexed
+    assert has_bwa_index(reference_fasta)
 
     # Align clipped query alignment fastq to contig
     align_input_args = ' '.join([
@@ -574,6 +571,7 @@ def find_contig_endpoint(contig, clipped_same_end, direction):
         align_to = contig_fasta
 
     if align_to:
+        ensure_bwa_index(align_to)
         simple_align_with_bwa_mem(
                 clipped_query_alignment_fq, align_to,
                 clipped_to_contig_bam)

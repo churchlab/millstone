@@ -20,6 +20,11 @@ from django.conf import settings
 SAMTOOLS_BINARY = settings.SAMTOOLS_BINARY
 TOOLS_DIR = settings.TOOLS_DIR
 
+
+def has_bwa_index(ref_genome_fasta):
+    return os.path.exists(ref_genome_fasta + '.bwt')
+
+
 def ensure_bwa_index(ref_genome_fasta, error_output=None):
     """Creates the reference genome index required by bwa, if it doesn't exist
     already.
@@ -27,7 +32,7 @@ def ensure_bwa_index(ref_genome_fasta, error_output=None):
     We rely on the convention that the index file location is the fasta
     location with the extension '.bwt' appended to it.
     """
-    if not os.path.exists(ref_genome_fasta + '.bwt'):
+    if not has_bwa_index(ref_genome_fasta):
         build_bwa_index(ref_genome_fasta, error_output)
 
     # Also build the fasta index.

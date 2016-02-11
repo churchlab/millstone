@@ -5,6 +5,7 @@ import subprocess
 import re
 
 from Bio import SeqIO
+from celery import group
 from celery import task
 from django.conf import settings
 
@@ -22,6 +23,7 @@ from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from main.model_utils import get_dataset_with_type
 from pipeline.read_alignment import get_insert_size_mean_and_stdev
+from pipeline.read_alignment_util import ensure_bwa_index
 from utils.bam_utils import concatenate_bams
 from utils.bam_utils import index_bam
 from utils.bam_utils import make_bam
@@ -71,7 +73,13 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED)
         sample_alignment.save()
 
-    generate_contigs_async_task = generate_contigs_multi_sample.si(
+    # Ensure reference genome fasta has bwa index
+    ref_genome = sample_alignment_list[0].alignment_group.reference_genome
+    ref_genome_fasta = ref_genome.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    ensure_bwa_index(ref_genome_fasta)
+
+    generate_contigs_async_task = generate_contigs_multi_sample(
             sample_alignment_list)
     async_result = generate_contigs_async_task.apply_async()
 
@@ -89,16 +97,26 @@ def kmer_coverage(C, L, k):
     return C * (L - k + 1) / float(L)
 
 
-@task
 def generate_contigs_multi_sample(sample_alignment_list):
     """Generate contigs for each ExperimentSampleToAlignment in
     the passed list in the order that they are displayed in the UI
     """
+    generate_contigs_task_list = []
     for sample_alignment in sorted(sample_alignment_list,
             key=lambda x: x.experiment_sample.label):
-        generate_contigs(sample_alignment)
+        generate_contigs_task_list.append(
+                generate_contigs.si(sample_alignment))
+
+    task_signature = group(generate_contigs_task_list)
+    for sample_alignment in sample_alignment_list:
+
+        task_signature = task_signature | parse_variants_from_vcf.si(
+                sample_alignment)
+
+    return task_signature
 
 
+@task
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=True):
@@ -478,47 +496,75 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
 
     # Get path for contigs vcf
     contig = contig_list[0]
+    sample_alignment = contig.experiment_sample_to_alignment
     ag = contig.experiment_sample_to_alignment.alignment_group
     vcf_path = os.path.join(
-            ag.get_model_data_dir(),
+            sample_alignment.get_model_data_dir(),
             'de_novo_assembled_contigs.vcf')
     var_dict_vcf_path = os.path.join(
-            ag.get_model_data_dir(),
+            sample_alignment.get_model_data_dir(),
             'de_novo_assembly_translocations.vcf')
 
     if var_dict_list:
+
+        dataset_query = sample_alignment.dataset_set.filter(
+                type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
+
+        if dataset_query:
+            dataset_query.delete()
+
         # Write variant dicts to vcf
         export_var_dict_list_as_vcf(var_dict_list, var_dict_vcf_path,
                 contig.experiment_sample_to_alignment)
 
         # Make dataset for contigs vcf
-        var_dict_vcf_dataset = add_dataset_to_entity(
-                ag,
-                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
-                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+        add_dataset_to_entity(
+                sample_alignment,
+                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
                 var_dict_vcf_path)
-
-        # Make variants from vcf
-        parse_vcf(var_dict_vcf_dataset, ag)
 
     if not placeable_contigs:
         return
+
+    dataset_query = sample_alignment.dataset_set.filter(
+                type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS)
+
+    if dataset_query:
+        dataset_query.delete()
 
     # Write contigs to vcf
     export_contig_list_as_vcf(placeable_contigs, vcf_path)
 
     # Make dataset for contigs vcf
-    vcf_dataset = add_dataset_to_entity(
-            ag,
+    add_dataset_to_entity(
+            sample_alignment,
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
             vcf_path)
 
-    # Make variants from vcf
-    variant_list = parse_vcf(vcf_dataset, ag)
+
+@task
+def parse_variants_from_vcf(sample_alignment):
+
+    graph_walk_vcf_query = sample_alignment.dataset_set.filter(
+            type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
+    if graph_walk_vcf_query:
+        assert graph_walk_vcf_query.count() == 1
+        parse_vcf(graph_walk_vcf_query[0], sample_alignment.alignment_group)
+
+    contig_vcf_query = sample_alignment.dataset_set.filter(
+            type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS)
+    if contig_vcf_query:
+        assert contig_vcf_query.count() == 1
+        contig_variant_list = parse_vcf(
+                contig_vcf_query[0], sample_alignment.alignment_group)
+
+    if not contig_vcf_query or not contig_variant_list:
+        return
 
     # Add variant specific track data
-    for variant in variant_list:
+    for variant in contig_variant_list:
         variant_bam_track_labels = []
         variant_coverage_track_labels = []
         vccd_list = variant.variantcallercommondata_set.all()

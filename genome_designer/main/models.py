@@ -121,7 +121,8 @@ class Dataset(UniqueUidModelMixin):
         VCF_FREEBAYES_SNPEFF = 'SNPEff VCF'
         VCF_LUMPY_SNPEFF = 'Lumpy SNPEff VCF'
         VCF_PINDEL_SNPEFF = 'Pindel SNPEff VCF'
-        VCF_DE_NOVO_ASSEMBLED_CONTIGS = 'De Novo Assemblied Contigs VCF'
+        VCF_DE_NOVO_ASSEMBLED_CONTIGS = 'De Novo Assembled Contigs VCF'
+        VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK = 'De Novo Assembly Graph Walk VCF'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
         LUMPY_INSERT_METRICS_HISTOGRAM = 'Lumpy Insert Metrics Histogram'
         LUMPY_INSERT_METRICS_MEAN_STDEV = 'Lumpy Insert Metrics Mean Stdev'
@@ -155,7 +156,9 @@ class Dataset(UniqueUidModelMixin):
         TYPE.VCF_LUMPY_SNPEFF: 'alignmentgroup_set',
         TYPE.VCF_USERINPUT : 'variantset_set',
         TYPE.VCF_FREEBAYES_SNPEFF : 'alignmentgroup_set',
-        TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS: 'alignment_group_set',
+        TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS : 'experimentsampletoalignment_set',
+        TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK : (
+                'experimentsampletoalignment_set'),
         TYPE.FASTQC1_HTML: 'experimentsample_set',
         TYPE.FASTQC2_HTML: 'experimentsample_set',
     }
