@@ -10,7 +10,6 @@ from celery import task
 from django.conf import settings
 
 from genome_finish.graph_contig_placement import graph_contig_placement
-from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.millstone_de_novo_fns import add_paired_mates
 from genome_finish.millstone_de_novo_fns import filter_low_qual_read_pairs
 from genome_finish.millstone_de_novo_fns import filter_out_unpaired_reads

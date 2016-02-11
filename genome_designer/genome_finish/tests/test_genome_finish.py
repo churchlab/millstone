@@ -10,7 +10,6 @@ from django.test import TestCase
 from genome_finish.assembly import evaluate_contigs
 from genome_finish.assembly import parse_variants_from_vcf
 from genome_finish.assembly import run_de_novo_assembly_pipeline
-from genome_finish.insertion_placement_read_trkg import simple_align_with_bwa_mem
 from genome_finish.millstone_de_novo_fns import create_de_novo_variants_set
 from main.model_utils import get_dataset_with_type
 from main.models import AlignmentGroup
