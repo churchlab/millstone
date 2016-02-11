@@ -10,7 +10,6 @@ from celery import task
 from django.conf import settings
 
 from genome_finish.graph_contig_placement import graph_contig_placement
-from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.millstone_de_novo_fns import add_paired_mates
 from genome_finish.millstone_de_novo_fns import filter_low_qual_read_pairs
 from genome_finish.millstone_de_novo_fns import filter_out_unpaired_reads
@@ -438,6 +437,9 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     records = list(SeqIO.parse(contigs_fasta, 'fasta'))
     digits = len(str(len(records)))
     for seq_record in records:
+
+        if 'N' in seq_record.seq:
+            continue
 
         contig_node_number = int(
                 contig_number_pattern.findall(seq_record.description)[0])
