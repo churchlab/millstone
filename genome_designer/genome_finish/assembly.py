@@ -438,6 +438,9 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     digits = len(str(len(records)))
     for seq_record in records:
 
+        if 'N' in seq_record.seq:
+            continue
+
         contig_node_number = int(
                 contig_number_pattern.findall(seq_record.description)[0])
         leading_zeros = digits - len(str(contig_node_number))
