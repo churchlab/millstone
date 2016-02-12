@@ -91,7 +91,13 @@ Once you upload the template, it will list the samples awaiting upload:
    :alt:
 
 You can then upload the individual files matching the filenames in the
-template.
+template. Note that if you have many files, it may be necessary to select
+in batches of 10 or so files.
+
+To confirm that files are uploaded, close the upload dialog and look at
+the table of samples. The status hsould change to RUNNING_QC, or when that's
+done, you should see a QC link. If the status still says AWAITING_UPLOAD,
+then the upload didn't go through successfully and you should try again.
 
 Alignment Settings
 ------------------
