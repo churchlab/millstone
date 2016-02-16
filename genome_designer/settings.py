@@ -7,9 +7,14 @@ try:
 except ImportError:
     pass
 
+if not os.path.exists(MEDIA_ROOT):
+    os.mkdir(MEDIA_ROOT)
+
 # Use a default temp file root if none is set.
 if 'TEMP_FILE_ROOT' not in locals():
     TEMP_FILE_ROOT = os.path.join(MEDIA_ROOT, 'tmp')
+    if not os.path.exists(TEMP_FILE_ROOT):
+        os.mkdir(TEMP_FILE_ROOT)
 
 # Set the binaries here in case TOOLS_DIR is modified in local_settings.py
 # TODO(gleb): What if users want to override specific binaries? Probably

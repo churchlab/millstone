@@ -1,0 +1,49 @@
+language: python
+
+python:
+  - "2.7"
+
+addons:
+  postgresql: "9.3"
+
+services:
+  - postgresql
+
+# Handle git submodules ourselves.
+git:
+  submodules: false
+
+before_install:
+  # For submodules, use sed to replace the SSH URL with the public URL,
+  # then initialize submodules here.
+  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
+  - git submodule update --init --recursive
+
+  # Perl lib installationa required for JBrowse perl.
+  # First configure cpan.
+  - (echo y;echo o conf prerequisites_policy follow;echo o conf commit)|cpan
+  # Now install dependency.
+  - sudo cpan install local::lib
+
+install:
+  - pip install -r requirements/deploy.txt
+  - cd jbrowse
+  - ./setup.sh
+  - cd ..
+  - cd genome_designer
+  - ./millstone_setup.py
+  - cd ..
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+
+before_script:
+  - psql -c "CREATE USER gdv2dbuser WITH PASSWORD 'g3n3d3z';" -U postgres
+  - psql -c "CREATE DATABASE gdv2db;" -U postgres
+  - psql -c "GRANT ALL PRIVILEGES ON DATABASE gdv2db TO gdv2dbuser;" -U postgres
+  - psql -c "ALTER USER gdv2dbuser CREATEDB;" -U postgres
+
+script:
+  - cd genome_designer
+  - ./scripts/run_unit_tests.sh
