@@ -456,10 +456,10 @@ def populate_record_eff(vcf_record):
                 vcf_record.CHROM,
                 str(vcf_record.POS),
                 'has no INFO EFF field. Cannot annotate.'])
-        vcf_record.INFO['EFF'] = [''.join([
-            'ERROR(|||||||||||',
-            'SNPEFF_ERROR:NO_EFF_INFO_FIELD|',
-            'SNPEFF_ERROR:NO_EFF_INFO_FIELD)'])]
+        vcf_record.INFO['EFF'] = (
+            'ERROR(|||||||||||'
+            'SNPEFF_ERROR:NO_EFF_INFO_FIELD|'
+            'SNPEFF_ERROR:NO_EFF_INFO_FIELD)')
         value = vcf_record.INFO['EFF']
 
 
