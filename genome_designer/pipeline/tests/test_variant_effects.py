@@ -131,6 +131,8 @@ class TestSnpeff(TestCase):
         class FakeVCFRecord(object):
             def __init__(self):
                 self.INFO = {}
+                self.CHROM = 'U00096.2'
+                self.POS = 100
 
         test_record = FakeVCFRecord()
 
@@ -146,13 +148,19 @@ class TestSnpeff(TestCase):
             '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST)'))]
         updated_test_record = populate_record_eff(test_record)
 
+        # missing eff field
+        test_record.INFO.pop('EFF', None)
+        updated_test_record = populate_record_eff(test_record)
+
+        self.assertEqual(updated_test_record.INFO['EFF_EFFECT'], ['ERROR'])
+        self.assertTrue('SNPEFF_ERROR' in updated_test_record.INFO['EFF_ERR'][0])
+
         # multi-eff
         test_record.INFO['EFF'] = [''.join((
             'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aCg|M239T|386|ygiC',
             '||CODING|b3038|1|1|WARN_TEST|ERROR_TEST),')),''.join((
             'NON_SYNONYMOUS_CODING(MODERATE|MISSENSE|aTg/aGg|M239T|386|ygiC',
             '||CODING|b3038|1|1|ERROR_TEST|WARN_TEST)'))]
-
         updated_test_record = populate_record_eff(test_record)
 
         self.assertEqual(updated_test_record.INFO['EFF_CONTEXT'],

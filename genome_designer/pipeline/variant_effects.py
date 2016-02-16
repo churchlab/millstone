@@ -446,8 +446,21 @@ def populate_record_eff(vcf_record):
     # Get the Eff field for this record.
     eff_field_lists = defaultdict(list)
     assert hasattr(vcf_record,'INFO'), 'No INFO attr, not a vcf record'
-    assert 'EFF' in vcf_record.INFO, 'VCF record has no EFF INFO field'
-    value = vcf_record.INFO['EFF']
+
+    # Check that VCF record has an EFF INFO field
+    if 'EFF' in vcf_record.INFO:
+        value = vcf_record.INFO['EFF']
+    else:
+        print >> sys.stderr, ('VCF record at {chrom} {pos} has no '
+                'INFO EFF field. Cannot annotate.').format(
+                chrom=vcf_record.CHROM, pos=vcf_record.POS)
+
+        vcf_record.INFO['EFF'] = (
+            'ERROR(|||||||||||'
+            'SNPEFF_ERROR:NO_EFF_INFO_FIELD|'
+            'SNPEFF_ERROR:NO_EFF_INFO_FIELD)')
+        value = vcf_record.INFO['EFF']
+
 
     # Find iter produces a separate set of groups for every comma-separated
     # alt EFF field set
