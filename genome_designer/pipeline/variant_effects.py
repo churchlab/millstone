@@ -451,11 +451,10 @@ def populate_record_eff(vcf_record):
     if 'EFF' in vcf_record.INFO:
         value = vcf_record.INFO['EFF']
     else:
-        print >> sys.stderr, ' '.join([
-                'VCF Record at',
-                vcf_record.CHROM,
-                str(vcf_record.POS),
-                'has no INFO EFF field. Cannot annotate.'])
+        print >> sys.stderr, ('VCF record at {chrom} {pos} has no '
+                'INFO EFF field. Cannot annotate.').format(
+                chrom=vcf_record.CHROM, pos=vcf_record.POS)
+
         vcf_record.INFO['EFF'] = (
             'ERROR(|||||||||||'
             'SNPEFF_ERROR:NO_EFF_INFO_FIELD|'
