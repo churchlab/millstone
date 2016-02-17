@@ -190,16 +190,11 @@ def prepare_jbrowse_ref_sequence(reference_genome, **kwargs):
             'DNA')
 
     # Now run prepare-refseqs.pl to get the ReferenceGenome in.
-    try:
-        subprocess.check_output([
-            PREPARE_REFSEQS_BIN,
-            '--fasta', reference_fasta,
-            '--out', jbrowse_path,
-        ])
-    except subprocess.CalledProcessError as e:
-        print e
-        print e.output
-        raise e
+    subprocess.check_call([
+        PREPARE_REFSEQS_BIN,
+        '--fasta', reference_fasta,
+        '--out', jbrowse_path,
+    ])
 
     json_tracks = get_tracklist_json(reference_genome, 'DNA')
 
