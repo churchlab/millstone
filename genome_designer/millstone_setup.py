@@ -21,7 +21,7 @@ from django.conf import settings
 
 
 # Retry download at least X times if disconnected.
-MAX_DL_RETRY = 2
+MAX_DL_RETRY = 3
 
 
 TOOLS_URLS = {
@@ -207,7 +207,12 @@ def download_tools(tools=TOOLS_URLS.keys(), tools_dir=settings.TOOLS_DIR):
             # Otherwise download files to the correct location.
             else:
                 dest_path = os.path.join(dest_dir, dest_filename)
-                _try_urlretrieve(tool_url,dest_path)
+                try:
+                    _, http_msg = _try_urlretrieve(tool_url, dest_path)
+                except IOError as e:
+                    print '    Error downloading %s' % tool_url
+                    print '    Aborting setup. Please retry.'
+                    raise e
                 print '    %s' % dest_path
 
         _update_executable_permissions(tool, tools_dir)
@@ -220,16 +225,16 @@ def _try_urlretrieve(tool_url, dest_path=None, retry=0):
             result = urllib.urlretrieve(tool_url)
         else:
             result = urllib.urlretrieve(tool_url, dest_path)
+        return result
 
-    except IOError:
+    except IOError as e:
         # attempt retry
         if retry < MAX_DL_RETRY:
-            print '    Connection failed, retry #{}'.format(retry+1)
-            _try_urlretrieve(tool_url, dest_path=dest_path, retry=retry+1)
+            print '    Connection failed, retry #{}'.format(retry + 1)
+            return _try_urlretrieve(
+                    tool_url, dest_path=dest_path, retry=retry + 1)
         else:
-            raise
-
-    return result
+            raise e
 
 
 def _get_or_create_tool_destination_dir(tool, tools_dir):
