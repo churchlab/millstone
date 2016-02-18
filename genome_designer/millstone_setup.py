@@ -113,6 +113,14 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/ia8z8ib0fxnsaft/samblaster'
         ]
     },
+    'unafold': {
+        'Darwin': [
+            'https://www.dropbox.com/s/6x24mkuqz2auv3k/unafold-darwin.zip'
+        ],
+        'Linux': [
+            'https://www.dropbox.com/s/n3h1vrplkm5l4c1/unafold-linux.zip'
+        ]
+    },
     'vcflib': {
         'Darwin': [
             'https://www.dropbox.com/s/efbprgj2fmgy5ck/vcflib-32be8fc-darwin.zip'
@@ -139,6 +147,7 @@ TOOLS_TO_EXECUTABLES = {
     'pindel': ['pindel', 'pindel2vcf'],
     'tabix': ['tabix', 'bgzip'],
     'freebayes': ['freebayes', 'vcfstreamsort', 'vcfuniq'],
+    'unafold': ['hybrid-ss-min'],
     'velvet': ['velvetg', 'velveth', 'extractContigReads.pl'],
     'vcflib': ['*'],
 }
