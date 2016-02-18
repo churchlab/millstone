@@ -1,7 +1,6 @@
 """Utils for connecting Millstone to optMAGE.
 """
 
-from django.conf import settings
 from optmage.oligo_designer import DEFAULT_REPLICATION_ORIGIN
 from optmage.oligo_designer import DEFAULT_REPLICATION_TERMINUS
 from optmage.oligo_designer import OligoGenerator
@@ -80,7 +79,6 @@ def print_mage_oligos(variant_set, output_filehandle, target_id_prefix,
     config.replication_origin = replication_origin_params.get_origin_interval()
     config.replication_terminus = (
             replication_origin_params.get_terminus_interval())
-    config.ss_calculator_bin = settings.HYBRID_SS_MIN_BIN
 
     oligo_target_list = []
     for variant in passing_variants:

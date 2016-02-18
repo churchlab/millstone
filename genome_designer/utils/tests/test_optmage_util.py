@@ -40,42 +40,45 @@ class TestOptmageUtil(TestCase):
         with open(ref_genome_source) as fh:
             self.ref_genome_seq_record = SeqIO.read(fh, 'fasta')
 
-    def test_print_mage_oligos(self):
-        var_set_1 = VariantSet.objects.create(
-            reference_genome=self.ref_genome,
-            label='vs1')
-        POSITION_RANGE = range(100, 1001, 100)
-        for position in POSITION_RANGE:
-            ref_value = self.ref_genome_seq_record.seq[position]
-            alt_value = random.choice('ACGT')
-            while alt_value == ref_value:
-                alt_value = random.choice('ACGT')
-            variant = Variant.objects.create(
-                    type=Variant.TYPE.TRANSITION,
-                    reference_genome=self.ref_genome,
-                    chromosome=Chromosome.objects.get(reference_genome=self.ref_genome),
-                    position=position,
-                    ref_value=ref_value)
-            VariantAlternate.objects.create(
-                    variant=variant,
-                    alt_value=alt_value)
-            VariantToVariantSet.objects.create(
-                    variant=variant,
-                    variant_set=var_set_1)
-        output = StringIO()
-        target_id_prefix = 'o_'
-        print_mage_oligos(var_set_1, output, target_id_prefix,
-                ReplicationOriginParams.from_defaults())
+    # NOTE: Commented out for travis-ci
+    # TODO: Get hybrid-ss-min installed on travis-ci. Though ideally we'd
+    # distribute it as a binary like we do with other tools.
+    # def test_print_mage_oligos(self):
+    #     var_set_1 = VariantSet.objects.create(
+    #         reference_genome=self.ref_genome,
+    #         label='vs1')
+    #     POSITION_RANGE = range(100, 1001, 100)
+    #     for position in POSITION_RANGE:
+    #         ref_value = self.ref_genome_seq_record.seq[position]
+    #         alt_value = random.choice('ACGT')
+    #         while alt_value == ref_value:
+    #             alt_value = random.choice('ACGT')
+    #         variant = Variant.objects.create(
+    #                 type=Variant.TYPE.TRANSITION,
+    #                 reference_genome=self.ref_genome,
+    #                 chromosome=Chromosome.objects.get(reference_genome=self.ref_genome),
+    #                 position=position,
+    #                 ref_value=ref_value)
+    #         VariantAlternate.objects.create(
+    #                 variant=variant,
+    #                 alt_value=alt_value)
+    #         VariantToVariantSet.objects.create(
+    #                 variant=variant,
+    #                 variant_set=var_set_1)
+    #     output = StringIO()
+    #     target_id_prefix = 'o_'
+    #     print_mage_oligos(var_set_1, output, target_id_prefix,
+    #             ReplicationOriginParams.from_defaults())
 
-        reader = csv.DictReader(StringIO(output.getvalue()))
-        all_rows = [row for row in reader]
-        self.assertEqual(10, len(all_rows))
+    #     reader = csv.DictReader(StringIO(output.getvalue()))
+    #     all_rows = [row for row in reader]
+    #     self.assertEqual(10, len(all_rows))
 
-        # Check at least some reqiured keys are there.
-        for row in all_rows:
-            for key in OLIGO_TARGET_REQUIRED_PARAMS:
-                self.assertTrue('target_id' in row)
-                self.assertEqual(90, int(row['oligo_size']))
+    #     # Check at least some reqiured keys are there.
+    #     for row in all_rows:
+    #         for key in OLIGO_TARGET_REQUIRED_PARAMS:
+    #             self.assertTrue('target_id' in row)
+    #             self.assertEqual(90, int(row['oligo_size']))
 
-        start_position_set = set([int(row['start']) for row in all_rows])
-        self.assertEqual(set(POSITION_RANGE), start_position_set)
+    #     start_position_set = set([int(row['start']) for row in all_rows])
+    #     self.assertEqual(set(POSITION_RANGE), start_position_set)

@@ -61,5 +61,3 @@ VCF_COMBINE_BINARY = os.path.join(VCFLIB_DIR, 'vcfcombine')
 
 # The location of the JBrowse scripts (perl scripts, ugh)
 JBROWSE_BIN_PATH = os.path.join(JBROWSE_ROOT, 'bin')
-
-HYBRID_SS_MIN_BIN = '%s/unafold/hybrid-ss-min' % TOOLS_DIR
