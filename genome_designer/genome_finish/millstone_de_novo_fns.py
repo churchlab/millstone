@@ -22,6 +22,20 @@ VELVETH_BINARY = settings.TOOLS_DIR + '/velvet/velveth'
 VELVETG_BINARY = settings.TOOLS_DIR + '/velvet/velvetg'
 
 
+def get_altalign_reads(input_bam_path, output_bam_path, xs_threshold=None):
+    input_af = pysam.AlignmentFile(input_bam_path, 'rb')
+    output_af = pysam.AlignmentFile(output_bam_path, 'wb',
+                template=input_af)
+
+    for read in input_af:
+        if read.has_tag('XS') and read.has_tag('AS'):
+            if read.get_tag('AS') <= read.get_tag('XS'):
+                output_af.write(read)
+
+    output_af.close()
+    input_af.close()
+
+
 def get_clipped_reads(bam_filename, output_filename, clipping_threshold=None):
     """Creates bam of reads that have more than clipping_threshold bases
     of clipping.  If no clipping_threshold specified, clipping stats

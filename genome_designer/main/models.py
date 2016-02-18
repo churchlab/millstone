@@ -105,6 +105,7 @@ class Dataset(UniqueUidModelMixin):
         FASTQ1 = 'FASTQ Forward'
         FASTQ2 = 'FASTQ Reverse'
         BWA_ALIGN = 'BWA BAM'
+        BWA_ALTALIGN = 'BWA Alternate Alignment Reads'
         BWA_DISCORDANT = 'BWA BAM Discordant Paired Reads'
         BWA_SPLIT = 'BWA BAM Split Reads'
         BWA_UNMAPPED = 'BWA Unmapped Reads'
@@ -142,6 +143,7 @@ class Dataset(UniqueUidModelMixin):
         TYPE.FASTQ1 : 'experimentsample_set',
         TYPE.FASTQ2 : 'experimentsample_set',
         TYPE.BWA_ALIGN : 'experimentsampletoalignment_set',
+        TYPE.BWA_ALTALIGN : 'experimentsampletoalignment_set',
         TYPE.BWA_DISCORDANT : 'experimentsampletoalignment_set',
         TYPE.BWA_SPLIT : 'experimentsampletoalignment_set',
         TYPE.BWA_CLIPPED : 'experimentsampletoalignment_set',

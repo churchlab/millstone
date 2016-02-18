@@ -13,6 +13,7 @@ from genome_finish.graph_contig_placement import graph_contig_placement
 from genome_finish.millstone_de_novo_fns import add_paired_mates
 from genome_finish.millstone_de_novo_fns import filter_low_qual_read_pairs
 from genome_finish.millstone_de_novo_fns import filter_out_unpaired_reads
+from genome_finish.millstone_de_novo_fns import get_altalign_reads
 from genome_finish.millstone_de_novo_fns import get_piled_reads
 from genome_finish.millstone_de_novo_fns import get_clipped_reads_smart
 from genome_finish.millstone_de_novo_fns import get_avg_genome_coverage
@@ -226,6 +227,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
         overwrite=False):
 
     sv_indicant_keys = [
+            Dataset.TYPE.BWA_ALTALIGN,
             Dataset.TYPE.BWA_PILED,
             Dataset.TYPE.BWA_CLIPPED,
             Dataset.TYPE.BWA_SPLIT,
@@ -234,6 +236,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     ]
 
     sv_indicant_class_to_filename_suffix = {
+            Dataset.TYPE.BWA_ALTALIGN: 'altalign',
             Dataset.TYPE.BWA_PILED: 'piled',
             Dataset.TYPE.BWA_CLIPPED: 'clipped',
             Dataset.TYPE.BWA_SPLIT: 'split',
@@ -242,6 +245,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     }
 
     sv_indicant_class_to_generator = {
+            Dataset.TYPE.BWA_ALTALIGN: get_altalign_reads,
             Dataset.TYPE.BWA_PILED: get_piled_reads,
             Dataset.TYPE.BWA_CLIPPED: lambda i, o: get_clipped_reads_smart(
                     i, o,
@@ -252,6 +256,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     }
 
     default_sv_indicant_classes = {
+            Dataset.TYPE.BWA_ALTALIGN: True,
             Dataset.TYPE.BWA_PILED: False,
             Dataset.TYPE.BWA_CLIPPED: True,
             Dataset.TYPE.BWA_SPLIT: True,
@@ -287,10 +292,18 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     def _get_or_create_sv_dataset(key):
         dataset_query = sample_alignment.dataset_set.filter(type=key)
 
-        if dataset_query.exists():
+        if dataset_query.exists() and not overwrite or (
+                dataset_query.exists() and
+                key not in sv_indicant_class_to_generator):
             assert len(dataset_query) == 1
             return dataset_query[0]
-        else:
+        elif dataset_query.exists() and overwrite and (
+                key in sv_indicant_class_to_generator):
+            assert len(dataset_query) == 1
+            dataset_query[0].delete()
+
+        if overwrite and key in sv_indicant_class_to_generator or (
+                not dataset_query.exists()):
             dataset_path = '.'.join([
                     alignment_file_prefix,
                     sv_indicant_class_to_filename_suffix[key],
@@ -298,6 +311,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
                     ])
             generator = sv_indicant_class_to_generator[key]
             generator(alignment_bam, dataset_path)
+
             return add_dataset_to_entity(
                     sample_alignment,
                     key,
@@ -309,6 +323,16 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
         if default_sv_indicant_classes[key]:
             dataset = _get_or_create_sv_dataset(key)
             sv_bams_list.append(dataset.get_absolute_location())
+
+    # Make some bam tracks for read classes
+    jbrowse_classes = [Dataset.TYPE.BWA_DISCORDANT, Dataset.TYPE.BWA_ALTALIGN]
+    reference_genome = sample_alignment.alignment_group.reference_genome
+    for dataset_type in jbrowse_classes:
+        bam_path = sample_alignment.dataset_set.get(
+                type=dataset_type).get_absolute_location()
+        index_bam(bam_path)
+        add_bam_file_track(reference_genome,
+        sample_alignment, dataset_type)
 
     # Create compilation filename prefix
     suffixes = [sv_indicant_class_to_filename_suffix[k]
