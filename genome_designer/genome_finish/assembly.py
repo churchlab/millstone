@@ -538,13 +538,14 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
             sample_alignment.get_model_data_dir(),
             'de_novo_assembly_translocations.vcf')
 
-    if var_dict_list:
-
-        dataset_query = sample_alignment.dataset_set.filter(
+    # Delete dataset if it exists so the vcf parsing task for this
+    # sample alignment won't find a potentially outdated dataset
+    dataset_query = sample_alignment.dataset_set.filter(
                 type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
+    if dataset_query:
+        dataset_query.delete()
 
-        if dataset_query:
-            dataset_query.delete()
+    if var_dict_list:
 
         # Write variant dicts to vcf
         export_var_dict_list_as_vcf(var_dict_list, var_dict_vcf_path,
@@ -561,6 +562,7 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
     if not placeable_contigs:
         return
 
+    # Also delete any old contig insertion placement dataset
     dataset_query = sample_alignment.dataset_set.filter(
                 type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS)
 
