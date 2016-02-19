@@ -105,6 +105,7 @@ class Dataset(UniqueUidModelMixin):
         FASTQ1 = 'FASTQ Forward'
         FASTQ2 = 'FASTQ Reverse'
         BWA_ALIGN = 'BWA BAM'
+        BWA_ALTALIGN = 'BWA Alternate Alignment Reads'
         BWA_DISCORDANT = 'BWA BAM Discordant Paired Reads'
         BWA_SPLIT = 'BWA BAM Split Reads'
         BWA_UNMAPPED = 'BWA Unmapped Reads'
@@ -123,6 +124,7 @@ class Dataset(UniqueUidModelMixin):
         VCF_PINDEL_SNPEFF = 'Pindel SNPEff VCF'
         VCF_DE_NOVO_ASSEMBLED_CONTIGS = 'De Novo Assembled Contigs VCF'
         VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK = 'De Novo Assembly Graph Walk VCF'
+        VCF_COV_DETECT_DELETIONS = 'Deletions Detected by Coverage Evidence'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
         LUMPY_INSERT_METRICS_HISTOGRAM = 'Lumpy Insert Metrics Histogram'
         LUMPY_INSERT_METRICS_MEAN_STDEV = 'Lumpy Insert Metrics Mean Stdev'
@@ -142,6 +144,7 @@ class Dataset(UniqueUidModelMixin):
         TYPE.FASTQ1 : 'experimentsample_set',
         TYPE.FASTQ2 : 'experimentsample_set',
         TYPE.BWA_ALIGN : 'experimentsampletoalignment_set',
+        TYPE.BWA_ALTALIGN : 'experimentsampletoalignment_set',
         TYPE.BWA_DISCORDANT : 'experimentsampletoalignment_set',
         TYPE.BWA_SPLIT : 'experimentsampletoalignment_set',
         TYPE.BWA_CLIPPED : 'experimentsampletoalignment_set',
@@ -1236,6 +1239,8 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
         """
         QUEUED = 'QUEUED TO ASSEMBLE'
         ASSEMBLING = 'ASSEMBLING'
+        BUILDING_SEQUENCE_GRAPH = 'BUILDING SEQUENCE GRAPH'
+        ANALYZING_COVERAGE = 'ANALYZING COVERAGE'
         COMPLETED = 'COMPLETED'
         FAILED = 'FAILED'
 

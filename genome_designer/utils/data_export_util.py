@@ -119,7 +119,7 @@ PLACEHOLDER_SAMPLE_NAME = 'fake_sid'
 
 
 def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
-        sample_alignment):
+        sample_alignment, method_info_string):
     """Exports a list of variants specified by dictionaries as a vcf.
 
     Args:
@@ -180,9 +180,7 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
                 (alt_seq,),
                 1, # QUAL
                 [], # FILTER
-                {
-                    'METHOD': 'DE_NOVO_ASSEMBLY'
-                }, # INFO
+                {'METHOD': method_info_string}, # INFO
                 'GT:DP:RO:QR:AO:QA:GL', # FORMAT
                 sample_indexes, # sample_indexes
         )
@@ -194,6 +192,7 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
         vcf_writer.write_record(record)
 
     vcf_filename = out_vcf_fh.name
+    out_vcf_fh.close()
     update_filter_key_map(sample_alignment.alignment_group.reference_genome,
             vcf_filename)
 

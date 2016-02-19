@@ -9,10 +9,12 @@ from celery import group
 from celery import task
 from django.conf import settings
 
+from genome_finish.detect_deletion import cov_detect_deletion_make_vcf
 from genome_finish.graph_contig_placement import graph_contig_placement
 from genome_finish.millstone_de_novo_fns import add_paired_mates
 from genome_finish.millstone_de_novo_fns import filter_low_qual_read_pairs
 from genome_finish.millstone_de_novo_fns import filter_out_unpaired_reads
+from genome_finish.millstone_de_novo_fns import get_altalign_reads
 from genome_finish.millstone_de_novo_fns import get_piled_reads
 from genome_finish.millstone_de_novo_fns import get_clipped_reads_smart
 from genome_finish.millstone_de_novo_fns import get_avg_genome_coverage
@@ -101,12 +103,18 @@ def generate_contigs_multi_sample(sample_alignment_list):
     the passed list in the order that they are displayed in the UI
     """
     generate_contigs_task_list = []
+    cov_detect_deletion_task_list = []
     for sample_alignment in sorted(sample_alignment_list,
             key=lambda x: x.experiment_sample.label):
         generate_contigs_task_list.append(
                 generate_contigs.si(sample_alignment))
 
-    task_signature = group(generate_contigs_task_list)
+        cov_detect_deletion_task_list.append(
+                cov_detect_deletion_make_vcf.si(sample_alignment))
+
+    task_signature = group(cov_detect_deletion_task_list) | (
+            group(generate_contigs_task_list))
+
     for sample_alignment in sample_alignment_list:
 
         task_signature = task_signature | parse_variants_from_vcf.si(
@@ -226,6 +234,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
         overwrite=False):
 
     sv_indicant_keys = [
+            Dataset.TYPE.BWA_ALTALIGN,
             Dataset.TYPE.BWA_PILED,
             Dataset.TYPE.BWA_CLIPPED,
             Dataset.TYPE.BWA_SPLIT,
@@ -234,6 +243,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     ]
 
     sv_indicant_class_to_filename_suffix = {
+            Dataset.TYPE.BWA_ALTALIGN: 'altalign',
             Dataset.TYPE.BWA_PILED: 'piled',
             Dataset.TYPE.BWA_CLIPPED: 'clipped',
             Dataset.TYPE.BWA_SPLIT: 'split',
@@ -242,6 +252,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     }
 
     sv_indicant_class_to_generator = {
+            Dataset.TYPE.BWA_ALTALIGN: get_altalign_reads,
             Dataset.TYPE.BWA_PILED: get_piled_reads,
             Dataset.TYPE.BWA_CLIPPED: lambda i, o: get_clipped_reads_smart(
                     i, o,
@@ -252,6 +263,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     }
 
     default_sv_indicant_classes = {
+            Dataset.TYPE.BWA_ALTALIGN: False,
             Dataset.TYPE.BWA_PILED: False,
             Dataset.TYPE.BWA_CLIPPED: True,
             Dataset.TYPE.BWA_SPLIT: True,
@@ -287,10 +299,18 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     def _get_or_create_sv_dataset(key):
         dataset_query = sample_alignment.dataset_set.filter(type=key)
 
-        if dataset_query.exists():
+        if dataset_query.exists() and not overwrite or (
+                dataset_query.exists() and
+                key not in sv_indicant_class_to_generator):
             assert len(dataset_query) == 1
             return dataset_query[0]
-        else:
+        elif dataset_query.exists() and overwrite and (
+                key in sv_indicant_class_to_generator):
+            assert len(dataset_query) == 1
+            dataset_query[0].delete()
+
+        if overwrite and key in sv_indicant_class_to_generator or (
+                not dataset_query.exists()):
             dataset_path = '.'.join([
                     alignment_file_prefix,
                     sv_indicant_class_to_filename_suffix[key],
@@ -298,6 +318,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
                     ])
             generator = sv_indicant_class_to_generator[key]
             generator(alignment_bam, dataset_path)
+
             return add_dataset_to_entity(
                     sample_alignment,
                     key,
@@ -309,6 +330,16 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
         if default_sv_indicant_classes[key]:
             dataset = _get_or_create_sv_dataset(key)
             sv_bams_list.append(dataset.get_absolute_location())
+
+    # Make some bam tracks for read classes
+    jbrowse_classes = [Dataset.TYPE.BWA_DISCORDANT]
+    reference_genome = sample_alignment.alignment_group.reference_genome
+    for dataset_type in jbrowse_classes:
+        bam_path = sample_alignment.dataset_set.get(
+                type=dataset_type).get_absolute_location()
+        index_bam(bam_path)
+        add_bam_file_track(reference_genome,
+        sample_alignment, dataset_type)
 
     # Create compilation filename prefix
     suffixes = [sv_indicant_class_to_filename_suffix[k]
@@ -507,17 +538,21 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
             sample_alignment.get_model_data_dir(),
             'de_novo_assembly_translocations.vcf')
 
+    # Delete dataset if it exists so the vcf parsing task for this
+    # sample alignment won't find a potentially outdated dataset
+    dataset_query = sample_alignment.dataset_set.filter(
+                type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
+    if dataset_query:
+        dataset_query.delete()
+
     if var_dict_list:
 
-        dataset_query = sample_alignment.dataset_set.filter(
-                type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
-
-        if dataset_query:
-            dataset_query.delete()
-
         # Write variant dicts to vcf
-        export_var_dict_list_as_vcf(var_dict_list, var_dict_vcf_path,
-                contig.experiment_sample_to_alignment)
+        method = 'GRAPH_WALK'
+        export_var_dict_list_as_vcf(
+                var_dict_list, var_dict_vcf_path,
+                contig.experiment_sample_to_alignment,
+                method)
 
         # Make dataset for contigs vcf
         add_dataset_to_entity(
@@ -529,6 +564,7 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
     if not placeable_contigs:
         return
 
+    # Also delete any old contig insertion placement dataset
     dataset_query = sample_alignment.dataset_set.filter(
                 type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS)
 
@@ -549,26 +585,25 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
 @task
 def parse_variants_from_vcf(sample_alignment):
 
-    graph_walk_vcf_query = sample_alignment.dataset_set.filter(
-            type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
-    if graph_walk_vcf_query:
-        assert graph_walk_vcf_query.count() == 1
-        parse_vcf(graph_walk_vcf_query[0], sample_alignment.alignment_group)
+    vcf_datasets_to_parse = [
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+            Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
 
-    contig_vcf_query = sample_alignment.dataset_set.filter(
-            type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS)
-    if contig_vcf_query:
-        assert contig_vcf_query.count() == 1
-        contig_variant_list = parse_vcf(
-                contig_vcf_query[0], sample_alignment.alignment_group)
+    variant_list = []
+    for dataset_type in vcf_datasets_to_parse:
+        dataset_query = sample_alignment.dataset_set.filter(
+            type=dataset_type)
+        if dataset_query:
+            assert dataset_query.count() == 1
+            parsed_variants = parse_vcf(
+                    dataset_query[0],
+                    sample_alignment.alignment_group)
 
-    if not contig_vcf_query or not contig_variant_list:
-        return
+            variant_list.extend(parsed_variants)
 
-    # Add variant specific track data
-    for variant in contig_variant_list:
-        variant_bam_track_labels = []
-        variant_coverage_track_labels = []
+    # Add contig origin data to vccds of created variants
+    for variant in variant_list:
         vccd_list = variant.variantcallercommondata_set.all()
 
         for vccd in vccd_list:
@@ -579,14 +614,4 @@ def parse_variants_from_vcf(sample_alignment):
                 contig.variant_caller_common_data = vccd
                 contig.save()
 
-        # Remove potential duplicates
-        variant_bam_track_labels = list(set(
-                variant_bam_track_labels))
-        variant_coverage_track_labels = list(set(
-                variant_coverage_track_labels))
-
-        variant.data['variant_specific_tracks'] = {
-            'alignment': variant_bam_track_labels,
-            'coverage': variant_coverage_track_labels
-        }
         variant.save()

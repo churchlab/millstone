@@ -15,6 +15,7 @@ from genome_finish.insertion_placement_read_trkg import simple_align_with_bwa_me
 from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from main.models import Contig
 from main.models import Dataset
+from main.models import ExperimentSampleToAlignment
 from main.models import ReferenceGenome
 
 MAX_DELETION = 100000
@@ -29,6 +30,12 @@ InsertionVertices = namedtuple('InsertionVertices',
 
 def graph_contig_placement(contig_list, skip_extracted_read_alignment,
         use_alignment_reads=True):
+
+    sample_alignment = contig_list[0].experiment_sample_to_alignment
+    sample_alignment.data['assembly_status'] = (
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.BUILDING_SEQUENCE_GRAPH
+            )
+    sample_alignment.save()
 
     if not skip_extracted_read_alignment:
         # Make a bam track on the reference for each contig that shows only the
