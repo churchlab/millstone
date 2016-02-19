@@ -1239,6 +1239,8 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin):
         """
         QUEUED = 'QUEUED TO ASSEMBLE'
         ASSEMBLING = 'ASSEMBLING'
+        BUILDING_SEQUENCE_GRAPH = 'BUILDING SEQUENCE GRAPH'
+        ANALYZING_COVERAGE = 'ANALYZING COVERAGE'
         COMPLETED = 'COMPLETED'
         FAILED = 'FAILED'
 

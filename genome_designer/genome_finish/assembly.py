@@ -548,9 +548,11 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
     if var_dict_list:
 
         # Write variant dicts to vcf
-        export_var_dict_list_as_vcf(var_dict_list, var_dict_vcf_path,
+        method = 'GRAPH_WALK'
+        export_var_dict_list_as_vcf(
+                var_dict_list, var_dict_vcf_path,
                 contig.experiment_sample_to_alignment,
-                caller_string="GRAPH_WALK")
+                method)
 
         # Make dataset for contigs vcf
         add_dataset_to_entity(

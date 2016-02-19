@@ -8,11 +8,12 @@ import pysam
 from genome_finish.graph_contig_placement import get_fasta
 from genome_finish.millstone_de_novo_fns import get_altalign_reads
 from main.models import Dataset
+from main.models import ExperimentSampleToAlignment
 from utils.bam_utils import index_bam
 from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
 
-CALLER_STRING = 'COV_DETECT_DELETION'
+METHOD = 'COVERAGE'
 
 
 @task
@@ -23,6 +24,9 @@ def cov_detect_deletion_make_vcf(sample_alignment):
     Args:
         sample_alignment: ExperimentSampleToAlignment instance
     """
+    sample_alignment.data['assembly_status'] = (
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.ANALYZING_COVERAGE)
+    sample_alignment.save()
 
     print "Generating coverage data\n"
     chrom_regions = get_deleted_regions(sample_alignment)
@@ -44,7 +48,7 @@ def cov_detect_deletion_make_vcf(sample_alignment):
 
         # Write variant dicts to vcf
         export_var_dict_list_as_vcf(var_dict_list, vcf_path,
-                sample_alignment, caller_string=CALLER_STRING)
+                sample_alignment, METHOD)
 
         # Make dataset for contigs vcf
         new_dataset = add_dataset_to_entity(
