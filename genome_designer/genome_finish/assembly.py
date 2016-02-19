@@ -573,26 +573,24 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
 @task
 def parse_variants_from_vcf(sample_alignment):
 
-    graph_walk_vcf_query = sample_alignment.dataset_set.filter(
+    vcf_datasets_to_parse = [
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK]
+
+    variant_list = []
+    for dataset_type in vcf_datasets_to_parse:
+        dataset_query = sample_alignment.dataset_set.filter(
             type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
-    if graph_walk_vcf_query:
-        assert graph_walk_vcf_query.count() == 1
-        parse_vcf(graph_walk_vcf_query[0], sample_alignment.alignment_group)
+        if dataset_query:
+            assert dataset_query.count() == 1
+            parsed_variants = parse_vcf(
+                    dataset_query[0],
+                    sample_alignment.alignment_group)
 
-    contig_vcf_query = sample_alignment.dataset_set.filter(
-            type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS)
-    if contig_vcf_query:
-        assert contig_vcf_query.count() == 1
-        contig_variant_list = parse_vcf(
-                contig_vcf_query[0], sample_alignment.alignment_group)
+            variant_list.extend(parsed_variants)
 
-    if not contig_vcf_query or not contig_variant_list:
-        return
-
-    # Add variant specific track data
-    for variant in contig_variant_list:
-        variant_bam_track_labels = []
-        variant_coverage_track_labels = []
+    # Add contig origin data to vccds of created variants
+    for variant in variant_list:
         vccd_list = variant.variantcallercommondata_set.all()
 
         for vccd in vccd_list:
@@ -603,14 +601,4 @@ def parse_variants_from_vcf(sample_alignment):
                 contig.variant_caller_common_data = vccd
                 contig.save()
 
-        # Remove potential duplicates
-        variant_bam_track_labels = list(set(
-                variant_bam_track_labels))
-        variant_coverage_track_labels = list(set(
-                variant_coverage_track_labels))
-
-        variant.data['variant_specific_tracks'] = {
-            'alignment': variant_bam_track_labels,
-            'coverage': variant_coverage_track_labels
-        }
         variant.save()
