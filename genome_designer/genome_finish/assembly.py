@@ -256,7 +256,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     }
 
     default_sv_indicant_classes = {
-            Dataset.TYPE.BWA_ALTALIGN: True,
+            Dataset.TYPE.BWA_ALTALIGN: False,
             Dataset.TYPE.BWA_PILED: False,
             Dataset.TYPE.BWA_CLIPPED: True,
             Dataset.TYPE.BWA_SPLIT: True,
@@ -325,7 +325,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
             sv_bams_list.append(dataset.get_absolute_location())
 
     # Make some bam tracks for read classes
-    jbrowse_classes = [Dataset.TYPE.BWA_DISCORDANT, Dataset.TYPE.BWA_ALTALIGN]
+    jbrowse_classes = [Dataset.TYPE.BWA_DISCORDANT]
     reference_genome = sample_alignment.alignment_group.reference_genome
     for dataset_type in jbrowse_classes:
         bam_path = sample_alignment.dataset_set.get(
