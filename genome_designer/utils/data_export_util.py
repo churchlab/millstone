@@ -192,6 +192,7 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
         vcf_writer.write_record(record)
 
     vcf_filename = out_vcf_fh.name
+    out_vcf_fh.close()
     update_filter_key_map(sample_alignment.alignment_group.reference_genome,
             vcf_filename)
 
