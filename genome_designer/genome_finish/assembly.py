@@ -9,6 +9,7 @@ from celery import group
 from celery import task
 from django.conf import settings
 
+from genome_finish.detect_deletion import cov_detect_deletion_make_vcf
 from genome_finish.graph_contig_placement import graph_contig_placement
 from genome_finish.millstone_de_novo_fns import add_paired_mates
 from genome_finish.millstone_de_novo_fns import filter_low_qual_read_pairs
@@ -102,12 +103,18 @@ def generate_contigs_multi_sample(sample_alignment_list):
     the passed list in the order that they are displayed in the UI
     """
     generate_contigs_task_list = []
+    cov_detect_deletion_task_list = []
     for sample_alignment in sorted(sample_alignment_list,
             key=lambda x: x.experiment_sample.label):
         generate_contigs_task_list.append(
                 generate_contigs.si(sample_alignment))
 
-    task_signature = group(generate_contigs_task_list)
+        cov_detect_deletion_task_list.append(
+                cov_detect_deletion_make_vcf.si(sample_alignment))
+
+    task_signature = group(cov_detect_deletion_task_list) | (
+            group(generate_contigs_task_list))
+
     for sample_alignment in sample_alignment_list:
 
         task_signature = task_signature | parse_variants_from_vcf.si(
@@ -541,7 +548,8 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
 
         # Write variant dicts to vcf
         export_var_dict_list_as_vcf(var_dict_list, var_dict_vcf_path,
-                contig.experiment_sample_to_alignment)
+                contig.experiment_sample_to_alignment,
+                caller_string="GRAPH_WALK")
 
         # Make dataset for contigs vcf
         add_dataset_to_entity(
@@ -575,12 +583,13 @@ def parse_variants_from_vcf(sample_alignment):
 
     vcf_datasets_to_parse = [
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK]
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+            Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
 
     variant_list = []
     for dataset_type in vcf_datasets_to_parse:
         dataset_query = sample_alignment.dataset_set.filter(
-            type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
+            type=dataset_type)
         if dataset_query:
             assert dataset_query.count() == 1
             parsed_variants = parse_vcf(

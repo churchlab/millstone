@@ -119,7 +119,7 @@ PLACEHOLDER_SAMPLE_NAME = 'fake_sid'
 
 
 def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
-        sample_alignment):
+        sample_alignment, caller_string='VARIANT_DICTIONARY_EXPORT'):
     """Exports a list of variants specified by dictionaries as a vcf.
 
     Args:
@@ -154,6 +154,10 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
         'Description="Type of approach used to detect SV">\n'
     modified_header_lines.append(method_header_line)
 
+    caller_header_line = '##INFO=<ID=CALLER,Number=1,Type=String,' + \
+        'Description="Specific SV discovery protocol">\n'
+    modified_header_lines.append(caller_header_line)
+
     vcf_template._header_lines.append(method_header_line)
 
     # Now update the header lines in vcf_reader.infos map as well.
@@ -181,7 +185,8 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
                 1, # QUAL
                 [], # FILTER
                 {
-                    'METHOD': 'DE_NOVO_ASSEMBLY'
+                    'METHOD': 'DE_NOVO_ASSEMBLY',
+                    'CALLER': caller_string
                 }, # INFO
                 'GT:DP:RO:QR:AO:QA:GL', # FORMAT
                 sample_indexes, # sample_indexes

@@ -1,18 +1,89 @@
 import os
 
+from Bio import SeqIO
+from celery import task
 import numpy as np
 import pysam
 
+from genome_finish.graph_contig_placement import get_fasta
 from genome_finish.millstone_de_novo_fns import get_altalign_reads
 from main.models import Dataset
 from utils.bam_utils import index_bam
+from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
+
+CALLER_STRING = 'COV_DETECT_DELETION'
+
+
+@task
+def cov_detect_deletion_make_vcf(sample_alignment):
+    """Uses coverage data to call large deletions and
+    creates a VCF_COV_DETECT_DELETIONS dataset for the sample alignment
+
+    Args:
+        sample_alignment: ExperimentSampleToAlignment instance
+    """
+
+    print "Generating coverage data\n"
+    chrom_regions = get_deleted_regions(sample_alignment)
+    var_dict_list = make_var_dict_list(
+            chrom_regions,
+            get_fasta(sample_alignment.alignment_group.reference_genome))
+
+    if var_dict_list:
+
+        dataset_query = sample_alignment.dataset_set.filter(
+                type=Dataset.TYPE.VCF_COV_DETECT_DELETIONS)
+
+        if dataset_query:
+            dataset_query.delete()
+
+        vcf_path = os.path.join(
+            sample_alignment.get_model_data_dir(),
+            'cov_detect_deletion.vcf')
+
+        # Write variant dicts to vcf
+        export_var_dict_list_as_vcf(var_dict_list, vcf_path,
+                sample_alignment, caller_string=CALLER_STRING)
+
+        # Make dataset for contigs vcf
+        new_dataset = add_dataset_to_entity(
+                sample_alignment,
+                Dataset.TYPE.VCF_COV_DETECT_DELETIONS,
+                Dataset.TYPE.VCF_COV_DETECT_DELETIONS,
+                vcf_path)
+
+        new_dataset.save()
+
+
+def make_var_dict_list(chrom_regions, ref_fasta):
+
+    with open(ref_fasta, 'r') as fh:
+        record_dict = SeqIO.to_dict(SeqIO.parse(fh, 'fasta'))
+
+    var_dict_list = []
+    for chrom, regions in chrom_regions.items():
+        if not regions:
+            continue
+
+        record = record_dict[chrom]
+        for region in regions:
+            var_dict = {
+                'chromosome': chrom,
+                'pos': region[0],
+                'ref_seq': str(record.seq[region[0]:region[1]]),
+                'alt_seq': '',
+            }
+            var_dict_list.append(var_dict)
+
+    return var_dict_list
 
 
 def get_deleted_regions(sample_alignment, cov_cutoff=5):
 
     chrom_to_cov_list = per_base_cov_stats_opt(sample_alignment)
 
+    chrom_regions = {}
     for chrom, cov_dict in chrom_to_cov_list.items():
         depths = cov_dict['depths']
         altaligns = cov_dict['altaligns']
@@ -24,7 +95,9 @@ def get_deleted_regions(sample_alignment, cov_cutoff=5):
         smoothed_regions = smoothed_deletions(
                 unique, low_cov_regions)
 
-        return smoothed_regions
+        chrom_regions[chrom] = smoothed_regions
+
+    return chrom_regions
 
 
 def get_low_cov_regions(cov_arr, min_cov):
@@ -32,7 +105,7 @@ def get_low_cov_regions(cov_arr, min_cov):
     split_indices = list(split_indices)
 
     if cov_arr[0] < min_cov:
-        split_indices.prepend(0)
+        split_indices.insert(0, 0)
     if cov_arr[-1] < min_cov:
         split_indices.append(len(cov_arr))
 
@@ -152,6 +225,7 @@ def per_base_cov_stats_opt(sample_alignment):
         assert altalign_dataset_query.count() == 1
         altalign_dataset = altalign_dataset_query[0]
     else:
+        print "Writing bam dataset of alternative alignment reads\n"
         altalign_dataset = make_altalign_dataset(sample_alignment)
 
     altalign_bam_path = altalign_dataset.get_absolute_location()

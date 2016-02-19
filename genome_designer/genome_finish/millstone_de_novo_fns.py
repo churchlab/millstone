@@ -425,7 +425,8 @@ def run_velvet(reads, output_dir, opt_dict=None):
     subprocess.check_call(cmd, shell=True, executable=BASH_PATH)
 
 
-def create_de_novo_variants_set(alignment_group, variant_set_label):
+def create_de_novo_variants_set(alignment_group, variant_set_label,
+        callers_to_not_include=['COV_DETECT_DELETION']):
 
     ref_genome = alignment_group.reference_genome
 
@@ -434,7 +435,9 @@ def create_de_novo_variants_set(alignment_group, variant_set_label):
     for variant in Variant.objects.filter(
             reference_genome=ref_genome):
         for vccd in variant.variantcallercommondata_set.all():
-            if vccd.data.get('INFO_METHOD', None) == 'DE_NOVO_ASSEMBLY':
+            if vccd.data.get('INFO_METHOD', None) == 'DE_NOVO_ASSEMBLY' and (
+                    vccd.data.get('INFO_CALLER', None) not in (
+                            callers_to_not_include)):
                 de_novo_variants.append(variant)
                 continue
 

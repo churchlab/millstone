@@ -124,6 +124,7 @@ class Dataset(UniqueUidModelMixin):
         VCF_PINDEL_SNPEFF = 'Pindel SNPEff VCF'
         VCF_DE_NOVO_ASSEMBLED_CONTIGS = 'De Novo Assembled Contigs VCF'
         VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK = 'De Novo Assembly Graph Walk VCF'
+        VCF_COV_DETECT_DELETIONS = 'Deletions Detected by Coverage Evidence'
         BED_CALLABLE_LOCI = 'Flagged Regions BED'
         LUMPY_INSERT_METRICS_HISTOGRAM = 'Lumpy Insert Metrics Histogram'
         LUMPY_INSERT_METRICS_MEAN_STDEV = 'Lumpy Insert Metrics Mean Stdev'
