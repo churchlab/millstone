@@ -11,6 +11,7 @@ from main.models import Dataset
 from main.models import ReferenceGenome
 from utils.import_util import add_dataset_to_entity
 from utils import generate_safe_filename_prefix_from_label
+from utils import remove_whitespace
 
 DATASET_TO_SEQIO_FORMAT = {
     Dataset.TYPE.REFERENCE_GENOME_GENBANK: 'genbank',
@@ -64,7 +65,9 @@ def combine_list_allformats(
             for record in SeqIO.parse(
                     input_fh, DATASET_TO_SEQIO_FORMAT[dataset.type]):
                 rg_seqrecord_list.append((rg, record))
-                seqrecord_ids.append('_'.join([rg.label[:7], record.id[:8]]))
+                seqrecord_ids.append('_'.join([
+                        remove_whitespace(rg.label)[:7],
+                        remove_whitespace(record.id)[:8]]))
                 seqrecord_descriptions.append(record.description)
 
     # Create a new ReferenceGenome.
@@ -84,8 +87,10 @@ def combine_list_allformats(
         if seqrecord_ids.count(seqrecord_id) == 1:
             unique_seqrecord_id = seqrecord_id
         else:
-            unique_seqrecord_id = '_'.join(
-                [str(i), rg.label[:label_len], seqrecord.id[:label_len]])
+            unique_seqrecord_id = '_'.join([
+                str(i),
+                remove_whitespace(rg.label)[:label_len],
+                remove_whitespace(seqrecord.id)[:label_len]])
 
         seqrecord.seq.alphabet = ambiguous_dna
         seqrecord.name = unique_seqrecord_id

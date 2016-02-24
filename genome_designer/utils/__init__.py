@@ -92,6 +92,12 @@ def merge_nested_dictionaries(d1, d2, allow_update=True):
     return merge_values(d1, d2)
 
 
+def remove_whitespace(a_string):
+    """Returns string with whitespace removed and stripped.
+    """
+    return re.sub('\W', '_', a_string.strip())
+
+
 def uppercase_underscore(a_string):
     """
     Internally some strings that are Title Cased With Spaces should be
