@@ -611,6 +611,32 @@ class TestUploadReferenceGenome(TestCase):
         self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
         self.assertFalse(json.loads(response.content).get('error', False))
 
+    def test_upload_non_ascii_name(self):
+        """For now, it's easier to prevent uploading ascii in general.
+        """
+        project = self.common_entities['project']
+        ref_genome_label = u'C321.\u2206A'
+        request = HttpRequest()
+        request.POST = {
+            'projectUid': project.uid,
+            'refGenomeLabel': ref_genome_label,
+            'importFileFormat': 'genbank'
+        }
+        request.method = 'POST'
+        request.user = self.common_entities['user']
+        authenticate(username=TEST_USERNAME, password=TEST_PASSWORD)
+        self.assertTrue(request.user.is_authenticated())
+
+        # Using same as above because I'm lazy to find another file.
+        request.FILES['refGenomeFile'] = UploadedFile(
+                file=open(LONG_ID_GENBANK),
+                name='dirty_genbank.gb')
+
+        response = create_ref_genome_from_browser_upload(request)
+        self.assertEqual(STATUS_CODE__SUCCESS, response.status_code)
+        error = json.loads(response.content).get('error')
+        self.assertTrue('non-ascii' in error)
+
     def test_run_alignment_with_spaces_in_genbank_filename(self):
         project = self.common_entities['project']
         ref_genome_label = 'dirty_upload'

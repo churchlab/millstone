@@ -90,6 +90,19 @@ def project_delete(request, project_uid):
             content_type='application/json')
 
 
+def _is_ref_genome_label_valid(label):
+    """Returns tuple (Boolean, str) indicating whether ReferenceGenome label
+    is valid.
+    """
+    # Check if characters are ascii.
+    if not all(ord(c) < 128 for c in label):
+        return (False,
+                'Sorry, non-ascii characters in reference genome ' +
+                'names are not supported.')
+
+    return (True, '')
+
+
 @login_required
 @require_POST
 def create_ref_genome_from_browser_upload(request):
@@ -97,6 +110,14 @@ def create_ref_genome_from_browser_upload(request):
     """
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=request.POST['projectUid'])
+
+    (is_label_valid, error) = _is_ref_genome_label_valid(
+            request.POST['refGenomeLabel'])
+    if not is_label_valid:
+        result = {
+            'error': error
+        }
+        return HttpResponse(json.dumps(result), content_type='application/json')
 
     uploaded_file = request.FILES['refGenomeFile']
 
@@ -137,6 +158,14 @@ def create_ref_genome_from_server_location(request):
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=request.POST['projectUid'])
 
+    (is_label_valid, error) = _is_ref_genome_label_valid(
+            request.POST['refGenomeLabel'])
+    if not is_label_valid:
+        result = {
+            'error': error
+        }
+        return HttpResponse(json.dumps(result), content_type='application/json')
+
     error_string = ''
     try:
         import_reference_genome_from_local_file(
@@ -161,6 +190,14 @@ def create_ref_genome_from_ncbi(request):
     """
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=request.POST['projectUid'])
+
+    (is_label_valid, error) = _is_ref_genome_label_valid(
+            request.POST['refGenomeLabel'])
+    if not is_label_valid:
+        result = {
+            'error': error
+        }
+        return HttpResponse(json.dumps(result), content_type='application/json')
 
     error_string = ''
     try:
