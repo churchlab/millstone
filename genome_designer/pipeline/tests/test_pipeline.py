@@ -216,3 +216,71 @@ class TestAlignmentPipeline(TransactionTestCase):
         alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
         self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
                 alignment_group.status)
+
+    def test_run_pipeline__multiple_chromosomes(self):
+        """Makes sure variant calling works when there are multiple chromosomes
+        on a single reference genome.
+        """
+        ref_genome = import_reference_genome_from_local_file(
+                self.project, 'concat_mg1655_partials',
+                FullVCFTestSet.TEST_CONCAT_GENBANK, 'genbank')
+
+
+        sample_obj = ExperimentSample.objects.create(
+                project=self.project,
+                label='Sample 0')
+
+        # Add raw reads to each sample.
+        copy_and_add_dataset_source(sample_obj,
+                Dataset.TYPE.FASTQ1,
+                Dataset.TYPE.FASTQ1,
+                FullVCFTestSet.FASTQ1[0])
+        copy_and_add_dataset_source(sample_obj,
+                Dataset.TYPE.FASTQ2,
+                Dataset.TYPE.FASTQ2,
+                FullVCFTestSet.FASTQ2[0])
+
+        sample_list = [sample_obj]
+
+        result = run_pipeline(
+                'name_placeholder', ref_genome, sample_list)
+        alignment_group = result[0]
+        alignment_async_result = result[1]
+        variant_calling_async_result = result[2]
+        alignment_async_result.get()
+        variant_calling_async_result.get()
+        alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
+        self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
+                alignment_group.status)
+
+        # Validate that all variants calld.
+        # TODO: Add Chromosome checking.
+
+        v_515 = Variant.objects.get(
+                reference_genome=alignment_group.reference_genome, position=515)
+        v_515_va = v_515.variantalternate_set.all()[0]
+        self.assertEqual('ygiB', v_515_va.data['INFO_EFF_GENE'])
+
+        v_205 = Variant.objects.get(
+                reference_genome=alignment_group.reference_genome, position=205)
+        v_205_va = v_205.variantalternate_set.all()[0]
+        self.assertEqual('tolC', v_205_va.data['INFO_EFF_GENE'])
+
+    # NOTE: This faills. Fix.
+    # def test_run_pipeline__bad_alignment(self):
+    #     """End-to-end test of pipeline. Fails if any errors.
+    #     """
+    #     ref_genome = import_reference_genome_from_local_file(
+    #             self.project, 'concat_mg1655_partials',
+    #             FullVCFTestSet.TEST_CONCAT_GENBANK, 'genbank')
+    #     sample_list = [self.experiment_sample]
+    #     result = run_pipeline(
+    #             'name_placeholder', ref_genome, sample_list)
+    #     alignment_group = result[0]
+    #     alignment_async_result = result[1]
+    #     variant_calling_async_result = result[2]
+    #     alignment_async_result.get()
+    #     variant_calling_async_result.get()
+    #     alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
+    #     self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
+    #             alignment_group.status)

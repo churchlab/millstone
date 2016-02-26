@@ -40,6 +40,7 @@ class FullVCFTestSet:
     TEST_DIR = os.path.join(settings.PWD, 'test_data', 'full_vcf_test_set')
     NUM_SAMPLES = 3
     TEST_GENBANK = os.path.join(TEST_DIR, 'mg1655_tolC_through_zupT.gb')
+    TEST_CONCAT_GENBANK = os.path.join(TEST_DIR, 'concat_mg1655_partials.gb')
     FASTQ1 = [os.path.join(TEST_DIR, 'sample%d.simLibrary.1.fq' % i)
              for i in range(NUM_SAMPLES)]
     FASTQ2 = [os.path.join(TEST_DIR, 'sample%d.simLibrary.2.fq' % i)

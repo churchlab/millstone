@@ -143,7 +143,7 @@ def find_variants_with_tool(alignment_group, variant_params_dict):
     # then update the vcf_output_filename and vcf_dataset_type.
     if (tool_name == TOOL_FREEBAYES and
             alignment_group.reference_genome.is_annotated()):
-        vcf_output_filename = run_snpeff(alignment_group, Dataset.TYPE.BWA_ALIGN)
+        vcf_output_filename = run_snpeff(alignment_group, TOOL_FREEBAYES)
         vcf_dataset_type = Dataset.TYPE.VCF_FREEBAYES_SNPEFF
         add_vcf_dataset(alignment_group, vcf_dataset_type, vcf_output_filename)
 

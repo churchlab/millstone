@@ -378,7 +378,9 @@ SNPEFF_UD_INTERVAL_LENGTH = 50
 
 # Run freebayes in parallel across multiple smaller regions, then merge the
 # results.
-FREEBAYES_PARALLEL = True
+# FREEBAYES_PARALLEL = True
+# Turn back on when Issue #646 is fixed.
+FREEBAYES_PARALLEL = False
 
 # Size of regions to split into when using Freebayes in
 # parallel concurrent mode. If your genome is smaller than this number

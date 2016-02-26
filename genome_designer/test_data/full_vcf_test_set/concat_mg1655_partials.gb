@@ -1,0 +1,277 @@
+LOCUS       0_mg1655_NC_000         1727 bp    DNA              UNK 01-JAN-1980
+DEFINITION  Escherichia coli str. K-12 substr. MG1655, complete genome. from
+            Reference Genome: mg1655_partial_tolC
+ACCESSION   0_mg1655_NC_000
+VERSION     0_mg1655_NC_000
+KEYWORDS    .
+SOURCE      
+  ORGANISM  . .
+            .
+FEATURES             Location/Qualifiers
+     CDS             149..1630
+                     /function="putative membrane; Cell division"
+                     /locus_tag="b3035"
+                     /GO_component="GO:0009279 - cell outer membrane; GO:0009274
+                     - peptidoglycan-based cell wall"
+                     /codon_start=1
+                     /gene_synonym="colE1-i; ECK3026; JW5503; mtcB; mukA;
+                     refI;toc; weeA"
+                     /transl_table=11
+                     /note="outer membrane channel; specific tolerance to
+                     colicin E1; segregation of daughter chromosomes"
+                     /db_xref="GI:90111528"
+                     /db_xref="ASAP:ABE-0009965"
+                     /db_xref="UniProtKB/Swiss-Prot:P02930"
+                     /db_xref="EcoGene:EG11009"
+                     /db_xref="GeneID:947521"
+                     /label="tolC CDS"
+                     /translation="MKKLLPILIGLSLSGFSSLSQAENLMQVYQQARLSNPELRKSAAD
+                     RDAAFEKINEARSPLLPQLGLGADYTYSNGYRDANGINSNATSASLQLTQSIFDMSKWR
+                     ALTLQEKAAGIQDVTYQTDQQTLILNTATAYFNVLNAIDVLSYTQAQKEAIYRQLDQTT
+                     QRFNVGLVAITDVQNARAQYDTVLANEVTARNNLDNAVEQLRQITGNYYPELAALNVEN
+                     FKTDKPQPVNALLKEAEKRNLSLLQARLSQDLAREQIRQAQDGHLPTLDLTASTGISDT
+                     SYSGSKTRGAAGTQYDDSNMGQNKVGLSFSLPIYQGGMVNSQVKQAQYNFVGASEQLES
+                     AHRSVVQTVRSSFNNINASISSINAYKQAVVSAQSSLDAMEAGYSVGTRTIVDVLDATT
+                     TLYNAKQELANARYNYLINQLNIKSALGTLNEQDLLALNNALSKPVSTNPENVAPQTPE
+                     QNAIADGYAPDSPAPVVQQTSARTTTSNGHNPFRN"
+                     /gene="tolC"
+                     /product="transport channel"
+                     /protein_id="NP_417507.2"
+     gene            149..1630
+                     /db_xref="EcoGene:EG11009"
+                     /db_xref="GeneID:947521"
+                     /locus_tag="b3035"
+                     /gene="tolC"
+                     /gene_synonym="colE1-i; ECK3026; JW5503; mtcB; mukA;
+                     refI;toc; weeA"
+                     /label="tolC gene"
+     mat_peptide     215..1627
+                     /product="transport channel"
+                     /locus_tag="b3035"
+                     /gene_synonym="colE1-i; ECK3026; JW5503; mtcB; mukA;
+                     refI;toc; weeA"
+                     /experiment="N-terminus verified by Edman degradation: PMID
+                     9298646,9629924"
+                     /label="tolC peptide"
+                     /gene="tolC"
+ORIGIN
+        1 gccgtttgag cagtcatgtg ttaaattgag gcacattaac gccctatggc acgtaacgcc
+       61 aaccttttgc ggtagcggct tctgctagaa tccgcaataa ttttacagtt tgatcgcgct
+      121 aaatactgct tcaccacaag gaatgcaaat gaagaaattg ctccccattc ttatcggcct
+      181 gagcctttct gggttcagtt cgttgagcca ggccgagaac ctgatgcaag tttatcagca
+      241 agcacgcctt agtaacccgg aattgcgtaa gtctgccgcc gatcgtgatg ctgcctttga
+      301 aaaaattaat gaagcgcgca gtccattact gccacagcta ggtttaggtg cagattacac
+      361 ctatagcaac ggctaccgcg acgcgaacgg catcaactct aacgcgacca gtgcgtcctt
+      421 gcagttaact caatccattt ttgatatgtc gaaatggcgt gcgttaacgc tgcaggaaaa
+      481 agcagcaggg attcaggacg tcacgtatca gaccgatcag caaaccttga tcctcaacac
+      541 cgcgaccgct tatttcaacg tgttgaatgc tattgacgtt ctttcctata cacaggcaca
+      601 aaaagaagcg atctaccgtc aattagatca aaccacccaa cgttttaacg tgggcctggt
+      661 agcgatcacc gacgtgcaga acgcccgcgc acagtacgat accgtgctgg cgaacgaagt
+      721 gaccgcacgt aataaccttg ataacgcggt agagcagctg cgccagatca ccggtaacta
+      781 ctatccggaa ctggctgcgc tgaatgtcga aaactttaaa accgacaaac cacagccggt
+      841 taacgcgctg ctgaaagaag ccgaaaaacg caacctgtcg ctgttacagg cacgcttgag
+      901 ccaggacctg gcgcgcgagc aaattcgcca ggcgcaggat ggtcacttac cgactctgga
+      961 tttaacggct tctaccggga tttctgacac ctcttatagc ggttcgaaaa cccgtggtgc
+     1021 cgctggtacc cagtatgacg atagcaatat gggccagaac aaagttggcc tgagcttctc
+     1081 gctgccgatt tatcagggcg gaatggttaa ctcgcaggtg aaacaggcac agtacaactt
+     1141 tgtcggtgcc agcgagcaac tggaaagtgc ccatcgtagc gtcgtgcaga ccgtgcgttc
+     1201 ctccttcaac aacattaatg catctatcag tagcattaac gcctacaaac aagccgtagt
+     1261 ttccgctcaa agctcattag acgcgatgga agcgggctac tcggtcggta cgcgtaccat
+     1321 tgttgatgtg ttggatgcga ccaccacgtt gtacaacgcc aagcaagagc tggcgaatgc
+     1381 gcgttataac tacctgatta atcagctgaa tattaagtca gctctgggta cgttgaacga
+     1441 gcaggatctg ctggcactga acaatgcgct gagcaaaccg gtttccacta atccggaaaa
+     1501 cgttgcaccg caaacgccgg aacagaatgc tattgctgat ggttatgcgc ctgatagccc
+     1561 ggcaccagtc gttcagcaaa catccgcacg cactaccacc agtaacggtc ataacccttt
+     1621 ccgtaactga tgacgacgac ggggcttcgg ccccgtctga acgtaaggca acgtaaagat
+     1681 acgggttatc tgccgcattc ttcccccttc tcgcttcaat ttcgacc
+//
+LOCUS       1_mg1655_NC_000         3925 bp    DNA              UNK 01-JAN-1980
+DEFINITION  Escherichia coli str. K-12 substr. MG1655, complete genome. from
+            Reference Genome: mg1655_partial_ygiB_to_zupT
+ACCESSION   1_mg1655_NC_000
+VERSION     1_mg1655_NC_000
+KEYWORDS    .
+SOURCE      
+  ORGANISM  . .
+            .
+FEATURES             Location/Qualifiers
+     gene            51..722
+                     /db_xref="EcoGene:EG11164"
+                     /db_xref="GeneID:945086"
+                     /locus_tag="b3037"
+                     /gene="ygiB"
+                     /gene_synonym="ECK3028; JW5927"
+                     /label="ygiB gene"
+     CDS             51..722
+                     /product="conserved protein, UPF0441 family"
+                     /codon_start=1
+                     /locus_tag="b3037"
+                     /gene_synonym="ECK3028; JW5927"
+                     /db_xref="GI:145698308"
+                     /db_xref="ASAP:ABE-0009969"
+                     /db_xref="UniProtKB/Swiss-Prot:P0ADT2"
+                     /db_xref="EcoGene:EG11164"
+                     /db_xref="GeneID:945086"
+                     /transl_table=11
+                     /label="ygiB CDS"
+                     /translation="MKRTKSIRHASFRKNWSARHLTPVALAVATVFMLAGCEKSDETVS
+                     LYQNADDCSAANPGKSAECTTAYNNALKEAERTAPKYATREDCVAEFGEGQCQQAPAQA
+                     GMAPENQAQAQQSSGSFWMPLMAGYMMGRLMGGGAGFAQQPLFSSKNPASPAYGKYTDA
+                     TGKNYGAAQPGRTMTVPKTAMAPKPATTTTVTRGGFGESVAKQSTMQRSATGTSSRSMG
+                     G"
+                     /gene="ygiB"
+                     /protein_id="NP_417509.3"
+     gene            728..1888
+                     /db_xref="EcoGene:EG11165"
+                     /db_xref="GeneID:947249"
+                     /locus_tag="b3038"
+                     /gene="ygiC"
+                     /gene_synonym="ECK3029; JW3006"
+                     /label="ygiC gene"
+     CDS             728..1888
+                     /function="putative enzyme; Not classified"
+                     /locus_tag="b3038"
+                     /codon_start=1
+                     /gene_synonym="ECK3029; JW3006"
+                     /transl_table=11
+                     /note="putative synthetase/amidase"
+                     /db_xref="GI:16130934"
+                     /db_xref="ASAP:ABE-0009971"
+                     /db_xref="UniProtKB/Swiss-Prot:P0ADT5"
+                     /db_xref="EcoGene:EG11165"
+                     /db_xref="GeneID:947249"
+                     /label="ygiC CDS"
+                     /translation="MERVSITERPDWREKAHEYGFNFHTMYGEPYWCEDAYYKLTLAQV
+                     EKLEEVTAELHQMCLKVVEKVIASDELMTKFRIPKHTWSFVRQSWLTHQPSLYSRLDLA
+                     WDGTGEPKLLENNADTPTSLYEAAFFQWIWLEDQLNAGNLPEGSDQFNSLQEKLIDRFV
+                     ELREQYGFQLLHLTCCRDTVEDRGTIQYLQDCATEAEIATEFLYIDDIGLGEKGQFTDL
+                     QDQVISNLFKLYPWEFMLREMFSTKLEDAGVRWLEPAWKSIISNKALLPLLWEMFPNHP
+                     NLLPAYFAEDDHPQMEKYVVKPIFSREGANVSIIENGKTIEAAEGPYGEEGMIVQQFHP
+                     LPKFGDSYMLIGSWLVNDQPAGIGIREDRALITQDMSRFYPHIFVE"
+                     /gene="ygiC"
+                     /product="glutathionylspermidine synthase homolog"
+                     /protein_id="NP_417510.1"
+     repeat_region   1897..1920
+                     /note="REP224 (repetitive extragenic palindromic)
+                     element;contains 1 REP sequences"
+                     /label="repeat region"
+     gene            complement(1926..2714)
+                     /db_xref="EcoGene:EG11166"
+                     /db_xref="GeneID:946447"
+                     /locus_tag="b3039"
+                     /gene="ygiD"
+                     /gene_synonym="ECK3030; JW3007"
+                     /label="ygiD gene"
+     CDS             complement(1926..2714)
+                     /product="putative dioxygenase, LigB family"
+                     /codon_start=1
+                     /locus_tag="b3039"
+                     /gene_synonym="ECK3030; JW3007"
+                     /db_xref="GI:226524747"
+                     /db_xref="ASAP:ABE-0009973"
+                     /db_xref="UniProtKB/Swiss-Prot:P24197"
+                     /db_xref="EcoGene:EG11166"
+                     /db_xref="GeneID:946447"
+                     /transl_table=11
+                     /label="ygiD CDS"
+                     /translation="MSSTRMPALFLGHGSPMNVLEDNLYTRSWQKLGMTLPRPQAIVVV
+                     SAHWFTRGTGVTAMETPPTIHDFGGFPQALYDTHYPAPGSPALAQRLVELLAPIPVTLD
+                     KEAWGFDHGSWGVLIKMYPDADIPMVQLSIDSSKPAAWHFEMGRKLAALRDEGIMLVAS
+                     GNVVHNLRTVKWHGDSSPYPWATSFNEYVKANLTWQGPVEQHPLVNYLDHEGGTLSNPT
+                     PEHYLPLLYVLGAWDGQEPITIPVEGIEMGSLSMLSVQIG"
+                     /gene="ygiD"
+                     /protein_id="NP_417511.2"
+     CDS             2857..3630
+                     /product="zinc transporter"
+                     /codon_start=1
+                     /locus_tag="b3040"
+                     /gene_synonym="ECK3031; JW3008; ygiE"
+                     /db_xref="GI:16130936"
+                     /db_xref="ASAP:ABE-0009977"
+                     /db_xref="UniProtKB/Swiss-Prot:P0A8H3"
+                     /db_xref="EcoGene:EG11167"
+                     /db_xref="GeneID:947035"
+                     /transl_table=11
+                     /label="zupT CDS"
+                     /translation="MSVPLILTILAGAATFIGAFLGVLGQKPSNRLLAFSLGFAAGIML
+                     LISLMEMLPAALAAEGMSPVLGYGMFIFGLLGYFGLDRMLPHAHPQDLMQKSVQPLPKS
+                     IKRTAILLTLGISLHNFPEGIATFVTASSNLELGFGIALAVALHNIPEGLAVAGPVYAA
+                     TGSKRTAILWAGISGLAEILGGVLAWLILGSMISPVVMAAIMAAVAGIMVALSVDELMP
+                     LAKEIDPNNNPSYGVLCGMSVMGFSLVLLQTAGIG"
+                     /gene="zupT"
+                     /protein_id="NP_417512.1"
+     gene            2857..3630
+                     /db_xref="EcoGene:EG11167"
+                     /db_xref="GeneID:947035"
+                     /locus_tag="b3040"
+                     /gene="zupT"
+                     /gene_synonym="ECK3031; JW3008; ygiE"
+                     /label="zupT gene"
+ORIGIN
+        1 agccatcctc tattctgatg ggtatttacc actggtcccg gaagacaaaa atgaaacgga
+       61 caaaatccat acgccacgca tcgttccgca aaaactggag cgcacgccat ctgacaccag
+      121 tcgctctcgc ggttgccact gtttttatgc tggctggctg tgaaaagagt gatgaaacag
+      181 tgtctctcta tcaaaatgct gacgactgtt cagctgcaaa cccaggcaaa agcgccgaat
+      241 gtaccaccgc gtacaacaat gcgctgaaag aagccgaacg tactgcgccg aaatacgcca
+      301 cccgtgaaga ctgtgttgct gaatttggtg aaggtcagtg ccagcaggca ccagcccagg
+      361 ctggcatggc accagaaaac caggcgcagg cccagcaatc cagcgggagt ttctggatgc
+      421 cgctgatggc cggttacatg atggggcgtc tgatgggcgg cggcgcggga tttgcacagc
+      481 agccgctgtt ctcctcgaaa aacccagcca gtccggctta cggtaaatat accgacgcga
+      541 cgggtaaaaa ctatggcgca gcccagccag gccgcaccat gaccgtaccg aagacggcaa
+      601 tggcaccaaa accggcgacc accactaccg ttacccgtgg cggttttggt gaatctgttg
+      661 ccaaacaaag cactatgcag cgtagtgcaa ccggtacctc ttctcgttca atgggtggct
+      721 gataccgatg gaaagagtca gtattaccga gcgcccggac tggcgtgaga aagcccacga
+      781 atacggtttc aattttcaca ccatgtacgg cgagccgtac tggtgtgaag atgcttacta
+      841 caagttgacc ctcgcccagg ttgaaaagct ggaagaagtc accgccgaac tgcaccagat
+      901 gtgcctgaaa gtggtggaaa aagtgatcgc cagcgatgag ctgatgacca aattccgcat
+      961 tccaaaacac acctggagtt ttgtgcgcca gtcatggctg acgcaccagc catcgcttta
+     1021 ttcgcgtctt gatctggcgt gggatggcac tggtgaacct aaacttctgg aaaataacgc
+     1081 cgatacgcca acgtcactat acgaggcggc gttctttcag tggatctggc tggaagatca
+     1141 gcttaacgcc ggtaacttgc cggagggcag cgaccagttt aacagtctgc aagaaaaact
+     1201 gatcgatcgc ttcgttgagc tgcgtgaaca gtatggcttc cagttgctgc atctcacctg
+     1261 ctgtcgcgac acggtggaag atcgcggaac cattcagtat ttgcaggact gcgcaacgga
+     1321 agctgaaatt gctactgagt tcctctacat cgatgatatc gggttaggtg aaaaaggtca
+     1381 gttcacggat ttacaggatc aggtaatttc caacctgttc aaactgtatc cgtgggaatt
+     1441 tatgttgcgt gagatgttct caaccaagct ggaggatgca ggcgtacgct ggctggaacc
+     1501 ggcgtggaag agcattatct ccaacaaggc acttctaccg ctactgtggg agatgttccc
+     1561 gaatcacccg aacctgctgc ccgcttattt tgcggaagat gatcatccgc aaatggaaaa
+     1621 atatgtggtt aaaccgatct tctcccgtga aggcgcaaac gtgtcgatca ttgagaacgg
+     1681 caaaaccatt gaagcagcgg aaggtccgta tggcgaagaa gggatgattg ttcagcaatt
+     1741 ccacccgtta ccgaaattcg gcgacagcta tatgctgatt ggtagctggc tggtgaacga
+     1801 tcaacccgcc ggaattggca ttcgtgaaga ccgtgcattg atcacccagg atatgtctcg
+     1861 gttttatcca catatttttg ttgaataagc cacgataccg gatggcactc gccatccggt
+     1921 aattgttagc ctatctgcac cgacagcata ctcaggctgc ccatttctat accctcaacc
+     1981 ggaatggtaa ttggctcctg cccatcccac gcacctaaca catacaacaa cggcaaataa
+     2041 tgctctggcg ttgggttcga taacgtgcca ccttcatggt cgaggtaatt caccagagga
+     2101 tgttgttcca ctggcccttg ccacgtcaga ttcgctttca catactcatt aaacgacgtc
+     2161 gcccacggat acggtgaact atcaccgtgc cacttcactg tgcgcaggtt atgcaccacg
+     2221 ttaccgctgg cgaccaacat tattccttca tctcgcagcg ctgccagttt gcgccccatt
+     2281 tcgaaatgcc aggcggcagg tttgctactg tcgatactca actgcaccat cgggatatca
+     2341 gcgtcaggat acatcttaat cagcacgccc cacgagccgt ggtcaaagcc ccaggcttct
+     2401 ttatccagcg tcaccgggat cggcgctaac agctcaacca gacgctgtgc cagcgcaggc
+     2461 gaacccggag caggataatg cgtatcgtac agcgcctgcg ggaagccacc aaagtcatga
+     2521 atcgtgggcg gcgtctccat cgcggtcact cctgttccac gggtaaacca gtgagccgaa
+     2581 accaccacaa tcgcttgcgg gcgtggcaat gtcatcccca acttctgcca gctgcgggta
+     2641 tacaaattat cttccagcac gttcatcgga ctaccgtgac ctaaaaacaa tgctggcata
+     2701 cgtgttgaag acatgatgat atccttaact aaaggtgtca ttttgatatc ctcacaatac
+     2761 gcttgttcgg cggagtaaga acccggataa caatgatgat gatcatcagt tattttgacg
+     2821 atctgcctga aggtgaagat ttataaggag ttgtcgatgt cagtacctct cattctgacc
+     2881 atactggcgg gggcagccac gtttattggc gcgtttctcg gcgttctcgg gcaaaaaccc
+     2941 tcgaaccgct tactggcgtt ttcgctaggt tttgcggcgg ggatcatgtt gctcatctca
+     3001 ttaatggaaa tgcttcctgc cgcactagca gctgaaggaa tgtcgcctgt gttgggttat
+     3061 ggaatgttta tcttcggtct gcttggctat tttggcctgg accgcatgtt gccacatgct
+     3121 catccgcagg atttaatgca aaaatcggtg cagccgttgc caaaatcgat caagcgcaca
+     3181 gccattctgc tcactctcgg catcagtctg cataacttcc cggaagggat tgccaccttt
+     3241 gtcacggcga gcagcaacct ggagctggga tttggcatcg cactggccgt cgcgttgcac
+     3301 aatatccctg aaggtctggc agtggcaggc ccggtttatg cggcaacggg gtctaaacgc
+     3361 accgcgattc tgtgggcggg gatttctgga ctagcagaaa ttcttggtgg tgtgctggcg
+     3421 tggttaatcc tcggtagcat gatttccccg gtggtcatgg cggcaatcat ggcggcggtt
+     3481 gcaggaatta tggtggcgct ctcggttgat gaattaatgc cgctcgccaa agagattgac
+     3541 cctaataata accccagcta tggcgtacta tgtggaatgt cagtgatggg attcagttta
+     3601 gtgctgctac aaacggcggg aattggttaa aaacaacatc agaagttgtc cagcgcatgg
+     3661 acaacttctg ccagcttcac gaaagcctta ttctaccttt tcggctgtct cttctctcgt
+     3721 actgtttaag tatttgttcc gcgcttcaag cagtgcgtct ctgtcctggc gaaacgcccg
+     3781 acaataacgt ttcaaatgca ggaaataacc caccacaacc agagcaatca atacaatcca
+     3841 gtaccaggcg ataaacatcc ttttaccctt aatatttaac aatactaaac atttagcgta
+     3901 taaatttcac atatcctttt tcgga
+//
