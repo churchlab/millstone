@@ -266,21 +266,16 @@ class TestAlignmentPipeline(TransactionTestCase):
         v_205_va = v_205.variantalternate_set.all()[0]
         self.assertEqual('tolC', v_205_va.data['INFO_EFF_GENE'])
 
-    # NOTE: This faills. Fix.
-    # def test_run_pipeline__bad_alignment(self):
-    #     """End-to-end test of pipeline. Fails if any errors.
-    #     """
-    #     ref_genome = import_reference_genome_from_local_file(
-    #             self.project, 'concat_mg1655_partials',
-    #             FullVCFTestSet.TEST_CONCAT_GENBANK, 'genbank')
-    #     sample_list = [self.experiment_sample]
-    #     result = run_pipeline(
-    #             'name_placeholder', ref_genome, sample_list)
-    #     alignment_group = result[0]
-    #     alignment_async_result = result[1]
-    #     variant_calling_async_result = result[2]
-    #     alignment_async_result.get()
-    #     variant_calling_async_result.get()
-    #     alignment_group = AlignmentGroup.objects.get(uid=alignment_group.uid)
-    #     self.assertEqual(AlignmentGroup.STATUS.COMPLETED,
-    #             alignment_group.status)
+    def test_run_pipeline__bad_alignment(self):
+        """Alignment of bad reads. Might happen if user tries to align wrong
+        reads to wrong reference genome.
+        """
+        ref_genome = import_reference_genome_from_local_file(
+                self.project, 'concat_mg1655_partials',
+                FullVCFTestSet.TEST_CONCAT_GENBANK, 'genbank')
+        sample_list = [self.experiment_sample]
+        # NOTE: Ideally there would be a better way to test this.
+        # In general, we need to figure out how to better communicate the reason
+        # for a failed alignment to the user.
+        with self.assertRaises(Exception):
+            run_pipeline('name_placeholder', ref_genome, sample_list)

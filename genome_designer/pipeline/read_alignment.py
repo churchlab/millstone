@@ -358,6 +358,9 @@ def compute_insert_metrics(bam_file, sample_alignment, stderr=None):
     Creates a Dataset for each of:
         * histogram file
         * file with mean and stdev comma-separated
+
+    Raises:
+        ValueError if calculating paired-end distribution failed.
     """
     histo_file = os.path.splitext(bam_file)[0] + '.insert_size_histogram.txt'
     mean_stdev_file = (os.path.splitext(bam_file)[0] +
@@ -387,7 +390,12 @@ def compute_insert_metrics(bam_file, sample_alignment, stderr=None):
 
     # Run the command and get mean, stdev
     mean_and_stdev_str = p2.communicate()[0]
-    raw_mean, raw_stdev = mean_and_stdev_str.split('\t')
+    mean_and_stdev_parts = mean_and_stdev_str.split('\t')
+    if len(mean_and_stdev_parts) != 2:
+        raise ValueError(
+            "Poor alignment. Perhaps you tried aligning to the wrong reference "
+            "genome?")
+    raw_mean, raw_stdev = mean_and_stdev_parts
     mean = int(float(raw_mean.split(':')[1].strip()))
     stdev = int(float(raw_stdev.split(':')[1].strip()))
 
