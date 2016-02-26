@@ -11,7 +11,6 @@ import shutil
 import subprocess
 import vcf
 
-from celery import task
 from django.conf import settings
 
 from main.models import Dataset
@@ -25,7 +24,9 @@ from pipeline.variant_calling.constants import TOOL_FREEBAYES
 from pipeline.variant_effects import run_snpeff
 from utils import uppercase_underscore
 
+
 VCF_AF_HEADER = '##FORMAT=<ID=AF,Number=1,Type=Float,Description="Alternate allele observation frequency, AO/(RO+AO)">'
+
 
 def freebayes_regions(ref_genome,
         region_size=settings.FREEBAYES_REGION_SIZE):
@@ -47,22 +48,23 @@ def freebayes_regions(ref_genome,
     regions = []
 
     with open(ref_genome_faidx) as faidx_fh:
+        # faidx has one line per chromosome
         for line in faidx_fh:
             fields = line.strip().split('\t')
             chr_name, chr_len = fields[:2]
             chr_len = int(chr_len)
             end = 0
 
-        while end < chr_len:
-            start = end
-            end = start + region_size
-            if end > chr_len:
-                end = chr_len
-            regions.append('{chr_name}:{start}-{end}'.format(
-                    chr_name=chr_name,
-                    start=start,
-                    end=end))
-            start = end
+            while end < chr_len:
+                start = end
+                end = start + region_size
+                if end > chr_len:
+                    end = chr_len
+                regions.append('{chr_name}:{start}-{end}'.format(
+                        chr_name=chr_name,
+                        start=start,
+                        end=end))
+                start = end
 
     return regions
 
