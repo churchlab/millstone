@@ -205,7 +205,7 @@ def add_chromosomes(reference_genome, dataset):
             if seqrecord.id not in seqrecord_ids:
                 Chromosome.objects.create(
                         reference_genome=reference_genome,
-                        label=seqrecord.description,
+                        label=seqrecord.id,
                         seqrecord_id=seqrecord.id,
                         num_bases=len(seqrecord))
 
