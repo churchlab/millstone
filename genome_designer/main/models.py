@@ -590,16 +590,32 @@ class ReferenceGenome(UniqueUidModelMixin):
         """Ensures that the jbrowse data dir exists."""
         return ensure_exists_0775_dir(self.get_jbrowse_directory_path())
 
-    def get_snpeff_directory_path(self):
+    def get_snpeff_dir(self):
         """Returns the full path to the root of snpeff data for this
         ReferenceGenome.
         """
-        return os.path.join(self.get_model_data_dir(), 'snpeff',
-                self.uid)
+        return os.path.join(self.get_model_data_dir(), 'snpeff')
+
+    def get_snpeff_config_path(self):
+        """Returns the full path to the SnpEff config file.
+        """
+        return os.path.join(self.get_snpeff_dir(), 'snpeff.config')
+
+    def get_snpeff_genbank_parent_dir(self):
+        """Returns the full path to the directory containing the genbank.
+        """
+        return os.path.join(self.get_snpeff_dir(), 'data', self.uid)
+
+    def get_snpeff_genbank_file_path(self):
+        """Returns the full path to the directory containing the genbank.
+
+        This is where SnpEff expects to find this file.
+        """
+        return os.path.join(self.get_snpeff_genbank_parent_dir(), 'genes.gbk')
 
     def ensure_snpeff_dir(self):
         """Ensures that the snpeff data dir exists."""
-        return ensure_exists_0775_dir(self.get_snpeff_directory_path())
+        return ensure_exists_0775_dir(self.get_snpeff_genbank_parent_dir())
 
     def get_client_jbrowse_data_path(self):
         if self.project.is_s3_backed():
