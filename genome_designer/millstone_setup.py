@@ -51,9 +51,9 @@ TOOLS_URLS = {
             'https://www.dropbox.com/s/j9y8ul4k71f4kx5/vcfuniq'
         ],
     },
-    'snpEff' : [
-        'https://www.dropbox.com/s/jnob4hkcwtquyag/snpEff-3.3e.zip',
-        ],
+    'snpEff': [
+        'https://www.dropbox.com/s/lqxnvpf9x8ja19j/snpEff-4.2.zip'
+    ],
     'samtools' : {
         'Darwin' : [
             'https://www.dropbox.com/s/wvd9iumzq1qi24h/samtools-0.1.20-darwin.zip'

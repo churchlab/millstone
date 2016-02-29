@@ -8,7 +8,6 @@ from itertools import chain
 import os
 import re
 from string import Template
-from StringIO import StringIO
 import subprocess
 import sys
 
@@ -21,7 +20,6 @@ from main.model_utils import ensure_exists_0775_dir
 from main.model_utils import get_dataset_with_type
 from main.models import Dataset
 from utils import ensure_line_lengths
-from utils import uppercase_underscore
 
 
 # Compile this SNPEFF parsing regex only once
@@ -111,7 +109,7 @@ SNPEFF_INFO_TEMPLATE = Template(','.join([
         'Description="$description">']))
 
 SNPEFF_ALT_RE = re.compile(r''.join([
-        r'(?P<{:s}>\w+)\((?P<{:s}>[^\|]*)',
+        r'(?P<{:s}>.+)\((?P<{:s}>[^\|]*)',
         r'\|(?P<{:s}>[^\|]*)' * (len(SNPEFF_FIELDS.keys())-4),
         r'\|?(?P<{:s}>[^\|]*)\|?(?P<{:s}>[^\|]*)\)']
         ).format(*SNPEFF_FIELDS.keys()))
@@ -125,7 +123,16 @@ MAP_VCF_SOURCE_TOOL_TO_ORIGINAL_VCF_DATASET_TYPE = {
 
 
 def build_snpeff(ref_genome):
-    """
+    """Setup the SnpEff database for ref_genome.
+
+    This function does the following:
+        * Sets up the directory structure for SnpEff-related files.
+        * Writes a possibly modified Genbank to the location that SnpEff
+              expects to find it. A few cleanups are necessary to avoid SnpEff
+              quirks.
+        * Creates the SnpEff config file for building the database/index.
+        * Builds the SnpEff database/index.
+
     SnpEFF needs a config file for every reference genome, which lists a
     single reference genome, its chromosomes, and the codon table that
     each uses. For now we can assume that all our genomes will use bacterial
@@ -144,78 +151,57 @@ def build_snpeff(ref_genome):
 
     # if no genbank file for this ref genome, then do nothing
     if not ref_genome.is_annotated():
-        print "Snpeff indexing failed: No genbank for reference genome %s" % (
+        print "Skipping SnpEff indexing: No genbank for reference genome %s" % (
                 ref_genome.uid)
         return
 
-    # Path we give to snp_eff should be the ref_genomes/uid/snpeff dir
-    # and ref_genomes/uid/snpeff/uid is where snpeff will look for genes.gbk
-    ref_genome.ensure_snpeff_dir()
-    snpeff_uid_path = ref_genome.get_snpeff_directory_path()
-    snpeff_path = os.path.join(get_snpeff_config_path(ref_genome))
-
-    # Template data we will pass to the django template parser in order to
-    # build the config file.
-    templ_data = {}
-
-    templ_data['snpeff_dir'] = snpeff_path
-
-    # Put a soft link to the reference genome genbank file in the snpeff dir
-    # under the ./snpeff/uid dir called genes.gb. Remove any old links
-    # if present.
+    # Get the path to the reference genbank, making sure it exists.
     ref_genome_path = get_dataset_with_type(ref_genome,
             type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).get_absolute_location()
-    assert ref_genome_path is not None, "No reference source genbank."
+    assert ref_genome_path is not None, "Reference Genbank missing."
 
-    snpeff_genbank_filename = os.path.join(snpeff_uid_path,'genes.gb')
+    # Create the snpeff directory structure.
+    ref_genome.ensure_snpeff_dir()
 
-    # TODO: The symlink below doesn't work - we need to now directly modify
-    # the Genbank for it to work with SnpEFF, so we'll keep a modified copy in
-    # the Ref Genome's SnpEFF directory. We have to modify it to ensure that
-    # the name and ID are the same and to ensure minimum line lengths.
-
-#    # Unlink if there was a link and then create a new link.
-#    try:
-#        os.unlink(snpeff_genbank_filename)
-#    except OSError:
-#        # There was no symlink. That's fine.
-#        pass
-#    # Re-create the link.
-#    os.symlink(ref_genome_path, snpeff_genbank_filename)
-
-    # Fill in uid and chromosome data
+    # Build a template data dictionary which will be passed to the django
+    # template renderer in order to generate the config file.
+    templ_data = {}
+    templ_data['snpeff_dir'] = ref_genome.get_snpeff_dir()
     templ_data['uid'] = ref_genome.uid
-    templ_data['chromosomes'] = []
     templ_data['label'] = ref_genome.label
 
-    new_gb = []
+    # The following block does 2 things:
+    #    1. Identifies all chromosomes in the Genbank.
+    #    2. Ensures that the contained SeqRecord name and ids match, which is
+    #       required by SnpEff.
+    templ_data['chromosomes'] = []
+    new_genbank_seq_records = []
+    with open(ref_genome_path) as genbank_fh:
+        for seq_record in SeqIO.parse(genbank_fh, 'genbank'):
+            # Set the ACCESSION/LOCUS/VERSION to all be the same for this
+            # new modified genbank
+            seq_record.name = seq_record.id
+            new_genbank_seq_records.append(seq_record)
 
-    # Each record is a chromosome in the ref genome
-    for seq_record in SeqIO.parse(
-            open(ref_genome_path, "r"), "genbank"):
+            # Add this record as a chromosome to this ref genome
+            # TODO: Do we want to check seqrecords for sane/sanitized names?
+            templ_data['chromosomes'].append(seq_record.name)
 
-        # Set the ACCESSION/LOCUS/VERSION to all be the same for this
-        # new modified genbank
-        seq_record.name = seq_record.id
-        new_gb.append(seq_record)
-
-        # Add this record as a chromosome to this ref genome
-        # TODO: Do we want to check seqrecords for sane/sanitized names?
-        templ_data['chromosomes'].append(seq_record.name)
-
-    # Save a modified copy of the genbank for snpEff
-    # with open(snpeff_genbank_symlink, 'w') as snpeff_gbk_file:
-    SeqIO.write(new_gb, snpeff_genbank_filename, "genbank")
-    # Stop-gap fix to ensure line lengths in GENbANK to appease SNPEFF
-    ensure_line_lengths(snpeff_genbank_filename)
-
+    templ_data['chromosomes'].append(seq_record.name)
     templ_data['chrs_string'] = ','.join(templ_data['chromosomes'])
 
-    # Render snpEff config template
-    render_snpeff_config(templ_data, os.path.join(snpeff_path,'snpeff.config'))
+    # Write the updated Genbank.
+    snpeff_genbank_path = ref_genome.get_snpeff_genbank_file_path()
+    SeqIO.write(new_genbank_seq_records, snpeff_genbank_path, 'genbank')
+
+    # Stop-gap fix to ensure line lengths in Genbank to appease SnpEff.
+    ensure_line_lengths(ref_genome.get_snpeff_genbank_file_path())
+
+    # Render SnpEff config template.
+    render_snpeff_config(templ_data, ref_genome.get_snpeff_config_path())
 
     # Build snpEff database
-    build_snpeff_db(os.path.join(snpeff_path,'snpeff.config'), ref_genome.uid)
+    build_snpeff_db(ref_genome.get_snpeff_config_path(), ref_genome.uid)
 
 
 def render_snpeff_config(
@@ -266,7 +252,7 @@ def build_snpeff_db(snpeff_config_path, ref_genome_uid):
     #     stdout_dest=open(os.devnull, 'w')
     #     stderr_dest=open(os.devnull, 'w')
 
-    snpeff_proc = subprocess.call(snpeff_args)
+    subprocess.call(snpeff_args)
 
 
 def get_snpeff_vcf_output_path(alignment_group, vcf_source_tool):
@@ -340,8 +326,9 @@ def run_snpeff(alignment_group, vcf_source_tool):
         'vcf',
         '-o',
         'vcf',
-        '-c', os.path.join(get_snpeff_config_path(ref_genome),'snpeff.config'),
+        '-c', ref_genome.get_snpeff_config_path(),
         '-ud', str(settings.SNPEFF_UD_INTERVAL_LENGTH),
+        '-formatEff',
         '-q',
         '-noLog',
 #        '-t', str(settings.SNPEFF_THREADS),
@@ -408,8 +395,8 @@ def convert_snpeff_info_fields(vcf_input_fh, vcf_output_fh):
 
 
 def populate_record_eff(vcf_record):
-    """This function takes a single VCF record and separates the EFF key
-    from snpEFF into a variety of individual keys.
+    """This function takes a single VCF record and separates the single EFF key
+    from snpEFF into multiple separate key-value pairs.
 
     The snpeff field starts out as a long string, consisting of many fields
     each separated by pipes.
@@ -442,14 +429,15 @@ def populate_record_eff(vcf_record):
     would be 'zipped', so that the EFF_AA field would be a list of two values:
     ['aTg/aCg','aTg/aGg'].
     """
+    assert hasattr(vcf_record, 'INFO'), 'No INFO attr, not a vcf record.'
 
-    # Get the Eff field for this record.
+    # Dicionary mapping from EFF key to list of values. This will be parsed
+    # from the single EFF field output by SnpEff.
     eff_field_lists = defaultdict(list)
-    assert hasattr(vcf_record,'INFO'), 'No INFO attr, not a vcf record'
 
     # Check that VCF record has an EFF INFO field
     if 'EFF' in vcf_record.INFO:
-        value = vcf_record.INFO['EFF']
+        eff_concat_string = vcf_record.INFO['EFF']
     else:
         print >> sys.stderr, ('VCF record at {chrom} {pos} has no '
                 'INFO EFF field. Cannot annotate.').format(
@@ -459,20 +447,23 @@ def populate_record_eff(vcf_record):
             'ERROR(|||||||||||'
             'SNPEFF_ERROR:NO_EFF_INFO_FIELD|'
             'SNPEFF_ERROR:NO_EFF_INFO_FIELD)')]
-        value = vcf_record.INFO['EFF']
+        eff_concat_string = vcf_record.INFO['EFF']
 
+    # One EFF group per ALT.
+    eff_group_list = []
+    for eff in eff_concat_string:
+        regex_match = SNPEFF_ALT_RE.match(eff)
+        assert regex_match is not None, (
+                "Could not parse SnpEff EFF value " % eff)
+        eff_group_list.append(regex_match)
 
-    # Find iter produces a separate set of groups for every comma-separated
-    # alt EFF field set
-    eff_group_iterator = (SNPEFF_ALT_RE.match(i) for i in value)
-
-    # This chains together a list of all EFF fields from all alts
-    eff_fields = list(chain.from_iterable(
-            (eff.groupdict().items() for eff in eff_group_iterator)))
+    eff_fields = list(chain.from_iterable((
+            eff.groupdict().items() for eff in eff_group_list)))
 
     for k, v in eff_fields:
         # mark empty fields as 'bad'
-        if v == '': v = '.'
+        if v == '':
+            v = '.'
         eff_field_lists['EFF_'+k].append(v)
 
     vcf_record.INFO.update(eff_field_lists)

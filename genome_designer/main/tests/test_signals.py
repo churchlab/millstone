@@ -67,17 +67,17 @@ class TestSignals(TestCase):
 
         # SNPEFF
 
-        # check that the genbank file was symlinked
-        gbk_path = os.path.join(
-                self.test_ext_ref_genome.get_snpeff_directory_path(),
-                'genes.gb')
-        assert os.path.exists(gbk_path), 'snpeff gbk conversion failed: %s' % (
-                gbk_path)
+        # Make sure Genbank file exists where expected.
+        gbk_path = self.test_ext_ref_genome.get_snpeff_genbank_file_path()
+        self.assertTrue(os.path.exists(gbk_path),
+                'snpeff gbk conversion failed: %s' % gbk_path)
 
         # check that the db was made
-        assert os.path.exists(os.path.join(
-                self.test_ext_ref_genome.get_snpeff_directory_path(),
-                'snpEffectPredictor.bin')), 'snpeff db was not made'
+        snpEffPredictor_bin_path = os.path.join(
+                self.test_ext_ref_genome.get_snpeff_genbank_parent_dir(),
+                'snpEffectPredictor.bin')
+        self.assertTrue(os.path.exists(snpEffPredictor_bin_path),
+                'snpeff db was not made')
 
         # FASTA
         fasta = get_dataset_with_type(self.test_ext_ref_genome,

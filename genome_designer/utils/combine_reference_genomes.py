@@ -104,7 +104,7 @@ def combine_list_allformats(
         seq_record_list.append(seqrecord)
         Chromosome.objects.create(
                 reference_genome=new_ref_genome,
-                label=seqrecord.description,
+                label=seqrecord.id,
                 seqrecord_id=seqrecord.id,
                 num_bases=len(seqrecord))
 

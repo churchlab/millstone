@@ -78,15 +78,17 @@ class TestSnpeff(TestCase):
             are present.
         """
         build_snpeff(self.reference_genome)
-        snpeff_path = get_snpeff_config_path(self.reference_genome)
-        snpeff_config_file = os.path.join(snpeff_path, 'snpeff.config')
-        snpeff_database_file = os.path.join(snpeff_path,self.reference_genome.uid,
-            'snpEffectPredictor.bin')
 
-        self.assertTrue(os.path.exists(snpeff_config_file),
-                    msg= 'SnpEff config file was not found.')
-        self.assertTrue(os.path.exists(snpeff_database_file),
-                    msg= 'SnpEff annotation database was not found.')
+        self.assertTrue(
+                os.path.exists(self.reference_genome.get_snpeff_config_path()),
+                'SnpEff config file was not found.')
+
+        snpeff_database_file = os.path.join(
+                self.reference_genome.get_snpeff_genbank_parent_dir(),
+                'snpEffectPredictor.bin')
+        self.assertTrue(
+                os.path.exists(snpeff_database_file),
+                'SnpEff annotation database was not found.')
 
     def test_run_snpeff(self):
         """Test running the pipeline that annotates SNPS.
