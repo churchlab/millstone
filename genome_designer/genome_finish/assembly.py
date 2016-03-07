@@ -520,8 +520,8 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
     contig_list.sort(key=_length_weighted_coverage, reverse=True)
 
     # Get placeable contigs using graph-based placement
-    placeable_contigs, var_dict_list = graph_contig_placement(contig_list,
-            skip_extracted_read_alignment, use_read_alignment)
+    placeable_contigs, var_dict_list, me_var_dict_list = graph_contig_placement(
+            contig_list, skip_extracted_read_alignment, use_read_alignment)
 
     # Mark placeable contigs
     for contig in placeable_contigs:
@@ -537,29 +537,41 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
     var_dict_vcf_path = os.path.join(
             sample_alignment.get_model_data_dir(),
             'de_novo_assembly_translocations.vcf')
+    me_var_dict_vcf_path = os.path.join(
+            sample_alignment.get_model_data_dir(),
+            'de_novo_assembly_me_translocations.vcf')
 
     # Delete dataset if it exists so the vcf parsing task for this
     # sample alignment won't find a potentially outdated dataset
     dataset_query = sample_alignment.dataset_set.filter(
-                type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
+                type__in=[
+                        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+                        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK])
     if dataset_query:
         dataset_query.delete()
 
-    if var_dict_list:
+    for var_dl, method, path, dataset_type in [
+            (var_dict_list, 'GRAPH_WALK', var_dict_vcf_path,
+                    Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK),
+            (me_var_dict_list, 'ME_GRAPH_WALK', me_var_dict_vcf_path,
+                    Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK)]:
+
+        if not var_dl:
+            continue
 
         # Write variant dicts to vcf
-        method = 'GRAPH_WALK'
         export_var_dict_list_as_vcf(
-                var_dict_list, var_dict_vcf_path,
+                var_dl, path,
                 contig.experiment_sample_to_alignment,
                 method)
 
         # Make dataset for contigs vcf
         add_dataset_to_entity(
                 sample_alignment,
-                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
-                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
-                var_dict_vcf_path)
+                dataset_type,
+                dataset_type,
+                path)
+        sample_alignment.save()
 
     if not placeable_contigs:
         return
@@ -588,6 +600,7 @@ def parse_variants_from_vcf(sample_alignment):
     vcf_datasets_to_parse = [
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK,
             Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
 
     variant_list = []
