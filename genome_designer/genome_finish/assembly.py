@@ -224,7 +224,7 @@ def generate_contigs(sample_alignment,
 
 
     sample_alignment.data['assembly_status'] = (
-            ExperimentSampleToAlignment.ASSEMBLY_STATUS.COMPLETED)
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.WAITING_TO_PARSE)
     sample_alignment.save()
 
     return contig_files
@@ -597,6 +597,10 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
 @task
 def parse_variants_from_vcf(sample_alignment):
 
+    sample_alignment.data['assembly_status'] = (
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.PARSING_VARIANTS)
+    sample_alignment.save()
+
     vcf_datasets_to_parse = [
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
@@ -628,3 +632,7 @@ def parse_variants_from_vcf(sample_alignment):
                 contig.save()
 
         variant.save()
+
+    sample_alignment.data['assembly_status'] = (
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.COMPLETED)
+    sample_alignment.save()

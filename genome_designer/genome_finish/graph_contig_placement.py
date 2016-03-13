@@ -111,20 +111,27 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment,
     if use_me_alignment:
         genbank_path = genbank_query[0].get_absolute_location()
         me_concat_fasta = os.path.join(contig_alignment_dir, 'me_concat.fa')
-        write_me_features_multifasta(genbank_path, me_concat_fasta)
-        add_dataset_to_entity(
-                sample_alignment,
-                Dataset.TYPE.MOBILE_ELEMENT_FASTA,
-                Dataset.TYPE.MOBILE_ELEMENT_FASTA,
-                me_concat_fasta)
+        if not sample_alignment.dataset_set.filter(
+                type=Dataset.TYPE.MOBILE_ELEMENT_FASTA):
+            write_me_features_multifasta(genbank_path, me_concat_fasta)
+            add_dataset_to_entity(
+                    sample_alignment,
+                    Dataset.TYPE.MOBILE_ELEMENT_FASTA,
+                    Dataset.TYPE.MOBILE_ELEMENT_FASTA,
+                    me_concat_fasta)
 
         contig_alignment_to_me_bam = os.path.join(
                 contig_alignment_dir, 'contig_alignment_to_me.bam')
-        ensure_bwa_index(me_concat_fasta)
-        simple_align_with_bwa_mem(
-                contig_concat,
-                me_concat_fasta,
-                contig_alignment_to_me_bam)
+
+        me_concat_fasta = sample_alignment.dataset_set.get(
+                type=Dataset.TYPE.MOBILE_ELEMENT_FASTA).get_absolute_location()
+
+        if not os.path.exists(contig_alignment_to_me_bam):
+            ensure_bwa_index(me_concat_fasta)
+            simple_align_with_bwa_mem(
+                    contig_concat,
+                    me_concat_fasta,
+                    contig_alignment_to_me_bam)
 
     # Align concatenated contig fastas to reference
     ref_genome = contig_list[0].parent_reference_genome
