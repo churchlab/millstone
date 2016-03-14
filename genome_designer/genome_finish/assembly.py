@@ -5,6 +5,8 @@ import subprocess
 import re
 
 from Bio import SeqIO
+from celery import chain
+from celery import chord
 from celery import group
 from celery import task
 from django.conf import settings
@@ -80,9 +82,8 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
     ensure_bwa_index(ref_genome_fasta)
 
-    generate_contigs_async_task = generate_contigs_multi_sample(
+    async_result = get_sv_caller_async_result(
             sample_alignment_list)
-    async_result = generate_contigs_async_task.apply_async()
 
     return async_result
 
@@ -98,29 +99,26 @@ def kmer_coverage(C, L, k):
     return C * (L - k + 1) / float(L)
 
 
-def generate_contigs_multi_sample(sample_alignment_list):
-    """Generate contigs for each ExperimentSampleToAlignment in
-    the passed list in the order that they are displayed in the UI
+def get_sv_caller_async_result(sample_alignment_list):
+    """Kick off a chord that calls SVs for each ExperimentSampleToAlignment in
+    sample_alignment_list and returns an AsyncResult object
     """
-    generate_contigs_task_list = []
-    cov_detect_deletion_task_list = []
+    generate_contigs_tasks = []
+    cov_detect_deletion_tasks = []
+    parse_vcf_tasks = []
     for sample_alignment in sorted(sample_alignment_list,
             key=lambda x: x.experiment_sample.label):
-        generate_contigs_task_list.append(
+        generate_contigs_tasks.append(
                 generate_contigs.si(sample_alignment))
 
-        cov_detect_deletion_task_list.append(
+        cov_detect_deletion_tasks.append(
                 cov_detect_deletion_make_vcf.si(sample_alignment))
 
-    task_signature = group(cov_detect_deletion_task_list) | (
-            group(generate_contigs_task_list))
+        parse_vcf_tasks.append(
+                parse_variants_from_vcf.si(sample_alignment))
 
-    for sample_alignment in sample_alignment_list:
-
-        task_signature = task_signature | parse_variants_from_vcf.si(
-                sample_alignment)
-
-    return task_signature
+    return chord(generate_contigs_tasks + cov_detect_deletion_tasks)(
+            chain(parse_vcf_tasks))
 
 
 @task
