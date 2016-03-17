@@ -118,8 +118,6 @@ def get_sv_caller_async_result(sample_alignment_list):
         parse_vcf_tasks.append(
                 parse_variants_from_vcf.si(sample_alignment))
 
-    # return chain(generate_contigs_tasks).apply_async()
-
     return chord(generate_contigs_tasks + cov_detect_deletion_tasks)(
             chain(parse_vcf_tasks))
 
@@ -139,7 +137,14 @@ def generate_contigs(sample_alignment,
     reference_genome = sample_alignment.alignment_group.reference_genome
     ref_fasta_dataset = reference_genome.dataset_set.get_or_create(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA)[0]
-    prepare_ref_genome_related_datasets(reference_genome, ref_fasta_dataset)
+
+    try:
+        prepare_ref_genome_related_datasets(
+                reference_genome, ref_fasta_dataset)
+    except subprocess.CalledProcessError:
+        # Celery threads trying to call Jbrowse perl scripts don't play nicely
+        # and sometimes throw a CalledProcessError
+        pass
 
     # Make data_dir directory to house genome_finishing files
     assembly_dir = os.path.join(
