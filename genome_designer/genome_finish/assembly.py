@@ -7,10 +7,11 @@ import re
 from Bio import SeqIO
 from celery import chain
 from celery import chord
-from celery import group
 from celery import task
 from django.conf import settings
 
+from genome_finish.celery_task_decorator import report_failure_stats
+from genome_finish.celery_task_decorator import set_assembly_status
 from genome_finish.detect_deletion import cov_detect_deletion_make_vcf
 from genome_finish.graph_contig_placement import graph_contig_placement
 from genome_finish.millstone_de_novo_fns import add_paired_mates
@@ -72,9 +73,9 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
         overwrite=True):
 
     for sample_alignment in sample_alignment_list:
-        sample_alignment.data['assembly_status'] = (
-                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED)
-        sample_alignment.save()
+        set_assembly_status(
+                sample_alignment,
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED, force=True)
 
     # Ensure reference genome fasta has bwa index
     ref_genome = sample_alignment_list[0].alignment_group.reference_genome
@@ -117,19 +118,22 @@ def get_sv_caller_async_result(sample_alignment_list):
         parse_vcf_tasks.append(
                 parse_variants_from_vcf.si(sample_alignment))
 
+    # return chain(generate_contigs_tasks).apply_async()
+
     return chord(generate_contigs_tasks + cov_detect_deletion_tasks)(
             chain(parse_vcf_tasks))
 
 
 @task
+@report_failure_stats('generate_contigs_failure_stats.txt')
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=True):
 
     # Set assembly status for UI
-    sample_alignment.data['assembly_status'] = (
-                ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
-    sample_alignment.save()
+    set_assembly_status(
+            sample_alignment,
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
 
     # Grab reference genome fasta path, ensure indexed
     reference_genome = sample_alignment.alignment_group.reference_genome
@@ -221,9 +225,10 @@ def generate_contigs(sample_alignment,
             sample_alignment)
 
 
-    sample_alignment.data['assembly_status'] = (
+    # Set assembly status for UI
+    set_assembly_status(
+            sample_alignment,
             ExperimentSampleToAlignment.ASSEMBLY_STATUS.WAITING_TO_PARSE)
-    sample_alignment.save()
 
     return contig_files
 
