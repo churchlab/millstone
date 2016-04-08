@@ -40,6 +40,7 @@ from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
 from utils.jbrowse_util import add_bam_file_track
+from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from variants.vcf_parser import parse_vcf
 
 # Default args for velvet assembly
@@ -82,6 +83,7 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
     ref_genome_fasta = ref_genome.dataset_set.get(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
     ensure_bwa_index(ref_genome_fasta)
+    prepare_jbrowse_ref_sequence(ref_genome)
 
     async_result = get_sv_caller_async_result(
             sample_alignment_list)
@@ -135,16 +137,8 @@ def generate_contigs(sample_alignment,
 
     # Grab reference genome fasta path, ensure indexed
     reference_genome = sample_alignment.alignment_group.reference_genome
-    ref_fasta_dataset = reference_genome.dataset_set.get_or_create(
+    reference_genome.dataset_set.get_or_create(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA)[0]
-
-    try:
-        prepare_ref_genome_related_datasets(
-                reference_genome, ref_fasta_dataset)
-    except subprocess.CalledProcessError:
-        # Celery threads trying to call Jbrowse perl scripts don't play nicely
-        # and sometimes throw a CalledProcessError
-        pass
 
     # Make data_dir directory to house genome_finishing files
     assembly_dir = os.path.join(
