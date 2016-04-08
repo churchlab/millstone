@@ -122,7 +122,7 @@ def get_sv_caller_async_result(sample_alignment_list):
             chain(parse_vcf_tasks))
 
 
-@task
+@task(ignore_result=False)
 @report_failure_stats('generate_contigs_failure_stats.txt')
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
@@ -602,7 +602,7 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
             vcf_path)
 
 
-@task
+@task(ignore_result=False)
 def parse_variants_from_vcf(sample_alignment):
 
     sample_alignment.data['assembly_status'] = (
