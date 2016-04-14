@@ -5,6 +5,8 @@ from celery import task
 import numpy as np
 import pysam
 
+from genome_finish.celery_task_decorator import set_assembly_status
+from genome_finish.celery_task_decorator import report_failure_stats
 from genome_finish.graph_contig_placement import get_fasta
 from genome_finish.millstone_de_novo_fns import get_altalign_reads
 from main.models import Dataset
@@ -16,7 +18,8 @@ from utils.import_util import add_dataset_to_entity
 METHOD = 'COVERAGE'
 
 
-@task
+@task(ignore_result=False)
+@report_failure_stats('detect_deletions_failure_stats.txt')
 def cov_detect_deletion_make_vcf(sample_alignment):
     """Uses coverage data to call large deletions and
     creates a VCF_COV_DETECT_DELETIONS dataset for the sample alignment
@@ -24,9 +27,10 @@ def cov_detect_deletion_make_vcf(sample_alignment):
     Args:
         sample_alignment: ExperimentSampleToAlignment instance
     """
-    sample_alignment.data['assembly_status'] = (
+
+    set_assembly_status(
+                sample_alignment,
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.ANALYZING_COVERAGE)
-    sample_alignment.save()
 
     print "Generating coverage data\n"
     chrom_regions = get_deleted_regions(sample_alignment)
@@ -58,6 +62,10 @@ def cov_detect_deletion_make_vcf(sample_alignment):
                 vcf_path)
 
         new_dataset.save()
+
+    set_assembly_status(
+                sample_alignment,
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.WAITING_TO_PARSE)
 
 
 def make_var_dict_list(chrom_regions, ref_fasta):

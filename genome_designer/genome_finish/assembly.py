@@ -5,10 +5,13 @@ import subprocess
 import re
 
 from Bio import SeqIO
-from celery import group
+from celery import chain
+from celery import chord
 from celery import task
 from django.conf import settings
 
+from genome_finish.celery_task_decorator import report_failure_stats
+from genome_finish.celery_task_decorator import set_assembly_status
 from genome_finish.detect_deletion import cov_detect_deletion_make_vcf
 from genome_finish.graph_contig_placement import graph_contig_placement
 from genome_finish.millstone_de_novo_fns import add_paired_mates
@@ -37,6 +40,7 @@ from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
 from utils.jbrowse_util import add_bam_file_track
+from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from variants.vcf_parser import parse_vcf
 
 # Default args for velvet assembly
@@ -70,19 +74,19 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
         overwrite=True):
 
     for sample_alignment in sample_alignment_list:
-        sample_alignment.data['assembly_status'] = (
-                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED)
-        sample_alignment.save()
+        set_assembly_status(
+                sample_alignment,
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED, force=True)
 
     # Ensure reference genome fasta has bwa index
     ref_genome = sample_alignment_list[0].alignment_group.reference_genome
     ref_genome_fasta = ref_genome.dataset_set.get(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
     ensure_bwa_index(ref_genome_fasta)
+    prepare_jbrowse_ref_sequence(ref_genome)
 
-    generate_contigs_async_task = generate_contigs_multi_sample(
+    async_result = get_sv_caller_async_result(
             sample_alignment_list)
-    async_result = generate_contigs_async_task.apply_async()
 
     return async_result
 
@@ -98,46 +102,43 @@ def kmer_coverage(C, L, k):
     return C * (L - k + 1) / float(L)
 
 
-def generate_contigs_multi_sample(sample_alignment_list):
-    """Generate contigs for each ExperimentSampleToAlignment in
-    the passed list in the order that they are displayed in the UI
+def get_sv_caller_async_result(sample_alignment_list):
+    """Kick off a chord that calls SVs for each ExperimentSampleToAlignment in
+    sample_alignment_list and returns an AsyncResult object
     """
-    generate_contigs_task_list = []
-    cov_detect_deletion_task_list = []
+    generate_contigs_tasks = []
+    cov_detect_deletion_tasks = []
+    parse_vcf_tasks = []
     for sample_alignment in sorted(sample_alignment_list,
             key=lambda x: x.experiment_sample.label):
-        generate_contigs_task_list.append(
+        generate_contigs_tasks.append(
                 generate_contigs.si(sample_alignment))
 
-        cov_detect_deletion_task_list.append(
+        cov_detect_deletion_tasks.append(
                 cov_detect_deletion_make_vcf.si(sample_alignment))
 
-    task_signature = group(cov_detect_deletion_task_list) | (
-            group(generate_contigs_task_list))
+        parse_vcf_tasks.append(
+                parse_variants_from_vcf.si(sample_alignment))
 
-    for sample_alignment in sample_alignment_list:
-
-        task_signature = task_signature | parse_variants_from_vcf.si(
-                sample_alignment)
-
-    return task_signature
+    return chord(generate_contigs_tasks + cov_detect_deletion_tasks)(
+            chain(parse_vcf_tasks))
 
 
-@task
+@task(ignore_result=False)
+@report_failure_stats('generate_contigs_failure_stats.txt')
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=True):
 
     # Set assembly status for UI
-    sample_alignment.data['assembly_status'] = (
-                ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
-    sample_alignment.save()
+    set_assembly_status(
+            sample_alignment,
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
 
     # Grab reference genome fasta path, ensure indexed
     reference_genome = sample_alignment.alignment_group.reference_genome
-    ref_fasta_dataset = reference_genome.dataset_set.get_or_create(
+    reference_genome.dataset_set.get_or_create(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA)[0]
-    prepare_ref_genome_related_datasets(reference_genome, ref_fasta_dataset)
 
     # Make data_dir directory to house genome_finishing files
     assembly_dir = os.path.join(
@@ -223,9 +224,10 @@ def generate_contigs(sample_alignment,
             sample_alignment)
 
 
-    sample_alignment.data['assembly_status'] = (
-            ExperimentSampleToAlignment.ASSEMBLY_STATUS.COMPLETED)
-    sample_alignment.save()
+    # Set assembly status for UI
+    set_assembly_status(
+            sample_alignment,
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.WAITING_TO_PARSE)
 
     return contig_files
 
@@ -520,8 +522,8 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
     contig_list.sort(key=_length_weighted_coverage, reverse=True)
 
     # Get placeable contigs using graph-based placement
-    placeable_contigs, var_dict_list = graph_contig_placement(contig_list,
-            skip_extracted_read_alignment, use_read_alignment)
+    placeable_contigs, var_dict_list, me_var_dict_list = graph_contig_placement(
+            contig_list, skip_extracted_read_alignment, use_read_alignment)
 
     # Mark placeable contigs
     for contig in placeable_contigs:
@@ -537,29 +539,41 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
     var_dict_vcf_path = os.path.join(
             sample_alignment.get_model_data_dir(),
             'de_novo_assembly_translocations.vcf')
+    me_var_dict_vcf_path = os.path.join(
+            sample_alignment.get_model_data_dir(),
+            'de_novo_assembly_me_translocations.vcf')
 
     # Delete dataset if it exists so the vcf parsing task for this
     # sample alignment won't find a potentially outdated dataset
     dataset_query = sample_alignment.dataset_set.filter(
-                type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK)
+                type__in=[
+                        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+                        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK])
     if dataset_query:
         dataset_query.delete()
 
-    if var_dict_list:
+    for var_dl, method, path, dataset_type in [
+            (var_dict_list, 'GRAPH_WALK', var_dict_vcf_path,
+                    Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK),
+            (me_var_dict_list, 'ME_GRAPH_WALK', me_var_dict_vcf_path,
+                    Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK)]:
+
+        if not var_dl:
+            continue
 
         # Write variant dicts to vcf
-        method = 'GRAPH_WALK'
         export_var_dict_list_as_vcf(
-                var_dict_list, var_dict_vcf_path,
+                var_dl, path,
                 contig.experiment_sample_to_alignment,
                 method)
 
         # Make dataset for contigs vcf
         add_dataset_to_entity(
                 sample_alignment,
-                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
-                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
-                var_dict_vcf_path)
+                dataset_type,
+                dataset_type,
+                path)
+        sample_alignment.save()
 
     if not placeable_contigs:
         return
@@ -582,12 +596,17 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
             vcf_path)
 
 
-@task
+@task(ignore_result=False)
 def parse_variants_from_vcf(sample_alignment):
+
+    sample_alignment.data['assembly_status'] = (
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.PARSING_VARIANTS)
+    sample_alignment.save()
 
     vcf_datasets_to_parse = [
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
             Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK,
             Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
 
     variant_list = []
@@ -615,3 +634,7 @@ def parse_variants_from_vcf(sample_alignment):
                 contig.save()
 
         variant.save()
+
+    sample_alignment.data['assembly_status'] = (
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.COMPLETED)
+    sample_alignment.save()

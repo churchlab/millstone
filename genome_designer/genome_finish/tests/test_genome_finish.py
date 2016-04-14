@@ -2,6 +2,7 @@
 Tests for genome finishing features
 """
 import os
+import re
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -19,11 +20,13 @@ from main.models import ExperimentSample
 from main.models import ExperimentSampleToAlignment
 from main.models import Project
 from main.models import ReferenceGenome
+from main.models import VariantSet
 from main.testing_util import are_fastas_same
 from pipeline.pipeline_runner import run_pipeline
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import import_reference_genome_from_local_file
 from utils.reference_genome_maker_util import generate_new_reference_genome
+from variants.variant_sets import update_variant_in_set_memberships
 
 TEST_USERNAME = 'testuser'
 TEST_PASSWORD = 'password'
@@ -209,13 +212,13 @@ class TestGraphWalk(TestCase):
 
     def _make_dummy_models(self):
 
-        reference_genome = ReferenceGenome.objects.create(
+        self.reference_genome = ReferenceGenome.objects.create(
                 project=self.project,
                 label='test_reference_genome')
 
 
         alignment_group = AlignmentGroup.objects.create(
-                reference_genome=reference_genome)
+                reference_genome=self.reference_genome)
 
         sample = ExperimentSample.objects.create(
                 project=self.project,
@@ -226,21 +229,19 @@ class TestGraphWalk(TestCase):
                 experiment_sample=sample)
 
         return {'sample_alignment': sample_alignment,
-                'reference_genome': reference_genome,
+                'reference_genome': self.reference_genome,
                 'alignment_group': alignment_group}
 
     def _run_contig_walk_test(self, test_dir):
 
         ref_fasta = os.path.join(test_dir, 'ref.fa')
-        target_fasta = os.path.join(test_dir, 'target.fa')
-        contig_fasta_list = []
-        i = 0
-        contig_fasta_path = os.path.join(test_dir, 'contig_' + str(i) + '.fa')
-        while os.path.exists(contig_fasta_path):
-            contig_fasta_list.append(contig_fasta_path)
-            i += 1
-            contig_fasta_path = os.path.join(test_dir,
-                    'contig_' + str(i) + '.fa')
+        self.target_fasta = os.path.join(test_dir, 'target.fa')
+
+        contig_fasta_list = filter(
+                lambda x: re.match(r'contig_\d+\.fa', x),
+                os.listdir(test_dir))
+        contig_fasta_list = [os.path.join(test_dir, filename) for
+                filename in contig_fasta_list]
 
         dummy_models = self._make_dummy_models()
         reference_genome = dummy_models['reference_genome']
@@ -248,10 +249,19 @@ class TestGraphWalk(TestCase):
         alignment_group = dummy_models['alignment_group']
 
         add_dataset_to_entity(
+                    reference_genome,
+                    Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                    Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                    filesystem_location=ref_fasta)
+
+
+        ref_genbank = os.path.join(test_dir, 'ref.gb')
+        if os.path.exists(ref_genbank):
+            add_dataset_to_entity(
                 reference_genome,
-                Dataset.TYPE.REFERENCE_GENOME_FASTA,
-                Dataset.TYPE.REFERENCE_GENOME_FASTA,
-                filesystem_location=ref_fasta)
+                Dataset.TYPE.REFERENCE_GENOME_GENBANK,
+                Dataset.TYPE.REFERENCE_GENOME_GENBANK,
+                ref_genbank)
 
         # Make data_dir directory to house genome_finishing files
         assembly_dir = os.path.join(
@@ -290,30 +300,110 @@ class TestGraphWalk(TestCase):
         variant_set = create_de_novo_variants_set(
                 alignment_group, 'de_novo_variants')
 
+        for v in variant_set.variants.all():
+            alts = v.get_alternates()
+            assert len(alts) == 1
+            alt = alts[0]
+            print '\npos:%s\nref: %dbp :%s\nalt: %dbp :%s\n' % (
+                    v.position,
+                    len(v.ref_value), v.ref_value,
+                    len(alt), alt)
+
+        return variant_set
+
+    def _assert_variants_make_target(self, variant_set):
         self.assertTrue(variant_set.variants.exists())
-        self.assertEqual(len(variant_set.variants.all()), 1)
+        # self.assertEqual(len(variant_set.variants.all()), 1)
 
-        # Make new reference genome
-        new_ref_genome_params = {'label': 'new_ref'}
-        new_ref_genome = generate_new_reference_genome(
-                variant_set, new_ref_genome_params)
+        if len(variant_set.variants.all()) == 1:
+            # Make new reference genome
+            new_ref_genome_params = {'label': 'new_ref'}
+            new_ref_genome = generate_new_reference_genome(
+                    variant_set, new_ref_genome_params)
 
-        # Verify insertion was placed correctly
-        new_ref_genome_fasta = get_dataset_with_type(
-                new_ref_genome, Dataset.TYPE.REFERENCE_GENOME_FASTA
-                ).get_absolute_location()
+            # Verify insertion was placed correctly
+            new_ref_genome_fasta = get_dataset_with_type(
+                    new_ref_genome, Dataset.TYPE.REFERENCE_GENOME_FASTA
+                    ).get_absolute_location()
 
-        fastas_same, indexes = are_fastas_same(
-                target_fasta, new_ref_genome_fasta)
+            fastas_same, indexes = are_fastas_same(
+                    self.target_fasta, new_ref_genome_fasta)
 
-        self.assertTrue(fastas_same)
+            self.assertTrue(fastas_same)
+
+        else:
+            print 'Multiple variants'
+            incorrect_variants = []
+            for i, v in enumerate(variant_set.variants.all()):
+
+                # Make Variant set for single variant
+                variant_set = VariantSet.objects.create(
+                        reference_genome=self.reference_genome,
+                        label='multiple_variant_%d' % i)
+
+                update_variant_in_set_memberships(
+                    self.reference_genome,
+                    [v.uid],
+                    'add',
+                    variant_set.uid)
+
+                new_ref_genome_params = {'label': 'new_ref'}
+
+                new_ref_genome = generate_new_reference_genome(
+                        variant_set, new_ref_genome_params)
+
+                # Verify insertion was placed correctly
+                new_ref_genome_fasta = get_dataset_with_type(
+                        new_ref_genome, Dataset.TYPE.REFERENCE_GENOME_FASTA
+                        ).get_absolute_location()
+
+                fastas_same, indexes = are_fastas_same(
+                        self.target_fasta, new_ref_genome_fasta)
+
+                if not fastas_same:
+                    incorrect_variants.append((i, v))
+
+            if incorrect_variants:
+                print 'Variant %d/%d was incorrect' * len(
+                        incorrect_variants) * tuple(zip(
+                                [t[0] for t in incorrect_variants],
+                                len(incorrect_variants) *
+                                len(variant_set.variants.all())))
+            self.assertTrue(not incorrect_variants, '%d incorrect variants' % (
+                    len(incorrect_variants) /
+                    len(variant_set.variants.all())))
 
     def test_deletion(self):
         test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
                 'deletion')
-        self._run_contig_walk_test(test_dir)
+        variant_set = self._run_contig_walk_test(test_dir)
+        self._assert_variants_make_target(variant_set)
 
     def test_homology_flanked_deletion(self):
         test_dir = os.path.join(GF_TEST_DIR, 'random_seq_data',
                 'homology_flanked_deletion')
-        self._run_contig_walk_test(test_dir)
+        variant_set = self._run_contig_walk_test(test_dir)
+        self._assert_variants_make_target(variant_set)
+
+    def test_annotated_mobile_element(self):
+        """Test for discovery of mobile element insertion in the
+        case where there is an integrated copy of the mobile element in the
+        genome annotated in the reference genbank"""
+
+        test_dir = os.path.join(GF_TEST_DIR, 'tenaillon',
+                'Line20')
+        variant_set = self._run_contig_walk_test(test_dir)
+
+        me_variants = []
+        for variant in variant_set.variants.all():
+            for vccd in variant.variantcallercommondata_set.all():
+                if vccd.data.get('INFO_METHOD', None) == 'ME_GRAPH_WALK':
+                    me_variants.append(variant)
+
+        self.assertTrue(me_variants)
+        for variant in me_variants:
+            self.assertTrue(1305000 < variant.position < 1306000)
+            alts = variant.get_alternates()
+            self.assertTrue(len(alts) == 1)
+            alt = alts[0]
+            self.assertTrue(1000 < len(alt) < 2000)
