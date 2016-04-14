@@ -6,7 +6,7 @@ import numpy as np
 import pysam
 
 from genome_finish.celery_task_decorator import set_assembly_status
-from genome_finish.celery_task_decorator import report_failure_stats_2
+from genome_finish.celery_task_decorator import report_failure_stats
 from genome_finish.graph_contig_placement import get_fasta
 from genome_finish.millstone_de_novo_fns import get_altalign_reads
 from main.models import Dataset
@@ -19,7 +19,7 @@ METHOD = 'COVERAGE'
 
 
 @task(ignore_result=False)
-@report_failure_stats_2('detect_deletions_failure_stats.txt')
+@report_failure_stats('detect_deletions_failure_stats.txt')
 def cov_detect_deletion_make_vcf(sample_alignment):
     """Uses coverage data to call large deletions and
     creates a VCF_COV_DETECT_DELETIONS dataset for the sample alignment

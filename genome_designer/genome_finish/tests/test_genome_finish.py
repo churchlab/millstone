@@ -385,7 +385,11 @@ class TestGraphWalk(TestCase):
         variant_set = self._run_contig_walk_test(test_dir)
         self._assert_variants_make_target(variant_set)
 
-    def test_is_element(self):
+    def test_annotated_mobile_element(self):
+        """Test for discovery of mobile element insertion in the
+        case where there is an integrated copy of the mobile element in the
+        genome annotated in the reference genbank"""
+
         test_dir = os.path.join(GF_TEST_DIR, 'tenaillon',
                 'Line20')
         variant_set = self._run_contig_walk_test(test_dir)

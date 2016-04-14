@@ -29,14 +29,14 @@ InsertionVertices = namedtuple('InsertionVertices',
         ['exit_ref', 'enter_contig', 'exit_contig', 'enter_ref'])
 
 
-def get_genbank_features_with_type(genbank_path, feature_type=None):
+def get_genbank_features_with_type(genbank_path, feature_type):
 
     chrom_intervals = {}
     with open(genbank_path, 'r') as fh:
         for seq_record in SeqIO.parse(fh, 'genbank'):
             interval_list = []
             for f in seq_record.features:
-                if feature_type and f.type == feature_type:
+                if f.type == feature_type:
                     interval_list.append((f, f.extract(seq_record.seq)))
 
             chrom_intervals[seq_record.id] = interval_list
@@ -71,8 +71,6 @@ def write_me_features_multifasta(genbank_path, output_fasta_path,
                 fh.write('>ME_REVERSE_%s\n' % me_type)
                 fh.write(str(seq)[::-1])
                 fh.write('\n')
-
-    fh.close()
 
 
 def graph_contig_placement(contig_list, skip_extracted_read_alignment,
