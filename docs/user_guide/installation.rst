@@ -35,8 +35,8 @@ Cloning the AMI
    you into a Wizard to have you configure your instance.
 
 2. In the Choose AMI tab, select Community AMIs in the left panel, then
-   search for "millstone", or search directly using our beta release ami
-   id: ami-271aa94c.
+   search for "millstone". The Millstone AMI will have a name of the form
+   `millstone_combined_YYYY_mm_dd_hash'. Select the newest version.
 
 3. On the 'Choose instance type' tab, select an instance according to
    your needs. We recommend m3.medium (select General Purpose on the
