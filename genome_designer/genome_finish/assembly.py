@@ -468,45 +468,60 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     contig_files.append(contigs_fasta)
 
     records = list(SeqIO.parse(contigs_fasta, 'fasta'))
-    digits = len(str(len(records)))
+    digits = len(str(len(records))) + 1
+    i = 0
     for seq_record in records:
 
-        if 'N' in seq_record.seq:
-            continue
-
         contig_node_number = int(
-                contig_number_pattern.findall(seq_record.description)[0])
-        leading_zeros = digits - len(str(contig_node_number))
-        contig_label = '%s_%s' % (
-                sample_alignment.experiment_sample.label,
-                leading_zeros * '0' + str(contig_node_number))
+                    contig_number_pattern.findall(
+                            seq_record.description)[0])
 
-        # Create an insertion model for the contig
-        contig = Contig.objects.create(
-                label=contig_label,
-                parent_reference_genome=reference_genome,
-                experiment_sample_to_alignment=(
-                        sample_alignment))
-        contig_list.append(contig)
+        coverage = float(seq_record.description.rsplit('_', 1)[1])
 
-        contig.metadata['coverage'] = float(
-                seq_record.description.rsplit('_', 1)[1])
-        contig.metadata['timestamp'] = timestamp
-        contig.metadata['node_number'] = contig_node_number
-        contig.metadata['assembly_dir'] = data_dir
+        # This gets copy of seq, not alias
+        full_seq = seq_record.seq
 
-        contig.ensure_model_data_dir_exists()
-        dataset_path = os.path.join(contig.get_model_data_dir(),
-                'fasta.fa')
+        for seq in full_seq.split('N'):
+            if not(seq):
+                continue
 
-        with open(dataset_path, 'w') as fh:
-            SeqIO.write([seq_record], fh, 'fasta')
+            i += 1
 
-        add_dataset_to_entity(
-                contig,
-                'contig_fasta',
-                Dataset.TYPE.REFERENCE_GENOME_FASTA,
-                filesystem_location=dataset_path)
+            leading_zeros = digits - len(str(i))
+            contig_label = '%s_%s' % (
+                    sample_alignment.experiment_sample.label,
+                    leading_zeros * '0' + str(i))
+
+            # Create an insertion model for the contig
+            contig = Contig.objects.create(
+                    label=contig_label,
+                    parent_reference_genome=reference_genome,
+                    experiment_sample_to_alignment=(
+                            sample_alignment))
+            contig_list.append(contig)
+
+            contig.metadata['coverage'] = coverage
+            contig.metadata['timestamp'] = timestamp
+            contig.metadata['node_number'] = contig_node_number
+            contig.metadata['assembly_dir'] = data_dir
+
+            contig.ensure_model_data_dir_exists()
+            dataset_path = os.path.join(contig.get_model_data_dir(),
+                    'fasta.fa')
+
+            seq_record.id = seq_record.name = seq_record.description = (
+                    'NODE_' + str(i))
+
+            seq_record.seq = seq
+
+            with open(dataset_path, 'w') as fh:
+                SeqIO.write([seq_record], fh, 'fasta')
+
+            add_dataset_to_entity(
+                    contig,
+                    'contig_fasta',
+                    Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                    filesystem_location=dataset_path)
 
     evaluate_contigs(contig_list)
     return contig_files
