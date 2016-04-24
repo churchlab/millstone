@@ -110,6 +110,8 @@ def export_melted_variant_view(alignment_group, filter_string):
 VCF_TEMPLATE_PATH = os.path.join(settings.PWD, 'test_data', 'vcf_template.vcf')
 EXPORT_CONTIGS_TEMPLATE_PATH = os.path.join(settings.PWD, 'test_data',
         'export_contigs_vcf_template.vcf')
+SV_VCF_TEMPLATE_PATH = os.path.join(settings.PWD, 'test_data',
+        'vcf_template_sv.vcf')
 
 # We use a fake single sample. The reason for this is that the external library
 # reference_genome_maker expects there to be a sample in case there are
@@ -139,7 +141,7 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
 
     # The vcf.Writer() requires a template vcf in order to structure itself.
     # We read in a generic template to satisfy this.
-    with open(EXPORT_CONTIGS_TEMPLATE_PATH) as template_fh:
+    with open(SV_VCF_TEMPLATE_PATH) as template_fh:
         vcf_template = vcf.Reader(template_fh)
 
     # Set samples and sample_indexes for template
@@ -164,8 +166,35 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
 
     vcf_writer = vcf.Writer(out_vcf_fh, vcf_template)
 
+    base_info_dict = {
+            'METHOD': method_info_string
+    }
+
+    if method_info_string == 'COVERAGE':
+        base_info_dict['SV_TYPE'] = 'DEL'
+    elif method_info_string == 'GRAPH_WALK':
+        base_info_dict['SV_TYPE'] = 'INS'
+    elif method_info_string == 'ME_GRAPH_WALK':
+        base_info_dict['SV_TYPE'] = 'ME_INS'
+    else:
+        raise Exception(
+                ('method_info_string: %s not in ' +
+                '["COVERAGE", "DE_NOVO_ASSEMBLY", "ME_GRAPH_WALK"]') % (
+                        method_info_string))
 
     for i, var_dict in enumerate(var_dict_list):
+
+        info_dict = base_info_dict.copy()
+        info_dict['SV_LEN'] = (
+                len(var_dict['alt_seq']) - len(var_dict['ref_seq']))
+
+        if 'MEINFO' in var_dict:
+            assert all([k in var_dict['MEINFO'] for k in
+                    ['name', 'start', 'end', 'polarity']])
+
+            assert len(var_dict['MEINFO'].keys() == 4)
+
+            info_dict['MEINFO'] = var_dict['MEINFO']
 
         # In the case of no alt, this variant is a deletion so
         # it is represented by a '<DEL>' alt field in vcf format
@@ -180,7 +209,7 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
                 (alt_seq,),
                 1, # QUAL
                 [], # FILTER
-                {'METHOD': method_info_string}, # INFO
+                info_dict, # INFO
                 'GT:DP:RO:QR:AO:QA:GL', # FORMAT
                 sample_indexes, # sample_indexes
         )
