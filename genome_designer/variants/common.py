@@ -13,6 +13,7 @@ from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
 from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
 from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
 from variants.filter_key_map_constants import MAP_KEY__EXPERIMENT_SAMPLE
+from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_LABEL
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_LABEL
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__VS_UID
 
@@ -146,6 +147,7 @@ def get_delim_key_value_triple(raw_string, all_key_map):
             key, value = split_result
             key = key.upper()
             key = key.strip()
+            key = get_canonical_synonym(key)
             value = value.strip()
             for data_map in all_key_map:
                 # Make sure this is a valid key and valid delimeter.
@@ -162,6 +164,14 @@ def get_delim_key_value_triple(raw_string, all_key_map):
 
     # If we got here, we didn't find a match.
     raise ParseError(raw_string, 'No valid filter delimeter.')
+
+
+def get_canonical_synonym(key):
+    """Returns canonical synonym for key, else just key.
+    """
+    if key == 'SAMPLE':
+        return MELTED_SCHEMA_KEY__ES_LABEL
+    return key
 
 
 def validate_key_against_map(key, all_key_map):
