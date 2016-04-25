@@ -25,6 +25,7 @@ from genome_finish.millstone_de_novo_fns import get_unmapped_reads
 from main.models import Contig
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
+from main.models import Variant
 from main.model_utils import get_dataset_with_type
 from pipeline.read_alignment import get_insert_size_mean_and_stdev
 from pipeline.read_alignment_util import ensure_bwa_index
@@ -41,6 +42,7 @@ from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import prepare_jbrowse_ref_sequence
+from variants.materialized_variant_filter import lookup_variants
 from variants.vcf_parser import parse_vcf
 
 # Default args for velvet assembly
@@ -74,6 +76,8 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
         overwrite=True):
 
     for sample_alignment in sample_alignment_list:
+
+        delete_previous_assembly(sample_alignment)
         set_assembly_status(
                 sample_alignment,
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED, force=True)
@@ -653,3 +657,43 @@ def parse_variants_from_vcf(sample_alignment):
     sample_alignment.data['assembly_status'] = (
             ExperimentSampleToAlignment.ASSEMBLY_STATUS.COMPLETED)
     sample_alignment.save()
+
+
+def delete_previous_assembly(sample_alignment):
+
+    for contig in sample_alignment.contig_set.all():
+        contig.delete()
+
+    variants = get_de_novo_variants(sample_alignment)
+
+    for v in variants:
+        v.delete()
+
+
+def get_de_novo_variants(sample_alignment):
+
+    SV_METHODS = [
+            'DE_NOVO_ASSEMBLY',
+            'ME_GRAPH_WALK',
+            'GRAPH_WALK',
+            'COVERAGE']
+    or_clause = ' | '.join(['INFO_METHOD=' + m for m in SV_METHODS])
+
+    sample_uid = str(sample_alignment.experiment_sample.uid)
+
+    filter_string = 'EXPERIMENT_SAMPLE_UID=%s & (%s)' % (sample_uid, or_clause)
+
+    query_args = {
+            'filter_string': filter_string,
+            'melted': False
+    }
+
+    de_novo_assembly_variants = lookup_variants(
+            query_args,
+            sample_alignment.alignment_group.reference_genome,
+            sample_alignment.alignment_group).result_list
+
+    variant_uids = set(v['UID'] for v in de_novo_assembly_variants)
+    var_list = Variant.objects.filter(uid__in=variant_uids)
+
+    return var_list
