@@ -169,6 +169,6 @@ gd.AlignmentView = Backbone.View.extend({
 
   /** Puts UI in the loading state. */
   exitLoadingState: function() {
-    this.loadingSpinner.stop();
+    gd.Spinner.globalClear();
   }
 });

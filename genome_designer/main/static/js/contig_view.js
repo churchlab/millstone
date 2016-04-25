@@ -70,7 +70,7 @@ gd.ContigView = Backbone.View.extend({
   exitLoadingState: function() {
     $(".gd-id-form-submit-button")
         .prop('disabled', false);
-    this.loadingSpinner.stop();
+    gd.Spinner.globalClear();
   },
 
 });

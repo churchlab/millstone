@@ -130,7 +130,7 @@ gd.ContigControlsComponent = gd.DataTableControlsComponent.extend({
   exitLoadingState: function() {
     $(".gd-id-form-submit-button")
         .prop('disabled', false);
-    this.loadingSpinner.stop();
+    gd.Spinner.globalClear();
   },
 
   destroy: function() {

@@ -35,9 +35,7 @@ gd.AlignmentListControlsComponent = gd.DataTableControlsComponent.extend({
 
   /** Reset UI changes after loading complete.. */
   setUIDoneLoadingState: function() {
-    if (this.loadingSpinner) {
-      this.loadingSpinner.stop();
-    }
+    gd.Spinner.globalClear();
   },
 
   /** Sends request to delete selected samples. */

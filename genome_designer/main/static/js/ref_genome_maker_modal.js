@@ -55,6 +55,6 @@ gd.RefGenomeMakerModal = Backbone.View.extend({
   /** Exits loading state. */
   exitLoadingState: function() {
     $("#gd-variant-sets-ref-genome-maker-submit").prop('disabled', false);
-    this.loadingSpinner.stop();
+    gd.Spinner.globalClear();
   },
 });

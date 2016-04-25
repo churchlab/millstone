@@ -32,7 +32,12 @@ gd.Spinner.prototype.spin = function(opt_target) {
 };
 
 
-/** Stops the spinner. */
-gd.Spinner.prototype.stop = function() {
-  this.spinnerDelegate.stop();
+/**
+ * Static function that clears any spinners.
+ *
+ * NOTE: We used to have a prototype stop method, but that broke if the user
+ * changed the view before load was complete.
+ */
+gd.Spinner.globalClear = function() {
+  $(document.body).children('.spinner').remove();
 };

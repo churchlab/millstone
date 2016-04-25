@@ -80,9 +80,7 @@ gd.SamplesControlsComponent = gd.DataTableControlsComponent.extend({
 
   /** Reset UI changes after loading complete.. */
   setUIDoneLoadingState: function() {
-    if (this.loadingSpinner) {
-      this.loadingSpinner.stop();
-    }
+    gd.Spinner.globalClear();
   },
 
   /** Sends request to delete selected samples. */
@@ -196,7 +194,7 @@ gd.SamplesControlsComponent = gd.DataTableControlsComponent.extend({
   /** Puts UI in the loading state. */
   exitLoadingState: function() {
     $("#gd-samples-create-from-server-location-submit").prop('disabled', false);
-    this.loadingSpinner.stop();
+    gd.Spinner.globalClear();
   },
 
   /**

@@ -157,9 +157,7 @@ gd.VariantsTableComponent = Backbone.View.extend({
   /** Reset UI changes after loading complete.. */
   setUIDoneLoadingState: function() {
     $('#gd-datatable-hook-datatable_wrapper').css('opacity', 1);
-    if (this.loadingSpinner) {
-      this.loadingSpinner.stop();
-    }
+    gd.Spinner.globalClear();
 
     // HACK: Reset master checkbox.
     // Is there a better place to do this?

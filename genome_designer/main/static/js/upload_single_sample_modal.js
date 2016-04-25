@@ -35,7 +35,7 @@ gd.UploadSingleSampleModal= Backbone.View.extend({
   exitLoadingState: function() {
     $(".gd-samples-upload-single-submit")
         .prop('disabled', false);
-    this.loadingSpinner.stop();
+    gd.Spinner.globalClear();
   },
 
   /** Uploads genome through browser. */

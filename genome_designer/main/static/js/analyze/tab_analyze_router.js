@@ -16,6 +16,7 @@ gd.TabAnalyzeRouter = Backbone.Router.extend({
 
   /** Navigates to the ref genome uid. */
   navOnAlignmentGroupSelect: function(alignmentGroupUid, subViewKey) {
+    gd.Spinner.globalClear();
     this.navigate(this.rootUrl + '/' + alignmentGroupUid + '/' + subViewKey);
   }
 });
