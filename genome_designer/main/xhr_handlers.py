@@ -51,6 +51,7 @@ from main.models import S3File
 from genome_finish.assembly import run_de_novo_assembly_pipeline
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
+from utils import generate_safe_filename_prefix_from_label
 from utils.combine_reference_genomes import combine_list_allformats
 from utils.data_export_util import export_melted_variant_view
 from utils.data_export_util import export_project_as_zip
@@ -294,6 +295,31 @@ def ref_genomes_download(request):
             file_name)
     response['Content-Length'] = os.path.getsize(file_path)
 
+    return response
+
+
+@login_required
+@require_GET
+def alignment_download_bam(request):
+    """Downloads requested fasta/genbank file
+    """
+    esta_uid = request.GET.get('estaUid')
+    esta = ExperimentSampleToAlignment.objects.get(uid=esta_uid)
+
+    # Path to associated bam file.
+    file_path = esta.dataset_set.get(
+            type=Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+
+    # User-friendly file name for download.
+    file_name = generate_safe_filename_prefix_from_label(
+            esta.experiment_sample.label) + '.bam'
+
+    # Wrap in downloadable object.
+    wrapper = FileWrapper(file(file_path))
+    response = StreamingHttpResponse(wrapper, content_type='text/plain')
+    response['Content-Disposition'] = 'attachment; filename="{0}"'.format(
+            file_name)
+    response['Content-Length'] = os.path.getsize(file_path)
     return response
 
 

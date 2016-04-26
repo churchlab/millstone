@@ -124,6 +124,12 @@ gd.AlignmentView = Backbone.View.extend({
           '<a href="' + errorLogUrl + '">Error Log</a>' +
         '</span>');
     }
+
+    /** Dropdown options. */
+    this.controlsComponent = new gd.AlignmentViewControlsComponent({
+      // el: '#gd-sample-list-view-datatable-hook-control',
+      datatableComponent: this.datatable
+    });
   },
 
   /**
