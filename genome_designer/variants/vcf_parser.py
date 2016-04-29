@@ -186,8 +186,6 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     Also go through all per-alt keys and add them as a json field
     to the VariantAlternate object.
 
-    Right now this assumes we are always using Freebayes for alignment.
-
     Args:
         reference_genome: The ReferenceGenome.
         vcf_record: pyvcf Record object.
@@ -209,6 +207,13 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
 
     if ref_value == 'N':
         ref_value = SV_REF_VALUE
+
+    # Convert long ref values to a string representation. No need to save
+    # the actual sequence anywhere because a user can look at the reference
+    # genome. We'll have to do this differently for alt_values where the user
+    # may want to be able to access the actual sequence.
+    if len(ref_value) > 10:
+        ref_value = 'LONG:{size}'.format(size=len(ref_value))
 
     # Make sure the chromosome cited in the VCF exists for
     # the reference genome variant is being added to
