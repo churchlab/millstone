@@ -3,4 +3,4 @@
 
 git+git://github.com/churchlab/django-celery-testworker.git@b9007154bba8a5da1c39826b34bf3191a5087a7e
 git+git://github.com/churchlab/optmage.git@d04f824b450878683016280f026a87a2e645c107
-git+git://github.com/churchlab/reference_genome_maker.git@88225c16a86fe3f22d359e7ac0c4d929b1c53309
+git+git://github.com/churchlab/reference_genome_maker.git@2cf452aea6e564216e9f4f835e4c05ff3e6163b5
