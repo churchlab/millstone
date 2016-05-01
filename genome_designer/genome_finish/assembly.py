@@ -25,6 +25,7 @@ from genome_finish.millstone_de_novo_fns import get_unmapped_reads
 from main.models import Contig
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
+from main.models import Variant
 from main.model_utils import get_dataset_with_type
 from pipeline.read_alignment import get_insert_size_mean_and_stdev
 from pipeline.read_alignment_util import ensure_bwa_index
@@ -41,6 +42,8 @@ from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import prepare_jbrowse_ref_sequence
+from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
+from variants.materialized_variant_filter import lookup_variants
 from variants.vcf_parser import parse_vcf
 
 # Default args for velvet assembly
@@ -68,12 +71,20 @@ DEFAULT_VELVET_OPTS = {
 
 NUM_CONTIGS_TO_EVALUATE = 1000
 
+STRUCTURAL_VARIANT_VCF_DATASETS = [
+        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK,
+        Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
+
 
 def run_de_novo_assembly_pipeline(sample_alignment_list,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=True):
 
     for sample_alignment in sample_alignment_list:
+
+        delete_previous_assembly(sample_alignment)
         set_assembly_status(
                 sample_alignment,
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED, force=True)
@@ -122,6 +133,52 @@ def get_sv_caller_async_result(sample_alignment_list):
 
     return chord(generate_contigs_tasks + cov_detect_deletion_tasks)(
             chain(parse_vcf_tasks))
+
+
+def run_sv_calling_from_contigs(sample_alignment_list):
+
+    for sample_alignment in sample_alignment_list:
+
+        delete_structural_variants(sample_alignment)
+        set_assembly_status(
+                sample_alignment,
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED, force=True)
+
+    # Ensure reference genome fasta has bwa index
+    ref_genome = sample_alignment_list[0].alignment_group.reference_genome
+    ref_genome_fasta = ref_genome.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    ensure_bwa_index(ref_genome_fasta)
+    prepare_jbrowse_ref_sequence(ref_genome)
+
+    async_result = get_sv_caller_from_contigs_async_result(
+            sample_alignment_list)
+
+    return async_result
+
+
+def get_sv_caller_from_contigs_async_result(sample_alignment_list):
+    """Kick off a chord that calls SVs for each ExperimentSampleToAlignment in
+    sample_alignment_list and returns an AsyncResult object
+    """
+
+    vcf_datasets_to_parse = [
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK]
+
+    evaluate_contigs_tasks = []
+    parse_vcf_tasks = []
+    for sample_alignment in sorted(sample_alignment_list,
+            key=lambda x: x.experiment_sample.label):
+        evaluate_contigs_tasks.append(
+                evaluate_sample_alignment_contigs.si(sample_alignment))
+
+        parse_vcf_tasks.append(
+                parse_variants_from_vcf.si(
+                        sample_alignment, vcf_datasets_to_parse))
+
+    return chord(evaluate_contigs_tasks)(chain(parse_vcf_tasks))
 
 
 @task(ignore_result=False)
@@ -468,20 +525,27 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     contig_files.append(contigs_fasta)
 
     records = list(SeqIO.parse(contigs_fasta, 'fasta'))
-    digits = len(str(len(records)))
+    digits = len(str(len(records))) + 1
+    i = 0
     for seq_record in records:
-
-        if 'N' in seq_record.seq:
-            continue
+        i += 1
 
         contig_node_number = int(
-                contig_number_pattern.findall(seq_record.description)[0])
-        leading_zeros = digits - len(str(contig_node_number))
+                    contig_number_pattern.findall(
+                            seq_record.description)[0])
+
+        coverage = float(seq_record.description.rsplit('_', 1)[1])
+
+        seq_record.seq = reduce(
+                lambda x, y: x + y,
+                [seq for seq in seq_record.seq.split('N')])
+
+        leading_zeros = digits - len(str(i))
         contig_label = '%s_%s' % (
                 sample_alignment.experiment_sample.label,
-                leading_zeros * '0' + str(contig_node_number))
+                leading_zeros * '0' + str(i))
 
-        # Create an insertion model for the contig
+        # Create model
         contig = Contig.objects.create(
                 label=contig_label,
                 parent_reference_genome=reference_genome,
@@ -489,8 +553,7 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
                         sample_alignment))
         contig_list.append(contig)
 
-        contig.metadata['coverage'] = float(
-                seq_record.description.rsplit('_', 1)[1])
+        contig.metadata['coverage'] = coverage
         contig.metadata['timestamp'] = timestamp
         contig.metadata['node_number'] = contig_node_number
         contig.metadata['assembly_dir'] = data_dir
@@ -498,6 +561,9 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
         contig.ensure_model_data_dir_exists()
         dataset_path = os.path.join(contig.get_model_data_dir(),
                 'fasta.fa')
+
+        seq_record.id = seq_record.name = seq_record.description = (
+                'NODE_' + str(i))
 
         with open(dataset_path, 'w') as fh:
             SeqIO.write([seq_record], fh, 'fasta')
@@ -510,6 +576,13 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
 
     evaluate_contigs(contig_list)
     return contig_files
+
+
+@task(ignore_result=False)
+@report_failure_stats('evaluate_contigs_failure_stats.txt')
+def evaluate_sample_alignment_contigs(sample_alignment):
+    contig_list = list(sample_alignment.contig_set.all())
+    evaluate_contigs(contig_list)
 
 
 def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
@@ -597,17 +670,13 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
 
 
 @task(ignore_result=False)
-def parse_variants_from_vcf(sample_alignment):
+def parse_variants_from_vcf(sample_alignment,
+        vcf_datasets_to_parse=STRUCTURAL_VARIANT_VCF_DATASETS):
 
     sample_alignment.data['assembly_status'] = (
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.PARSING_VARIANTS)
     sample_alignment.save()
 
-    vcf_datasets_to_parse = [
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK,
-            Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
 
     variant_list = []
     for dataset_type in vcf_datasets_to_parse:
@@ -638,3 +707,57 @@ def parse_variants_from_vcf(sample_alignment):
     sample_alignment.data['assembly_status'] = (
             ExperimentSampleToAlignment.ASSEMBLY_STATUS.COMPLETED)
     sample_alignment.save()
+
+
+def delete_previous_assembly(sample_alignment):
+
+    for contig in sample_alignment.contig_set.all():
+        contig.delete()
+
+    variants = get_de_novo_variants(sample_alignment)
+
+    for v in variants:
+        v.delete()
+
+
+def delete_structural_variants(sample_alignment):
+
+    sv_methods = [
+            'DE_NOVO_ASSEMBLY',
+            'ME_GRAPH_WALK',
+            'GRAPH_WALK']
+
+    variants = get_de_novo_variants(sample_alignment, sv_methods)
+
+    for v in variants:
+        v.delete()
+
+
+def get_de_novo_variants(sample_alignment, sv_methods = [
+        'DE_NOVO_ASSEMBLY', 'ME_GRAPH_WALK', 'GRAPH_WALK', 'COVERAGE']):
+
+    # Check to see if this reference genome has ever seen structural variants
+    ref_genome = sample_alignment.alignment_group.reference_genome
+    if 'INFO_METHOD' not in ref_genome.variant_key_map[MAP_KEY__COMMON_DATA]:
+        return []
+
+    or_clause = ' | '.join(['INFO_METHOD=' + m for m in sv_methods])
+
+    sample_uid = str(sample_alignment.experiment_sample.uid)
+
+    filter_string = 'EXPERIMENT_SAMPLE_UID=%s & (%s)' % (sample_uid, or_clause)
+
+    query_args = {
+            'filter_string': filter_string,
+            'melted': False
+    }
+
+    de_novo_assembly_variants = lookup_variants(
+            query_args,
+            sample_alignment.alignment_group.reference_genome,
+            sample_alignment.alignment_group).result_list
+
+    variant_uids = set(v['UID'] for v in de_novo_assembly_variants)
+    var_list = Variant.objects.filter(uid__in=variant_uids)
+
+    return var_list

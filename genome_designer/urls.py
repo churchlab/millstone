@@ -128,6 +128,8 @@ urlpatterns = patterns('',
 
     url(r'^_/alignments/generate_contigs$',
             'main.xhr_handlers.generate_contigs'),
+    url(r'^_/alignments/call_svs_from_contigs$',
+            'main.xhr_handlers.call_svs_from_contigs'),
     url(r'^_/alignments/download_bam$',
             'main.xhr_handlers.alignment_download_bam'),
 

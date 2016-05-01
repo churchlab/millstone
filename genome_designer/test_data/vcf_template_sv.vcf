@@ -1,0 +1,7 @@
+##fileformat=VCFv4.1
+##phasing=none
+##INFO=<ID=SV_LEN,Number=-1,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SV_TYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=MEINFO,Number=4,Type=String,Description="Mobile element info of the form NAME,START,END,POLARITY">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	fake_sid
