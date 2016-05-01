@@ -71,6 +71,12 @@ DEFAULT_VELVET_OPTS = {
 
 NUM_CONTIGS_TO_EVALUATE = 1000
 
+STRUCTURAL_VARIANT_VCF_DATASETS = [
+        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK,
+        Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
+
 
 def run_de_novo_assembly_pipeline(sample_alignment_list,
         sv_read_classes={}, input_velvet_opts={},
@@ -127,6 +133,52 @@ def get_sv_caller_async_result(sample_alignment_list):
 
     return chord(generate_contigs_tasks + cov_detect_deletion_tasks)(
             chain(parse_vcf_tasks))
+
+
+def run_sv_calling_from_contigs(sample_alignment_list):
+
+    for sample_alignment in sample_alignment_list:
+
+        delete_structural_variants(sample_alignment)
+        set_assembly_status(
+                sample_alignment,
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED, force=True)
+
+    # Ensure reference genome fasta has bwa index
+    ref_genome = sample_alignment_list[0].alignment_group.reference_genome
+    ref_genome_fasta = ref_genome.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    ensure_bwa_index(ref_genome_fasta)
+    prepare_jbrowse_ref_sequence(ref_genome)
+
+    async_result = get_sv_caller_from_contigs_async_result(
+            sample_alignment_list)
+
+    return async_result
+
+
+def get_sv_caller_from_contigs_async_result(sample_alignment_list):
+    """Kick off a chord that calls SVs for each ExperimentSampleToAlignment in
+    sample_alignment_list and returns an AsyncResult object
+    """
+
+    vcf_datasets_to_parse = [
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
+            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK]
+
+    evaluate_contigs_tasks = []
+    parse_vcf_tasks = []
+    for sample_alignment in sorted(sample_alignment_list,
+            key=lambda x: x.experiment_sample.label):
+        evaluate_contigs_tasks.append(
+                evaluate_sample_alignment_contigs.si(sample_alignment))
+
+        parse_vcf_tasks.append(
+                parse_variants_from_vcf.si(
+                        sample_alignment, vcf_datasets_to_parse))
+
+    return chord(evaluate_contigs_tasks)(chain(parse_vcf_tasks))
 
 
 @task(ignore_result=False)
@@ -526,6 +578,13 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     return contig_files
 
 
+@task(ignore_result=False)
+@report_failure_stats('evaluate_contigs_failure_stats.txt')
+def evaluate_sample_alignment_contigs(sample_alignment):
+    contig_list = list(sample_alignment.contig_set.all())
+    evaluate_contigs(contig_list)
+
+
 def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
         use_read_alignment=True):
 
@@ -611,17 +670,13 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
 
 
 @task(ignore_result=False)
-def parse_variants_from_vcf(sample_alignment):
+def parse_variants_from_vcf(sample_alignment,
+        vcf_datasets_to_parse=STRUCTURAL_VARIANT_VCF_DATASETS):
 
     sample_alignment.data['assembly_status'] = (
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.PARSING_VARIANTS)
     sample_alignment.save()
 
-    vcf_datasets_to_parse = [
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK,
-            Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
 
     variant_list = []
     for dataset_type in vcf_datasets_to_parse:
@@ -665,19 +720,28 @@ def delete_previous_assembly(sample_alignment):
         v.delete()
 
 
-def get_de_novo_variants(sample_alignment):
+def delete_structural_variants(sample_alignment):
+
+    sv_methods = [
+            'DE_NOVO_ASSEMBLY',
+            'ME_GRAPH_WALK',
+            'GRAPH_WALK']
+
+    variants = get_de_novo_variants(sample_alignment, sv_methods)
+
+    for v in variants:
+        v.delete()
+
+
+def get_de_novo_variants(sample_alignment, sv_methods = [
+        'DE_NOVO_ASSEMBLY', 'ME_GRAPH_WALK', 'GRAPH_WALK', 'COVERAGE']):
 
     # Check to see if this reference genome has ever seen structural variants
     ref_genome = sample_alignment.alignment_group.reference_genome
     if 'INFO_METHOD' not in ref_genome.variant_key_map[MAP_KEY__COMMON_DATA]:
         return []
 
-    SV_METHODS = [
-            'DE_NOVO_ASSEMBLY',
-            'ME_GRAPH_WALK',
-            'GRAPH_WALK',
-            'COVERAGE']
-    or_clause = ' | '.join(['INFO_METHOD=' + m for m in SV_METHODS])
+    or_clause = ' | '.join(['INFO_METHOD=' + m for m in sv_methods])
 
     sample_uid = str(sample_alignment.experiment_sample.uid)
 

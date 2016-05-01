@@ -19,8 +19,12 @@ gd.SampleAssemblyControlsComponent = gd.DataTableControlsComponent.extend({
     // Option to delete contigs.
     var assembleOptionHtml =
         '<a href="#" class="gd-id-assemble">Assemble Contigs</a>';
+    var callFromContigsOptionHtml =
+        '<a href="#" class="gd-id-call-sv-from-contigs">Call SVs using assembled contigs</a>';
     this.addDropdownOption(assembleOptionHtml);
+    this.addDropdownOption(callFromContigsOptionHtml);
     $('.gd-id-assemble').click(_.bind(this.handleAssembleContigs, this));
+    $('.gd-id-call-sv-from-contigs').click(_.bind(this.handleCallSVFromContigs, this));
   },
 
   /** Send request to generate contigs with default parameters **/
@@ -33,6 +37,19 @@ gd.SampleAssemblyControlsComponent = gd.DataTableControlsComponent.extend({
     };
 
     $.post('/_/alignments/generate_contigs', JSON.stringify(postData),
+        _.bind(this.handleAssembleContigsResponse, this));
+  },
+
+  /** Send request to call svs from contigs with default parameters **/
+  handleCallSVFromContigs: function() {
+
+    sample_alignment_uid_list = this.datatableComponent.getCheckedRowUids()
+
+    var postData = {
+        sampleAlignmentUidList: sample_alignment_uid_list
+    };
+
+    $.post('/_/alignments/call_svs_from_contigs', JSON.stringify(postData),
         _.bind(this.handleAssembleContigsResponse, this));
   },
 

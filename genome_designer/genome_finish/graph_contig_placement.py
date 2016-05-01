@@ -90,7 +90,16 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment,
 
     # Make Assembly dir
     assembly_dir = contig_list[0].metadata['assembly_dir']
-    contig_alignment_dir = os.path.join(assembly_dir, 'contig_alignment')
+
+    dir_counter = 0
+    while dir_counter == 0 or dir_exists:
+        contig_alignment_dir = os.path.join(
+                assembly_dir, 'contig_alignment',
+                str(dir_counter))
+
+        dir_exists = os.path.exists(contig_alignment_dir)
+        dir_counter += 1
+
     os.mkdir(contig_alignment_dir)
 
     # Concatenate contig fastas for alignment
@@ -214,7 +223,8 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment,
     # Perform translocation walk
     if ref_genome.num_chromosomes == 1:
 
-        trans_iv_pairs = translocation_walk(G)
+        # trans_iv_pairs = translocation_walk(G)
+        trans_iv_pairs = []
         var_dict_list = [parse_path_into_ref_alt(iv_pair, contig_qname_to_uid,
                 sample_alignment)
                 for iv_pair in trans_iv_pairs]
@@ -953,7 +963,7 @@ def parse_path_into_ref_alt(path_list, contig_qname_to_uid,
 
             assert enter_vert.pos <= exit_vert.pos
             if rc:
-                return str(seq_rec.reverse_complement()[
+                return str(seq_rec.seq.reverse_complement()[
                         enter_vert.pos: exit_vert.pos])
             else:
                 return str(seq_rec.seq[enter_vert.pos: exit_vert.pos])
