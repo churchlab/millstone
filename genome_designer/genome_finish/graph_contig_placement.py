@@ -228,11 +228,13 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment,
     # Perform translocation walk
     if ref_genome.num_chromosomes == 1:
 
-        # trans_iv_pairs = translocation_walk(G)
-        trans_iv_pairs = []
+        trans_iv_pairs = translocation_walk(G)
         var_dict_list = [parse_path_into_ref_alt(iv_pair, contig_qname_to_uid,
                 sample_alignment)
                 for iv_pair in trans_iv_pairs]
+
+        var_dict_list = [var_d for var_d in var_dict_list
+                if any([var_d['ref_seq'], var_d['alt_seq']])]
 
         if use_me_alignment:
             me_trans_iv_pairs = me_translocation_walk(G)
@@ -401,7 +403,8 @@ def add_alignment_to_graph(G, contig_alignment_bam):
 
                 # Add an edge to G for the junction
                 G.add_edge(contig_vert, ref_vert,
-                        weight=match_region.length, is_rc=read.is_reverse)
+                        weight=match_region.length, is_rc=read.is_reverse,
+                        match_region=match_region)
 
             if match_region.read_end != contig_intervals.length:
                 # Insert break into sequence intervals for ref and contig
@@ -411,7 +414,8 @@ def add_alignment_to_graph(G, contig_alignment_bam):
 
                 # Add an edge to G for the junction
                 G.add_edge(ref_vert, contig_vert,
-                        weight=match_region.length, is_rc=read.is_reverse)
+                        weight=match_region.length, is_rc=read.is_reverse,
+                        match_region=match_region)
 
     # Add inter-contig sequence edges
     for contig_intervals in contigs_intervals.values() + [ref_intervals]:
@@ -804,7 +808,9 @@ def translocation_walk(G):
             exit_iv = sorted_by_enter_ref[j]
             deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
 
-    return iv_pairs
+    filtered = match_region_filter(G, iv_pairs)
+
+    return filtered
 
 
 class SequenceVertex:
@@ -1060,7 +1066,9 @@ def parse_path_into_ref_alt(path_list, contig_qname_to_uid,
         assert len(set(seq_names)) == 1
 
         name = seq_names[0]
-        is_rc = seq_names[-3:] == '_RC'
+        is_rc = name[-3:] == '_RC'
+        if is_rc:
+            name = name[:-3]
 
         var_dict['MEINFO'] = {
                 'name': seq_names[0],
