@@ -91,6 +91,11 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment,
     # Make Assembly dir
     assembly_dir = contig_list[0].metadata['assembly_dir']
 
+    contig_alignment_base_dir = os.path.join(
+            assembly_dir, 'contig_alignment')
+    if not os.path.exists(contig_alignment_base_dir):
+        os.mkdir(contig_alignment_base_dir)
+
     dir_counter = 0
     while dir_counter == 0 or dir_exists:
         contig_alignment_dir = os.path.join(
