@@ -1,6 +1,7 @@
 from collections import namedtuple
 import os
 import subprocess
+import sys
 
 from Bio import SeqIO
 from django.conf import settings
@@ -75,11 +76,33 @@ def write_me_features_multifasta(genbank_path, output_fasta_path,
 
 def graph_contig_placement(contig_list, skip_extracted_read_alignment,
         use_alignment_reads=True):
+    """Align contigs passed in contig_list to the reference and to any
+    annotated mobile elements in the reference genbank and use the alignment
+    to build a sequence graph.  The sequence graph is then used by graph
+    walking algorithms that call structural variants from paths in the graph.
+
+    Args:
+        contig_list: list of Contig objects
+        skip_extracted_read_alignment: if False, extract the reads that
+                assembled each contig and make them a bam track on the
+                reference
+        use_alignment_reads: if True, filter contig placements that would
+                delete regions of moderate coverage
+
+    Returns:
+         placeable_contigs: Contig objects with metadata fields holding
+                their reference placement parameters
+         var_dict_list: list of dictionary representations of translocation
+                variants with keys: chromosome, pos, ref_seq, alt_seq
+         me_var_dict_list: list of dictionary representations of mobile
+                element translocation variants with keys: chromosome, pos,
+                ref_seq, alt_seq, MEINFO
+    """
 
     sample_alignment = contig_list[0].experiment_sample_to_alignment
     sample_alignment.data['assembly_status'] = (
             ExperimentSampleToAlignment.ASSEMBLY_STATUS.BUILDING_SEQUENCE_GRAPH
-            )
+    )
     sample_alignment.save()
 
     if not skip_extracted_read_alignment:
@@ -96,14 +119,13 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment,
     if not os.path.exists(contig_alignment_base_dir):
         os.mkdir(contig_alignment_base_dir)
 
-    dir_counter = 0
-    while dir_counter == 0 or dir_exists:
-        contig_alignment_dir = os.path.join(
-                assembly_dir, 'contig_alignment',
-                str(dir_counter))
-
-        dir_exists = os.path.exists(contig_alignment_dir)
-        dir_counter += 1
+    # Make a subdirectory within contig_alignment_base_dir with the
+    # next available integer that is not already a subdir as its name
+    contig_alignment_dir = (
+            os.path.join(contig_alignment_base_dir, str(i))
+            for i in xrange(sys.maxint)
+            if not os.path.exists(
+                    os.path.join(contig_alignment_base_dir, str(i)))).next()
 
     os.mkdir(contig_alignment_dir)
 
@@ -255,6 +277,9 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment,
 
 
 def avg_coverage(bam, chromosome, start, end):
+    """Average read coverage between start and end positions on
+    the chromosome as indicated by the bam file whose path is passed as an arg
+    """
 
     alignment_file = pysam.AlignmentFile(bam)
     coverage_atcg = alignment_file.count_coverage(
@@ -267,6 +292,10 @@ def avg_coverage(bam, chromosome, start, end):
 
 
 def add_me_alignment_to_graph(G, contig_alignment_bam, add_rc_me_seqs=True):
+    """Add (sequence vertex, sequence vertex) edges between contigs and
+    mobile elements to DiGraph G as indicated by the contig_alignment_bam
+    alignment file
+    """
 
     contigs_intervals = G.contig_intervals_list
     me_interval_dict = {}
@@ -370,6 +399,10 @@ def add_rc_of_me_to_graph(G):
 
 
 def add_alignment_to_graph(G, contig_alignment_bam):
+    """Add (sequence vertex, sequence vertex) edges between contigs and
+    the reference to DiGraph G as indicated by the contig_alignment_bam
+    alignment file
+    """
 
     ref_intervals = G.ref_intervals
 
@@ -513,6 +546,10 @@ def set_contig_placement_params(contig, insertion_vertices):
 
 
 def novel_seq_ins_walk(G):
+    """Walk the graph and return InsertionVertices objects corresponding to
+    ref - contig - contig - ref paths that represent novel sequence insertions
+    """
+
     ref_seq_uid = G.ref_intervals.vertices[0].seq_uid
     contig_seq_uid_set = set(ci.seq_uid for ci in
             G.contig_intervals_list.values())
@@ -553,6 +590,17 @@ def novel_seq_ins_walk(G):
 
 
 def me_translocation_walk(G):
+    """Walk the graph and return InsertionVertices tuples corresponding to
+    ref - contig - contig - ME - ME - contig - contig - ref paths that
+    represent mobile element insertions
+
+    Args:
+        G: networkx.DiGraph representation of sequence graph
+
+    Returns:
+        filtered: (InsertionVertices, InsertionVertices) tuples corresponding
+            to ME insertion paths through the sequence graph
+    """
 
     assert hasattr(G, 'me_interval_dict')
 
@@ -651,6 +699,9 @@ def me_translocation_walk(G):
 
 
 def strand_filter(G, me_iv_pairs):
+    """Returns list of (InsertionVertices, InsertionVertices) tuples
+    with those containing paths of inconsistent polarity filtered out
+    """
 
     def _is_edge_rc(u, v):
         data = G.get_edge_data(u, v)
@@ -680,6 +731,10 @@ def strand_filter(G, me_iv_pairs):
 
 
 def me_length_filter(me_iv_pairs, min_length=100):
+    """Returns list of (InsertionVertices, InsertionVertices) tuples
+    with those containing paths going backwards through the ME sequence
+    filtered out
+    """
 
     filtered = []
     for iv_pair in me_iv_pairs:
@@ -693,6 +748,10 @@ def me_length_filter(me_iv_pairs, min_length=100):
 
 
 def match_region_filter(G, me_iv_pairs):
+    """Returns list of (InsertionVertices, InsertionVertices) tuples,
+    filtering out paths corresponding to null variants and only keeping
+    a single copy of synonymous variants
+    """
 
     def _me_seq_length(iv_pair):
         enter_iv, exit_iv = iv_pair
@@ -726,6 +785,17 @@ def match_region_filter(G, me_iv_pairs):
 
 
 def translocation_walk(G):
+    """Walk the graph and return InsertionVertices tuples corresponding to
+    ref - contig - contig - ref - ref - contig - contig - ref paths that
+    represent translocations within the reference
+
+    Args:
+        G: networkx.DiGraph representation of sequence graph
+
+    Returns:
+        filtered: (InsertionVertices, InsertionVertices) tuples corresponding
+            to translocation paths through the sequence graph
+    """
 
     ref_seq_uid_set = set([G.ref_intervals.seq_uid])
 
@@ -944,6 +1014,10 @@ def make_contig_reads_to_ref_alignments(contig):
 
 def parse_path_into_ref_alt(path_list, contig_qname_to_uid,
         sample_alignment):
+    """Takes the (InsertionVertices, Insertion Vertices) tuple path_list
+    and returns a variant in the form of a dictionary with keys:
+    chromosome, pos, ref_seq, alt_seq
+    """
 
     ref_genome = sample_alignment.alignment_group.reference_genome
     ref_uid = ref_genome.uid
@@ -967,7 +1041,7 @@ def parse_path_into_ref_alt(path_list, contig_qname_to_uid,
 
             me_fasta = sample_alignment.dataset_set.get(
                     type=Dataset.TYPE.MOBILE_ELEMENT_FASTA
-                    ).get_absolute_location()
+            ).get_absolute_location()
 
             seq_rec = (sr for sr in SeqIO.parse(me_fasta, 'fasta')
                     if sr.id == seq_uid).next()
@@ -1002,7 +1076,7 @@ def parse_path_into_ref_alt(path_list, contig_qname_to_uid,
     def _seq_interval_iter():
         i = 1
         while i <= len(path_list_concat) - 3:
-            yield path_list_concat[i:i+2]
+            yield path_list_concat[i:i + 2]
             i += 2
 
     seq_list = []
