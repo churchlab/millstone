@@ -475,6 +475,7 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     digits = len(str(len(records))) + 1
     i = 0
     for seq_record in records:
+        i += 1
 
         contig_node_number = int(
                     contig_number_pattern.findall(
@@ -482,50 +483,43 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
 
         coverage = float(seq_record.description.rsplit('_', 1)[1])
 
-        # This gets copy of seq, not alias
-        full_seq = seq_record.seq
+        seq_record.seq = reduce(
+                lambda x, y: x + y,
+                [seq for seq in seq_record.seq.split('N')])
 
-        for seq in full_seq.split('N'):
-            if not(seq):
-                continue
+        leading_zeros = digits - len(str(i))
+        contig_label = '%s_%s' % (
+                sample_alignment.experiment_sample.label,
+                leading_zeros * '0' + str(i))
 
-            i += 1
+        # Create model
+        contig = Contig.objects.create(
+                label=contig_label,
+                parent_reference_genome=reference_genome,
+                experiment_sample_to_alignment=(
+                        sample_alignment))
+        contig_list.append(contig)
 
-            leading_zeros = digits - len(str(i))
-            contig_label = '%s_%s' % (
-                    sample_alignment.experiment_sample.label,
-                    leading_zeros * '0' + str(i))
+        contig.metadata['coverage'] = coverage
+        contig.metadata['timestamp'] = timestamp
+        contig.metadata['node_number'] = contig_node_number
+        contig.metadata['assembly_dir'] = data_dir
 
-            # Create an insertion model for the contig
-            contig = Contig.objects.create(
-                    label=contig_label,
-                    parent_reference_genome=reference_genome,
-                    experiment_sample_to_alignment=(
-                            sample_alignment))
-            contig_list.append(contig)
+        contig.ensure_model_data_dir_exists()
+        dataset_path = os.path.join(contig.get_model_data_dir(),
+                'fasta.fa')
 
-            contig.metadata['coverage'] = coverage
-            contig.metadata['timestamp'] = timestamp
-            contig.metadata['node_number'] = contig_node_number
-            contig.metadata['assembly_dir'] = data_dir
+        seq_record.id = seq_record.name = seq_record.description = (
+                'NODE_' + str(i))
 
-            contig.ensure_model_data_dir_exists()
-            dataset_path = os.path.join(contig.get_model_data_dir(),
-                    'fasta.fa')
+        with open(dataset_path, 'w') as fh:
+            SeqIO.write([seq_record], fh, 'fasta')
 
-            seq_record.id = seq_record.name = seq_record.description = (
-                    'NODE_' + str(i))
-
-            seq_record.seq = seq
-
-            with open(dataset_path, 'w') as fh:
-                SeqIO.write([seq_record], fh, 'fasta')
-
-            add_dataset_to_entity(
-                    contig,
-                    'contig_fasta',
-                    Dataset.TYPE.REFERENCE_GENOME_FASTA,
-                    filesystem_location=dataset_path)
+        add_dataset_to_entity(
+                contig,
+                'contig_fasta',
+                Dataset.TYPE.REFERENCE_GENOME_FASTA,
+                filesystem_location=dataset_path)
 
     evaluate_contigs(contig_list)
     return contig_files
