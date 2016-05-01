@@ -213,7 +213,7 @@ def get_or_create_variant(reference_genome, vcf_record, vcf_dataset,
     # genome. We'll have to do this differently for alt_values where the user
     # may want to be able to access the actual sequence.
     if len(ref_value) > 10:
-        ref_value = 'LONG:{size}'.format(size=len(ref_value))
+        ref_value = 'LONG:{size}bp'.format(size=len(ref_value))
 
     # Make sure the chromosome cited in the VCF exists for
     # the reference genome variant is being added to
