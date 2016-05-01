@@ -154,9 +154,10 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment,
     if use_me_alignment:
         add_me_alignment_to_graph(G, contig_alignment_to_me_bam)
 
-    # Add SEQUENCE_GRAPH_PICKLE dataset to ref genome
+
+    # Add SEQUENCE_GRAPH_PICKLE dataset to sample alignment
     graph_pickle_path = os.path.join(
-            ref_genome.get_model_data_dir(),
+            contig_alignment_dir,
             'sequence_graph.pickle')
     nx.write_gpickle(G, graph_pickle_path)
     add_dataset_to_entity(
@@ -213,15 +214,18 @@ def graph_contig_placement(contig_list, skip_extracted_read_alignment,
     # Perform translocation walk
     if ref_genome.num_chromosomes == 1:
 
-        trans_dict = translocation_walk(G)
+        trans_iv_pairs = translocation_walk(G)
         var_dict_list = [parse_path_into_ref_alt(iv_pair, contig_qname_to_uid,
                 sample_alignment)
-                for iv_pair in trans_dict['iv_pairs']]
-        if 'me_iv_pairs' in trans_dict:
+                for iv_pair in trans_iv_pairs]
+
+        if use_me_alignment:
+            me_trans_iv_pairs = me_translocation_walk(G)
+
             me_var_dict_list = [parse_path_into_ref_alt(
                     iv_pair, contig_qname_to_uid,
                     sample_alignment)
-                for iv_pair in trans_dict['me_iv_pairs']]
+                for iv_pair in me_trans_iv_pairs]
         else:
             me_var_dict_list = []
 
@@ -245,7 +249,7 @@ def avg_coverage(bam, chromosome, start, end):
     return avg_coverage
 
 
-def add_me_alignment_to_graph(G, contig_alignment_bam):
+def add_me_alignment_to_graph(G, contig_alignment_bam, add_rc_me_seqs=True):
 
     contigs_intervals = G.contig_intervals_list
     me_interval_dict = {}
@@ -274,8 +278,12 @@ def add_me_alignment_to_graph(G, contig_alignment_bam):
                         match_region.read_start)
 
                 # Add an edge to G for the junction
-                G.add_edge(contig_vert, me_vert, weight=match_region.length)
-                G.add_edge(me_vert, contig_vert, weight=match_region.length)
+                G.add_edge(contig_vert, me_vert,
+                        weight=match_region.length, is_rc=read.is_reverse,
+                        match_region=match_region)
+                G.add_edge(me_vert, contig_vert,
+                        weight=match_region.length, is_rc=read.is_reverse,
+                        match_region=match_region)
 
             if match_region.read_end != contig_intervals.length:
                 # Insert break into sequence intervals for ref and contig
@@ -287,12 +295,20 @@ def add_me_alignment_to_graph(G, contig_alignment_bam):
                         match_region.read_end)
 
                 # Add an edge to G for the junction
-                G.add_edge(me_vert, contig_vert, weight=match_region.length)
-                G.add_edge(contig_vert, me_vert, weight=match_region.length)
+                G.add_edge(me_vert, contig_vert,
+                        weight=match_region.length, is_rc=read.is_reverse,
+                        match_region=match_region)
+                G.add_edge(contig_vert, me_vert,
+                        weight=match_region.length, is_rc=read.is_reverse,
+                        match_region=match_region)
+
+    G.me_interval_dict = me_interval_dict
+
+    if add_rc_me_seqs:
+        add_rc_of_me_to_graph(G)
 
     # Add inter-contig sequence edges
-    for contig_intervals in (contigs_intervals.values() +
-            me_interval_dict.values()):
+    for contig_intervals in contigs_intervals.values():
         previous_vertex = contig_intervals.vertices[0]
         for vertex in contig_intervals.vertices[1:]:
             G.add_edge(previous_vertex, vertex)
@@ -305,7 +321,35 @@ def add_me_alignment_to_graph(G, contig_alignment_bam):
             G.add_edge(vertex, previous_vertex)
             previous_vertex = vertex
 
-    G.me_interval_dict = me_interval_dict
+
+def add_rc_of_me_to_graph(G):
+    """Creates a SequenceIntervals instance for the reverse complement of each
+    mobile element and adds the appropriate edges to DiGraph G
+    """
+
+    me_interval_dict = G.me_interval_dict
+
+    rc_interval_dict = {}
+    for me_interval in me_interval_dict.values():
+
+        l = me_interval.length
+        seq_uid = me_interval.seq_uid + '_RC'
+        rc_interval = SequenceIntervals(seq_uid, l)
+
+        for v in me_interval.vertices:
+            new_v = rc_interval.insert_vertex(l - v.pos)
+            for _, endpoint, data in G.edges([v], data=True):
+                contig_interval = endpoint.parent
+                contig_l = contig_interval.length
+                new_contig_v = contig_interval.insert_vertex(
+                        contig_l - endpoint.pos)
+                data['is_rc'] = not data['is_rc']
+                G.add_edge(new_v, new_contig_v, **data)
+                G.add_edge(new_contig_v, new_v, **data)
+
+        rc_interval_dict[seq_uid] = rc_interval
+
+    G.me_interval_dict.update(rc_interval_dict)
 
 
 def add_alignment_to_graph(G, contig_alignment_bam):
@@ -333,6 +377,7 @@ def add_alignment_to_graph(G, contig_alignment_bam):
 
         match_regions = get_match_regions(read)
         for match_region in match_regions:
+
             if match_region.read_start != 0:
                 # Insert break into sequence intervals for ref and contig
                 ref_vert = ref_intervals.insert_vertex(match_region.ref_start)
@@ -340,7 +385,8 @@ def add_alignment_to_graph(G, contig_alignment_bam):
                         match_region.read_start)
 
                 # Add an edge to G for the junction
-                G.add_edge(contig_vert, ref_vert, weight=match_region.length)
+                G.add_edge(contig_vert, ref_vert,
+                        weight=match_region.length, is_rc=read.is_reverse)
 
             if match_region.read_end != contig_intervals.length:
                 # Insert break into sequence intervals for ref and contig
@@ -349,7 +395,8 @@ def add_alignment_to_graph(G, contig_alignment_bam):
                         match_region.read_end)
 
                 # Add an edge to G for the junction
-                G.add_edge(ref_vert, contig_vert, weight=match_region.length)
+                G.add_edge(ref_vert, contig_vert,
+                        weight=match_region.length, is_rc=read.is_reverse)
 
     # Add inter-contig sequence edges
     for contig_intervals in contigs_intervals.values() + [ref_intervals]:
@@ -486,34 +533,34 @@ def novel_seq_ins_walk(G):
     return iv_list
 
 
-def translocation_walk(G):
+def me_translocation_walk(G):
+
+    assert hasattr(G, 'me_interval_dict')
 
     ref_seq_uid_set = set([G.ref_intervals.seq_uid])
-    # Add any me
-    use_me_alignment = hasattr(G, 'me_interval_dict')
 
-    if use_me_alignment:
-        me_seq_uid_set = set(si.seq_uid for si in G.me_interval_dict.values())
-        ref_seq_uid_set = ref_seq_uid_set | me_seq_uid_set
+    me_seq_uid_set = set(si.seq_uid for si in G.me_interval_dict.values())
+    ref_seq_uid_set = ref_seq_uid_set | me_seq_uid_set
 
     contig_seq_uid_set = set(ci.seq_uid for ci in
             G.contig_intervals_list.values())
 
     def ref_neighbors(vert):
+        if vert not in G:
+            return []
         return [v for v in G.neighbors(vert) if v.seq_uid in ref_seq_uid_set]
 
     def contig_neighbors(vert):
+        if vert not in G:
+            return []
         return [v for v in G.neighbors(vert) if v.seq_uid in
                 contig_seq_uid_set]
 
     forward_edges = []
     back_edges = []
 
-    if hasattr(G, 'me_interval_dict'):
-        me_vertices = reduce(lambda x, y: x + y,
+    me_vertices = reduce(lambda x, y: x + y,
             [si.vertices for si in G.me_interval_dict.values()])
-    else:
-        me_vertices = []
 
     dset = set()
     for exit_ref in G.ref_intervals.vertices + me_vertices:
@@ -544,11 +591,178 @@ def translocation_walk(G):
     sorted_by_enter_ref = sorted(forward_edges + back_edges,
             key=lambda x: x.enter_ref.pos)
 
-    iv_pairs = []
     me_iv_pairs = []
     i = 0
+
+    me_sorted_by_exit_ref = [e for e in sorted_by_exit_ref if (
+            e.enter_ref.seq_uid in me_seq_uid_set and
+            e.exit_ref.seq_uid == G.ref_intervals.seq_uid)]
+
+    me_sorted_by_enter_ref = [e for e in sorted_by_enter_ref if (
+            e.exit_ref.seq_uid in me_seq_uid_set and
+            e.enter_ref.seq_uid == G.ref_intervals.seq_uid)]
+
+    OVERLAP_TOLERANCE = 400
+    for enter_iv in me_sorted_by_exit_ref:
+
+        while (me_sorted_by_enter_ref[i].enter_ref.pos <
+                enter_iv.exit_ref.pos - OVERLAP_TOLERANCE and
+                i < len(me_sorted_by_enter_ref) - 1):
+            i += 1
+
+        j = i
+        exit_iv = me_sorted_by_enter_ref[j]
+        deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
+        while deletion < MAX_TRANS_DELETION:
+
+            me_iv_pairs.append((enter_iv, exit_iv))
+
+            if j == len(me_sorted_by_enter_ref) - 1:
+                break
+
+            j += 1
+            exit_iv = me_sorted_by_enter_ref[j]
+            deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
+
+    filtered = strand_filter(G, me_iv_pairs)
+    filtered = me_length_filter(filtered)
+    filtered = match_region_filter(G, filtered)
+
+    return filtered
+
+
+def strand_filter(G, me_iv_pairs):
+
+    def _is_edge_rc(u, v):
+        data = G.get_edge_data(u, v)
+        return data['is_rc']
+
+    filtered = []
+    for iv_pair in me_iv_pairs:
+
+        enter_iv, exit_iv = iv_pair
+
+        r_to_c_strand = _is_edge_rc(enter_iv.exit_ref, enter_iv.enter_contig)
+        c_to_m_strand = _is_edge_rc(enter_iv.exit_contig, enter_iv.enter_ref)
+        m_to_c_strand = _is_edge_rc(exit_iv.exit_ref, exit_iv.enter_contig)
+        c_to_r_strand = _is_edge_rc(exit_iv.exit_contig, exit_iv.enter_ref)
+
+        enter_me_agreement = r_to_c_strand == c_to_m_strand
+        exit_me_agreement = m_to_c_strand == c_to_r_strand
+
+        me_strand_agreement = (
+                enter_iv.enter_ref.seq_uid.endswith('_RC') ==
+                exit_iv.exit_ref.seq_uid.endswith('_RC'))
+
+        if me_strand_agreement and enter_me_agreement and exit_me_agreement:
+            filtered.append(iv_pair)
+
+    return filtered
+
+
+def me_length_filter(me_iv_pairs, min_length=100):
+
+    filtered = []
+    for iv_pair in me_iv_pairs:
+        enter_iv, exit_iv = iv_pair
+        me_seq_len = exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
+
+        if me_seq_len > min_length:
+            filtered.append(iv_pair)
+
+    return filtered
+
+
+def match_region_filter(G, me_iv_pairs):
+
+    def _me_seq_length(iv_pair):
+        enter_iv, exit_iv = iv_pair
+        return exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
+
+    filtered = {}
+    for iv_pair in me_iv_pairs:
+
+        enter_iv, exit_iv = iv_pair
+
+        enter_me_edge = (enter_iv.exit_contig, enter_iv.enter_ref)
+        exit_me_edge = (exit_iv.exit_ref, exit_iv.enter_contig)
+
+        enter_me_match_region = G.get_edge_data(*enter_me_edge)['match_region']
+        exit_me_match_region = G.get_edge_data(*exit_me_edge)['match_region']
+
+        if enter_me_match_region == exit_me_match_region:
+            continue
+
+        key = (enter_iv.exit_ref, exit_iv.enter_ref,
+                enter_me_match_region, exit_me_match_region)
+
+        redundant = filtered.get(key, None)
+        if not redundant:
+            filtered[key] = iv_pair
+        else:
+            if _me_seq_length(iv_pair) > _me_seq_length(redundant):
+                filtered[key] = iv_pair
+
+    return filtered.values()
+
+
+def translocation_walk(G):
+
+    ref_seq_uid_set = set([G.ref_intervals.seq_uid])
+
+    contig_seq_uid_set = set(ci.seq_uid for ci in
+            G.contig_intervals_list.values())
+
+    def ref_neighbors(vert):
+        if vert not in G:
+            return []
+        return [v for v in G.neighbors(vert) if v.seq_uid in ref_seq_uid_set]
+
+    def contig_neighbors(vert):
+        if vert not in G:
+            return []
+        return [v for v in G.neighbors(vert) if v.seq_uid in
+                contig_seq_uid_set]
+
+    forward_edges = []
+    back_edges = []
+
+
+    dset = set()
+    for exit_ref in G.ref_intervals.vertices:
+        for enter_contig in contig_neighbors(exit_ref):
+            queue = set([enter_contig])
+            visited = []
+            while queue:
+                exit_contig = queue.pop()
+                for enter_ref in ref_neighbors(exit_contig):
+
+                    iv = InsertionVertices(
+                            exit_ref, enter_contig, exit_contig,
+                            enter_ref)
+                    dset.add(iv)
+
+                    if exit_ref.pos < enter_ref.pos:
+                        forward_edges.append(iv)
+                    else:
+                        back_edges.append(iv)
+
+                visited.append(exit_contig)
+                queue.update([n for n in contig_neighbors(exit_contig)
+                        if n not in visited])
+
+    sorted_by_exit_ref = sorted(forward_edges + back_edges,
+            key=lambda x: x.exit_ref.pos)
+
+    sorted_by_enter_ref = sorted(forward_edges + back_edges,
+            key=lambda x: x.enter_ref.pos)
+
+    iv_pairs = []
+    i = 0
+
     OVERLAP_TOLERANCE = 400
     for enter_iv in sorted_by_exit_ref:
+
         while (sorted_by_enter_ref[i].enter_ref.pos <
                 enter_iv.exit_ref.pos - OVERLAP_TOLERANCE and
                 i < len(sorted_by_enter_ref) - 1):
@@ -557,17 +771,15 @@ def translocation_walk(G):
         j = i
         exit_iv = sorted_by_enter_ref[j]
         deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
-        while -MAX_DUP < deletion < MAX_TRANS_DELETION:
+        while deletion < MAX_TRANS_DELETION:
 
             # Length of translocation sequence
             trans_length = exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
 
-            if (use_me_alignment and
-                any(v.seq_uid in me_seq_uid_set for v in
+            if (all(v.seq_uid in ref_seq_uid_set for v in
                     [exit_iv.exit_ref, exit_iv.enter_ref,
-                    enter_iv.exit_ref, enter_iv.enter_ref])):
-                me_iv_pairs.append((enter_iv, exit_iv))
-            elif (MIN_TRANS_LENGTH < trans_length < MAX_TRANS_LENGTH):
+                    enter_iv.exit_ref, enter_iv.enter_ref]) and (
+                    MIN_TRANS_LENGTH < trans_length < MAX_TRANS_LENGTH)):
                 iv_pairs.append((enter_iv, exit_iv))
 
             if j == len(sorted_by_enter_ref) - 1:
@@ -577,17 +789,7 @@ def translocation_walk(G):
             exit_iv = sorted_by_enter_ref[j]
             deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
 
-    me_iv_pairs = filter(
-            lambda x: (
-                    x[0].exit_ref.seq_uid == G.ref_intervals.seq_uid and
-                    x[1].enter_ref.seq_uid == G.ref_intervals.seq_uid),
-            me_iv_pairs)
-
-    out_dict = {'iv_pairs': iv_pairs}
-    if me_iv_pairs:
-        out_dict['me_iv_pairs'] = me_iv_pairs
-
-    return out_dict
+    return iv_pairs
 
 
 class SequenceVertex:
@@ -637,10 +839,17 @@ class SequenceIntervals:
                 self.vertices.insert(i, new_vertex)
                 return new_vertex
 
+    def blank_copy(self):
+        return SequenceIntervals(self.seq_uid, self.length, self.tag)
+
 
 def get_fasta(has_fasta):
     return has_fasta.dataset_set.get(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+
+
+MatchRegion = namedtuple('MatchRegion',
+            ['ref_start', 'ref_end', 'read_start', 'read_end', 'length'])
 
 
 def get_match_regions(read):
@@ -657,8 +866,6 @@ def get_match_regions(read):
     read_pos = 0
     matching_length = 0
     matching = False
-    MatchRegion = namedtuple('MatchRegion',
-            ['ref_start', 'ref_end', 'read_start', 'read_end', 'length'])
     match_regions = []
     for code, length in read.cigartuples:
         cigar = cigar_codes.get(code, None)
@@ -730,18 +937,26 @@ def parse_path_into_ref_alt(path_list, contig_qname_to_uid,
             return ref_seq[enter_vert.pos: exit_vert.pos]
 
         if enter_vert.seq_uid.startswith('ME_'):
+
+            rc = enter_vert.seq_uid[-3:] == '_RC'
+            if rc:
+                seq_uid = enter_vert.seq_uid[:-3]
+            else:
+                seq_uid = enter_vert.seq_uid
+
             me_fasta = sample_alignment.dataset_set.get(
                     type=Dataset.TYPE.MOBILE_ELEMENT_FASTA
                     ).get_absolute_location()
 
             seq_rec = (sr for sr in SeqIO.parse(me_fasta, 'fasta')
-                    if sr.id == enter_vert.seq_uid).next()
+                    if sr.id == seq_uid).next()
 
-            if enter_vert.pos < exit_vert.pos:
-                return str(seq_rec.seq[enter_vert.pos: exit_vert.pos])
+            assert enter_vert.pos <= exit_vert.pos
+            if rc:
+                return str(seq_rec.reverse_complement()[
+                        enter_vert.pos: exit_vert.pos])
             else:
-                return str(seq_rec.seq[
-                        exit_vert.pos: enter_vert.pos].reverse_complement())
+                return str(seq_rec.seq[enter_vert.pos: exit_vert.pos])
 
         contig_qname = enter_vert.seq_uid
         contig_uid = contig_qname_to_uid[contig_qname]

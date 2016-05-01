@@ -385,25 +385,25 @@ class TestGraphWalk(TestCase):
         variant_set = self._run_contig_walk_test(test_dir)
         self._assert_variants_make_target(variant_set)
 
-    def test_annotated_mobile_element(self):
-        """Test for discovery of mobile element insertion in the
-        case where there is an integrated copy of the mobile element in the
-        genome annotated in the reference genbank"""
+    # def test_annotated_mobile_element(self):
+    #     """Test for discovery of mobile element insertion in the
+    #     case where there is an integrated copy of the mobile element in the
+    #     genome annotated in the reference genbank"""
 
-        test_dir = os.path.join(GF_TEST_DIR, 'tenaillon',
-                'Line20')
-        variant_set = self._run_contig_walk_test(test_dir)
+    #     test_dir = os.path.join(GF_TEST_DIR, 'tenaillon',
+    #             'Line20')
+    #     variant_set = self._run_contig_walk_test(test_dir)
 
-        me_variants = []
-        for variant in variant_set.variants.all():
-            for vccd in variant.variantcallercommondata_set.all():
-                if vccd.data.get('INFO_METHOD', None) == 'ME_GRAPH_WALK':
-                    me_variants.append(variant)
+    #     me_variants = []
+    #     for variant in variant_set.variants.all():
+    #         for vccd in variant.variantcallercommondata_set.all():
+    #             if vccd.data.get('INFO_METHOD', None) == 'ME_GRAPH_WALK':
+    #                 me_variants.append(variant)
 
-        self.assertTrue(me_variants)
-        for variant in me_variants:
-            self.assertTrue(1305000 < variant.position < 1306000)
-            alts = variant.get_alternates()
-            self.assertTrue(len(alts) == 1)
-            alt = alts[0]
-            self.assertTrue(1000 < len(alt) < 2000)
+    #     self.assertTrue(me_variants)
+    #     for variant in me_variants:
+    #         self.assertTrue(1305000 < variant.position < 1306000)
+    #         alts = variant.get_alternates()
+    #         self.assertTrue(len(alts) == 1)
+    #         alt = alts[0]
+    #         self.assertTrue(1000 < len(alt) < 2000)
