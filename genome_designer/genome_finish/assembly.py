@@ -42,6 +42,7 @@ from utils.import_util import add_dataset_to_entity
 from utils.import_util import prepare_ref_genome_related_datasets
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import prepare_jbrowse_ref_sequence
+from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
 from variants.materialized_variant_filter import lookup_variants
 from variants.vcf_parser import parse_vcf
 
@@ -665,6 +666,11 @@ def delete_previous_assembly(sample_alignment):
 
 
 def get_de_novo_variants(sample_alignment):
+
+    # Check to see if this reference genome has ever seen structural variants
+    ref_genome = sample_alignment.alignment_group.reference_genome
+    if 'INFO_METHOD' not in ref_genome.variant_key_map[MAP_KEY__COMMON_DATA]:
+        return []
 
     SV_METHODS = [
             'DE_NOVO_ASSEMBLY',
