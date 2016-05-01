@@ -1031,9 +1031,37 @@ def parse_path_into_ref_alt(path_list, contig_qname_to_uid,
 
     ref_seq = ref_seq[ref_start: ref_end]
 
-    return {
+    var_dict = {
         'chromosome': ref_chromosome,
         'pos': ref_start,
         'ref_seq': ref_seq,
         'alt_seq': alt_seq
     }
+
+    translocation_seq_verts = [path_list_concat[3], path_list_concat[4]]
+    seq_names = []
+    me_prefix = 'ME_insertion_sequence:'
+    is_me = False
+    for v in translocation_seq_verts:
+        name = v.seq_uid
+        if name.startswith(me_prefix):
+            is_me = True
+            name = name[len(me_prefix):]
+        seq_names.append(name)
+
+    if is_me:
+        # Assert the two vertices of the translocation in the path
+        # are on the same mobile element sequence
+        assert len(set(seq_names)) == 1
+
+        name = seq_names[0]
+        is_rc = seq_names[-3:] == '_RC'
+
+        var_dict['MEINFO'] = {
+                'name': seq_names[0],
+                'start': translocation_seq_verts[0].pos,
+                'end': translocation_seq_verts[1].pos,
+                'polarity': '-' if is_rc else '+'
+        }
+
+    return var_dict

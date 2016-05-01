@@ -192,9 +192,10 @@ def export_var_dict_list_as_vcf(var_dict_list, vcf_dest_path_or_filehandle,
             assert all([k in var_dict['MEINFO'] for k in
                     ['name', 'start', 'end', 'polarity']])
 
-            assert len(var_dict['MEINFO'].keys() == 4)
+            assert len(var_dict['MEINFO'].keys()) == 4
 
-            info_dict['MEINFO'] = var_dict['MEINFO']
+            info_dict['MEINFO'] = ','.join([str(var_dict['MEINFO'][k])
+                    for k in ['name', 'start', 'end', 'polarity']])
 
         # In the case of no alt, this variant is a deletion so
         # it is represented by a '<DEL>' alt field in vcf format
