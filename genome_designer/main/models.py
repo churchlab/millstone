@@ -1428,7 +1428,6 @@ class Variant(UniqueUidModelMixin):
                     VariantAlternate.objects.create(
                             variant=self,
                             alt_value=alt_value,
-                            ref_genome=self.reference_genome
                     )
             )
 
@@ -1567,11 +1566,6 @@ class VariantAlternate(UniqueUidModelMixin, VisibleFieldMixin):
         on disk, rather than into the database.
         """
         orig_alt = str(kwargs.pop('alt_value', None))
-
-        # HACK: If this is called from inside of the override of the Variant
-        # constructor, we explicitly pass reference genome since self.variant
-        # hasn't been committed to database yet and thus won't have an id.
-        ref_genome_override = kwargs.pop('ref_genome', None)
 
         normalized_alt = get_normalized_alt_representation(orig_alt)
 
