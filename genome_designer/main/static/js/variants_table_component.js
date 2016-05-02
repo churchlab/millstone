@@ -97,6 +97,52 @@ gd.VariantsTableComponent = Backbone.View.extend({
       $('#gd-snp-filter-time').text(
           '(query time: ' + this.datatableComponent.timeForLastResult +' sec)');
     }
+
+    // Handle click on href for a long alt value.
+    $('.gd-id-variants-long-alt').click(
+        _.bind(this.handleLongAltClick, this));
+  },
+
+  /**
+   * Handles click on long alt link.
+   *
+   * If data-alt-hash attribute exists, then this fetches the alt value and
+   * shows it in a modal. If no data-alt-hash, does nothing.
+   */
+  handleLongAltClick: function(e) {
+    var altHash = $(e.target).data('alt-hash');
+    if (!altHash) {
+        return;
+    }
+
+    var requestData = {
+      'altHash': altHash,
+      'refGenomeUid': this.model.get('refGenomeUid'),
+    };
+
+    $.get('/_/variants/get_long_alt', requestData,
+        _.bind(function(responseData) {
+            $(document.body).append(
+                '<div id="gd-long-alt-modal" class="modal fade" ' +
+                        'tabindex="-1" role="dialog">' +
+                    '<div class="modal-dialog"><div class="modal-content">' +
+                        '<div class="modal-header">' +
+                            '<button type="button" class="close" data-dismiss="modal">' +
+                                'x' +
+                            '</button>' +
+                            '<h3>Long Alt Value</h3>' +
+                        '</div>' +
+                    '<div>' +
+                    '<div class="modal-body">' +
+                        '<pre class="gd-id-long-alt-value-text ' +
+                                'gd-long-text-wrapped pre-scrollable">' +
+                        '</pre>' +
+                    '<div>' +
+                '</div>');
+
+            $('#gd-long-alt-modal').find('.gd-id-long-alt-value-text').text(responseData);
+            $('#gd-long-alt-modal').modal();
+        }, this));
   },
 
   afterMaterializedViewReady: function() {

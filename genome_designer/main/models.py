@@ -40,6 +40,7 @@ import subprocess
 from custom_fields import PostgresJsonField
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Model
@@ -49,6 +50,8 @@ from genome_finish.contig_display_utils import create_contig_junction_links
 from model_utils import assert_unique_types
 from model_utils import ensure_exists_0775_dir
 from model_utils import get_dataset_with_type
+from model_utils import get_long_alt_path
+from model_utils import get_normalized_alt_representation
 from model_utils import make_choices_tuple
 from model_utils import UniqueUidModelMixin
 from model_utils import VisibleFieldMixin
@@ -575,6 +578,9 @@ class ReferenceGenome(UniqueUidModelMixin):
         """
         return os.path.join(self.get_model_data_root(), str(self.uid))
 
+    def get_long_variant_alts_dir(self):
+        return os.path.join(self.get_model_data_dir(), 'long_variant_alts')
+
     def ensure_model_data_dir_exists(self):
         """Ensure that a data directory exists for this model.
         """
@@ -582,7 +588,12 @@ class ReferenceGenome(UniqueUidModelMixin):
         ensure_exists_0775_dir(self.get_model_data_root())
 
         # Check whether the data dir exists, and create it if not.
-        return ensure_exists_0775_dir(self.get_model_data_dir())
+        ensure_exists_0775_dir(self.get_model_data_dir())
+
+        ensure_exists_0775_dir(self.get_long_variant_alts_dir())
+
+        # Successful if made it here. Else error would have been raised.
+        return True
 
     def get_jbrowse_directory_path(self):
         """Returns the full path to the root of JBrowse data for this
@@ -1372,38 +1383,52 @@ class Variant(UniqueUidModelMixin):
     # User specified data fields corresponding to the variant
     data = PostgresJsonField()
 
-    def __init__(self, *args, **kwargs): 
-        """If we are passed an alt_value field, we need to get_or_create
-        VariantAlternate objects corresponding to them, and link them  up to
-        this new variant. We're ignoring the handling the rare situation when a
-        Variant has no alt_values, which we don't really want to happen. It is
-        difficult to handle because sometimes the VariantAlternate objects are
-        declared separately and added to the Variant after __init__()."""
+    def __init__(self, *args, **kwargs):
+        """Override constructor to support alt_value in kwargs.
 
-        alts = kwargs.get('alt_value', None)
+        alt_value can be a single string or a list of strings.
 
-        # Here I'm mutating kwargs to get rid of alt_value, but I can't think
-        # of a reason why this would be a problem, since we've already saved it.
-        kwargs.pop('alt_value',None)
+        In earlier versions of the code, we assumed every Variant would have a
+        single alt. Thus alt_value was an attribute of the Variant class,
+        and there are many places in the code and tests where we call the
+        Variant constructor including the alt_value kwarg. Now, we have defined
+        a new class VariantAlternate which has a ManyToOne relationship with
+        Variant so VariantAlternate models now need to be created.
+
+        In this overriding constructor, if we are passed an alt_value field,
+        we pop it from the call to the actual Variant constructor, and then
+        get_or_create() VariantAlternate objects corresponding to the alts
+        in alt_values, linking them to this Variant.
+
+        WARNING: Since clients can now control creating Variants and
+        VariantAlternates themselves, this creates the possibility of creating
+        a Variant with no VariantAlternate. This is a situation that will
+        almost certainly break something somewhere.
+        """
+        # Save alts while removing it from kwargs.
+        alts = kwargs.pop('alt_value', None)
 
         # call super's __init__ without the alt_value field if present
         super(Variant, self).__init__(*args, **kwargs)
 
-        if alts is None: return
+        if alts is None:
+            return
 
-        #handle case of one or multiple alt_values
+        # We support a single alt, or multiple alts. After this code,
+        # alt_values will be a list.
         if not isinstance(alts, basestring):
-            # alt_value is a list of alts
+            assert isinstance(alts, list)
+            assert isinstance(alts[0], basestring)
             alt_values = alts
         else:
-            # alt value is one alt
             alt_values = [alts]
 
         for alt_value in alt_values:
             self.variantalternate_set.add(
                     VariantAlternate.objects.create(
                             variant=self,
-                            alt_value=alt_value
+                            alt_value=alt_value,
+                            ref_genome=self.reference_genome
                     )
             )
 
@@ -1417,9 +1442,12 @@ class Variant(UniqueUidModelMixin):
                 '_' + ','.join(self.get_alternates()))
 
     def get_alternates(self):
-        """ Return a base string for each alternate for this variant. """
+        """Returns a list of string representing the full alternate string for each
+        variant.
 
-        return [alt.alt_value for alt in self.variantalternate_set.all()]
+        If long alt, this will return the actual value of the alt.
+        """
+        return [va.actual_alt for va in self.variantalternate_set.all()]
 
     @property
     def variant_specific_tracks(self):
@@ -1491,15 +1519,39 @@ class VariantCallerCommonData(Model, VisibleFieldMixin):
         return []
 
 
+class VariantAlternateManager(models.Manager):
+    """Custom models manager to allow overrides.
+    """
+
+    def get_or_create(self, **kwargs):
+        """Overide to provide support for long alts.
+        """
+        orig_alt = str(kwargs.pop('alt_value', None))
+        normalized_alt = get_normalized_alt_representation(orig_alt)
+        kwargs['alt_value'] = normalized_alt
+        try:
+            return VariantAlternate.objects.get(**kwargs), False
+        except ObjectDoesNotExist:
+            kwargs['alt_value'] = orig_alt
+            return super(VariantAlternateManager, self).get_or_create(**kwargs)
+
+
 class VariantAlternate(UniqueUidModelMixin, VisibleFieldMixin):
     """A model listing alternate alleles for each variant."""
 
+    LONG_ALT_REGEX = re.compile('LONG:(?P<size>\d+),HASH:(?P<hash>\w+)')
+
     # Null is true here because we are adding this relationship during Variant's
     # overloaded __init__() so it hasn't been saved() yet. Otherwise it throws
-    # an django.db.utils.IntegrityError: 
+    # an django.db.utils.IntegrityError:
     #    main_variantalternate.variant_id may not be NULL
+    # WARNING: Clients that call this method directly must make sure this is not
+    # left as null.
     variant = models.ForeignKey('Variant', null=True)
 
+    # Either the actual alt sequence value (e.g. "A"), or, for long alts, a
+    # string of the form "LONG:<size>,HASH:<hash>".
+    # Use model_utils.get_normalized_alt_representation() to get this.
     alt_value = models.TextField('Alt')
 
     is_primary = models.BooleanField(default='False')
@@ -1507,23 +1559,75 @@ class VariantAlternate(UniqueUidModelMixin, VisibleFieldMixin):
     # this json fields holds all PER ALT data (INFO data with num -1)
     data = PostgresJsonField()
 
+    # Override manager to allow custom method overrides.
+    objects = VariantAlternateManager()
+
+    def __init__(self, *args, **kwargs):
+        """Override constructor to support writing long values to file
+        on disk, rather than into the database.
+        """
+        orig_alt = str(kwargs.pop('alt_value', None))
+
+        # HACK: If this is called from inside of the override of the Variant
+        # constructor, we explicitly pass reference genome since self.variant
+        # hasn't been committed to database yet and thus won't have an id.
+        ref_genome_override = kwargs.pop('ref_genome', None)
+
+        normalized_alt = get_normalized_alt_representation(orig_alt)
+
+        # For normalized alt values, we need to write the alt to file.
+        if normalized_alt != orig_alt:
+            long_alt_regex_match = VariantAlternate.LONG_ALT_REGEX.match(
+                    normalized_alt)
+            assert long_alt_regex_match
+            hash_part = long_alt_regex_match.group('hash')
+            ref_genome = kwargs['variant'].reference_genome
+            long_alt_path = get_long_alt_path(ref_genome, hash_part)
+            with open(long_alt_path, 'w') as fh:
+                fh.write(orig_alt)
+
+        kwargs['alt_value'] = normalized_alt
+        return super(VariantAlternate, self).__init__(*args, **kwargs)
+
+    @property
+    def actual_alt(self):
+        """Returns the actual alt value, including the full alt for a long value.
+
+        Clients should use this rather than alt_value directly for reading.
+        """
+        maybe_long_alt_regex_match = VariantAlternate.LONG_ALT_REGEX.match(
+                self.alt_value)
+        if maybe_long_alt_regex_match:
+            ref_genome = self.variant.reference_genome
+            hash_part = maybe_long_alt_regex_match.group('hash')
+            long_alt_path = get_long_alt_path(ref_genome, hash_part)
+            assert os.path.exists(long_alt_path)
+            with open(long_alt_path) as fh:
+                return fh.read().strip()
+        else:
+            return self.alt_value
+
     def __unicode__(self):
-        alt_value = self.alt_value
-        if len(self.alt_value) > 10:
-            alt_value = alt_value[:10] + '...'
-        return 'var: ' + str(self.variant) + ', alt:' + alt_value
+        actual_alt_value = self.actual_alt
+        if len(actual_alt_value) > 10:
+            actual_alt_value = actual_alt_value[:10] + '...'
+        return 'var:{variant}, alt:{actual_alt_value}'.format(
+                variant=self.variant, actual_alt_value=actual_alt_value)
 
     # TODO: Do we want to explicitly link each VariantAlternate to
     # it's variant index in each VCCD object or VE object?
     # Currently it's done implicitly through the VCCD's data['ALT']
     # field and VE's data['gt_bases'] and data['GT'] fields, but these
-    # are not checked for consistency. 
+    # are not checked for consistency.
     @classmethod
     def default_view_fields(clazz, **kwargs):
         """Get the order of the models for displaying on the front-end.
         Called by the adapter.
         """
-        return [{'field':'alt_value', 'verbose':'Alt(s)'}]
+        return [{
+            'field': 'actual_alt',
+            'verbose': 'Alt(s)'
+        }]
 
 
 class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
@@ -1579,6 +1683,7 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
 
     def create_variant_alternate_association(self):
         gt_bases = self.data['GT_BASES']
+        gt_nums = self.data['GT_NUMS']
 
         # If this variant evidence is a non-call, no need to add alt alleles.
         if gt_bases is None:
@@ -1589,18 +1694,24 @@ class VariantEvidence(UniqueUidModelMixin, VisibleFieldMixin):
                 'this is not handled and should never happen...')
 
         # The gt_bases string looks like, e.g. 'A/AT'. Loop over alts.
-        for gt_base in gt_bases.split('/'):
+        gt_bases_split = gt_bases.split('/')
+        gt_nums_split = gt_nums.split('/')
+
+        for i in range(len(gt_bases_split)):
+            gt_base = str(gt_bases_split[i])
+            gt_num = int(gt_nums_split[i])
+            if gt_num == 0:
+                # This refers to ref allele, thus no alt to create.
+                continue
             try:
                 variant = self.variant_caller_common_data.variant
 
-                # Skip if this is not an alternate allele
-                if variant.ref_value == gt_base:
-                    continue
+                normalized_alt_value = get_normalized_alt_representation(gt_base)
 
                 self.variantalternate_set.add(
                         VariantAlternate.objects.get(
                             variant=variant,
-                            alt_value=gt_base
+                            alt_value=normalized_alt_value
                 ))
 
             except VariantAlternate.DoesNotExist:

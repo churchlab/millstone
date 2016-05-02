@@ -132,7 +132,8 @@ class TestSignals(TestCase):
 
         # Test creating VE with ref gt.
         ve_ref_data = {
-            'GT_BASES': 'A/A'
+            'GT_BASES': 'A/A',
+            'GT_NUMS': '0/0'
         }
         ve_with_ref_data = VariantEvidence.objects.create(
                 experiment_sample=sample_1,
@@ -142,7 +143,8 @@ class TestSignals(TestCase):
 
         # Test creating VE with alt gt.
         ve_alt_data = {
-            'GT_BASES': 'G/G'
+            'GT_BASES': 'G/G',
+            'GT_NUMS': '1/1'
         }
         ve_with_alt_data = VariantEvidence.objects.create(
                 experiment_sample=sample_1,

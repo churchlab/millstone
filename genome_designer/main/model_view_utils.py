@@ -5,12 +5,14 @@ to datatables.
 
 from itertools import chain
 from itertools import groupby
+import os
 import re
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
 from main.models import Variant
+from main.models import VariantAlternate
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ALT
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__CHROMOSOME
 from variants.melted_variant_schema import MELTED_SCHEMA_KEY__ES_UID
@@ -210,6 +212,8 @@ def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
 
     ve_data = variant_as_dict['VE_DATA']
 
+    # We have two different code paths depending on whether we are rendering
+    # cast or melted view. Eventualy, we should do a better job consolidating.
     if not melted:
         hets = []
         for var in ve_data:
@@ -237,6 +241,9 @@ def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
             if re.match('N]', alt) or re.search('\[N', alt):
                 alt = 'BND({orig_alt})'.format(orig_alt=alt)
 
+            # Special handling in case of long alt.
+            alt = maybe_handle_long_alt(alt)
+
             group = list(group)
             num_het = sum([alt_het[1] for alt_het in group])
             alt_string = ' %s (%d)' % (alt, len(list(group)) - maybe_dec)
@@ -256,12 +263,46 @@ def create_alt_flag_field(variant_as_dict, melted, maybe_dec):
         value = variant_as_dict[MELTED_SCHEMA_KEY__ALT]
         if value is None:
             return None
+
         maybe_surrounding_brackets_match = re.match(r'<([\w]+)>', value)
         if maybe_surrounding_brackets_match:
             value = maybe_surrounding_brackets_match.group(1)
+
+        # Special handling in case of long alt.
+        value = maybe_handle_long_alt(value)
+
         if ve_data and ve_data.get(MELTED_SCHEMA_KEY__HET, False):
             value += (
                     ' <span class="%s" ' +
                     'title="Marginal call (IS_HET=TRUE)">' +
                     '&frac12;</span>') % marginal_set_classes
     return value
+
+
+def maybe_handle_long_alt(alt):
+    """If long alt, wrap in href appropriately.
+    """
+    # If this is a long alt, it will have a hash of the alt which
+    # corresponds to the file on disk in which the full value is located.
+    # We create an href that when clicked will result in fetching the
+    # full alt from disk, guided by data-alt-hash html attribute.
+    # NOTE: To be backwards compatible, we still allow long alts that
+    # are stored in the database, but don't send them ot the frontend.
+    # Instead we just serve up an href where data-alt-hash is empty.
+    maybe_long_alt_match = VariantAlternate.LONG_ALT_REGEX.match(alt)
+    if maybe_long_alt_match or len(alt) > 10:
+        if maybe_long_alt_match:
+            alt_value = 'LONG:{size}bp'.format(
+                    size=maybe_long_alt_match.group('size'))
+            alt_hash = maybe_long_alt_match.group('hash')
+        else:
+            alt_value = 'LONG:{size}bp'.format(size=len(alt))
+            alt_hash = ''
+
+        alt = (
+                '<a '
+                'class="gd-id-variants-long-alt" '
+                'data-alt-hash="{alt_hash}" href="#">{alt_value}</a>'.format(
+                        alt_hash=alt_hash,
+                        alt_value=alt_value))
+    return alt

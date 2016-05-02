@@ -375,7 +375,8 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict = {
                 'called': True,
                 'gt_type': 2,
-                'gt_bases': 'G/G'
+                'gt_bases': 'G/G',
+                'gt_nums': '1/1'
         }
 
         sample_1_evidence = VariantEvidence.objects.create(
@@ -386,7 +387,8 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
         raw_sample_data_dict = {
                 'called': True,
                 'gt_type': 2,
-                'gt_bases': 'T/T'
+                'gt_bases': 'T/T',
+                'gt_nums': '1/1'
         }
         sample_2_evidence = VariantEvidence.objects.create(
                 experiment_sample=self.sample_obj_2,
@@ -491,6 +493,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         raw_sample_data_dict = {
             'GT_BASES': 'T/T',
+            'GT_NUMS': '1/1',
             'INFO_EFF_GENE': 'tolC'
         }
         VariantEvidence.objects.create(
@@ -544,6 +547,7 @@ class TestVariantFilter(BaseTestVariantFilterTestCase):
 
         raw_sample_data_dict = {
             'GT_BASES': 'T/T',
+            'GT_NUMS': '1/1',
             'GT_TYPE': 2,
             'INFO_EFF_GENE': 'tolC'
         }

@@ -2,6 +2,7 @@
 Utility objects and functions for interacting with models.
 """
 
+import hashlib
 from uuid import uuid4
 
 from django.conf import settings
@@ -16,6 +17,9 @@ import stat
 
 # Size of unique UIDs.
 UUID_SIZE = 8
+
+# Size of hash id for filenames that store long alt.
+LONG_ALT_HASH_SIZE = 8
 
 
 ###############################################################################
@@ -175,3 +179,37 @@ def get_dataset_with_type(entity, type, compressed=False):
     if len(results) > 0:
         return results[0]
     return None
+
+
+def get_normalized_alt_representation(alt_str):
+    """Returns a normalized represenation of the alt.
+
+    This provides support for long alt values which we don't want to store in
+    the database. Instead we store a unique hash that is the name of the file
+    on disk.
+
+    For a short alt <= 10bp, this is function just return the alt unchanged.
+
+    For a long alt, this function returns a string of the form
+    "LONG:<size>|FILE:<hash>", where <hash> is computed directly from alt_str.
+    """
+    if len(alt_str) <= 10:
+        return alt_str
+
+    size = len(alt_str)
+    hash_part = hashlib.md5(alt_str).hexdigest()[:LONG_ALT_HASH_SIZE]
+    return 'LONG:{size},HASH:{hash_part}'.format(
+            size=size, hash_part=hash_part)
+
+
+def get_long_alt_path(ref_genome, hash_part):
+    """Returns path to file where long alt is stored.
+    """
+    long_alts_dir = ref_genome.get_long_variant_alts_dir()
+
+    # NOTE: This line helps transitioning existing installations of Millstone
+    # but it may be wonky with respect to concurrency.
+    # TODO: Remove.
+    ensure_exists_0775_dir(long_alts_dir)
+
+    return os.path.join(long_alts_dir, hash_part + '.txt')

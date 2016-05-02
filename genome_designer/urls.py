@@ -120,6 +120,8 @@ urlpatterns = patterns('',
         'main.xhr_handlers.save_variant_filter'),
     url(r'^_/variants/delete_filter$',
         'main.xhr_handlers.delete_variant_filter'),
+    url(r'^_/variants/get_long_alt$',
+        'main.xhr_handlers.get_long_alt_value_from_file'),
 
     url(r'^_/alignmentgroups$',
             'main.xhr_handlers.get_alignment_groups'),
