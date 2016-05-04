@@ -48,6 +48,7 @@ from main.models import VariantAlternate
 from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
+from main.model_utils import get_long_alt_path
 from genome_finish.assembly import run_de_novo_assembly_pipeline
 from genome_finish.assembly import run_sv_calling_from_contigs
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
@@ -1496,6 +1497,26 @@ def call_svs_from_contigs(request):
 
     return HttpResponse(
         json.dumps({}), content_type='application/json')
+
+
+@require_GET
+@login_required
+def get_long_alt_value_from_file(request):
+    """Returns value of long alt stored in file path defined in request.
+    """
+    ref_genome_uid = request.GET['refGenomeUid']
+    ref_genome = get_object_or_404(
+            ReferenceGenome,
+            project__owner=request.user.get_profile(),
+            uid=ref_genome_uid)
+
+    alt_hash = request.GET['altHash']
+
+    alt_path = get_long_alt_path(ref_genome, alt_hash)
+    with open(os.path.join(settings.MEDIA_ROOT, alt_path)) as fh:
+        alt_value = fh.read()
+
+    return HttpResponse(alt_value)
 
 
 if settings.S3_ENABLED:

@@ -392,9 +392,9 @@ def export_variant_set_as_vcf(variant_set, vcf_dest_path_or_filehandle):
 
     vcf_writer = vcf.Writer(out_vcf_fh, vcf_template)
     for variant in variant_set.variants.all():
-        alts = variant.variantalternate_set.all()
+        alts = variant.get_alternates()
         assert len(alts) == 1, "Only support variants with exactly one alt."
-        alt_value = alts[0].alt_value
+        alt_value = alts[0]
 
         record = vcf.model._Record(
                 variant.chromosome.seqrecord_id,

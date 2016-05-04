@@ -78,7 +78,8 @@ class TestEnsureVariantSetConsistency(TestCase):
         raw_sample_data_dict = {
                 'CALLED': True,
                 'GT_TYPE': 2,
-                'GT_BASES': 'G/G'
+                'GT_BASES': 'G/G',
+                'GT_NUMS': '1/1'
         }
         VariantEvidence.objects.create(
                 experiment_sample=self.sample_2,
