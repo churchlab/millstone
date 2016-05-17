@@ -1012,14 +1012,24 @@ def export_variants_as_csv(request):
     """Handles a request to download variants in .csv format.
     """
     ag_uid = request.GET.get('alignment_group_uid')
-    alignment_group = get_object_or_404(AlignmentGroup,
-            reference_genome__project__owner=request.user.get_profile(),
-            uid=ag_uid)
+    if ag_uid is None:
+        alignment_group = None
+        ref_genome_uid = request.GET.get('ref_genome_uid')
+        assert ref_genome_uid is not None
+        ref_genome = get_object_or_404(ReferenceGenome,
+                project__owner=request.user.get_profile(),
+                uid=ref_genome_uid)
+    else:
+        alignment_group = get_object_or_404(AlignmentGroup,
+                reference_genome__project__owner=request.user.get_profile(),
+                uid=ag_uid)
+        ref_genome = None
 
     filter_string = request.GET.get('filter_string', '')
 
     response = StreamingHttpResponse(
-            export_melted_variant_view(alignment_group, filter_string),
+            export_melted_variant_view(alignment_group, filter_string,
+                    ref_genome_override=ref_genome),
             content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="variants.csv"'
     return response

@@ -33,7 +33,8 @@ CORE_VARIANT_KEYS = [
 ]
 
 
-def export_melted_variant_view(alignment_group, filter_string):
+def export_melted_variant_view(
+        alignment_group, filter_string, ref_genome_override=None):
     """Generator that yields rows of a csv file.
 
     Args:
@@ -41,7 +42,10 @@ def export_melted_variant_view(alignment_group, filter_string):
         filter_string: Limit the returned Variants to those that match this
             filter.
     """
-    ref_genome = alignment_group.reference_genome
+    if ref_genome_override is not None:
+        ref_genome = ref_genome_override
+    else:
+        ref_genome = alignment_group.reference_genome
 
     mvm = MeltedVariantMaterializedViewManager(ref_genome)
     mvm.create_if_not_exists_or_invalid()
