@@ -454,7 +454,7 @@ def populate_record_eff(vcf_record):
     for eff in eff_concat_string:
         regex_match = SNPEFF_ALT_RE.match(eff)
         assert regex_match is not None, (
-                "Could not parse SnpEff EFF value " % eff)
+                "Could not parse SnpEff EFF value %s" % eff)
         eff_group_list.append(regex_match)
 
     eff_fields = list(chain.from_iterable((
