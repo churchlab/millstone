@@ -23,6 +23,7 @@ from pipeline.variant_effects import build_snpeff
 from pipeline.variant_effects import run_snpeff
 from pipeline.variant_effects import get_snpeff_config_path
 from pipeline.variant_effects import populate_record_eff
+from pipeline.variant_effects import SNPEFF_ALT_RE
 from pipeline.variant_calling.common import add_vcf_dataset
 from pipeline.variant_calling.constants import TOOL_FREEBAYES
 from utils.import_util import import_reference_genome_from_local_file
@@ -184,3 +185,13 @@ class TestSnpeff(TestCase):
         alignment_group.dataset_set.add(vcf_dataset)
 
         run_snpeff(alignment_group, TOOL_FREEBAYES)
+
+
+class TestSnpeffNoSetup(TestCase):
+    """Small tests that don't require setup.
+    """
+
+    def test_snpeff_alt_re__no_EFFECT(self):
+        match = SNPEFF_ALT_RE.match(
+                '(MODIFIER||||||||||G|ERROR_OUT_OF_CHROMOSOME_RANGE)')
+        self.assertTrue(match)

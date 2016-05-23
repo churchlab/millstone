@@ -109,7 +109,7 @@ SNPEFF_INFO_TEMPLATE = Template(','.join([
         'Description="$description">']))
 
 SNPEFF_ALT_RE = re.compile(r''.join([
-        r'(?P<{:s}>.+)\((?P<{:s}>[^\|]*)',
+        r'(?P<{:s}>.*)\((?P<{:s}>[^\|]*)',
         r'\|(?P<{:s}>[^\|]*)' * (len(SNPEFF_FIELDS.keys())-4),
         r'\|?(?P<{:s}>[^\|]*)\|?(?P<{:s}>[^\|]*)\)']
         ).format(*SNPEFF_FIELDS.keys()))
