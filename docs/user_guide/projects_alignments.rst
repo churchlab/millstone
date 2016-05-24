@@ -26,7 +26,7 @@ alignments.
 
 *Note: If you have many/large samples, and would prefer to upload files
 via the command line instead of the browser, see `this
-guide <https://github.com/churchlab/churchlab.github.io/wiki/Manual-Data-Upload-to-Server>`__.*
+guide <https://github.com/churchlab/churchlab.github.io/wiki/Manual-Data-Upload-to-Server>`.*
 
 Reference Genome
 ----------------
