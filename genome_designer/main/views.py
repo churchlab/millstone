@@ -506,7 +506,18 @@ def sample_alignment_error_view(request, project_uid, alignment_group_uid,
     data_dir = sample_alignment.get_model_data_dir()
     error_file_dir = os.path.join(data_dir, 'bwa_align.error')
     if os.path.exists(error_file_dir):
-        with open(error_file_dir) as fh:
+        with open(error_file_dir, 'rb') as fh:
+            # Effectively perform a tail call, showing approximately last
+            # 100 lines (~100 bytes / line) = 10000 bytes.
+
+            # First figure out size of file by jumping to end.
+            fh.seek(0, os.SEEK_END)
+            eof = fh.tell()
+
+            # Now jump back up to 100 lines * ~100 bytes / line, or beginning.
+            fh.seek(max(eof - 10000, 0), os.SEEK_SET)
+
+            # Read the data from here to end.
             raw_data = fh.read()
     else:
         raw_data = 'undefined'
