@@ -682,7 +682,9 @@ def me_translocation_walk(G):
         deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
         while deletion < MAX_TRANS_DELETION:
 
-            me_iv_pairs.append((enter_iv, exit_iv))
+            # Add to list if path enters and exits from the same ME
+            if enter_iv.enter_ref.seq_uid == exit_iv.exit_ref.seq_uid:
+                me_iv_pairs.append((enter_iv, exit_iv))
 
             if j == len(me_sorted_by_enter_ref) - 1:
                 break
