@@ -27,7 +27,7 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
     };
 
     this.datatableComponent = new gd.DataTableComponent({
-        el: $('#gd-datatable-hook'),
+        el: $('#gd-datatable-hook-contigs'),
         serverTarget: '/_/contigs',
         controlsTemplate: '/_/templates/contig_list_controls',
         requestData: requestData,

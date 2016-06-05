@@ -6,10 +6,21 @@
     Choose a reference genome, an alignment, and an entity to analyze.
   </div>
 
+  <div id="gd-datatable-hook">
+  </div>
+
+  <!-- HACK: Right now, if the user navigates to contigs analyze view
+       and then navigates away to, say, variants analyze view, before
+       contigs data is returned, the contigs data will get rendered.
+       Temporarily deal with this by forcing contigs to get rendered
+       to their own hook so that they don't overwrite the displayed
+       variants.
+  -->
+
   <div id="samples-datatable-hook">
   </div>
 
-  <div id="gd-datatable-hook">
+  <div id="gd-datatable-hook-contigs">
   </div>
 
   <script type="text/javascript">
