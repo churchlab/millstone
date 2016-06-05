@@ -40,12 +40,6 @@ def cov_detect_deletion_make_vcf(sample_alignment):
 
     if var_dict_list:
 
-        dataset_query = sample_alignment.dataset_set.filter(
-                type=Dataset.TYPE.VCF_COV_DETECT_DELETIONS)
-
-        if dataset_query:
-            dataset_query.delete()
-
         vcf_path = os.path.join(
             sample_alignment.get_model_data_dir(),
             'cov_detect_deletion.vcf')

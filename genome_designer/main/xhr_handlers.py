@@ -50,7 +50,6 @@ from main.models import VariantSet
 from main.models import S3File
 from main.model_utils import get_long_alt_path
 from genome_finish.assembly import run_de_novo_assembly_pipeline
-from genome_finish.assembly import run_sv_calling_from_contigs
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
 from utils import generate_safe_filename_prefix_from_label
@@ -64,7 +63,6 @@ from utils.import_util import import_reference_genome_from_ncbi
 from utils.import_util import import_samples_from_targets_file
 from utils.import_util import import_variant_set_from_vcf
 from utils.import_util import run_fastqc_on_sample_fastq
-from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from utils.optmage_util import ReplicationOriginParams
 from utils.optmage_util import print_mage_oligos
 from utils.reference_genome_maker_util import generate_new_reference_genome
@@ -1474,35 +1472,6 @@ def generate_contigs(request):
 
     # Kick off async assembly
     run_de_novo_assembly_pipeline(
-            sample_alignment_list)
-
-    return HttpResponse(
-        json.dumps({}), content_type='application/json')
-
-
-@require_POST
-@login_required
-def call_svs_from_contigs(request):
-    """
-    Calls SVs asynchronously using already assembled contigs
-    """
-
-    # Retrieve ExperimentSampleToAlignment uid list
-    request_data = json.loads(request.body)
-    sample_alignment_uid_list = request_data.get('sampleAlignmentUidList', [])
-    if len(sample_alignment_uid_list) == 0:
-        raise Http404
-
-    sample_alignment_list = ExperimentSampleToAlignment.objects.filter(
-            alignment_group__reference_genome__project__owner=(
-                    request.user.get_profile()),
-            uid__in=sample_alignment_uid_list)
-
-    if len(sample_alignment_list) != len(sample_alignment_uid_list):
-        raise Http404
-
-    # Kick off async SV calling from contigs
-    run_sv_calling_from_contigs(
             sample_alignment_list)
 
     return HttpResponse(

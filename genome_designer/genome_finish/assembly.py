@@ -39,7 +39,6 @@ from utils.bam_utils import sort_bam_by_name
 from utils.data_export_util import export_contig_list_as_vcf
 from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
-from utils.import_util import prepare_ref_genome_related_datasets
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
@@ -77,25 +76,42 @@ STRUCTURAL_VARIANT_VCF_DATASETS = [
         Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK,
         Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
 
+CUSTOM_SV_METHODS = [
+    'DE_NOVO_ASSEMBLY',
+    'ME_GRAPH_WALK',
+    'GRAPH_WALK',
+    'COVERAGE'
+]
+
 
 def run_de_novo_assembly_pipeline(sample_alignment_list,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=True):
+    """Kicks off Millstone's custom SV calling pipeline.
 
+    NOTE: Despite the name, in addition to de novo assembly, our custom
+    SV-calling pipeline also uses non-assembly based methods like low-coverage
+    detection to call deletions.
+    """
+
+    # First, we delete any data from previous runs of this custom SV-calling
+    # pipeline, and update the status of the sample alignments to indicate
+    # that custom SV-calling is taking place.
     for sample_alignment in sample_alignment_list:
-
-        delete_previous_assembly(sample_alignment)
+        clean_up_previous_runs_of_sv_calling_pipeline(sample_alignment)
         set_assembly_status(
                 sample_alignment,
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED, force=True)
 
-    # Ensure reference genome fasta has bwa index
+    # Next, we ensure reference genome fasta is indexed. We do this before
+    # the async tasks.
     ref_genome = sample_alignment_list[0].alignment_group.reference_genome
     ref_genome_fasta = ref_genome.dataset_set.get(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
     ensure_bwa_index(ref_genome_fasta)
     prepare_jbrowse_ref_sequence(ref_genome)
 
+    # Finally we assemble the async tasks that be parallelized.
     async_result = get_sv_caller_async_result(
             sample_alignment_list)
 
@@ -114,71 +130,34 @@ def kmer_coverage(C, L, k):
 
 
 def get_sv_caller_async_result(sample_alignment_list):
-    """Kick off a chord that calls SVs for each ExperimentSampleToAlignment in
-    sample_alignment_list and returns an AsyncResult object
+    """Builds a celery chord that contains tasks for calling SVs for each
+    ExperimentSampleToAlignment in sample_alignment_list in parallel. Each task
+    generates vcfs, named according to the method use to call the contained
+    variants. The callback to the chord is a chain of tasks (applied
+    synchronously) that parse variants from vcfs.
+
+    Returns an AsyncResult object.
     """
     generate_contigs_tasks = []
     cov_detect_deletion_tasks = []
     parse_vcf_tasks = []
     for sample_alignment in sorted(sample_alignment_list,
             key=lambda x: x.experiment_sample.label):
+
+        # These tasks are based on de novo assembly.
         generate_contigs_tasks.append(
                 generate_contigs.si(sample_alignment))
 
+        # These tasks use coverage to call large deletions.
         cov_detect_deletion_tasks.append(
                 cov_detect_deletion_make_vcf.si(sample_alignment))
 
+        # These tasks parse the resulting VCFs.
         parse_vcf_tasks.append(
                 parse_variants_from_vcf.si(sample_alignment))
 
     return chord(generate_contigs_tasks + cov_detect_deletion_tasks)(
             chain(parse_vcf_tasks))
-
-
-def run_sv_calling_from_contigs(sample_alignment_list):
-
-    for sample_alignment in sample_alignment_list:
-
-        delete_structural_variants(sample_alignment)
-        set_assembly_status(
-                sample_alignment,
-                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED, force=True)
-
-    # Ensure reference genome fasta has bwa index
-    ref_genome = sample_alignment_list[0].alignment_group.reference_genome
-    ref_genome_fasta = ref_genome.dataset_set.get(
-            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-    ensure_bwa_index(ref_genome_fasta)
-    prepare_jbrowse_ref_sequence(ref_genome)
-
-    async_result = get_sv_caller_from_contigs_async_result(
-            sample_alignment_list)
-
-    return async_result
-
-
-def get_sv_caller_from_contigs_async_result(sample_alignment_list):
-    """Kick off a chord that calls SVs for each ExperimentSampleToAlignment in
-    sample_alignment_list and returns an AsyncResult object
-    """
-
-    vcf_datasets_to_parse = [
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK]
-
-    evaluate_contigs_tasks = []
-    parse_vcf_tasks = []
-    for sample_alignment in sorted(sample_alignment_list,
-            key=lambda x: x.experiment_sample.label):
-        evaluate_contigs_tasks.append(
-                evaluate_sample_alignment_contigs.si(sample_alignment))
-
-        parse_vcf_tasks.append(
-                parse_variants_from_vcf.si(
-                        sample_alignment, vcf_datasets_to_parse))
-
-    return chord(evaluate_contigs_tasks)(chain(parse_vcf_tasks))
 
 
 @task(ignore_result=False)
@@ -579,13 +558,6 @@ def assemble_with_velvet(data_dir, velvet_opts, sv_indicants_bam,
     return contig_files
 
 
-@task(ignore_result=False)
-@report_failure_stats('evaluate_contigs_failure_stats.txt')
-def evaluate_sample_alignment_contigs(sample_alignment):
-    contig_list = list(sample_alignment.contig_set.all())
-    evaluate_contigs(contig_list)
-
-
 def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
         use_read_alignment=True):
 
@@ -595,36 +567,42 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
     # Sort contig_list by highest length weighted coverage
     contig_list.sort(key=_length_weighted_coverage, reverse=True)
 
-    # Get placeable contigs using graph-based placement
+    # All contigs have have same sample_alignment so grab sample alignment from
+    # the first one.
+    contig = contig_list[0]
+    sample_alignment = contig.experiment_sample_to_alignment
+
+    # Attempt placing contigs. Get back placeable contigs,
+    # translocation variants (dict obj), and mobile elements translocation
+    # variants (dict obj).
     placeable_contigs, var_dict_list, me_var_dict_list = graph_contig_placement(
             contig_list, skip_extracted_read_alignment, use_read_alignment)
 
-    # Mark placeable contigs
-    for contig in placeable_contigs:
-        contig.metadata['is_placeable'] = True
+    # Handle placeable contigs, if any.
+    if len(placeable_contigs):
+        for contig in placeable_contigs:
+            contig.metadata['is_placeable'] = True
 
-    # Get path for contigs vcf
-    contig = contig_list[0]
-    sample_alignment = contig.experiment_sample_to_alignment
-    ag = contig.experiment_sample_to_alignment.alignment_group
-    vcf_path = os.path.join(
-            sample_alignment.get_model_data_dir(),
-            'de_novo_assembled_contigs.vcf')
+        placeable_contig_vcf_path = os.path.join(
+                sample_alignment.get_model_data_dir(),
+                'de_novo_assembled_contigs.vcf')
+        # Write contigs to vcf
+        export_contig_list_as_vcf(placeable_contigs, placeable_contig_vcf_path)
+
+        # Make dataset for contigs vcf
+        add_dataset_to_entity(
+                sample_alignment,
+                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+                Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
+                placeable_contig_vcf_path)
+
+    # Handle other types of contig objects, if any.
     var_dict_vcf_path = os.path.join(
             sample_alignment.get_model_data_dir(),
             'de_novo_assembly_translocations.vcf')
     me_var_dict_vcf_path = os.path.join(
             sample_alignment.get_model_data_dir(),
             'de_novo_assembly_me_translocations.vcf')
-
-    # Delete dataset if it exists so the vcf parsing task for this
-    # sample alignment won't find a potentially outdated dataset
-    dataset_query = sample_alignment.dataset_set.filter(
-                type__in=[
-                        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_GRAPH_WALK,
-                        Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK])
-    if dataset_query:
-        dataset_query.delete()
 
     for var_dl, method, path, dataset_type in [
             (var_dict_list, 'GRAPH_WALK', var_dict_vcf_path,
@@ -647,27 +625,6 @@ def evaluate_contigs(contig_list, skip_extracted_read_alignment=False,
                 dataset_type,
                 dataset_type,
                 path)
-        sample_alignment.save()
-
-    if not placeable_contigs:
-        return
-
-    # Also delete any old contig insertion placement dataset
-    dataset_query = sample_alignment.dataset_set.filter(
-                type=Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS)
-
-    if dataset_query:
-        dataset_query.delete()
-
-    # Write contigs to vcf
-    export_contig_list_as_vcf(placeable_contigs, vcf_path)
-
-    # Make dataset for contigs vcf
-    add_dataset_to_entity(
-            sample_alignment,
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
-            Dataset.TYPE.VCF_DE_NOVO_ASSEMBLED_CONTIGS,
-            vcf_path)
 
 
 @task(ignore_result=False)
@@ -710,43 +667,41 @@ def parse_variants_from_vcf(sample_alignment,
     sample_alignment.save()
 
 
-def delete_previous_assembly(sample_alignment):
+def clean_up_previous_runs_of_sv_calling_pipeline(sample_alignment):
+    """Deletes all model entities from previous runs of our custom SV
+    pipeline.
+    """
+    # Delete Contigs.
+    sample_alignment.contig_set.all().delete()
 
-    for contig in sample_alignment.contig_set.all():
-        contig.delete()
+    # Delete Variants associated with SVs called by this pipeline.
+    var_list = get_de_novo_variants(sample_alignment)
+    for var in var_list:
+        var.delete()
 
-    variants = get_de_novo_variants(sample_alignment)
-
-    for v in variants:
-        v.delete()
-
-
-def delete_structural_variants(sample_alignment):
-
-    sv_methods = [
-            'DE_NOVO_ASSEMBLY',
-            'ME_GRAPH_WALK',
-            'GRAPH_WALK']
-
-    variants = get_de_novo_variants(sample_alignment, sv_methods)
-
-    for v in variants:
-        v.delete()
+    # Delete vcf Datasets and associated files.
+    sample_alignment.dataset_set.filter(
+            type__in=STRUCTURAL_VARIANT_VCF_DATASETS).delete()
 
 
-def get_de_novo_variants(sample_alignment, sv_methods = [
-        'DE_NOVO_ASSEMBLY', 'ME_GRAPH_WALK', 'GRAPH_WALK', 'COVERAGE']):
+def get_de_novo_variants(sample_alignment, sv_methods=CUSTOM_SV_METHODS):
+    """Returns list of Variant objects corresponding to those called by
+    our custom SV-calling pipeline for the given sample_alignment.
+    """
 
-    # Check to see if this reference genome has ever seen structural variants
+    # Check to see if this reference genome has ever had structural variants
+    # called against it. If not, return empty list.
     ref_genome = sample_alignment.alignment_group.reference_genome
     if 'INFO_METHOD' not in ref_genome.variant_key_map[MAP_KEY__COMMON_DATA]:
         return []
 
+    # Otherwise, we build a query to fetch all SV variants using our internal
+    # query language.
     or_clause = ' | '.join(['INFO_METHOD=' + m for m in sv_methods])
 
-    sample_uid = str(sample_alignment.experiment_sample.uid)
-
-    filter_string = 'EXPERIMENT_SAMPLE_UID=%s & (%s)' % (sample_uid, or_clause)
+    filter_string = 'EXPERIMENT_SAMPLE_UID={sample_uid} & ({or_clause})'.format(
+        sample_uid=str(sample_alignment.experiment_sample.uid),
+        or_clause=or_clause)
 
     query_args = {
             'filter_string': filter_string,
