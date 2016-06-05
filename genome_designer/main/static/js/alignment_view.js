@@ -30,38 +30,6 @@ gd.AlignmentView = Backbone.View.extend({
         _.bind(this.decorateAlignmentControls, this));
   },
 
-  handleGenerateContigs: function() {
-    var sampleAlignmentUidList = this.datatable.getCheckedRowUids();
-
-    // If nothing to do, show message.
-    if (!sampleAlignmentUidList.length) {
-      alert('Please select Experiment Samples to use for contig generation.');
-      return;
-    }
-
-    if(sampleAlignmentUidList.length > 1) {
-      alert('Please select only one Experiment Sample to use for contig ' +
-          'generation.');
-      return;
-    }
-
-    var postData = {
-        sampleAlignmentUid: sampleAlignmentUidList[0]
-    };
-
-    this.enterLoadingState();
-
-    $.get('/_/alignments/generate_contigs', postData,
-        _.bind(this.handleGenerateContigsResponse, this));
-  },
-
-  handleGenerateContigsResponse: function(response) {
-    this.exitLoadingState();
-    if (response.is_contig_file_empty == 1) {
-      alert('No evidence for structural variants in this alignment');
-    };
-  },
-
  /** Helper method to append input value to form. */
   _appendInputFieldToForm: function(formJqueryObj, name, value) {
     formJqueryObj.append(_.template(
@@ -77,12 +45,6 @@ gd.AlignmentView = Backbone.View.extend({
 
   /** Create component to wrap samples controls, and listen for events. */
   decorateAlignmentControls: function() {
-    // Draw 'Generate contigs' button only if the feature is enabled
-    if($('#gd-generate-contigs-btn').length) {
-      $('#gd-generate-contigs-btn').click(_.bind(
-          this.handleGenerateContigs, this));
-    }
-
     // Draw 'Go to variants' button only if AlignmentGroup is COMPLETED.
     if (this.model.get('alignment_group').status == 'COMPLETED') {
       var templateData = {
