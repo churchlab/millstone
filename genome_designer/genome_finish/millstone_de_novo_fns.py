@@ -36,37 +36,6 @@ def get_altalign_reads(input_bam_path, output_bam_path, xs_threshold=None):
     input_af.close()
 
 
-def get_clipped_reads(bam_filename, output_filename, clipping_threshold=None):
-    """Creates bam of reads that have more than clipping_threshold bases
-    of clipping.  If no clipping_threshold specified, clipping stats
-    for the alignment are calculated and the clipping_threshold is set
-    to the mean + one stddev of the per read clipping of a sample of
-    10000 reads
-    """
-    if clipping_threshold is None:
-        stats = clipping_stats(bam_filename, sample_size=10000)
-        clipping_threshold = int(stats['mean'] + stats['std'])
-
-    cmd = ' | '.join([
-            # -F 0x100 option filters out secondary alignments
-            '{samtools} view -h -F 0x100 {bam_filename}',
-            '{extract_clipped_script} -i stdin -t {clipping_threshold}',
-            '{samtools} view -Sb -']).format(
-                    samtools=SAMTOOLS_BINARY,
-                    bam_filename=bam_filename,
-                    clipping_threshold=clipping_threshold,
-                    extract_clipped_script=os.path.join(
-                            GENOME_FINISH_PATH,
-                            'extractClippedReads.py'))
-
-    with open(output_filename, 'w') as fh:
-        subprocess.check_call(cmd, stdout=fh, shell=True, executable=BASH_PATH)
-
-    # sort the split reads, overwrite the old file
-    subprocess.check_call(
-            [SAMTOOLS_BINARY, 'sort', output_filename] +
-            [os.path.splitext(output_filename)[0]])
-
 
 def get_piled_reads(input_bam_path, output_bam_path,
         clipping_threshold=None):
