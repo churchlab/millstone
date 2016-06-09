@@ -354,6 +354,10 @@ def update_parent_child_variant_fields(alignment_group):
     GT_TYPE >= 0 in any of the children.
 
     Ideally this is done before making the materialized view.
+
+    Note: This should only be run ONCE, right after all variants are done but
+    before the materialized view is made. Also, it should NEVER be run by
+    a task such that multiple are run in parallel, since that hoses the DB.
     """
 
     #1. Get parent-children uid relationships for all experiment_samples

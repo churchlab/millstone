@@ -474,6 +474,9 @@ def reset_database():
                 '\t* Postgres session is open\n'
                 '\t* No postgres user; change OS_USER in default database'
                         ' in local_settings.py\n'
+                'Commands run:\n' +
+                script_string +
+                '\n\n'
                 '\nOffending postgres errors:\n' + ''.join(error_lines))
 
     """

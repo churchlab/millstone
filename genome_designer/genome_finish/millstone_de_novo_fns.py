@@ -316,6 +316,7 @@ def get_coverage_stats(sample_alignment):
     return chrom_cov_dict
 
 
+
 def get_avg_genome_coverage(sample_alignment):
     """Returns a float which is the average genome coverage, calculated as
     the average length-weighted read coverage over all chromosomes
@@ -334,3 +335,28 @@ def get_avg_genome_coverage(sample_alignment):
         total_len += length
 
     return float(len_weighted_coverage) / total_len
+
+
+def filter_low_qual_read_pairs(input_bam_path, output_bam_path,
+        avg_phred_cutoff=20):
+    """Filters out reads with average phred scores below cutoff
+    """
+
+    # Put qnames with average phred scores below the cutoff into dictionary
+    bad_quality_qnames = {}
+    input_af = pysam.AlignmentFile(input_bam_path, "rb")
+    for read in input_af:
+        avg_phred = np.mean(read.query_qualities)
+        if avg_phred < avg_phred_cutoff:
+            bad_quality_qnames[read.qname] = True
+
+    # Write reads in input to output if not in bad_quality_names
+    output_af = pysam.AlignmentFile(output_bam_path, "wb",
+            template=input_af)
+    input_af.reset()
+    for read in input_af:
+        if not bad_quality_qnames.get(read.qname, False):
+            output_af.write(read)
+    output_af.close()
+    input_af.close()
+

@@ -88,8 +88,7 @@ class TestParallelAssembly(TestCase):
                 experiment_sample__in=sample_list)
 
         # Run pipeline and wait on result
-        async_result = run_de_novo_assembly_pipeline(sample_align_list)
-        async_result.get()
+        run_de_novo_assembly_pipeline(sample_align_list)
 
         return alignment_group
 

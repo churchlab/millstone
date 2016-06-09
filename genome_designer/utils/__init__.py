@@ -1,19 +1,34 @@
 """
 Miscellaneous utility functions.
 """
-import sys
+import collections
 import os
 import re
 import shutil
+import string
+import sys
 import tempfile
 import urllib2
-import string
 
 from Bio import SeqIO
 from django.conf import settings
 
 # Number of characters that snpeff requires per line of the genbank file
 SNPEFF_MIN_LINE_LEN = 20
+
+def namedtuple_with_defaults(typename, field_names, default_values=()):
+    """
+    Named tuple where not all arguments are required.
+    http://stackoverflow.com/questions/11351032/named-tuple-and-optional-keyword-arguments
+    """
+    T = collections.namedtuple(typename, field_names)
+    T.__new__.__defaults__ = (None,) * len(T._fields)
+    if isinstance(default_values, collections.Mapping):
+        prototype = T(**default_values)
+    else:
+        prototype = T(*default_values)
+    T.__new__.__defaults__ = tuple(prototype)
+    return T
 
 
 def make_temp_file(label, extension):

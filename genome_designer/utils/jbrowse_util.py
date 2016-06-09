@@ -163,7 +163,6 @@ def compile_tracklist_json(reference_genome):
 
     write_tracklist_json(reference_genome, consolidated_track_list)
 
-
 def prepare_jbrowse_ref_sequence(reference_genome, **kwargs):
     """Prepare the reference sequence and place it in the ref_genome dir.
 
@@ -507,7 +506,7 @@ def get_tracks_for_entity(reference_genome,
 
     # # always have DNA and gbk if available
     # track_list['DNA']('DNA')
-    # if reference_genome.is_annotated:
+    # if reference_genome.is_annotated():
     #     track_list.append('gbk')
 
     # # Do all alignment groups if None, else get just the one:

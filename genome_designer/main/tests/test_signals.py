@@ -91,6 +91,7 @@ class TestSignals(TestCase):
         assert os.path.exists(gff.get_absolute_location()), (
                 'gff conversion failed')
 
+
     def test_post_variant_evidence_create(self):
         self.assertTrue(True)
 

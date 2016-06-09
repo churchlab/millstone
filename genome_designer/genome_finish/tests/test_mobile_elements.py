@@ -9,14 +9,28 @@ from genome_finish.graph_contig_placement import add_me_alignment_to_graph
 from genome_finish.graph_contig_placement import me_translocation_walk
 from genome_finish.graph_contig_placement import SequenceIntervals
 
+from main.testing_util import create_common_entities
+
 GF_TEST_DIR = os.path.join(
         settings.PWD,
         'test_data/genome_finish_test')
 
 
 class TestMobileElements(TestCase):
+    """
+    This is Line 5 from Tenaillon 2013.
+    This test should give two IS150 elements at 1305489 and 968327
+    and an IS186 element at 4517605 (which is in the Ancestor also.)
+    """
 
-    def test_2_mobile_elements(self):
+    def setUp(self):
+        self.common_data = create_common_entities()
+        self.project = self.common_data['project']
+
+        self.pos_elem_tups = [
+                    (968327, 'IS150'),
+                    (1305482, 'IS150'),
+                    (4517605, 'IS186')]
 
         graph_test_dir = os.path.join(GF_TEST_DIR, 'graph_tests')
 
@@ -38,7 +52,13 @@ class TestMobileElements(TestCase):
         add_alignment_to_graph(G, contig_alignment_bam)
         add_me_alignment_to_graph(G, contig_alignment_to_me_bam)
 
-        me_iv_pairs = me_translocation_walk(G)
+        self.me_iv_pairs = me_translocation_walk(G)
+
+
+    def test_3_mobile_elements(self):
+        """
+        Assert elements are found in the correct locations.
+        """
 
         def _is_correct(iv_pair, pos, element_name='', tolerance=100):
             if abs(iv_pair[0][0].pos - pos) > tolerance:
@@ -49,19 +69,17 @@ class TestMobileElements(TestCase):
             if not found_element_name.startswith(me_prefix + element_name):
                 return False
 
-            return True
+        return True
 
-        pos_elem_tups = [(968327, 'IS150'), (1305482, 'IS150')]
-
-        # Assert all expected ME's are found
-        for pos, elem in pos_elem_tups:
+        # Assert all expected MEs are found
+        for pos, elem in self.pos_elem_tups:
             self.assertTrue(any(_is_correct(iv_pair, pos, elem)
-                    for iv_pair in me_iv_pairs))
+                    for iv_pair in self.me_iv_pairs))
 
-        # Assert no redundant ME's
-        for pos, elem in pos_elem_tups:
+        # Assert no redundant MEs
+        for pos, elem in self.pos_elem_tups:
             self.assertTrue(sum(_is_correct(iv_pair, pos, elem)
-                    for iv_pair in me_iv_pairs) == 1)
+                    for iv_pair in self.me_iv_pairs) == 1)
 
-        # Assert no false positive ME's
-        assert len(me_iv_pairs) == len(pos_elem_tups)
+        # Assert no false positive MEs
+        assert len(self.me_iv_pairs) == len(self.pos_elem_tups)

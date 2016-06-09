@@ -41,3 +41,4 @@ def assert_celery_running():
         return
     celery_status = get_celery_worker_status()
     assert not CELERY_ERROR_KEY in celery_status, celery_status[CELERY_ERROR_KEY]
+

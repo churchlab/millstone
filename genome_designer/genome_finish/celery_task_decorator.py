@@ -13,8 +13,7 @@ def set_assembly_status(sample_alignment, status, force=False):
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED)
 
     # Set assembly status for UI
-    sample_alignment.data['assembly_status'] = (
-                ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
+    sample_alignment.data['assembly_status'] = status
     sample_alignment.save()
 
 

@@ -56,7 +56,8 @@ def parse_alignment_group_vcf(alignment_group, vcf_dataset_type):
     parse_vcf(vcf_dataset, alignment_group)
 
 
-def parse_vcf(vcf_dataset, alignment_group):
+def parse_vcf(vcf_dataset, alignment_group,
+            should_update_parent_child_relationships=True):
     """
     Parses the VCF and creates Variant models relative to ReferenceGenome.
 
@@ -127,7 +128,11 @@ def parse_vcf(vcf_dataset, alignment_group):
 
     # Finally, update the parent/child relationships for these new
     # created variants.
-    update_parent_child_variant_fields(alignment_group)
+    # We don't want to do this in the case of SVs, since they are called separately
+    # and independently, and we can't be sure that they will be called the same in
+    # different samples.
+    if should_update_parent_child_relationships:
+        update_parent_child_variant_fields(alignment_group)
 
     # Force invalidate materialized view here.
     reference_genome.invalidate_materialized_view()

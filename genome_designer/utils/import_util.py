@@ -35,6 +35,7 @@ from pipeline.read_alignment_util import ensure_bwa_index
 from pipeline.variant_effects import build_snpeff
 from utils import generate_safe_filename_prefix_from_label
 from utils import uppercase_underscore
+from utils.genbank_util import generate_gbk_feature_index
 from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from utils.jbrowse_util import add_genbank_file_track
 from variants.vcf_parser import get_or_create_variant
@@ -218,6 +219,14 @@ def add_chromosomes(reference_genome, dataset):
         _make_chromosome(SeqIO.parse(dataset_path, "genbank"))
     elif dataset.type == Dataset.TYPE.REFERENCE_GENOME_GFF:
         # Don't add chromosomes for GFF. Used internally with JBrowse.
+        return
+    elif dataset.type == Dataset.TYPE.FEATURE_INDEX:
+        # Don't add chromosomes for feature_index.
+        # Used internally to find features.
+        return
+
+    elif dataset.type == Dataset.TYPE.MOBILE_ELEMENT_FASTA:
+        # Don't add chromosomes for mobile elements. Used by SV calling.
         return
     else:
         raise AssertionError("Unexpected Dataset type {ds_type}".format(
@@ -1176,7 +1185,6 @@ def prepare_ref_genome_related_datasets(ref_genome, dataset):
 
         # make sure the fasta index is generated
 
-
         # Run jbrowse ref genome processing
         prepare_jbrowse_ref_sequence(ref_genome)
 
@@ -1190,6 +1198,25 @@ def prepare_ref_genome_related_datasets(ref_genome, dataset):
 
         # Run jbrowse genbank genome processing for genes
         add_genbank_file_track(ref_genome)
+
+        # Create an indexed set of intervals so we can find contigs
+        # and snps within genes without using snpEFF.
+
+        feature_index_output_path = os.path.join(
+                ref_genome.get_snpeff_genbank_parent_dir(),
+                'gbk_feature_idx.pickle')
+
+        generate_gbk_feature_index(
+                ref_genome.get_snpeff_genbank_file_path(),
+                feature_index_output_path)
+
+        gbk_idx_dataset = Dataset.objects.create(
+                label=Dataset.TYPE.FEATURE_INDEX,
+                type=Dataset.TYPE.FEATURE_INDEX)
+
+        gbk_idx_dataset.filesystem_location = feature_index_output_path
+        gbk_idx_dataset.save()
+        ref_genome.dataset_set.add(gbk_idx_dataset)
 
     # We create the bwa index once here, so that alignments running in
     # parallel don't step on each others' toes.

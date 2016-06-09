@@ -96,8 +96,7 @@ class TestGenomeFinishMG1655(TestCase):
                 experiment_sample=sample)
 
         # Run pipeline and wait on result
-        async_result = run_de_novo_assembly_pipeline([sample_align])
-        async_result.get()
+        run_de_novo_assembly_pipeline([sample_align])
 
         # Retrieve contigs
         contigs = Contig.objects.filter(
@@ -275,7 +274,7 @@ class TestGraphWalk(TestCase):
         os.mkdir(data_dir)
 
         # Create contigs
-        contig_list = []
+        contig_uid_list = []
         for i, contig_fasta in enumerate(contig_fasta_list):
             contig = Contig.objects.create(
                 parent_reference_genome=reference_genome,
@@ -288,13 +287,17 @@ class TestGraphWalk(TestCase):
                     filesystem_location=contig_fasta)
             contig.metadata['assembly_dir'] = data_dir
             contig.metadata['node_number'] = i
-            contig_list.append(contig)
+            contig_uid_list.append(contig.uid)
+            contig.save()
 
         # Place contigs and create variants
-        evaluate_contigs(contig_list,
+        evaluate_contigs(contig_uid_list,
                 skip_extracted_read_alignment=True,
                 use_read_alignment=False)
+
         parse_variants_from_vcf(sample_alignment)
+
+        self.contig_uid_list = contig_uid_list
 
         # Get set of de novo variants
         variant_set = create_de_novo_variants_set(
@@ -401,6 +404,26 @@ class TestGraphWalk(TestCase):
                     me_variants.append(variant)
 
         self.assertTrue(me_variants)
+
+
+        # Check that contigs are annotated.
+        contig_junction_genes = {'l':set(), 'r':set()}
+        # get all contig junctions
+        for contig in list(Contig.objects.filter(uid__in=self.contig_uid_list)):
+            lr_junction_list = [
+                    ('l', contig.left_junctions),
+                    ('r', contig.right_junctions)]
+            for lr, junc_list in lr_junction_list:
+                for j in junc_list:
+                    contig_junction_genes[lr].update(j[4])
+        self.assertEqual(
+                contig_junction_genes['r'],
+                set([u'insertion sequence:IS150', u'cls']))
+        self.assertEqual(
+                contig_junction_genes['l'],
+                set([u'insertion sequence:IS150', u'cls']))
+
+
         for variant in me_variants:
             self.assertTrue(1305000 < variant.position < 1306000)
             alts = variant.get_alternates()

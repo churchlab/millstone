@@ -21,7 +21,8 @@ from main.s3 import project_files_needed
 from pipeline.read_alignment_util import ensure_bwa_index
 from pipeline.callable_loci import get_callable_loci
 from pipeline.read_alignment_util import index_bam_file
-from utils.bam_utils import filter_bam_file_by_row
+from pipeline.read_alignment_util import extract_split_reads
+from pipeline.read_alignment_util import extract_discordant_read_pairs
 from utils.import_util import add_dataset_to_entity
 from utils.jbrowse_util import add_bam_file_track
 from utils.jbrowse_util import add_bed_file_track
@@ -429,24 +430,58 @@ def compute_callable_loci(reference_genome, sample_alignment,
                 reference_genome,
                 Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
 
-        output = _get_callable_loci_output_filename(bam_file_location)
+        callable_loci_bed_fn = (
+                _get_callable_loci_output_filename(bam_file_location))
 
-        get_callable_loci(bam_file_location, output)
+        get_callable_loci(bam_file_location, callable_loci_bed_fn)
 
         # Add callable loci bed as dataset
-        callable_loci_bed = Dataset.objects.create(
+        callable_loci_bed_dataset = Dataset.objects.create(
                 label=Dataset.TYPE.BED_CALLABLE_LOCI,
                 type=Dataset.TYPE.BED_CALLABLE_LOCI,
-                filesystem_location=clean_filesystem_location(output))
+                filesystem_location=clean_filesystem_location(callable_loci_bed_fn))
 
-        sample_alignment.dataset_set.add(callable_loci_bed)
+        sample_alignment.dataset_set.add(callable_loci_bed_dataset)
         sample_alignment.save()
 
-        callable_loci_bed_fn = callable_loci_bed.get_absolute_location()
+        clean_bed_fn = clean_bed_features(callable_loci_bed_dataset, stderr=stderr)
 
+        # add it as a jbrowse track
+        add_bed_file_track(
+                reference_genome,
+                sample_alignment,
+                callable_loci_bed_dataset)
+
+
+    except Exception as e:
+        print >> stderr, 'WARNING: Callable Loci failed.'
+        print >> stderr, str(e)
+        clean_bed_fn = ''
+
+    finally:
+        return clean_bed_fn
+
+
+def clean_bed_features(callable_loci_bed_dataset, stderr=None):
+    """
+    This helper function updates the callable loci bed to make the
+    features titlecase and remove spaces. It reads the whole bed into
+    memory, cleans it, and prints it back out to the original file.
+
+    It does NOT update the jbrowse track, which needs to be done separately
+    with:
+        add_bed_file_track(
+                reference_genome, sample_alignment, callable_loci_bed)
+    """
+    # update the fn with the clean filesystem location
+    callable_loci_bed_fn = callable_loci_bed_dataset.get_absolute_location()
+
+    try:
+        # store the bed in memory so we can clean/update it
         output = subprocess.check_output(
                 ['cat', callable_loci_bed_fn])
 
+        # write the bed again from memory, cleaning fields
         with open(callable_loci_bed_fn, 'w') as callable_loci_bed_fh:
             for i, line in enumerate(output.split('\n')):
                 try:
@@ -467,14 +502,11 @@ def compute_callable_loci(reference_genome, sample_alignment,
                         '%d: (%s) couldn\'t be parsed: %s') % (
                                 i, line, str(e))
 
-        # add it as a jbrowse track
-        add_bed_file_track(reference_genome, sample_alignment, callable_loci_bed)
-
     except Exception as e:
-        print >> stderr, 'WARNING: Callable Loci failed.'
+        print >> stderr, 'WARNING: Callable Loci clean failed.'
         print >> stderr, str(e)
-
-    return callable_loci_bed_fn
+    finally:
+        return callable_loci_bed_fn
 
 
 def _get_metrics_output_filename(bam_file_location):
@@ -559,26 +591,6 @@ def get_insert_size_mean_and_stdev(sample_alignment, stderr=None, _iteration=0):
             return tuple([int(p) for p in parts])
 
 
-def _filter_out_interchromosome_reads(bam_filename, overwrite_input=True):
-    """Filters out read pairs which lie on different chromosomes.
-
-    Args:
-        bam_filename: Path to bam file.
-        overwrite_input: If True, overwrite the input file.
-    """
-    def is_rnext_same(line):
-        parts = line.split('\t')
-        rnext_col = parts[6]
-        return rnext_col == '='
-
-    if overwrite_input:
-        output_bam_path = bam_filename
-    else:
-        output_bam_path = os.path.splitext(bam_filename)[0] + '.nointerchrom.bam'
-
-    filter_bam_file_by_row(bam_filename, is_rnext_same, output_bam_path)
-
-
 def get_discordant_read_pairs(sample_alignment):
     """Isolate discordant pairs of reads from a sample alignment.
     """
@@ -613,38 +625,18 @@ def get_discordant_read_pairs(sample_alignment):
     bam_discordant_filename = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_discordant_pairs.bam')
 
-
     try:
         bwa_disc_dataset.status = Dataset.STATUS.COMPUTING
         bwa_disc_dataset.save(update_fields=['status'])
-
-        # Use bam read alignment flags to pull out discordant pairs only
-        filter_discordant = ' | '.join([
-                '{samtools} view -u -F 0x0002 {bam_filename} ',
-                '{samtools} view -u -F 0x0100 - ',
-                '{samtools} view -u -F 0x0004 - ',
-                '{samtools} view -u -F 0x0008 - ',
-                '{samtools} view -b -F 0x0400 - ']).format(
-                        samtools=settings.SAMTOOLS_BINARY,
-                        bam_filename=bam_filename)
-
-        with open(bam_discordant_filename, 'w') as fh:
-            subprocess.check_call(filter_discordant,
-                    stdout=fh, shell=True, executable=settings.BASH_PATH)
-
-        # sort the discordant reads, overwrite the old file
-        subprocess.check_call([settings.SAMTOOLS_BINARY, 'sort', bam_discordant_filename,
-                os.path.splitext(bam_discordant_filename)[0]])
-
-        _filter_out_interchromosome_reads(bam_discordant_filename)
-
-        bwa_disc_dataset.filesystem_location = clean_filesystem_location(
-                bam_discordant_filename)
-        bwa_disc_dataset.status = Dataset.STATUS.READY
+        extract_discordant_read_pairs(bam_filename, bam_discordant_filename)
 
     except subprocess.CalledProcessError:
         bwa_disc_dataset.filesystem_location = ''
         bwa_disc_dataset.status = Dataset.STATUS.FAILED
+    finally:
+        bwa_disc_dataset.status = Dataset.STATUS.READY
+        bwa_disc_dataset.filesystem_location = clean_filesystem_location(
+                bam_discordant_filename)
 
     bwa_disc_dataset.save()
 
@@ -654,7 +646,7 @@ def get_discordant_read_pairs(sample_alignment):
 def get_split_reads(sample_alignment):
     """Isolate split reads from a sample alignment.
 
-    This uses a python script supplied with Lumppy, that is run as a
+    This uses a python script supplied with Lumpy that is run as a
     separate process.
 
     NOTE THAT THIS SCRIPT ONLY WORKS WITH BWA MEM.
@@ -682,48 +674,23 @@ def get_split_reads(sample_alignment):
     assert os.path.exists(bam_filename), "BAM file '%s' is missing." % (
             bam_filename)
 
-    # NOTE: This assumes the index just adds at .bai, w/ same path otherwise
-    # - will this always be true?
-    if not os.path.exists(bam_filename+'.bai'):
-        index_bam_file(bam_filename)
-
     bam_split_filename = os.path.join(sample_alignment.get_model_data_dir(),
             'bwa_split_reads.bam')
-
-    # Use lumpy bwa-mem split read script to pull out split reads.
-    filter_split_reads = ' | '.join([
-            '{samtools} view -h {bam_filename}',
-            'python {lumpy_bwa_mem_sr_script} -i stdin',
-            '{samtools} view -Sb -']).format(
-                    samtools=settings.SAMTOOLS_BINARY,
-                    bam_filename=bam_filename,
-                    lumpy_bwa_mem_sr_script=
-                            settings.LUMPY_EXTRACT_SPLIT_READS_BWA_MEM)
 
     try:
         bwa_split_dataset.status = Dataset.STATUS.COMPUTING
         bwa_split_dataset.save(update_fields=['status'])
-
-        with open(bam_split_filename, 'w') as fh:
-            subprocess.check_call(filter_split_reads,
-                    stdout=fh,
-                    shell=True,
-                    executable=settings.BASH_PATH)
-
-        # sort the split reads, overwrite the old file
-        subprocess.check_call([settings.SAMTOOLS_BINARY, 'sort', bam_split_filename,
-                os.path.splitext(bam_split_filename)[0]])
-
-        _filter_out_interchromosome_reads(bam_split_filename)
-
-        bwa_split_dataset.status = Dataset.STATUS.READY
-        bwa_split_dataset.filesystem_location = clean_filesystem_location(
-                bam_split_filename)
+        extract_split_reads(bam_filename, bam_split_filename)
 
     except subprocess.CalledProcessError:
         # if there are no split reads, then fail.
         bwa_split_dataset.filesystem_location = ''
         bwa_split_dataset.status = Dataset.STATUS.FAILED
+    finally:
+        bwa_split_dataset.status = Dataset.STATUS.READY
+        bwa_split_dataset.filesystem_location = clean_filesystem_location(
+                bam_split_filename)
+
 
     bwa_split_dataset.save()
 

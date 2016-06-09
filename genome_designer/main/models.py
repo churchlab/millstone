@@ -45,7 +45,6 @@ from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Model
 
-# from genome_finish.insertion_placement_read_trkg import Junction
 from genome_finish.contig_display_utils import create_contig_junction_links
 from model_utils import assert_unique_types
 from model_utils import ensure_exists_0775_dir
@@ -57,6 +56,7 @@ from model_utils import JSONDataSubfieldsMixin
 from model_utils import UniqueUidModelMixin
 from model_utils import VisibleFieldMixin
 from utils import uppercase_underscore
+from utils.genbank_util import generate_genbank_mobile_element_multifasta
 from variants.filter_key_map_constants import MAP_KEY__ALTERNATE
 from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
 from variants.filter_key_map_constants import MAP_KEY__EVIDENCE
@@ -138,6 +138,7 @@ class Dataset(UniqueUidModelMixin):
         FASTQC2_HTML = 'FASTQC Reverse HTML Output'
         SEQUENCE_GRAPH_PICKLE = 'Pickled NetworkX Sequence Graph'
         MOBILE_ELEMENT_FASTA = 'Mobile Element Fasta'
+        FEATURE_INDEX = 'Genbank Feature Index'
 
     TYPE_CHOICES = make_choices_tuple(TYPE)
     type = models.CharField(max_length=40, choices=TYPE_CHOICES)
@@ -277,8 +278,8 @@ class Dataset(UniqueUidModelMixin):
     def internal_string(self, parent_entity):
         """
         A string used internally to describe a dataset for an entity.
-        Our convention is 
-            parent_entity.uid + '_' + dataset.type 
+        Our convention is
+            parent_entity.uid + '_' + dataset.type
             (uppercased, whitespace as underscores)
         """
         return str(parent_entity.uid) + '_' + uppercase_underscore(self.type)
@@ -286,7 +287,7 @@ class Dataset(UniqueUidModelMixin):
     def external_string(self, parent_entity):
         """
         A string used externally to describe a dataset for an entity.
-        Our convention is 
+        Our convention is
             parent_entity.label + ' ' + dataset.type
         """
         return str(parent_entity.label) + ' ' + self.type
@@ -375,7 +376,7 @@ class Dataset(UniqueUidModelMixin):
 
         with open(orig_file, 'rb') as fh_in:
             with open(new_compressed_file, 'wb') as fh_out:
-                subprocess.check_call(compression_command, 
+                subprocess.check_call(compression_command,
                         stdin=fh_in, stdout=fh_out)
 
         # Generate the new dataset model object
@@ -383,8 +384,8 @@ class Dataset(UniqueUidModelMixin):
         new_compressed_file_rel = self.filesystem_location + compression_type
 
         new_compressed_dataset = Dataset.objects.create(
-            label= self.label + ' (compressed)', 
-            type= self.type, 
+            label= self.label + ' (compressed)',
+            type= self.type,
             filesystem_location= new_compressed_file_rel)
 
         # Finally, add this new compressed dataset to the dataset_set
@@ -663,6 +664,46 @@ class ReferenceGenome(UniqueUidModelMixin):
         return self.dataset_set.filter(
                 type=Dataset.TYPE.REFERENCE_GENOME_GENBANK).exists()
 
+    def ensure_mobile_element_multifasta(self):
+        """
+        If this genome is annotated, then ensure a multifasta
+        file exists that contains a list of all mobile elements, which are
+        annotated as type == "mobile_element". This is used by the SV
+        calling code. If it does not exist it will be created.
+        """
+        if not self.is_annotated():
+            raise AttributeError
+
+        me_fa_path = os.path.join(
+                self.get_snpeff_genbank_parent_dir(),
+                'mobile_elements.fa')
+
+        me_dataset = self.dataset_set.filter(
+                type=Dataset.TYPE.MOBILE_ELEMENT_FASTA)
+        me_dataset_exists = me_dataset.exists()
+        me_fasta_exists = me_dataset_exists and os.path.exists(
+                me_dataset[0].get_absolute_location())
+
+        if me_dataset_exists and me_fasta_exists:
+            return
+
+        if me_dataset_exists and not me_fasta_exists:
+            [d.delete() for d in me_dataset]
+
+        generate_genbank_mobile_element_multifasta(
+                self.get_snpeff_genbank_file_path(),
+                me_fa_path)
+
+        me_fa_dataset = Dataset.objects.create(
+                label=Dataset.TYPE.MOBILE_ELEMENT_FASTA,
+                type=Dataset.TYPE.MOBILE_ELEMENT_FASTA)
+
+        me_fa_dataset.filesystem_location = me_fa_path
+        me_fa_dataset.save()
+
+        self.dataset_set.add(me_fa_dataset)
+        self.save()
+
     def get_variant_caller_common_map(self):
         return self.variant_key_map[MAP_KEY__COMMON_DATA]
 
@@ -833,14 +874,14 @@ class Contig(UniqueUidModelMixin, JSONDataSubfieldsMixin):
         """
         return [
             {'field': 'label'},
-            {'field': 'experiment_sample'},
-            {'field': 'num_bases', 'verbose': 'Contig Length'},
-            {'field': 'coverage', 'verbose': 'Average Coverage'},
-            {'field': 'chromosome'},
+            {'field': 'experiment_sample', 'verbose': 'Sample'},
+            {'field': 'num_bases', 'verbose': 'Length'},
+            {'field': 'coverage', 'verbose': 'Avg. Coverage'},
+            #{'field': 'chromosome'},
             {'field': 'left_junctions_html', 'verbose':
-                    'Left Junctions<br>(Reference &rarr; Contig)'},
+                    'Left Junctions<br>(Ref &rarr; Contig)'},
             {'field': 'right_junctions_html', 'verbose':
-                    'Right Junctions<br>(Reference &rarr; Contig)'}
+                    'Right Junctions<br>(Ref &rarr; Contig)'}
         ]
 
 
@@ -1234,6 +1275,7 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin, JSONDataSubfieldsMixin):
         The status of an Assembly
         """
         NOT_STARTED = 'NOT STARTED'
+        CLEARING = 'CLEARING OLD DATA'
         QUEUED = 'QUEUED TO ASSEMBLE'
         ASSEMBLING = 'ASSEMBLING'
         BUILDING_SEQUENCE_GRAPH = 'BUILDING SEQUENCE GRAPH'

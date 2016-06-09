@@ -1272,7 +1272,7 @@ def contigs_has_insertion_location(request):
 @require_POST
 def contigs_find_insertion_location(request):
     """Attempts to find the placement parameters for the contigs
-    in the passedd contig uid list.  If unable to place a contig,
+    in the passed contig uid list.  If unable to place a contig,
     the specific error message is included in the format (label, error_string)
     in a list under the key 'error' in the response dict
     """
