@@ -206,8 +206,6 @@ urlpatterns = patterns('',
             'main.template_xhrs.sample_list_controls'),
     url(r'^_/templates/contig_list_controls$',
             'main.template_xhrs.contig_list_controls'),
-    url(r'^_/templates/sample_alignment_list_for_assembly_controls$',
-            'main.template_xhrs.sample_alignment_list_for_assembly_controls'),
     url(r'^_/templates/create_new_empty_variant_set$',
             'main.template_xhrs.create_new_empty_variant_set'),
 

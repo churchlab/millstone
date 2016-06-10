@@ -50,6 +50,37 @@ class VisibleFieldMixin(object):
         return clazz.default_view_fields() + additional_fields
 
 
+class JSONDataSubfieldsMixin(object):
+    """Mixin that allows looking up attributes that are not directly on the
+    model object to be looked for in JSON data.
+    """
+
+    def __getattr__(self, name):
+        """Override.
+
+        Automatically called if an attribute is not found in the typical
+        place.
+
+        Our implementation checks the data or metadata dict, raising an
+        AttributeError if not found.
+
+        See:
+           http://docs.python.org/2/reference/datamodel.html#object.__getattr__
+        """
+        print name
+        if hasattr(self, 'data'):
+            data_attribute = self.data
+        elif hasattr(self, 'metadata'):
+            data_attribute = self.metadata
+        else:
+            raise AttributeError
+
+        try:
+            return data_attribute[name]
+        except:
+            raise AttributeError
+
+
 ###############################################################################
 # Unique Uid
 ###############################################################################

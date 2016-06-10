@@ -25,6 +25,14 @@ gd.AlignmentViewControlsComponent = gd.DataTableControlsComponent.extend({
         '<a href="#" class="gd-id-ag-download-bam">Download BAM</a>';
     this.addDropdownOption(downloadBamOptionHTML);
     $('.gd-id-ag-download-bam').click(_.bind(this.handleDownloadBam, this));
+
+    // Call SVs using contig assembly.
+    if (FLAG_GENOME_FINISHING_ENABLED) {
+      var assembleOptionHtml =
+          '<a href="#" class="gd-id-assemble">Call SVs by de novo Assembly</a>';
+      this.addDropdownOption(assembleOptionHtml);
+      $('.gd-id-assemble').click(_.bind(this.handleAssembleContigs, this));
+    }
   },
 
   handleDownloadBam: function() {
@@ -54,5 +62,25 @@ gd.AlignmentViewControlsComponent = gd.DataTableControlsComponent.extend({
         '<input type="hidden" name="<%= name %>" value="<%= value %>">',
         {name: name, value: value}
     ));
+  },
+
+  /** Send request to generate contigs with default parameters **/
+  handleAssembleContigs: function() {
+    sample_alignment_uid_list = this.datatableComponent.getCheckedRowUids()
+
+    var postData = {
+        sampleAlignmentUidList: sample_alignment_uid_list
+    };
+
+    $.post('/_/alignments/generate_contigs', JSON.stringify(postData),
+        _.bind(this.handleAssembleContigsResponse, this));
+  },
+
+  handleAssembleContigsResponse: function(response) {
+    if (response.is_contig_file_empty == 1) {
+      alert('No evidence for structural variants in this alignment');
+    } else {
+      this.trigger('MODELS_UPDATED');
+    };
   },
 });

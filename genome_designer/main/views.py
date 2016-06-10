@@ -358,7 +358,8 @@ def alignment_view(request, project_uid, alignment_group_uid):
         'experiment_sample_to_alignment_list_json': adapt_model_to_frontend(
                 ExperimentSampleToAlignment,
                 {'alignment_group': alignment_group}),
-        'init_js_data': init_js_data
+        'init_js_data': init_js_data,
+        'flag_genome_finishing_enabled': int(settings.FLAG__GENOME_FINISHING_ENABLED)
     }
     return render(request, 'alignment.html', context)
 
