@@ -260,12 +260,6 @@ class Dataset(UniqueUidModelMixin):
         return self.filesystem_location.endswith(
                 tuple(self.COMPRESSION_TYPES.keys()))
 
-    def is_indexed(self):
-        """
-        Checks if dataset has idx location.
-        """
-        return not (self.filesystem_idx_location == '')
-
     def wrap_if_compressed(self):
         """ This helper function returns a process substitution string
         to be used by /bin/bash if the fastq read file is compressed, otherwise

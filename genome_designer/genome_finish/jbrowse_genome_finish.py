@@ -229,8 +229,6 @@ def add_contig_reads_bam_track(contig, alignment_type):
     # keyed by the alignment_type.
     bam_dataset = get_dataset_with_type(contig, alignment_type)
 
-    # assert bam_dataset.is_indexed()
-
     # Figure out the url that JBrowse would use to show the data, e.g.:
     #     /jbrowse/gd_data/projects/58a62c7d/genomes/8dc829ec/align.bam
     # urlTemplate = os.path.join(JBROWSE_DATA_URL_ROOT,

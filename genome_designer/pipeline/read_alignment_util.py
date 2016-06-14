@@ -43,15 +43,6 @@ def ensure_bwa_index(ref_genome_fasta, error_output=None):
             ref_genome_fasta
         ], stderr=error_output)
 
-    # ref_genome_dict_path = os.path.splitext(ref_genome_fasta)[0] + '.dict'
-    # if not os.path.exists(ref_genome_dict_path):
-    #     subprocess.check_call([
-    #         'java', '-Xmx1024M',
-    #         '-jar', '%s/picard/CreateSequenceDictionary.jar' % TOOLS_DIR,
-    #         'R=', ref_genome_fasta,
-    #         'O=', ref_genome_dict_path,
-    #     ], stderr=error_output)
-
 
 def build_bwa_index(ref_genome_fasta, error_output=None):
     """Calls the command that builds the bwa index required for alignment.
