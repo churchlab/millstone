@@ -67,7 +67,6 @@ class JSONDataSubfieldsMixin(object):
         See:
            http://docs.python.org/2/reference/datamodel.html#object.__getattr__
         """
-        print name
         if hasattr(self, 'data'):
             data_attribute = self.data
         elif hasattr(self, 'metadata'):
