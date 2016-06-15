@@ -1,6 +1,9 @@
 """Actions to run at server startup.
 """
 
+import subprocess
+import sys
+
 from django.db import connection
 from django.db import transaction
 from south.migration import Migrations
@@ -11,6 +14,8 @@ def run():
     """Call this from manage.py or tests.
     """
     _add_custom_mult_agg_function()
+
+    _check_environment()
 
     # TODO: This breaks test_pipeline.py. Why?
     # _check_migrations_applied()
@@ -58,3 +63,16 @@ def _check_migrations_applied():
                 "Missing: {not_applied}\n".format(
                         applied=applied_migrations,
                         not_applied=not_applied))
+
+
+def _check_environment():
+    """Checks for software and tools in environment.
+
+    NOTE: In progress.
+    """
+    # Check for java.
+    try:
+        subprocess.check_output(
+                ["java", "-version"], stderr=subprocess.STDOUT)
+    except OSError:
+        raise AssertionError("Startup Error: java not found in environment.")
