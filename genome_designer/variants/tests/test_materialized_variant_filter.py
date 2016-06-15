@@ -604,6 +604,7 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
         self.assertEqual('position > 5',
                 evaluator.symbol_to_expression_map['A'])
 
+        # Test &.
         query_args = {'filter_string': 'position>5 & GT= 2'}
         evaluator = VariantFilterEvaluator(query_args, self.ref_genome)
         EXPECTED_SYMBOLIC_REP = sympify('A & B')
@@ -613,15 +614,29 @@ class TestVariantFilterEvaluator(BaseTestVariantFilterTestCase):
         self.assertEqual('GT= 2',
                 evaluator.symbol_to_expression_map['B'])
 
-    def test_symbolify__decimals(self):
-        """Tests presence of decimal in value to be evaluated.
-        """
+        # Test decimals.
         query_args = {'filter_string': 'AF > 0.5'}
         evaluator = VariantFilterEvaluator(query_args, self.ref_genome)
         EXPECTED_SYMBOLIC_REP = sympify('A')
         self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
         self.assertEqual('AF > 0.5',
                 evaluator.symbol_to_expression_map['A'])
+
+        # Test hyphens
+        QUERY = 'EXPERIMENT_SAMPLE_LABEL = C-E5-2'
+        query_args = {'filter_string': QUERY}
+        evaluator = VariantFilterEvaluator(query_args, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('A')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
+        self.assertEqual(QUERY, evaluator.symbol_to_expression_map['A'])
+
+        # Test quotes
+        QUERY = 'EXPERIMENT_SAMPLE_LABEL = "C-E5-2"'
+        query_args = {'filter_string': QUERY}
+        evaluator = VariantFilterEvaluator(query_args, self.ref_genome)
+        EXPECTED_SYMBOLIC_REP = sympify('A')
+        self.assertEqual(EXPECTED_SYMBOLIC_REP, evaluator.sympy_representation)
+        self.assertEqual(QUERY, evaluator.symbol_to_expression_map['A'])
 
 
 class TestMinimal(BaseTestVariantFilterTestCase):
