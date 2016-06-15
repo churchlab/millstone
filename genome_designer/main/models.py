@@ -1342,8 +1342,8 @@ class Variant(UniqueUidModelMixin):
 
     TODO: See code from Gemini paper (PLOS ONE 7/18/13) for ideas.
 
-    A variant need not necessarily be associated with a specific sample; the
-    VariantToExperimentSample model handles this association.
+    A variant need not necessarily be associated with a specific sample. A
+    Variant is associated with a sample via VariantEvidence.
     """
 
     class TYPE:
@@ -1712,8 +1712,9 @@ class VariantSet(UniqueUidModelMixin):
     example, we might create a VariantSet called 'c321D Designed Changes'
     to represent the set of Variants that were intended for mutation.
 
-    Variants hold a list of Variant objects, and each can, but do not have to,
-    point to one or more VariantToExperimentSample objects.
+    VariantSet maintains a list of list of Variant objects in the variants col.
+    Each Variant may or may not be associated with an ExperimentSample via
+    VariantEvidence.
 
     Each variant set can contain variants from multiple alignments or samples,
     but all variants must belong to a single reference genome.
@@ -1721,7 +1722,6 @@ class VariantSet(UniqueUidModelMixin):
     TODO: In the future, we might come up with a framework for transferring
     variants or variant sets to new reference genomes via LiftOver or something
     similar.
-
     """
     label = models.CharField(max_length=256)
 
