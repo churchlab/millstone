@@ -877,7 +877,6 @@ class Contig(UniqueUidModelMixin, JSONDataSubfieldsMixin):
             {'field': 'experiment_sample', 'verbose': 'Sample'},
             {'field': 'num_bases', 'verbose': 'Length'},
             {'field': 'coverage', 'verbose': 'Avg. Coverage'},
-            #{'field': 'chromosome'},
             {'field': 'left_junctions_html', 'verbose':
                     'Left Junctions<br>(Ref &rarr; Contig)'},
             {'field': 'right_junctions_html', 'verbose':

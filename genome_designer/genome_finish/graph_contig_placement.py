@@ -874,10 +874,10 @@ def translocation_walk(G):
     return filtered
 
 
-class SequenceVertex:
-    '''
+class SequenceVertex(object):
+    """
     These objects serve as nodes on the Graph.
-    '''
+    """
 
     def __init__(self, seq_uid, pos, parent):
         self.parent = parent

@@ -35,7 +35,6 @@ from pipeline.read_alignment import get_insert_size_mean_and_stdev
 from pipeline.read_alignment_util import extract_discordant_read_pairs
 from pipeline.read_alignment_util import extract_split_reads
 from pipeline.read_alignment_util import ensure_bwa_index
-
 from utils.bam_utils import concatenate_bams
 from utils.bam_utils import index_bam
 from utils.bam_utils import make_bam
