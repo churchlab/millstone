@@ -169,15 +169,21 @@ def _assert_pipeline_is_safe_to_run(alignment_group_label, sample_list):
             "Must provide at least one ExperimentSample.")
     assert_celery_running()
 
-    # Make sure all samples are ready.
+    # Fastq Datasets must be ready or running QC.
     relevant_datasets = Dataset.objects.filter(
-            experimentsample__in=sample_list)
+            experimentsample__in=sample_list,
+            type__in=[Dataset.TYPE.FASTQ1, Dataset.TYPE.FASTQ2])
+
+    GOOD_STATUSES = (Dataset.STATUS.READY, Dataset.STATUS.QC)
+
     for d in relevant_datasets:
-        good_statuses = (Dataset.STATUS.READY, Dataset.STATUS.QC)
-        assert any([d.status == status for status in good_statuses]), (
-                "Dataset %s for sample %s has status %s. Expected %s." % (
-                d.label, d.experimentsample_set.all()[0].label,
-                d.status, Dataset.STATUS.READY))
+        assert any([d.status == status for status in GOOD_STATUSES]), (
+                "Dataset {label} for sample {sample_label} has status "
+                "{status}. Expected any of {allowed_statuses}.".format(
+                        label=d.label,
+                        sample_label=d.experimentsample_set.all()[0].label,
+                        status=d.status,
+                        allowed_statuses=str(GOOD_STATUSES)))
 
 
 def _get_or_create_sample_alignment_datasets(alignment_group, sample_list):
