@@ -80,7 +80,8 @@ gd.AlignmentViewControlsComponent = gd.DataTableControlsComponent.extend({
     if (response.is_contig_file_empty == 1) {
       alert('No evidence for structural variants in this alignment');
     } else {
-      this.trigger('MODELS_UPDATED');
+      // Provide ui affordance that something happened.
+      window.location.reload();
     };
   },
 });
