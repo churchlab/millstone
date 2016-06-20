@@ -505,7 +505,6 @@ def assemble_with_velvet(assembly_dir, velvet_opts, sv_indicants_bam,
     contig_uid_list = []
 
     _run_velvet(assembly_dir, velvet_opts, sv_indicants_bam)
-    _cleanup_velvet_dir(assembly_dir)
 
     # Collect resulting contigs fasta
     contigs_fasta = os.path.join(assembly_dir, 'contigs.fa')
@@ -563,7 +562,6 @@ def assemble_with_velvet(assembly_dir, velvet_opts, sv_indicants_bam,
             # be very fast.
             _run_velvet(contig.get_model_data_dir(), velvet_opts,
                     contig_reads_bam)
-            _cleanup_velvet_dir(contig.get_model_data_dir())
             reassembled_seqrecord = _extract_node_from_contig_reassembly(
                     contig)
             if reassembled_seqrecord:
@@ -884,15 +882,6 @@ def _run_velvet(assembly_dir, velvet_opts, sv_indicants_bam):
     with open(velvetg_error_output, 'w') as error_output_fh:
         subprocess.check_call(cmd, shell=True, executable=settings.BASH_PATH,
                 stderr=error_output_fh)
-
-def _cleanup_velvet_dir(assembly_dir):
-    """
-    We do not use most of the velvet assembly files, and they take up
-    a lot of space. Delete them when we are done.
-    """
-    # clean up extra velvet files
-    for fn in VELVET_OUTPUT_FILES:
-        os.remove(assembly_dir,fn)
 
 
 def _extract_node_from_contig_reassembly(contig):
