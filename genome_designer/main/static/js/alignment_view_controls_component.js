@@ -72,12 +72,16 @@ gd.AlignmentViewControlsComponent = gd.DataTableControlsComponent.extend({
         sampleAlignmentUidList: sample_alignment_uid_list
     };
 
+    this.loadingSpinner = new gd.Spinner();
+    this.loadingSpinner.spin();
+
     $.post('/_/alignments/generate_contigs', JSON.stringify(postData),
         _.bind(this.handleAssembleContigsResponse, this));
   },
 
   handleAssembleContigsResponse: function(response) {
     if (response.is_contig_file_empty == 1) {
+      gd.Spinner.globalClear();
       alert('No evidence for structural variants in this alignment');
     } else {
       // Provide ui affordance that something happened.
