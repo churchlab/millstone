@@ -479,6 +479,9 @@ def assemble_with_velvet(assembly_dir, velvet_opts, sv_indicants_bam,
 def evaluate_contigs(contig_uid_list, skip_extracted_read_alignment=False,
         use_read_alignment=True):
 
+    if not contig_uid_list:
+        return
+
     def _length_weighted_coverage(contig):
         return contig.num_bases * contig.coverage
 
