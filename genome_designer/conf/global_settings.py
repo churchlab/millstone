@@ -287,13 +287,14 @@ djcelery.setup_loader()
 # RabbitMQ settings
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 
+# Must register any modules with celery tasks here.
 CELERY_IMPORTS = (
         'pipeline.pipeline_runner',
         'pipeline.read_alignment',
         'pipeline.variant_calling',
         'pipeline.variant_calling.freebayes',
         'utils.import_util',
-        'genome_finish.assembly'
+        'genome_finish.assembly_runner'
 )
 
 # When True, forces synchronous behavior so that it's not necessary
