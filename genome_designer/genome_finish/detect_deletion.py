@@ -1,7 +1,6 @@
 import os
 
 from Bio import SeqIO
-from celery import task
 import numpy as np
 import pysam
 
@@ -18,8 +17,6 @@ from utils.import_util import add_dataset_to_entity
 METHOD = 'COVERAGE'
 
 
-@task(ignore_result=False)
-@report_failure_stats('detect_deletions_failure_stats.txt')
 def cov_detect_deletion_make_vcf(sample_alignment):
     """Uses coverage data to call large deletions and
     creates a VCF_COV_DETECT_DELETIONS dataset for the sample alignment

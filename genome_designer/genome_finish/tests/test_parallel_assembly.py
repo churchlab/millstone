@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from genome_finish.assembly import run_de_novo_assembly_pipeline
+from genome_finish.assembly_runner import run_de_novo_assembly_pipeline
 from genome_finish.millstone_de_novo_fns import create_de_novo_variants_set
 from main.model_utils import get_dataset_with_type
 from main.models import Dataset

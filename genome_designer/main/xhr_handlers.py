@@ -49,7 +49,7 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
 from main.model_utils import get_long_alt_path
-from genome_finish.assembly import run_de_novo_assembly_pipeline
+from genome_finish.assembly_runner import run_de_novo_assembly_pipeline
 from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
 from utils import generate_safe_filename_prefix_from_label

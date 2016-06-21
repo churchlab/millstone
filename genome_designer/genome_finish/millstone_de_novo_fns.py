@@ -148,17 +148,17 @@ def get_unmapped_reads(bam_filename, output_filename, avg_phred_cutoff=None):
                 avg_phred_cutoff)
 
 
-def add_paired_mates(input_sam_path, source_bam_filename, output_sam_path):
+def add_paired_mates(input_bam_path, source_bam_filename, output_bam_path):
 
-    sam_file = pysam.AlignmentFile(input_sam_path)
+    bam_file = pysam.AlignmentFile(input_bam_path)
     input_qnames_to_read = {}
-    for read in sam_file:
+    for read in bam_file:
         input_qnames_to_read[read.qname] = True
-    sam_file.close()
+    bam_file.close()
 
     original_alignmentfile = pysam.AlignmentFile(source_bam_filename, "rb")
     output_alignmentfile = pysam.AlignmentFile(
-            output_sam_path, "wh", template=original_alignmentfile)
+            output_bam_path, "wh", template=original_alignmentfile)
     for read in original_alignmentfile:
         if input_qnames_to_read.get(read.qname, False):
             if not read.is_secondary and not read.is_supplementary:
@@ -205,7 +205,11 @@ def filter_out_unpaired_reads(input_bam_path, output_bam_path):
 
 def filter_low_qual_read_pairs(input_bam_path, output_bam_path,
         avg_phred_cutoff=20):
-    """Filters out reads with average phred scores below cutoff
+    """
+    Filters out reads with average phred scores below cutoff
+
+    TODO: use `bwa sort -n file` to stdout to remove the need to
+    use a dictionary with readnames.
     """
 
     # Put qnames with average phred scores below the cutoff into dictionary
@@ -216,13 +220,18 @@ def filter_low_qual_read_pairs(input_bam_path, output_bam_path,
         if avg_phred < avg_phred_cutoff:
             bad_quality_qnames[read.qname] = True
 
+    read_count = 0
+    input_af.close()
+    input_af = pysam.AlignmentFile(input_bam_path, "rb")
     # Write reads in input to output if not in bad_quality_names
     output_af = pysam.AlignmentFile(output_bam_path, "wb",
             template=input_af)
-    input_af.reset()
+
     for read in input_af:
         if not bad_quality_qnames.get(read.qname, False):
             output_af.write(read)
+            read_count += 1
+
     output_af.close()
     input_af.close()
 
@@ -335,28 +344,3 @@ def get_avg_genome_coverage(sample_alignment):
         total_len += length
 
     return float(len_weighted_coverage) / total_len
-
-
-def filter_low_qual_read_pairs(input_bam_path, output_bam_path,
-        avg_phred_cutoff=20):
-    """Filters out reads with average phred scores below cutoff
-    """
-
-    # Put qnames with average phred scores below the cutoff into dictionary
-    bad_quality_qnames = {}
-    input_af = pysam.AlignmentFile(input_bam_path, "rb")
-    for read in input_af:
-        avg_phred = np.mean(read.query_qualities)
-        if avg_phred < avg_phred_cutoff:
-            bad_quality_qnames[read.qname] = True
-
-    # Write reads in input to output if not in bad_quality_names
-    output_af = pysam.AlignmentFile(output_bam_path, "wb",
-            template=input_af)
-    input_af.reset()
-    for read in input_af:
-        if not bad_quality_qnames.get(read.qname, False):
-            output_af.write(read)
-    output_af.close()
-    input_af.close()
-

@@ -6,35 +6,29 @@ import shutil
 import subprocess
 import re
 
-from Bio import SeqIO
-from celery import chain
-from celery import chord
-from celery import group
-from celery import task
 from django.conf import settings
 
-from genome_finish.celery_task_decorator import report_failure_stats
+from Bio import SeqIO
+
 from genome_finish.celery_task_decorator import set_assembly_status
-from genome_finish.detect_deletion import cov_detect_deletion_make_vcf
 from genome_finish.graph_contig_placement import graph_contig_placement
 from genome_finish.insertion_placement_read_trkg import make_contig_reads_to_ref_alignments
 from genome_finish.millstone_de_novo_fns import add_paired_mates
 from genome_finish.millstone_de_novo_fns import filter_low_qual_read_pairs
 from genome_finish.millstone_de_novo_fns import filter_out_unpaired_reads
 from genome_finish.millstone_de_novo_fns import get_altalign_reads
-from genome_finish.millstone_de_novo_fns import get_piled_reads
-from genome_finish.millstone_de_novo_fns import get_clipped_reads_smart
 from genome_finish.millstone_de_novo_fns import get_avg_genome_coverage
+from genome_finish.millstone_de_novo_fns import get_clipped_reads_smart
+from genome_finish.millstone_de_novo_fns import get_piled_reads
 from genome_finish.millstone_de_novo_fns import get_unmapped_reads
+from main.model_utils import get_dataset_with_type
 from main.models import Contig
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
 from main.models import VariantCallerCommonData
-from main.model_utils import get_dataset_with_type
 from pipeline.read_alignment import get_insert_size_mean_and_stdev
 from pipeline.read_alignment_util import extract_discordant_read_pairs
 from pipeline.read_alignment_util import extract_split_reads
-from pipeline.read_alignment_util import ensure_bwa_index
 from utils.bam_utils import concatenate_bams
 from utils.bam_utils import index_bam
 from utils.bam_utils import make_bam
@@ -46,8 +40,6 @@ from utils.data_export_util import export_contig_list_as_vcf
 from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
 from utils.jbrowse_util import add_bam_file_track
-from utils.jbrowse_util import prepare_jbrowse_ref_sequence
-from utils.jbrowse_util import compile_tracklist_json
 from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
 from variants.vcf_parser import parse_vcf
 
@@ -110,51 +102,6 @@ STRUCTURAL_VARIANT_BAM_DATASETS = [
         Dataset.TYPE.BWA_DISCORDANT]
 
 
-def run_de_novo_assembly_pipeline(sample_alignment_list,
-        sv_read_classes={}, input_velvet_opts={},
-        overwrite=True):
-    """Kicks off Millstone's custom SV calling pipeline.
-
-    NOTE: Despite the name, in addition to de novo assembly, our custom
-    SV-calling pipeline also uses non-assembly based methods like low-coverage
-    detection to call deletions.
-    """
-    # First, we delete any data from previous runs of this custom SV-calling
-    # pipeline, and update the status of the sample alignments to indicate
-    # that custom SV-calling is taking place.
-
-    for sample_alignment in sample_alignment_list:
-        set_assembly_status(
-                sample_alignment,
-                ExperimentSampleToAlignment.ASSEMBLY_STATUS.CLEARING,
-                force=True)
-
-    de_novo_cleanup_async_result(sample_alignment_list).get()
-
-    for sample_alignment in sample_alignment_list:
-        set_assembly_status(
-                sample_alignment,
-                ExperimentSampleToAlignment.ASSEMBLY_STATUS.QUEUED, force=True)
-
-    # Recompile the tracklist after deleting the indiv_tracks dirs for these
-    # deleted contigs.
-    ref_genome = sample_alignment_list[0].alignment_group.reference_genome
-    compile_tracklist_json(ref_genome)
-
-    # Next, we ensure reference genome fasta is indexed. We do this before
-    # the async tasks.
-    ref_genome_fasta = ref_genome.dataset_set.get(
-            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
-    ensure_bwa_index(ref_genome_fasta)
-    prepare_jbrowse_ref_sequence(ref_genome)
-
-    # Finally we assemble the async tasks that be parallelized.
-    async_result = get_sv_caller_async_result(
-            sample_alignment_list)
-
-    return async_result
-
-
 def kmer_coverage(C, L, k):
     """Converts contig coverage to kmer coverage
 
@@ -165,65 +112,7 @@ def kmer_coverage(C, L, k):
     """
     return C * (L - k + 1) / float(L)
 
-@task
-def _chordfinisher( *args, **kwargs ):
-    """
-    Needs to run at the end of a chord to delay the variant parsing step.
-    
-    http://stackoverflow.com/questions/
-    15123772/celery-chaining-groups-and-subtasks-out-of-order-execution
-    """
-    return "FINISHED VARIANT FINDING."
 
-
-def get_sv_caller_async_result(sample_alignment_list):
-    """Builds a celery chord that contains tasks for calling SVs for each
-    ExperimentSampleToAlignment in sample_alignment_list in parallel. Each task
-    generates vcfs, named according to the method use to call the contained
-    variants. The callback to the chord is a chain of tasks (applied
-    synchronously) that parse variants from vcfs.
-
-    Returns an AsyncResult object.
-    """
-    generate_contigs_tasks = []
-    cov_detect_deletion_tasks = []
-    for sample_alignment in sorted(sample_alignment_list,
-            key=lambda x: x.experiment_sample.label):
-
-        # These tasks are based on de novo assembly.
-        generate_contigs_tasks.append(
-                generate_contigs.si(sample_alignment))
-
-        # These tasks use coverage to call large deletions.
-        cov_detect_deletion_tasks.append(
-                cov_detect_deletion_make_vcf.si(sample_alignment))
-
-    variant_finding = group(generate_contigs_tasks + cov_detect_deletion_tasks)
-
-    sv_task_chain = (variant_finding |
-            _chordfinisher.si() |
-            parse_variants_for_sample_alignment_list.si(sample_alignment_list))
-
-    return sv_task_chain()
-
-def de_novo_cleanup_async_result(sample_alignment_list):
-    """Builds a celery group that contains tasks for deleting all contig and SV
-    data in parallel.
-
-    Returns an AsyncResult object.
-    """
-
-    cleanup_tasks = []
-    for sample_alignment in sorted(sample_alignment_list,
-            key=lambda x: x.experiment_sample.label):
-        cleanup_tasks.append(
-                clean_up_sv_calling_asnyc_task.si(sample_alignment))
-
-    return group(cleanup_tasks).apply_async()
-
-
-@task(ignore_result=False)
-@report_failure_stats('generate_contigs_failure_stats.txt')
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=True):
@@ -466,22 +355,14 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     SV_indicants_no_dups_bam = compilation_prefix + '.no_dups.bam'
     rmdup(SV_indicants_bam, SV_indicants_no_dups_bam)
 
-    # Convert SV indicants bam to sam
-    SV_indicants_sam = compilation_prefix + '.no_dups.sam'
-    make_sam(SV_indicants_no_dups_bam, SV_indicants_sam)
-
     # Add mate pairs to SV indicants sam
     print 'adding mate pairs'
-    SV_indicants_with_pairs_sam = compilation_prefix + '.with_pairs.sam'
-    add_paired_mates(
-            SV_indicants_sam, alignment_bam, SV_indicants_with_pairs_sam)
-
-    # Make bam of SV indicants w/mate pairs
     SV_indicants_with_pairs_bam = compilation_prefix + '.with_pairs.bam'
-    make_bam(SV_indicants_with_pairs_sam, SV_indicants_with_pairs_bam)
-
+    add_paired_mates(
+            SV_indicants_bam, alignment_bam, SV_indicants_with_pairs_bam)
+    
     # Filter low quality reads
-    print 'filtering out low quality reads'
+    print 'filtering out low quality reads_subdir'
     SV_indicants_filtered = compilation_prefix + '.with_pairs.filtered.bam'
     filter_low_qual_read_pairs(
             SV_indicants_with_pairs_bam, SV_indicants_filtered)
@@ -580,10 +461,17 @@ def assemble_with_velvet(assembly_dir, velvet_opts, sv_indicants_bam,
                 'contig_fasta',
                 Dataset.TYPE.REFERENCE_GENOME_FASTA,
                 filesystem_location=dataset_path)
+
         contig.save()
+        # Make a bam track on the reference for each contig that shows only the
+        # reads that assembled the contig and their mates
+        make_contig_reads_to_ref_alignments(contig.uid)
 
         # append the uid to the contig_uid_list
         contig_uid_list.append(contig.uid)
+
+    # once contigs are extracted, remove velvet data
+    _cleanup_velvet_dir(assembly_dir)
 
     return contig_uid_list
 
@@ -720,29 +608,12 @@ def parse_variants_from_vcf(sample_alignment,
     sample_alignment.save()
 
 
-@task(ignore_result=False)
-@report_failure_stats('parse_variants_from_vcf_failure_stats.txt')
-def parse_variants_for_sample_alignment_list(sample_alignment_list):
-    for sample_alignment in sorted(sample_alignment_list,
-            key=lambda x: x.experiment_sample.label):
-        parse_variants_from_vcf(sample_alignment)
-
-
-@task(ignore_result=False)
-def clean_up_sv_calling_asnyc_task(sample_alignment):
-    """
-    Async wrapper for cleanup function.
-    """
-    clean_up_previous_runs_of_sv_calling_pipeline(sample_alignment)
-
-
 def clean_up_previous_runs_of_sv_calling_pipeline(sample_alignment):
     """Deletes all model entities from previous runs of our custom SV
     pipeline. It also does a lot of cleanup of non-modeled data
     files and cleans up contig stuff from the jbrowse track list, and
     recompiles the jbrowse tracklist.
     """
-    print 
     # Get all Contig names.
     contig_uids = [c.uid for c in sample_alignment.contig_set.all()]
 
@@ -869,6 +740,7 @@ def _run_velvet(assembly_dir, velvet_opts, sv_indicants_bam):
             '-ins_length', str(ins_length),
             '-exp_cov', str(exp_cov),
             '-scaffolding', 'no',
+            # '-very_clean', 'yes',
             '-ins_length_sd', str(ins_length_sd),
             '-cov_cutoff', str(cov_cutoff),
             # '-max_coverage', str(3 * exp_cov),
@@ -882,6 +754,17 @@ def _run_velvet(assembly_dir, velvet_opts, sv_indicants_bam):
     with open(velvetg_error_output, 'w') as error_output_fh:
         subprocess.check_call(cmd, shell=True, executable=settings.BASH_PATH,
                 stderr=error_output_fh)
+
+def _cleanup_velvet_dir(assembly_dir):
+    """
+    We do not use most of the velvet assembly files, and they take up
+    a lot of space. Delete them when we are done.
+    """
+    # clean up extra velvet files
+    for fn in VELVET_OUTPUT_FILES:
+        path = os.path.join(assembly_dir, fn)
+        if os.path.exists(path):
+            os.remove(path)
 
 
 def _extract_node_from_contig_reassembly(contig):
@@ -898,10 +781,6 @@ def _extract_node_from_contig_reassembly(contig):
             'contigs.fa')
 
     records = list(SeqIO.parse(single_contig_fasta, 'fasta'))
-
-    # clean up extra velvet files
-    # for fn in VELVET_OUTPUT_FILES:
-    #    os.remove(os.path.join(contig.get_model_data_dir(),fn))
 
     # skip if the reassembly of the contig produced multiple contigs.
     # We could do something fancier here and look at the size of the largest

@@ -8,9 +8,13 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
+from genome_finish.assembly import clean_up_previous_runs_of_sv_calling_pipeline
 from genome_finish.assembly import evaluate_contigs
+from genome_finish.assembly import generate_contigs
 from genome_finish.assembly import parse_variants_from_vcf
-from genome_finish.assembly import run_de_novo_assembly_pipeline
+from genome_finish.assembly_runner import single_sample_alignment_assembly
+from genome_finish.celery_task_decorator import set_assembly_status
+from genome_finish.detect_deletion import cov_detect_deletion_make_vcf
 from genome_finish.millstone_de_novo_fns import create_de_novo_variants_set
 from main.model_utils import get_dataset_with_type
 from main.models import AlignmentGroup
@@ -23,8 +27,11 @@ from main.models import ReferenceGenome
 from main.models import VariantSet
 from main.testing_util import are_fastas_same
 from pipeline.pipeline_runner import run_pipeline
+from pipeline.read_alignment_util import ensure_bwa_index
 from utils.import_util import add_dataset_to_entity
 from utils.import_util import import_reference_genome_from_local_file
+from utils.jbrowse_util import compile_tracklist_json
+from utils.jbrowse_util import prepare_jbrowse_ref_sequence
 from utils.reference_genome_maker_util import generate_new_reference_genome
 from variants.variant_sets import update_variant_in_set_memberships
 
@@ -96,7 +103,7 @@ class TestGenomeFinishMG1655(TestCase):
                 experiment_sample=sample)
 
         # Run pipeline and wait on result
-        run_de_novo_assembly_pipeline([sample_align])
+        single_sample_alignment_assembly(sample_align)
 
         # Retrieve contigs
         contigs = Contig.objects.filter(
@@ -104,6 +111,7 @@ class TestGenomeFinishMG1655(TestCase):
                 experiment_sample_to_alignment=sample_align)
 
         return contigs
+
 
     def _run_genome_finish_test(self, data_dict, mismatch_tolerance=0):
 

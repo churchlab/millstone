@@ -117,12 +117,6 @@ def graph_contig_placement(contig_uid_list, skip_extracted_read_alignment,
 
     ref_genome = sample_alignment.alignment_group.reference_genome
 
-    if not skip_extracted_read_alignment:
-        # Make a bam track on the reference for each contig that shows only the
-        # reads that assembled the contig and their mates
-        for contig_uid in contig_uid_list:
-            make_contig_reads_to_ref_alignments(contig_uid)
-
     # Make Assembly dir
     assembly_dir = os.path.join(sample_alignment.get_model_data_dir(),
             'assembly')
