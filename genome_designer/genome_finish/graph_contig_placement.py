@@ -134,20 +134,26 @@ def graph_contig_placement(contig_uid_list, skip_extracted_read_alignment,
         shutil.rmtree(contig_alignment_dir)
     os.mkdir(contig_alignment_dir)
 
+    # NOTE(gleb): Not sure whether these have to be ordered, but keeping
+    # them ordered while refactoring.
+    contigs_as_ordered_dict = OrderedDict(
+            [(c.uid, c) for c in contig_list])
+
     # Concatenate contig fastas for alignment
-    contig_fastas = OrderedDict([(c.uid, get_fasta(c)) for c in contig_list])
     contig_concat = os.path.join(contig_alignment_dir, 'contig_concat.fa')
-    with open(contig_concat, 'w') as fh:
-        subprocess.check_call(' '.join(['cat'] + contig_fastas.values()),
-                shell=True, executable=settings.BASH_PATH, stdout=fh)
+    with open(contig_concat, 'w') as output_fh:
+        for contig_uid, c in contigs_as_ordered_dict.iteritems():
+            contig_fasta_file = get_fasta(c)
+            with open(contig_fasta_file) as read_fh:
+                output_fh.write(read_fh.read())
 
     # Create dictionaries to translate contig uid to its fasta descriptor line
     contig_qname_to_uid = {}
-    for contig_uid, contig_fasta_file in contig_fastas.items():
+    for contig_uid, c in contigs_as_ordered_dict.items():
+        contig_fasta_file = get_fasta(c)
         with open(contig_fasta_file, 'r') as fh:
             descriptor = fh.next()
-            contig_qname_to_uid[
-                    descriptor.strip('>\n')] = contig_uid
+            contig_qname_to_uid[descriptor.strip('>\n')] = contig_uid
 
     # Get extracted mobile elements in addition to contigs
     if ref_genome.is_annotated():
