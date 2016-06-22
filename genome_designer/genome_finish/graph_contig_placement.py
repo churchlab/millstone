@@ -652,7 +652,10 @@ def me_translocation_walk(G):
             e.enter_ref.seq_uid == G.ref_intervals.seq_uid)]
 
     OVERLAP_TOLERANCE = 400
+
     for enter_iv in me_sorted_by_exit_ref:
+
+        if not me_sorted_by_enter_ref: continue
 
         while (me_sorted_by_enter_ref[i].enter_ref.pos <
                 enter_iv.exit_ref.pos - OVERLAP_TOLERANCE and
@@ -836,6 +839,8 @@ def translocation_walk(G):
 
     OVERLAP_TOLERANCE = 400
     for enter_iv in sorted_by_exit_ref:
+
+        if not sorted_by_enter_ref: continue
 
         while (sorted_by_enter_ref[i].enter_ref.pos <
                 enter_iv.exit_ref.pos - OVERLAP_TOLERANCE and
