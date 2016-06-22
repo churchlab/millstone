@@ -2,7 +2,6 @@ from collections import namedtuple, OrderedDict
 import os
 import subprocess
 import shutil
-import sys
 
 from Bio import SeqIO
 from django.conf import settings
@@ -11,11 +10,7 @@ import pysam
 
 from genome_finish.contig_display_utils import Junction
 from genome_finish.millstone_de_novo_fns import get_coverage_stats
-from genome_finish.insertion_placement_read_trkg import extract_contig_reads
-from genome_finish.insertion_placement_read_trkg import make_contig_reads_dataset
 from genome_finish.insertion_placement_read_trkg import simple_align_with_bwa_mem
-from genome_finish.insertion_placement_read_trkg import make_contig_reads_to_ref_alignments
-from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from main.models import Contig
 from main.models import Dataset
 from main.models import ExperimentSampleToAlignment
@@ -23,14 +18,25 @@ from main.model_utils import get_dataset_with_type
 from pipeline.read_alignment_util import ensure_bwa_index
 from utils.import_util import add_dataset_to_entity
 
+
 MAX_DELETION = 100000
+
 MAX_DUP = 10
+
 MAX_REF_SELF_HOMOLOGY = 200
+
 MAX_TRANS_LENGTH = 20000
+
 MIN_TRANS_LENGTH = 20
+
 MAX_TRANS_DELETION = 20000
+
 InsertionVertices = namedtuple('InsertionVertices',
         ['exit_ref', 'enter_contig', 'exit_contig', 'enter_ref'])
+
+TRANSLOCATION_OVERLAP_TOLERANCE = 400
+
+ME_TRANSLOCATION_OVERLAP_TOLERANCE = 400
 
 
 def get_genbank_features_with_type(genbank_path, feature_type):
@@ -641,7 +647,6 @@ def me_translocation_walk(G):
             key=lambda x: x.enter_ref.pos)
 
     me_iv_pairs = []
-    i = 0
 
     me_sorted_by_exit_ref = [e for e in sorted_by_exit_ref if (
             e.enter_ref.seq_uid in me_seq_uid_set and
@@ -651,32 +656,30 @@ def me_translocation_walk(G):
             e.exit_ref.seq_uid in me_seq_uid_set and
             e.enter_ref.seq_uid == G.ref_intervals.seq_uid)]
 
-    OVERLAP_TOLERANCE = 400
+    if len(me_sorted_by_enter_ref):
+        i = 0
+        for enter_iv in me_sorted_by_exit_ref:
 
-    for enter_iv in me_sorted_by_exit_ref:
+            while (me_sorted_by_enter_ref[i].enter_ref.pos <
+                    enter_iv.exit_ref.pos - TRANSLOCATION_OVERLAP_TOLERANCE and
+                    i < len(me_sorted_by_enter_ref) - 1):
+                i += 1
 
-        if not me_sorted_by_enter_ref: continue
-
-        while (me_sorted_by_enter_ref[i].enter_ref.pos <
-                enter_iv.exit_ref.pos - OVERLAP_TOLERANCE and
-                i < len(me_sorted_by_enter_ref) - 1):
-            i += 1
-
-        j = i
-        exit_iv = me_sorted_by_enter_ref[j]
-        deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
-        while deletion < MAX_TRANS_DELETION:
-
-            # Add to list if path enters and exits from the same ME
-            if enter_iv.enter_ref.seq_uid == exit_iv.exit_ref.seq_uid:
-                me_iv_pairs.append((enter_iv, exit_iv))
-
-            if j == len(me_sorted_by_enter_ref) - 1:
-                break
-
-            j += 1
+            j = i
             exit_iv = me_sorted_by_enter_ref[j]
             deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
+            while deletion < MAX_TRANS_DELETION:
+
+                # Add to list if path enters and exits from the same ME
+                if enter_iv.enter_ref.seq_uid == exit_iv.exit_ref.seq_uid:
+                    me_iv_pairs.append((enter_iv, exit_iv))
+
+                if j == len(me_sorted_by_enter_ref) - 1:
+                    break
+
+                j += 1
+                exit_iv = me_sorted_by_enter_ref[j]
+                deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
 
     filtered = strand_filter(G, me_iv_pairs)
     filtered = me_length_filter(filtered)
@@ -804,7 +807,6 @@ def translocation_walk(G):
     forward_edges = []
     back_edges = []
 
-
     dset = set()
     for exit_ref in G.ref_intervals.vertices:
         for enter_contig in contig_neighbors(exit_ref):
@@ -835,38 +837,36 @@ def translocation_walk(G):
             key=lambda x: x.enter_ref.pos)
 
     iv_pairs = []
-    i = 0
 
-    OVERLAP_TOLERANCE = 400
-    for enter_iv in sorted_by_exit_ref:
+    if len(sorted_by_enter_ref):
+        i = 0
+        for enter_iv in sorted_by_exit_ref:
 
-        if not sorted_by_enter_ref: continue
+            while (sorted_by_enter_ref[i].enter_ref.pos <
+                    enter_iv.exit_ref.pos - ME_TRANSLOCATION_OVERLAP_TOLERANCE
+                    and i < len(sorted_by_enter_ref) - 1):
+                i += 1
 
-        while (sorted_by_enter_ref[i].enter_ref.pos <
-                enter_iv.exit_ref.pos - OVERLAP_TOLERANCE and
-                i < len(sorted_by_enter_ref) - 1):
-            i += 1
-
-        j = i
-        exit_iv = sorted_by_enter_ref[j]
-        deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
-        while deletion < MAX_TRANS_DELETION:
-
-            # Length of translocation sequence
-            trans_length = exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
-
-            if (all(v.seq_uid in ref_seq_uid_set for v in
-                    [exit_iv.exit_ref, exit_iv.enter_ref,
-                    enter_iv.exit_ref, enter_iv.enter_ref]) and (
-                    MIN_TRANS_LENGTH < trans_length < MAX_TRANS_LENGTH)):
-                iv_pairs.append((enter_iv, exit_iv))
-
-            if j == len(sorted_by_enter_ref) - 1:
-                break
-
-            j += 1
+            j = i
             exit_iv = sorted_by_enter_ref[j]
             deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
+            while deletion < MAX_TRANS_DELETION:
+
+                # Length of translocation sequence
+                trans_length = exit_iv.exit_ref.pos - enter_iv.enter_ref.pos
+
+                if (all(v.seq_uid in ref_seq_uid_set for v in
+                        [exit_iv.exit_ref, exit_iv.enter_ref,
+                        enter_iv.exit_ref, enter_iv.enter_ref]) and (
+                        MIN_TRANS_LENGTH < trans_length < MAX_TRANS_LENGTH)):
+                    iv_pairs.append((enter_iv, exit_iv))
+
+                if j == len(sorted_by_enter_ref) - 1:
+                    break
+
+                j += 1
+                exit_iv = sorted_by_enter_ref[j]
+                deletion = exit_iv.enter_ref.pos - enter_iv.exit_ref.pos
 
     filtered = match_region_filter(G, iv_pairs)
 
