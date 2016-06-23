@@ -3,8 +3,11 @@ Signal registration.
 
 See: https://docs.djangoproject.com/en/dev/topics/signals/.
 """
-from Bio import SeqIO
 
+import os
+import shutil
+
+from Bio import SeqIO
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from django.db.models.signals import m2m_changed
@@ -70,8 +73,15 @@ pre_delete.connect(pre_project_delete, sender=Project,
         dispatch_uid='project_delete')
 
 
-# Delete all associated variant caller data when a contig is deleted.
 def post_contig_delete(sender, instance, **kwargs):
+    """Delete all data associated with Contig including:
+        * contig data
+        * associated variant caller data.
+    """
+    data_dir = instance.get_model_data_dir()
+    if os.path.exists(data_dir):
+        shutil.rmtree(data_dir)
+
     # In case vccd has already been deleted
     try:
         vccd = instance.variant_caller_common_data
@@ -80,6 +90,8 @@ def post_contig_delete(sender, instance, **kwargs):
     if vccd is None:
         return
 
+    # If this is last VariantCallerCommonData for Variant, delete the whole
+    # Variant.
     vccd.variant.reference_genome.invalidate_materialized_view()
     if vccd.variant.variantcallercommondata_set.count() == 1:
         vccd.variant.delete()
