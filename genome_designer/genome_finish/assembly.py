@@ -2,15 +2,16 @@ import datetime
 import os
 import pickle
 import pyinter
+import re
 import shutil
 import subprocess
-import re
-
-from django.conf import settings
 
 from Bio import SeqIO
+from django.conf import settings
 
+from genome_finish.celery_task_decorator import get_failure_report_path
 from genome_finish.celery_task_decorator import set_assembly_status
+from genome_finish.constants import CUSTOM_SV_METHODS
 from genome_finish.graph_contig_placement import graph_contig_placement
 from genome_finish.insertion_placement_read_trkg import make_contig_reads_to_ref_alignments
 from genome_finish.millstone_de_novo_fns import add_paired_mates
@@ -31,8 +32,6 @@ from pipeline.read_alignment_util import extract_discordant_read_pairs
 from pipeline.read_alignment_util import extract_split_reads
 from utils.bam_utils import concatenate_bams
 from utils.bam_utils import index_bam
-from utils.bam_utils import make_bam
-from utils.bam_utils import make_sam
 from utils.bam_utils import rmdup
 from utils.bam_utils import sort_bam_by_coordinate
 from utils.bam_utils import sort_bam_by_name
@@ -86,13 +85,6 @@ STRUCTURAL_VARIANT_VCF_DATASETS = [
         Dataset.TYPE.VCF_DE_NOVO_ASSEMBLY_ME_GRAPH_WALK,
         Dataset.TYPE.VCF_COV_DETECT_DELETIONS]
 
-CUSTOM_SV_METHODS = [
-    'DE_NOVO_ASSEMBLY',
-    'ME_GRAPH_WALK',
-    'GRAPH_WALK',
-    'COVERAGE'
-]
-
 STRUCTURAL_VARIANT_BAM_DATASETS = [
         Dataset.TYPE.BWA_ALTALIGN,
         Dataset.TYPE.BWA_PILED,
@@ -100,6 +92,16 @@ STRUCTURAL_VARIANT_BAM_DATASETS = [
         Dataset.TYPE.BWA_SPLIT,
         Dataset.TYPE.BWA_UNMAPPED,
         Dataset.TYPE.BWA_DISCORDANT]
+
+FAILURE_REPORT__CONTIG = 'generate_contigs_failure_stats.txt'
+FAILURE_REPORT__DETECT_DELETION = 'detect_deletions_failure_stats.txt'
+FAILURE_REPORT__PARSE_VARIANTS = 'parse_variants_from_vcf_failure_stats.txt'
+
+FAILURE_REPORT_FILENAMES = [
+    FAILURE_REPORT__CONTIG,
+    FAILURE_REPORT__DETECT_DELETION,
+    FAILURE_REPORT__PARSE_VARIANTS
+]
 
 
 def kmer_coverage(C, L, k):
@@ -116,13 +118,26 @@ def kmer_coverage(C, L, k):
 def generate_contigs(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=True):
+    """Generates contigs.
+    """
+    # Don't proceed if processing this sample alignment previously failed or
+    # in another async process.
+    sample_alignment = ExperimentSampleToAlignment.objects.get(
+            uid=sample_alignment.uid)
+    if (sample_alignment.data.get('assembly_status') ==
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED):
+        return
 
     # Set assembly status for UI
+    # NOTE: Setting this status is playing whack-a-mole against other async sv
+    # detection functions, e.g. detect_deletion.cov_detect_deletion_make_vcf().
     set_assembly_status(
             sample_alignment,
             ExperimentSampleToAlignment.ASSEMBLY_STATUS.ASSEMBLING)
 
-    # Grab reference genome fasta path, ensure indexed
+    print 'Generating contigs\n'
+
+    # Grab reference genome fasta path and ensure exists.
     reference_genome = sample_alignment.alignment_group.reference_genome
     reference_genome.dataset_set.get_or_create(
             type=Dataset.TYPE.REFERENCE_GENOME_FASTA)[0]
@@ -208,12 +223,14 @@ def generate_contigs(sample_alignment,
     # Evaluate contigs for mapping.
     evaluate_contigs(contig_uid_list)
 
-    # Set assembly status for UI
-    set_assembly_status(
-            sample_alignment,
-            ExperimentSampleToAlignment.ASSEMBLY_STATUS.WAITING_TO_PARSE)
-
-    return contig_uid_list
+    # Update status again if not FAILED.
+    sample_alignment = ExperimentSampleToAlignment.objects.get(
+            uid=sample_alignment.uid)
+    if (sample_alignment.data.get('assembly_status') !=
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED):
+        set_assembly_status(
+                sample_alignment,
+                ExperimentSampleToAlignment.ASSEMBLY_STATUS.WAITING_TO_PARSE)
 
 
 def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
@@ -569,15 +586,14 @@ def parse_variants_from_vcf(sample_alignment,
     # Do nothing if the assembly for this sample alignment failed.
     if sample_alignment.data.get('assembly_status') == (
             ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED):
-        print ('WARNING: SV assembly failed for Sample Alignment'+
-                ' {} ({}) so variant parsing was skipped. ').format(
-                        ExperimentSampleToAlignment.label,
-                        ExperimentSampleToAlignment.uid)
+        print ('WARNING: SV assembly failed for Sample Alignment ' +
+                '{label} ({uid}) so variant parsing was skipped.').format(
+                        label=ExperimentSampleToAlignment.label,
+                        uid=ExperimentSampleToAlignment.uid)
         return
 
-    sample_alignment.data['assembly_status'] = (
+    set_assembly_status(sample_alignment,
             ExperimentSampleToAlignment.ASSEMBLY_STATUS.PARSING_VARIANTS)
-    sample_alignment.save()
 
     variant_list = []
     for dataset_type in vcf_datasets_to_parse:
@@ -595,7 +611,6 @@ def parse_variants_from_vcf(sample_alignment,
     # Add contig origin data to vccds of created variants
     for variant in variant_list:
         vccd_list = variant.variantcallercommondata_set.all()
-
         for vccd in vccd_list:
             # See if the variant is associated with a contig
             contig_uid_list = vccd.data.get('INFO_contig_uid', False)
@@ -604,11 +619,8 @@ def parse_variants_from_vcf(sample_alignment,
                 contig.variant_caller_common_data = vccd
                 contig.save()
 
-        variant.save()
-
-    sample_alignment.data['assembly_status'] = (
+    set_assembly_status(sample_alignment,
             ExperimentSampleToAlignment.ASSEMBLY_STATUS.COMPLETED)
-    sample_alignment.save()
 
 
 def clean_up_previous_runs_of_sv_calling_pipeline(sample_alignment):
@@ -617,6 +629,12 @@ def clean_up_previous_runs_of_sv_calling_pipeline(sample_alignment):
     files and cleans up contig stuff from the jbrowse track list, and
     recompiles the jbrowse tracklist.
     """
+    # Delete all error reports.
+    for report_filename in FAILURE_REPORT_FILENAMES:
+        report_path = get_failure_report_path(sample_alignment, report_filename)
+        if os.path.exists(report_path):
+            os.remove(report_path)
+
     # Get all Contig names.
     contig_uids = [c.uid for c in sample_alignment.contig_set.all()]
 
@@ -631,7 +649,7 @@ def clean_up_previous_runs_of_sv_calling_pipeline(sample_alignment):
 
     for contig_uid in contig_uids:
         reads_subdir = os.path.join(
-                jbrowse_parent_path,'_'.join([
+                jbrowse_parent_path, '_'.join([
                         contig_uid,
                         'BWA_STRUCTURAL_VARIANT_INDICATING_READS']))
         coverage_subdir = '_'.join([
@@ -664,13 +682,10 @@ def clean_up_previous_runs_of_sv_calling_pipeline(sample_alignment):
             sample_alignment.ASSEMBLY_STATUS.NOT_STARTED,
             force=True)
 
-    sample_alignment.save()
-
-    # Delete all assembly files that don't have datasets.
+    # Delete all assembly data.
     assembly_dir = os.path.join(
             sample_alignment.get_model_data_dir(),
             'assembly')
-
     if os.path.exists(assembly_dir):
         shutil.rmtree(assembly_dir)
 
@@ -758,6 +773,7 @@ def _run_velvet(assembly_dir, velvet_opts, sv_indicants_bam):
         subprocess.check_call(cmd, shell=True, executable=settings.BASH_PATH,
                 stderr=error_output_fh)
 
+
 def _cleanup_velvet_dir(assembly_dir):
     """
     We do not use most of the velvet assembly files, and they take up
@@ -793,6 +809,7 @@ def _extract_node_from_contig_reassembly(contig):
     else:
         return records[0]
 
+
 def get_features_at_locations(ref_genome, intervals, chromosome=None):
     """
     Use the genbank index dataset and return gene or mobile element names
@@ -818,6 +835,7 @@ def get_features_at_locations(ref_genome, intervals, chromosome=None):
             return_features[interval] = features
 
         return return_features
+
 
 def annotate_contig_junctions(contig_uid_list, ref_genome, dist=0):
     """
@@ -883,5 +901,3 @@ def annotate_contig_junctions(contig_uid_list, ref_genome, dist=0):
             junction[4] += feat_names
 
         contig.save()
-
-

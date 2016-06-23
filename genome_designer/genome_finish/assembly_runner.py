@@ -1,12 +1,17 @@
-from celery import chain
-from celery import chord
+"""
+Functions for running custom SV methods based on assembly and detecting
+low coverage.
+
+Celery tasks are here. Implementations are in assembly.py.
+"""
+
 from celery import group
 from celery import task
-from celery import task
-
-from django.conf import settings
 
 from genome_finish.assembly import clean_up_previous_runs_of_sv_calling_pipeline
+from genome_finish.assembly import FAILURE_REPORT__CONTIG
+from genome_finish.assembly import FAILURE_REPORT__DETECT_DELETION
+from genome_finish.assembly import FAILURE_REPORT__PARSE_VARIANTS
 from genome_finish.assembly import generate_contigs
 from genome_finish.assembly import parse_variants_from_vcf
 from genome_finish.celery_task_decorator import report_failure_stats
@@ -60,6 +65,7 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
 
     return async_result
 
+
 def single_sample_alignment_assembly(sample_alignment):
     """
     Run the assembly pipeline without celery on a single sample_alignment.
@@ -90,8 +96,9 @@ def single_sample_alignment_assembly(sample_alignment):
     cov_detect_deletion_make_vcf(sample_alignment)
     parse_variants_from_vcf(sample_alignment)
 
+
 @task
-def _chordfinisher( *args, **kwargs ):
+def _chordfinisher(*args, **kwargs):
     """
     Needs to run at the end of a chord to delay the variant parsing step.
 
@@ -133,7 +140,7 @@ def get_sv_caller_async_result(sample_alignment_list):
 
 
 @task(ignore_result=False)
-@report_failure_stats('generate_contigs_failure_stats.txt')
+@report_failure_stats(FAILURE_REPORT__CONTIG)
 def generate_contigs_async(sample_alignment,
         sv_read_classes={}, input_velvet_opts={},
         overwrite=True):
@@ -144,16 +151,18 @@ def generate_contigs_async(sample_alignment,
             sv_read_classes={}, input_velvet_opts={},
             overwrite=True)
 
+
 @task(ignore_result=False)
-@report_failure_stats('detect_deletions_failure_stats.txt')
+@report_failure_stats(FAILURE_REPORT__DETECT_DELETION)
 def cov_detect_deletion_make_vcf_async(sample_alignment):
     """
     Async wrapper for deletion coverage function.
     """
     cov_detect_deletion_make_vcf(sample_alignment)
 
+
 @task(ignore_result=False)
-@report_failure_stats('parse_variants_from_vcf_failure_stats.txt')
+@report_failure_stats(FAILURE_REPORT__PARSE_VARIANTS)
 def parse_variants_for_sa_list_async(sample_alignment_list):
     """
     Async wrapper for generation of vcf variants from SV calls.

@@ -6,15 +6,25 @@ from main.models import ExperimentSampleToAlignment
 
 
 def set_assembly_status(sample_alignment, status, force=False):
+    """Sets assembly status field.
+    """
+    sample_alignment = ExperimentSampleToAlignment.objects.get(
+            uid=sample_alignment.uid)
 
     # Make sure assembly status is not FAILED
     if not force:
-        assert sample_alignment.data['assembly_status'] != (
+        assert sample_alignment.data.get('assembly_status') != (
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED)
 
     # Set assembly status for UI
     sample_alignment.data['assembly_status'] = status
     sample_alignment.save()
+
+
+def get_failure_report_path(sample_alignment, report_filename):
+    """Returns full path to given report for ExperimentSampleToAlignment.
+    """
+    return os.path.join(sample_alignment.get_model_data_dir(), report_filename)
 
 
 def report_failure_stats(file_name):
@@ -40,20 +50,19 @@ def report_failure_stats(file_name):
                 sample_alignment = sample_alignment_args[0]
 
                 # Set assembly status to FAILED
-                sample_alignment.data['assembly_status'] = (
-                        ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED)
-                sample_alignment.save()
+                set_assembly_status(
+                        sample_alignment,
+                        ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED,
+                        force=True)
 
                 # Write exception with traceback to file
                 tb = traceback.format_exc()
-                file_path = os.path.join(
-                        sample_alignment.get_model_data_dir(),
-                        file_name)
+                file_path = get_failure_report_path(sample_alignment, file_name)
                 with open(file_path, 'w') as fh:
                     fh.write('tracback:%s\nexception:%r' % (tb, exc))
 
-                # Raise the excepted exception
-                raise exc
+                # NOTE: Do not raise the exception so that the rest of the
+                # pipeline can proceed.
 
         return wrapper
     return decorator

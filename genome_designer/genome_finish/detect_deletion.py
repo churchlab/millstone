@@ -5,7 +5,7 @@ import numpy as np
 import pysam
 
 from genome_finish.celery_task_decorator import set_assembly_status
-from genome_finish.celery_task_decorator import report_failure_stats
+from genome_finish.constants import CUSTOM_SV_METHOD__COVERAGE
 from genome_finish.graph_contig_placement import get_fasta
 from genome_finish.millstone_de_novo_fns import get_altalign_reads
 from main.models import Dataset
@@ -13,8 +13,6 @@ from main.models import ExperimentSampleToAlignment
 from utils.bam_utils import index_bam
 from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
-
-METHOD = 'COVERAGE'
 
 
 def cov_detect_deletion_make_vcf(sample_alignment):
@@ -24,7 +22,17 @@ def cov_detect_deletion_make_vcf(sample_alignment):
     Args:
         sample_alignment: ExperimentSampleToAlignment instance
     """
+    # Don't proceed if processing this sample alignment previously failed or
+    # in another async process.
+    sample_alignment = ExperimentSampleToAlignment.objects.get(
+            uid=sample_alignment.uid)
+    if (sample_alignment.data.get('assembly_status') ==
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED):
+        return
 
+    # Set assembly status for UI
+    # NOTE: Setting this status is playing whack-a-mole against other async sv
+    # detection functions, e.g. assembly.generate_contigs().
     set_assembly_status(
                 sample_alignment,
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.ANALYZING_COVERAGE)
@@ -43,7 +51,7 @@ def cov_detect_deletion_make_vcf(sample_alignment):
 
         # Write variant dicts to vcf
         export_var_dict_list_as_vcf(var_dict_list, vcf_path,
-                sample_alignment, METHOD)
+                sample_alignment, CUSTOM_SV_METHOD__COVERAGE)
 
         # Make dataset for contigs vcf
         new_dataset = add_dataset_to_entity(
@@ -54,7 +62,12 @@ def cov_detect_deletion_make_vcf(sample_alignment):
 
         new_dataset.save()
 
-    set_assembly_status(
+    # Update status again if not FAILED.
+    sample_alignment = ExperimentSampleToAlignment.objects.get(
+            uid=sample_alignment.uid)
+    if (sample_alignment.data.get('assembly_status') !=
+            ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED):
+        set_assembly_status(
                 sample_alignment,
                 ExperimentSampleToAlignment.ASSEMBLY_STATUS.WAITING_TO_PARSE)
 
