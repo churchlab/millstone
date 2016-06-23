@@ -1368,6 +1368,13 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin, JSONDataSubfieldsMixin):
                     ExperimentSampleToAlignment.ASSEMBLY_STATUS.NOT_STARTED)
         return super(ExperimentSampleToAlignment, self).__getattr__(name)
 
+    def get_no_unpaired_bam_location(self):
+        """Used in a HACK.
+        """
+        alignment_bam = get_dataset_with_type(
+                self, Dataset.TYPE.BWA_ALIGN).get_absolute_location()
+        return os.path.splitext(alignment_bam)[0] + '.no_unpaired.bam'
+
 
 ###############################################################################
 # Variants (SNVs and SVs)

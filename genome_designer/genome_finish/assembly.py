@@ -276,10 +276,8 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
             Dataset.TYPE.BWA_ALIGN).get_absolute_location()
 
     # HACK: Filter out unpaired mates
-    alignment_no_unpaired_bam = (os.path.splitext(alignment_bam)[0] +
-            '.no_unpaired.bam')
-    if not os.path.exists(alignment_no_unpaired_bam):
-        filter_out_unpaired_reads(alignment_bam, alignment_no_unpaired_bam)
+    alignment_no_unpaired_bam = sample_alignment.get_no_unpaired_bam_location()
+    filter_out_unpaired_reads(alignment_bam, alignment_no_unpaired_bam)
 
     # Use no unpaired filtered bam
     alignment_bam = alignment_no_unpaired_bam
@@ -634,6 +632,11 @@ def clean_up_previous_runs_of_sv_calling_pipeline(sample_alignment):
         report_path = get_failure_report_path(sample_alignment, report_filename)
         if os.path.exists(report_path):
             os.remove(report_path)
+
+    # Delete specific files.
+    no_unpaired_bam = sample_alignment.get_no_unpaired_bam_location()
+    if os.path.exists(no_unpaired_bam):
+        os.remove(no_unpaired_bam)
 
     # Get all Contig names.
     contig_uids = [c.uid for c in sample_alignment.contig_set.all()]
