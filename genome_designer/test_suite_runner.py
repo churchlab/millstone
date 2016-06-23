@@ -38,6 +38,15 @@ class CustomTestSuiteRunner(TempFilesystemTestSuiteRunner):
     """Our custom TestSuiteRunner.
     """
 
+    CLEAN_UP_FILES_WITH_EXTENSION = [
+        '.amb',
+        '.ann',
+        '.bwt',
+        '.fai',
+        '.pac',
+        '.sa'
+    ]
+
     def setup_test_environment(self, **kwargs):
         setup_test_environment_common()
 
@@ -48,6 +57,19 @@ class CustomTestSuiteRunner(TempFilesystemTestSuiteRunner):
         settings.BROKER_BACKEND = 'memory'
 
         return super(CustomTestSuiteRunner, self).setup_test_environment()
+
+    def teardown_test_environment(self, **kwargs):
+        """Override.
+        """
+        # Clean up index file changes in test data so they don't show up in
+        # in the git diff.
+        TEST_DATA_DIR = os.path.join(settings.PWD, 'test_data')
+        for root, dirs, files in os.walk(TEST_DATA_DIR):
+            for f in files:
+                if os.path.splitext(f)[1] in self.CLEAN_UP_FILES_WITH_EXTENSION:
+                    os.remove(os.path.join(root, f))
+
+        return super(CustomTestSuiteRunner, self).teardown_test_environment()
 
 
 class IntegrationTestSuiteRunner(TempFilesystemTestSuiteRunner):
