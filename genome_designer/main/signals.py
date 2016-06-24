@@ -282,3 +282,9 @@ def post_variant_set_create(sender, instance, created, **kwargs):
         instance.ensure_model_data_dir_exists()
 post_save.connect(post_variant_set_create, sender=VariantSet,
         dispatch_uid='variant_set_create')
+
+
+def pre_dataset_delete(sender, instance, **kwargs):
+    instance.delete_underlying_data()
+pre_delete.connect(pre_dataset_delete, sender=Dataset,
+        dispatch_uid='user_profile_create')

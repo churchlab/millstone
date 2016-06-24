@@ -246,13 +246,15 @@ class Dataset(UniqueUidModelMixin):
     def delete_underlying_data(self):
         """Deletes data from filesystem.
         """
-        full_fs_location = self.get_absolute_location()
-        if os.path.exists(full_fs_location):
-            os.remove(full_fs_location)
+        if len(self.filesystem_location):
+            full_fs_location = self.get_absolute_location()
+            if os.path.exists(full_fs_location):
+                os.remove(full_fs_location)
 
-        full_fs_index_location = self.get_absolute_idx_location()
-        if os.path.exists(full_fs_index_location):
-            os.remove(full_fs_index_location)
+        if len(self.filesystem_idx_location):
+            full_fs_index_location = self.get_absolute_idx_location()
+            if os.path.exists(full_fs_index_location):
+                os.remove(full_fs_index_location)
 
     def is_compressed(self):
         """
