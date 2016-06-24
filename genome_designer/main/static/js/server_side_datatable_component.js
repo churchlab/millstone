@@ -113,14 +113,20 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
    * Helper method for preparing the checkbox value to be sent to the
    * server.
    *
-   * HACK: Hard-coded for the Variant view.
+   * HACK: Hard-coded for the Variant view. And now further hacked for
+   * Contigs view.
    */
   getCheckboxValueFromDisplayableObj: function(displayableObj) {
-    if (!('UID' in displayableObj)) {
+    var uid_key;
+    if ('UID' in displayableObj) {
+      uid_key = 'UID';
+    } else if ('uid' in displayableObj) {
+      uid_key = 'uid';
+    } else {
       throw "Unexpected format for displayable object.";
     }
 
-    var value = displayableObj.UID;
+    var value = displayableObj[uid_key];
     if ('EXPERIMENT_SAMPLE_UID' in displayableObj) {
       value += ',' + displayableObj.EXPERIMENT_SAMPLE_UID;
     }
@@ -253,7 +259,17 @@ gd.ServerSideDataTableComponent = gd.AbstractDataTableComponent.extend({
     var aaData = [];
 
     // Parse the variant data.
-    var variantListData = JSON.parse(json.variant_list_json);
+    // HACK(gleb): variants vs contigs.
+    var dataKey;
+    if ('variant_list_json' in json) {
+      dataKey = 'variant_list_json';
+    } else if ('contig_list_json' in json) {
+      dataKey = 'contig_list_json';
+    } else {
+      throw "Unexpected data to cleanServerResponse.";
+    }
+
+    var variantListData = JSON.parse(json[dataKey]);
     if (variantListData.obj_list.length) {
       aaData = this.makeDisplayableObjectList(variantListData.obj_list);
     }

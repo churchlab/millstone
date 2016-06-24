@@ -1201,35 +1201,37 @@ def get_ref_genomes(request):
 def get_contigs(request):
     """Get list of Contigs for the provided Project uid.
     """
+    print 'GET CONTIGS'
     # Parse the GET params.
-    ref_genome_uid = request.GET.get('refGenomeUid')
     alignment_group_uid = request.GET.get('alignmentGroupUid')
 
     sample_to_align_query = ExperimentSampleToAlignment.objects.filter(
             alignment_group__uid=alignment_group_uid)
 
     filters = {
-            'parent_reference_genome': ReferenceGenome.objects.get(
-                    uid=ref_genome_uid),
             'experiment_sample_to_alignment__in': sample_to_align_query
     }
 
-    contig_list = Contig.objects.filter(**filters)
-    response_data = adapt_model_to_frontend(Contig,
+    pagination_start = int(request.GET.get('iDisplayStart', 0))
+    pagination_len = int(request.GET.get('iDisplayLength', 100))
+
+    contig_query = Contig.objects.filter(**filters)
+    num_total_contigs = contig_query.count()
+
+    contig_list = contig_query[
+            pagination_start:pagination_start + pagination_len]
+
+    # Adapt to frontend.
+    contig_list_json = adapt_model_to_frontend(Contig,
             obj_list=contig_list)
 
-    # Add bit to indicate whether any assemblies are running.
-    # NOTE: We do this wonky json.loads(), modify, json.dumps() becaause
-    # adapt_model_to_frontend() has the suboptimal interface of returning
-    # a json packaged object. It would be better to change this, but would
-    # require making this change safely everywhere else, but since we are
-    # lacking test coverage I'm not going to do that right now.
-    response_data_dict = json.loads(response_data)
-    response_data_dict['clientShouldRefresh'] = _are_any_assemblies_running(
-            sample_to_align_query)
-    response_data = json.dumps(response_data_dict)
+    # Package up the response.
+    response_data = {
+        'contig_list_json': contig_list_json,
+        'num_total_variants': num_total_contigs
+    }
 
-    return HttpResponse(response_data,
+    return HttpResponse(json.dumps(response_data),
             content_type='application/json')
 
 
