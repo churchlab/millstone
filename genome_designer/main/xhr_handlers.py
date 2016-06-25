@@ -1196,28 +1196,71 @@ def get_ref_genomes(request):
     return HttpResponse(response_data, content_type='application/json')
 
 
+CONTIG_VIEW_COL_ORDER_TO_LABEL_MAP = {
+    1: 'label',
+    2: 'experiment_sample_to_alignment__experiment_sample__label',
+    3: 'num_bases'
+
+}
+
+# NOTE: Ideally would sort by coverage, but that number is stored in the
+# json field metadata. Our current PostgresJsonField model attribute type
+# doesn't support this. There is probably a Django JSONField by now that does
+# so we'd want to upgrade to that. Or implement the query manually.
+CONTIG_VIEW_SORT_BY_DEFAULT_ORDER = [
+    'experiment_sample_to_alignment__experiment_sample__label',
+    '-num_bases',
+    'label'
+]
+
+
 @login_required
 @require_GET
 def get_contigs(request):
     """Get list of Contigs for the provided Project uid.
+
+    Supports server-side pagination and sorting.
+    By default returns first 100 results.
     """
-    print 'GET CONTIGS'
     # Parse the GET params.
     alignment_group_uid = request.GET.get('alignmentGroupUid')
 
-    sample_to_align_query = ExperimentSampleToAlignment.objects.filter(
+    esta_list = ExperimentSampleToAlignment.objects.filter(
             alignment_group__uid=alignment_group_uid)
 
-    filters = {
-            'experiment_sample_to_alignment__in': sample_to_align_query
-    }
+    contig_query = Contig.objects.filter(
+            experiment_sample_to_alignment__in=esta_list)
 
+    # Count total results to allow for pagination.
+    num_total_contigs = contig_query.count()
+
+    # Determine how to paginate. Default first 100 results.
     pagination_start = int(request.GET.get('iDisplayStart', 0))
     pagination_len = int(request.GET.get('iDisplayLength', 100))
 
-    contig_query = Contig.objects.filter(**filters)
-    num_total_contigs = contig_query.count()
+    # Apply sorting.
+    sort_by_col_order = []
+    sort_by_col_0 = int(request.GET.get('iSortCol_0', 0))
+    if sort_by_col_0:
+        sort_dir_added_col = CONTIG_VIEW_COL_ORDER_TO_LABEL_MAP[sort_by_col_0]
+        if request.GET.get('sSortDir_0', 'asc') == 'desc':
+            sort_dir_added_col = '-' + sort_dir_added_col
+        sort_by_col_order.append(sort_dir_added_col)
+    for col in CONTIG_VIEW_SORT_BY_DEFAULT_ORDER:
+        if not (
+                (col in sort_by_col_order) or
+                '-' + col in sort_by_col_order or
+                col.replace('-', '') in sort_by_col_order):
+            sort_by_col_order.append(col)
+    contig_query = contig_query.order_by(*sort_by_col_order)
 
+    # Optimization to prefetch related fields that are used for
+    # adapting to the frontend.
+    contig_query = contig_query.select_related(
+            'experiment_sample_to_alignment__experiment_sample',
+            'parent_reference_genome__project')
+
+    # Apply pagination and fetch.
     contig_list = contig_query[
             pagination_start:pagination_start + pagination_len]
 

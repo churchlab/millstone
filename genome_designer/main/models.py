@@ -875,14 +875,35 @@ class Contig(UniqueUidModelMixin, JSONDataSubfieldsMixin):
         Called by the adapter.
         """
         return [
-            {'field': 'label'},
-            {'field': 'experiment_sample', 'verbose': 'Sample'},
-            {'field': 'num_bases', 'verbose': 'Length'},
-            {'field': 'coverage', 'verbose': 'Avg. Coverage'},
-            {'field': 'left_junctions_html', 'verbose':
-                    'Left Junctions<br>(Ref &rarr; Contig)'},
-            {'field': 'right_junctions_html', 'verbose':
-                    'Right Junctions<br>(Ref &rarr; Contig)'}
+            {
+                'field': 'label',
+                'sortable': True
+            },
+            {
+                'field': 'experiment_sample',
+                'verbose': 'Sample',
+                'sortable': True
+            },
+            {
+                'field': 'num_bases',
+                'verbose': 'Length',
+                'sortable': True
+            },
+            {
+                'field': 'coverage',
+                'verbose': 'Avg. Coverage',
+                'sortable': False
+            },
+            {
+                'field': 'left_junctions_html',
+                'verbose': 'Left Junctions<br>(Ref &rarr; Contig)',
+                'sortable': False
+            },
+            {
+                'field': 'right_junctions_html',
+                'verbose': 'Right Junctions<br>(Ref &rarr; Contig)',
+                'sortable': False
+            }
         ]
 
 

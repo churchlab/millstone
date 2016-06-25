@@ -64,25 +64,20 @@ def adapt_model_to_frontend(model, filters={}, obj_list=None, **kwargs):
     # in which they should be displayed.
     field_dict_list = model.get_field_order(**kwargs)
 
-    # Each field is a dict with two keys, 'field' for field name and 'verbose'
-    # for display name. Get each. If 'verbose' is missing, then make verbose
-    # be the field with _'s turned to spaces and Title Cased.
-    field_list = [fdict['field'] for fdict in field_dict_list]
-
     # Get the verbose field names, which will be used as column headers.
     def _get_verbose(fdict):
         if 'verbose' in fdict:
             return fdict['verbose']
         else:
-            return string.capwords(fdict['field'],'_').replace('_',' ')
-    field_verbose_names = [_get_verbose(fdict) for fdict in field_dict_list]
+            return string.capwords(fdict['field'], '_').replace('_', ' ')
 
     # A list of dicts containing the order of each column and the field titles
     # for each column, used for configuring jquery.datatables.js
     obj_field_config = [{
-        'mData': name,
-        'sTitle': verbose_name
-    } for (name, verbose_name) in zip(field_list, field_verbose_names)]
+        'mData': fdict['field'],
+        'sTitle': _get_verbose(fdict),
+        'bSortable': fdict.get('sortable', True)
+    } for fdict in field_dict_list]
 
     # Package the result.
     return json.dumps({
