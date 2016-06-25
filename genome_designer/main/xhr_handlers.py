@@ -1222,14 +1222,15 @@ def get_contigs(request):
     Supports server-side pagination and sorting.
     By default returns first 100 results.
     """
-    # Parse the GET params.
-    alignment_group_uid = request.GET.get('alignmentGroupUid')
+    # Check valid AlignmentGroup and user has permissions to see it.
+    ag = get_object_or_404(AlignmentGroup,
+            reference_genome__project__owner=request.user.get_profile(),
+            uid=request.GET.get('alignmentGroupUid', '0'))
 
-    esta_list = ExperimentSampleToAlignment.objects.filter(
-            alignment_group__uid=alignment_group_uid)
-
+    # Query to get all Contigs. Pagination and sorting applied below.
     contig_query = Contig.objects.filter(
-            experiment_sample_to_alignment__in=esta_list)
+            experiment_sample_to_alignment__in=
+                    ag.experimentsampletoalignment_set.all())
 
     # Count total results to allow for pagination.
     num_total_contigs = contig_query.count()
