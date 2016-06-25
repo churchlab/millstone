@@ -211,10 +211,9 @@ gd.TabAnalyzeBaseView = Backbone.View.extend(
     }
     this.currentSubView = null;
 
-    // Remove anything left there.
+    // Remove any datatable contents still there.
     $('#gd-datatable-hook').empty();
-    // Remove anything left there.
-    $('#samples-datatable-hook').empty();
+    $('#gd-datatable-hook-contigs').empty();
   },
 
 

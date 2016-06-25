@@ -36,6 +36,11 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
             this.addFilterDataServerSideRequest, this)
     });
 
+    // Listen to events from the DataTable to provide appropriate UI affordance.
+    this.listenTo(this.datatableComponent, 'START_LOADING',
+        _.bind(this.setUIStartLoadingState, this));
+    this.listenTo(this.datatableComponent, 'DONE_LOADING',
+        _.bind(this.setUIDoneLoadingState, this));
     this.listenToOnce(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
         _.bind(this.decorateControls, this));
   },
@@ -100,7 +105,7 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
 
   /** Provide affordance while doing Variant query. */
   setUIStartLoadingState: function() {
-    $('#gd-datatable-hook-datatable_wrapper').css('opacity', 0.5);
+    $('#gd-datatable-hook-contigs-datatable_wrapper').css('opacity', 0.5);
 
     this.loadingSpinner = new gd.Spinner();
     this.loadingSpinner.spin()
