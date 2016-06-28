@@ -7,11 +7,16 @@
 gd.ContigControlsComponent = gd.DataTableControlsComponent.extend({
   initialize: function() {
     gd.DataTableControlsComponent.prototype.initialize.call(this);
+    this.render();
+  },
+
+  render: function() {
     this.decorateControls();
   },
 
   decorateControls: function() {
     this.drawDropdownOptions();
+    this.listenToControls();
   },
 
    /** Draws dropdown options. */
@@ -21,64 +26,33 @@ gd.ContigControlsComponent = gd.DataTableControlsComponent.extend({
         '<a href="#" class="gd-id-contigs-delete">Delete</a>';
     this.addDropdownOption(deleteOptionHtml);
     $('.gd-id-contigs-delete').click(_.bind(this.handleDelete, this));
-
-    // Option to find contig insertion location.
-    var findInsertionLocationOptionHtml =('<a href="#" class="gd-id-' +
-        'contigs-find-insertion-location">Find Insertion Location</a>');
-    this.addDropdownOption(findInsertionLocationOptionHtml);
-    $('.gd-id-contigs-find-insertion-location').click(_.bind(
-        this.handleFindInsertionLocation, this));
   },
 
-  /** Sends request to find insertion location. */
-  handleFindInsertionLocation: function() {
-    var contigUidList = this.datatableComponent.getCheckedRowUids();
-
-    // If nothing to do, show message.
-    if (!contigUidList.length) {
-      alert('Please select contigs for which to find insertion locations.');
-      return;
-    }
-
-    // Get confirmation from user.
-    var getData = {
-        contigUidList: contigUidList
-    };
-
-    $.get('/_/contigs/has_insertion_location', {data:JSON.stringify(getData)},
-        _.bind(function(response){
-          var hasInsertionEndpoints = response.has_insertion_location;
-          if (hasInsertionEndpoints) {
-            var agree = confirm('Some of the contigs selected already have' +
-                'insertion locations; are you sure you want to overwrite ' +
-                'them?')
-            if (!agree) {
-              return;
-            }
-          }
-          this.enterLoadingState();
-          var postData = {
-              contigUidList: contigUidList,
-          }
-          $.post('/_/contigs/find_insertion_location',
-              JSON.stringify(postData),
-              _.bind(this.handleFindInsertionLocationResponse, this));
-        }, this))
+  listenToControls: function() {
+    $('#gd-contigs-view-download-btn').click(
+        _.bind(this.handleDownloadContigsButtonClick, this));
   },
 
-  handleFindInsertionLocationResponse: function(response) {
-    this.exitLoadingState();
-    if ('error' in response) {
-      var errorMessage = ('Unable to find insertion locations for the ' +
-          'following contigs:\n')
-      for (i in response.error) {
-        errorMessage += (response.error[i][0] + ': ' + response.error[i][1] +
-            '\n')
-      }
-      var agree = confirm(errorMessage)
-    }
-    
-    this.trigger('MODELS_UPDATED');
+  handleDownloadContigsButtonClick: function() {
+    var formJqueryObj = $('#gd-contigs-export-form');
+
+    // Reset the form html
+    formJqueryObj.empty();
+
+    // Append the form fields.
+    this._appendInputFieldToForm(formJqueryObj, 'alignment_group_uid',
+        this.model.get('alignmentGroupUid'));
+
+    // Submit the form. This cause a download to start.
+    formJqueryObj.submit();
+  },
+
+  /** Helper method to append input value to form. */
+  _appendInputFieldToForm: function(formJqueryObj, name, value) {
+    formJqueryObj.append(_.template(
+        '<input type="hidden" name="<%= name %>" value="<%= value %>">',
+        {name: name, value: value}
+    ));
   },
 
   /** Sends request to delete selected contigs. */

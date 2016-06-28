@@ -2,6 +2,8 @@
 Methods for exporting data.
 """
 
+from collections import OrderedDict
+import copy
 import csv
 from datetime import datetime
 import os
@@ -450,3 +452,96 @@ def export_project_as_zip(project):
                 ziph.write(full_path, archive_target_path)
 
     return os.path.join('/tmp', project_export_zip_name)
+
+
+CONTIG_CSV_FIELD_NAMES = [
+    'sample',
+    'contig',
+    'coverage',
+    'num_bases',
+    'lr',
+    'pos',
+    'gene',
+    'IS',
+    'seq'
+]
+
+
+def export_contigs_as_csv(alignment_group):
+    """Exports contigs to facilitate streaming download over the web without
+    exhausting memory.
+    """
+
+    # Create a csv writer that uses a StringIO buffer.
+    # Every time we write a row, we flush the buffer and yield the data.
+    output_buffer = StringIO.StringIO()
+    writer = csv.DictWriter(output_buffer, CONTIG_CSV_FIELD_NAMES)
+
+    # Write header
+    writer.writeheader()
+    output_buffer.seek(0)
+    data = output_buffer.read()
+    output_buffer.truncate(0)
+    yield data
+
+    # Write data.
+    for sample_alignment in alignment_group.experimentsampletoalignment_set.iterator():
+        for contig in sample_alignment.contig_set.iterator():
+            contig_rows = _ctg_to_jct_rows(sample_alignment, contig)
+            for contig_row in contig_rows:
+                writer.writerow(contig_row)
+                output_buffer.seek(0)
+                data = output_buffer.read()
+                output_buffer.truncate(0)
+                yield data
+
+
+def _ctg_to_jct_rows(sample_alignment, contig):
+    """Returns list of dictionaries, one element per contig junction. Or, if no
+    junctions, then just a row with common data.
+    """
+    ctg_rows = []
+
+    # Get contig sequence.
+    file_path = contig.dataset_set.get(
+            type=Dataset.TYPE.REFERENCE_GENOME_FASTA).get_absolute_location()
+    if os.path.exists(file_path):
+        with open(file_path) as fh:
+            contig_seq = str(SeqIO.read(fh, 'fasta').seq)
+    else:
+        contig_seq = ''
+
+    ctg_l_junctions = [('L', c) for c in
+            contig.metadata.get('left_junctions', [])]
+    ctg_r_junctions = [('R', c) for c in
+            contig.metadata.get('right_junctions', [])]
+    all_junctions = ctg_l_junctions + ctg_r_junctions
+
+    contig_common_data = {
+        'sample': sample_alignment.experiment_sample.label,
+        'contig': contig.label,
+        'num_bases': contig.num_bases,
+        'coverage': contig.metadata.get('coverage'),
+        'seq': contig_seq
+    }
+
+    if not(len(all_junctions)):
+        ctg_rows.append(contig_common_data)
+    else:
+        # Make a separate entry for each junction.
+        for lr, jct_dict in all_junctions:
+            contig_dict = copy.copy(contig_common_data)
+
+            if len(jct_dict) == 5 and jct_dict[4]:
+                gene_name = jct_dict[4][0]
+            else:
+                gene_name = ''
+
+            contig_dict.update({
+                'lr': lr,
+                'pos': jct_dict[0],
+                'gene': gene_name,
+                'IS': 'insertion sequence' in gene_name,
+            })
+            ctg_rows.append(contig_dict)
+    return ctg_rows

@@ -54,6 +54,7 @@ from genome_finish.insertion_placement_read_trkg import get_insertion_placement_
 from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
 from utils import generate_safe_filename_prefix_from_label
 from utils.combine_reference_genomes import combine_list_allformats
+from utils.data_export_util import export_contigs_as_csv
 from utils.data_export_util import export_melted_variant_view
 from utils.data_export_util import export_project_as_zip
 from utils.import_util import create_samples_from_row_data
@@ -358,6 +359,23 @@ def contigs_download(request):
             file_name)
     response['Content-Length'] = os.path.getsize(file_path)
 
+    return response
+
+
+@login_required
+@require_GET
+def contigs_export_all(request):
+    """Export all contigs.
+    """
+    ag_uid = request.GET.get('alignment_group_uid')
+    alignment_group = get_object_or_404(AlignmentGroup,
+            reference_genome__project__owner=request.user.get_profile(),
+            uid=ag_uid)
+
+    response = StreamingHttpResponse(
+            export_contigs_as_csv(alignment_group),
+            content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="contigs.csv"'
     return response
 
 

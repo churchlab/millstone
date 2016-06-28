@@ -1,6 +1,11 @@
 <!-- Control Box -->
 <div id='{{table_id}}-control'>
-  <div class=gd-datatable-controls-title>
-    Assembled Contigs
-  </div>
+  <button id="gd-contigs-view-download-btn" class="btn btn-primary" href="#">
+    Download All
+  </button>
+
+  <form id="gd-contigs-export-form" action="/_/contigs/export_all"
+      method="GET" target="_blank">
+    <!-- NOTE: Populated dynamically in js. -->
+  </form>
 </div>

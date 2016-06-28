@@ -80,36 +80,9 @@ def reference_genome_list_controls(request):
 def contig_list_controls(request):
     """Returns the Contig List control box.
     """
-
-    # TODO: Find out if below line is important
-    # csrf = request.GET.get('csrf')
-
-    alignment_group = get_object_or_404(
-            AlignmentGroup,
-            uid=request.GET.get('alignmentGroupUid'))
-
-    # If the request passed a tableId, then give it to Django to decorate the
-    # controls.
     context = {
-            'table_id': request.GET.get('tableId',
-                    'reference-genome-list-datatable'),
-            'alignment_group_uid': alignment_group.uid,
-            'samples_uid_tuples': [
-                    (esta.experiment_sample.label, esta.uid) for esta in
-                    alignment_group.experimentsampletoalignment_set.all()]
+        'table_id': request.GET.get('tableId')
     }
-
-    sample_alignment_query = ExperimentSampleToAlignment.objects.filter(
-            alignment_group=alignment_group)
-
-    assembly_status_tuples = []
-    for sample_alignment in sample_alignment_query:
-        status = sample_alignment.data.get('assembly_status', False)
-        if status:
-            assembly_status_tuples.append(
-                    (sample_alignment.experiment_sample.label, status))
-
-    context['assembly_status_tuples'] = assembly_status_tuples
 
     return HttpResponse(
             render_to_string('controls/contig_list_controls.html', context))

@@ -41,7 +41,7 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
         _.bind(this.setUIStartLoadingState, this));
     this.listenTo(this.datatableComponent, 'DONE_LOADING',
         _.bind(this.setUIDoneLoadingState, this));
-    this.listenToOnce(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
+    this.listenTo(this.datatableComponent, 'DONE_CONTROLS_REDRAW',
         _.bind(this.decorateControls, this));
   },
 
@@ -125,7 +125,8 @@ gd.TabAnalyzeSubviewContigs = gd.TabAnalyzeSubviewAbstractBase.extend({
     this.contigControlsComponent = new gd.ContigControlsComponent({
       el: '#gd-datatable-hook-control',
       datatableComponent: this.datatableComponent,
-      alignmentGroupUid: this.model.attributes.alignmentGroupUid
+      alignmentGroupUid: this.model.attributes.alignmentGroupUid,
+      model: this.model
     });
 
     this.listenToOnce(this.contigControlsComponent, 'MODELS_UPDATED',
