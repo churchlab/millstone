@@ -28,10 +28,6 @@ urlpatterns = patterns('',
     url(r'^projects/([\w-]+)/analyze/([\w-]+)/([\w-]+)$',
             'main.views.tab_root_analyze'),
 
-    # Genome finishing
-    url(r'^projects/([\w-]+)/genomefinishing$',
-            'main.views.genome_finish_view'),
-
     # Reference genomes
     url(r'^projects/([\w-]+)/refgenomes$',
             'main.views.reference_genome_list_view'),
@@ -64,8 +60,7 @@ urlpatterns = patterns('',
 
     # Contigs
     url(r'^projects/([\w-]+)/contigs/([\w-]+)$',
-        'main.views.contig_view'),
-
+            'main.views.contig_view'),
 
     # Demo Splash
     url(r'^demo_splash$',
@@ -115,13 +110,13 @@ urlpatterns = patterns('',
     url(r'^_/variants/invalidate_materialized_view$',
             'main.xhr_handlers.invalidate_materialized_view'),
     url(r'^_/variants/delete$',
-        'main.xhr_handlers.variant_sets_delete'),
+            'main.xhr_handlers.variant_sets_delete'),
     url(r'^_/variants/save_filter$',
-        'main.xhr_handlers.save_variant_filter'),
+            'main.xhr_handlers.save_variant_filter'),
     url(r'^_/variants/delete_filter$',
-        'main.xhr_handlers.delete_variant_filter'),
+            'main.xhr_handlers.delete_variant_filter'),
     url(r'^_/variants/get_long_alt$',
-        'main.xhr_handlers.get_long_alt_value_from_file'),
+            'main.xhr_handlers.get_long_alt_value_from_file'),
 
     url(r'^_/alignmentgroups$',
             'main.xhr_handlers.get_alignment_groups'),
@@ -175,13 +170,13 @@ urlpatterns = patterns('',
             'main.xhr_handlers.get_sample_alignments_for_assembly'),
 
     url(r'^_/contigs$',
-        'main.xhr_handlers.get_contigs'),
+            'main.xhr_handlers.get_contigs'),
     url(r'^_/contigs/delete$',
-        'main.xhr_handlers.contigs_delete'),
+            'main.xhr_handlers.contigs_delete'),
     url(r'^_/contigs/has_insertion_location$',
-        'main.xhr_handlers.contigs_has_insertion_location'),
+            'main.xhr_handlers.contigs_has_insertion_location'),
     url(r'^_/contigs/find_insertion_location$',
-        'main.xhr_handlers.contigs_find_insertion_location'),
+            'main.xhr_handlers.contigs_find_insertion_location'),
     url(r'^_/contigs/download$',
             'main.xhr_handlers.contigs_download'),
     url(r'^_/contigs/export_all$',

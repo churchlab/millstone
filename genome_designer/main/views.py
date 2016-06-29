@@ -179,25 +179,6 @@ def tab_root_analyze(request, project_uid, alignment_group_uid=None, sub_view=No
 
     return render(request, 'tab_root_analyze.html', context)
 
-@login_required
-def genome_finish_view(request, project_uid):
-    """Displays reference genomes on the opening page of
-    the genome finish tab
-    """
-    project = get_object_or_404(Project, owner=request.user.get_profile(),
-            uid=project_uid)
-
-    init_js_data = json.dumps({
-        'entity': adapt_model_instance_to_frontend(project)
-    })
-
-    context = {
-        'project': project,
-        'tab_root': TAB_ROOT__DATA,
-        'init_js_data': init_js_data,
-    }
-
-    return render(request, 'genome_finish.html', context)
 
 @login_required
 def reference_genome_list_view(request, project_uid):
@@ -222,7 +203,7 @@ def reference_genome_list_view(request, project_uid):
 
 @login_required
 def reference_genome_view(request, project_uid, ref_genome_uid):
-    """Overview of a single project.
+    """Overview of a single ReferenceGenome.
     """
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
@@ -251,7 +232,7 @@ def reference_genome_view(request, project_uid, ref_genome_uid):
 
 @login_required
 def contig_view(request, project_uid, contig_uid):
-    """Overview of a single project.
+    """Overview of a single Contig.
     """
     project = get_object_or_404(Project, owner=request.user.get_profile(),
             uid=project_uid)
@@ -290,6 +271,7 @@ def sample_list_view(request, project_uid):
         'error_string': error_string
     }
     return render(request, 'sample_list.html', context)
+
 
 @login_required
 def fastqc_view(request, project_uid, sample_uid, read_num):
@@ -729,6 +711,7 @@ class RegistrationViewWrapper(RegistrationView):
 
 if settings.RUNNING_ON_EC2:
     from boto.utils import get_instance_metadata
+
     @login_required
     def ec2_info_view(request):
         """
