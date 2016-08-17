@@ -34,10 +34,6 @@ install:
   - ./millstone_setup.py
   - cd ..
 
-cache:
-  directories:
-    - $HOME/.cache/pip
-
 before_script:
   - psql -c "CREATE USER gdv2dbuser WITH PASSWORD 'g3n3d3z';" -U postgres
   - psql -c "CREATE DATABASE gdv2db;" -U postgres
