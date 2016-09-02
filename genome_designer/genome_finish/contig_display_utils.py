@@ -33,7 +33,9 @@ def get_ref_jbrowse_link(contig, loc):
 def decorate_with_link_to_loc(contig, loc, text):
     return ('<a href="' + get_ref_jbrowse_link(contig, loc) +
         ',' + contig.get_contig_reads_track() +
-        '" target="_blank">' + text + '</a>')
+        # TODO(dbgoodman): Add back once JBrowse contig features re-enabled.
+        # '" target="_blank">' + text + '</a>')
+        '">' + text + '</a>')
 
 
 def make_html_list(li, css_class='list-unstyled'):
