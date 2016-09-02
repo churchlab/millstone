@@ -38,7 +38,6 @@ from utils.bam_utils import sort_bam_by_name
 from utils.data_export_util import export_contig_list_as_vcf
 from utils.data_export_util import export_var_dict_list_as_vcf
 from utils.import_util import add_dataset_to_entity
-from utils.jbrowse_util import add_bam_file_track
 from variants.filter_key_map_constants import MAP_KEY__COMMON_DATA
 from variants.vcf_parser import parse_vcf
 
@@ -183,8 +182,10 @@ def generate_contigs(sample_alignment,
 
         for_assembly_dataset.save()
 
-        add_bam_file_track(reference_genome,
-                sample_alignment, Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY)
+        # TODO(dbgoodman): Look into re-enabling this. Right now, this creates
+        # thousands of tracks and appears to significantly slow down JBrowse.
+        # add_bam_file_track(reference_genome,
+        #         sample_alignment, Dataset.TYPE.BWA_FOR_DE_NOVO_ASSEMBLY)
 
     velvet_opts = dict(DEFAULT_VELVET_OPTS)
 
@@ -327,15 +328,16 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
             dataset = _get_or_create_sv_dataset(key)
             sv_bams_list.append(dataset.get_absolute_location())
 
-    # Make some bam tracks for read classes
-    jbrowse_classes = [Dataset.TYPE.BWA_DISCORDANT]
-    reference_genome = sample_alignment.alignment_group.reference_genome
-    for dataset_type in jbrowse_classes:
-        bam_path = sample_alignment.dataset_set.get(
-                type=dataset_type).get_absolute_location()
-        index_bam(bam_path)
-        add_bam_file_track(reference_genome,
-        sample_alignment, dataset_type)
+    # TODO(dbgoodman): Maybe fix.
+    # # Make some bam tracks for read classes
+    # jbrowse_classes = [Dataset.TYPE.BWA_DISCORDANT]
+    # reference_genome = sample_alignment.alignment_group.reference_genome
+    # for dataset_type in jbrowse_classes:
+    #     bam_path = sample_alignment.dataset_set.get(
+    #             type=dataset_type).get_absolute_location()
+    #     index_bam(bam_path)
+    #     add_bam_file_track(reference_genome,
+    #     sample_alignment, dataset_type)
 
     # Create compilation filename prefix
     suffixes = [sv_indicant_class_to_filename_suffix[k]
@@ -375,7 +377,7 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
     SV_indicants_with_pairs_bam = compilation_prefix + '.with_pairs.bam'
     add_paired_mates(
             SV_indicants_bam, alignment_bam, SV_indicants_with_pairs_bam)
-    
+
     # Filter low quality reads
     print 'filtering out low quality reads_subdir'
     SV_indicants_filtered = compilation_prefix + '.with_pairs.filtered.bam'

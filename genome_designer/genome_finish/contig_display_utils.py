@@ -9,22 +9,25 @@ Junction = namedtuple_with_defaults('Junction',
 
 
 def get_ref_jbrowse_link(contig, loc):
-    sample_alignment = contig.experiment_sample_to_alignment
-    # This is a workaround to using type=Dataset.TYPE.BWA_ALIGN, because this
-    # file is imported by main/models.py, so importing Dataset here causes a
-    # circular import error.
-    # TODO(gleb): Figure out better organization
-    bam_dataset = sample_alignment.dataset_set.get(
-            type='BWA BAM')
+    return '#'
 
-    sample_bam_track = '_'.join([
-            bam_dataset.internal_string(sample_alignment.experiment_sample),
-            str(sample_alignment.alignment_group.uid)])
+    # TODO(dbg): Maybe fix.
+    # sample_alignment = contig.experiment_sample_to_alignment
+    # # This is a workaround to using type=Dataset.TYPE.BWA_ALIGN, because this
+    # # file is imported by main/models.py, so importing Dataset here causes a
+    # # circular import error.
+    # # TODO(gleb): Figure out better organization
+    # bam_dataset = sample_alignment.dataset_set.get(
+    #         type='BWA BAM')
 
-    track_labels = settings.JBROWSE_DEFAULT_TRACKS + [sample_bam_track]
-    return (contig.parent_reference_genome.get_client_jbrowse_link() +
-            '&loc=' + str(loc) +
-            '&tracks=' + ','.join(track_labels))
+    # sample_bam_track = '_'.join([
+    #         bam_dataset.internal_string(sample_alignment.experiment_sample),
+    #         str(sample_alignment.alignment_group.uid)])
+
+    # track_labels = settings.JBROWSE_DEFAULT_TRACKS + [sample_bam_track]
+    # return (contig.parent_reference_genome.get_client_jbrowse_link() +
+    #         '&loc=' + str(loc) +
+    #         '&tracks=' + ','.join(track_labels))
 
 
 def decorate_with_link_to_loc(contig, loc, text):

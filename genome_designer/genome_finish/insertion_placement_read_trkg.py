@@ -12,7 +12,6 @@ from django.conf import settings
 import pysam
 
 from genome_finish.contig_display_utils import Junction
-from genome_finish.jbrowse_genome_finish import add_contig_reads_bam_track
 from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
 from main.models import Contig
 from main.models import Dataset
@@ -611,8 +610,13 @@ def find_contig_insertion_endpoints(contig,
         'right': contig_ins_right_end
     }
 
-def make_contig_reads_to_ref_alignments(contig_uid, add_jbrowse_track=True,
-    overwrite=False):
+
+def make_contig_reads_to_ref_alignments(
+        contig_uid, add_jbrowse_track=False, overwrite=False):
+    """NOTE: add_jbrowse_track not currently supported.
+    """
+    if add_jbrowse_track:
+        raise NotImplementedError("JBrowse tracks disabled.")
 
     contig = Contig.objects.get(uid=contig_uid)
 
@@ -631,5 +635,6 @@ def make_contig_reads_to_ref_alignments(contig_uid, add_jbrowse_track=True,
         # type BWA_SV_INDICANTS
         make_contig_reads_dataset(contig, contig_reads)
 
-    if add_jbrowse_track:
-        add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)
+    # TODO(dbgoodman): Maybe fix.
+    # if add_jbrowse_track:
+    #     add_contig_reads_bam_track(contig, Dataset.TYPE.BWA_SV_INDICANTS)

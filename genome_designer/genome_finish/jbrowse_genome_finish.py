@@ -22,7 +22,9 @@ def maybe_create_reads_to_contig_bam(contig):
             type=Dataset.TYPE.BWA_ALIGN).exists():
         prepare_jbrowse_ref_sequence(contig)
         align_contig_reads_to_contig(contig)
-        add_contig_reads_to_contig_bam_track(contig, Dataset.TYPE.BWA_ALIGN)
+
+        # TODO(dbg): Maybe fix.
+        # add_contig_reads_to_contig_bam_track(contig, Dataset.TYPE.BWA_ALIGN)
 
 
 def align_contig_reads_to_contig(contig):
