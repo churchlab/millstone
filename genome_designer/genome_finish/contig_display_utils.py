@@ -8,34 +8,35 @@ Junction = namedtuple_with_defaults('Junction',
         [None, -1, None, -1, []])
 
 
-def get_ref_jbrowse_link(contig, loc):
-    return '#'
+def get_jbrowse_link_for_contig_aligned_to_ref_genome(contig, loc):
+    """Returns JBrowse to the contig aligned against the reference genome.
+    """
+    sample_alignment = contig.experiment_sample_to_alignment
 
-    # TODO(dbg): Maybe fix.
-    # sample_alignment = contig.experiment_sample_to_alignment
-    # # This is a workaround to using type=Dataset.TYPE.BWA_ALIGN, because this
-    # # file is imported by main/models.py, so importing Dataset here causes a
-    # # circular import error.
-    # # TODO(gleb): Figure out better organization
-    # bam_dataset = sample_alignment.dataset_set.get(
-    #         type='BWA BAM')
+    # HACK: Workaround to using type=Dataset.TYPE.BWA_ALIGN, because this
+    # file is imported by main/models.py, so importing Dataset here causes a
+    # circular import error.
+    # TODO(gleb): Figure out better organization
+    bam_dataset = sample_alignment.dataset_set.get(
+            type='BWA BAM')
 
-    # sample_bam_track = '_'.join([
-    #         bam_dataset.internal_string(sample_alignment.experiment_sample),
-    #         str(sample_alignment.alignment_group.uid)])
+    sample_bam_track = '_'.join([
+            bam_dataset.internal_string(sample_alignment.experiment_sample),
+            str(sample_alignment.alignment_group.uid)])
 
-    # track_labels = settings.JBROWSE_DEFAULT_TRACKS + [sample_bam_track]
-    # return (contig.parent_reference_genome.get_client_jbrowse_link() +
-    #         '&loc=' + str(loc) +
-    #         '&tracks=' + ','.join(track_labels))
+    track_labels = settings.JBROWSE_DEFAULT_TRACKS + [sample_bam_track]
+    return (contig.parent_reference_genome.get_client_jbrowse_link() +
+            '&loc=' + str(loc) +
+            '&tracks=' + ','.join(track_labels))
 
 
 def decorate_with_link_to_loc(contig, loc, text):
-    return ('<a href="' + get_ref_jbrowse_link(contig, loc) +
-        # TODO(dbgoodman): Add back once JBrowse contig features re-enabled.
-        # ',' + contig.get_contig_reads_track() +
-        # '" target="_blank">' + text + '</a>')
-        '">' + text + '</a>')
+    return (
+            '<a href="' +
+            get_jbrowse_link_for_contig_aligned_to_ref_genome(contig, loc) +
+            # TODO(dbgoodman): Add back once JBrowse contig features re-enabled.
+            # ',' + contig.get_contig_reads_track() +
+            '" target="_blank">' + text + '</a>')
 
 
 def make_html_list(li, css_class='list-unstyled'):
