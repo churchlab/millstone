@@ -393,6 +393,10 @@ def get_sv_indicating_reads(sample_alignment, input_sv_indicant_classes={},
 
 def assemble_with_velvet(assembly_dir, velvet_opts, sv_indicants_bam,
         sample_alignment, overwrite=True, reassemble_contig_from_reads=False):
+    # NOTE: Unused. If enabled, will call make_contig_reads_to_ref_alignments()
+    # which is not used anywhere currently due to performance issues which
+    # which are particularly bad when many unused reads.
+    assert not reassemble_contig_from_reads
 
     timestamp = str(datetime.datetime.now())
     contig_number_pattern = re.compile('^NODE_(\d+)_')
@@ -444,26 +448,27 @@ def assemble_with_velvet(assembly_dir, velvet_opts, sv_indicants_bam,
 
         contig.ensure_model_data_dir_exists()
 
+        # NOTE: Unused code.
         # Reassemble the contig from its constituent reads separately,
         # using a second velvet call.
-        if reassemble_contig_from_reads:
-            # 1. Grab reads from velvet to reassemble the contig
-            make_contig_reads_to_ref_alignments(contig,
-                    add_jbrowse_track=False, overwrite=overwrite)
-            contig_reads_bam = os.path.join(
-                    contig.get_model_data_dir(),
-                    'sv_indicants.bam')
+        # if reassemble_contig_from_reads:
+        #     # 1. Grab reads from velvet to reassemble the contig
+        #     make_contig_reads_to_ref_alignments(contig,
+        #             add_jbrowse_track=False, overwrite=overwrite)
+        #     contig_reads_bam = os.path.join(
+        #             contig.get_model_data_dir(),
+        #             'sv_indicants.bam')
 
-            # 2. Reassemble the contig from its whole reads using velvet -
-            # this generates longer contigs because the graph will trim the
-            # edges if there is a branchpoint. With only one node it should
-            # be very fast.
-            _run_velvet(contig.get_model_data_dir(), velvet_opts,
-                    contig_reads_bam)
-            reassembled_seqrecord = _extract_node_from_contig_reassembly(
-                    contig)
-            if reassembled_seqrecord:
-                seq_record.seq = reassembled_seqrecord.seq
+        #     # 2. Reassemble the contig from its whole reads using velvet -
+        #     # this generates longer contigs because the graph will trim the
+        #     # edges if there is a branchpoint. With only one node it should
+        #     # be very fast.
+        #     _run_velvet(contig.get_model_data_dir(), velvet_opts,
+        #             contig_reads_bam)
+        #     reassembled_seqrecord = _extract_node_from_contig_reassembly(
+        #             contig)
+        #     if reassembled_seqrecord:
+        #         seq_record.seq = reassembled_seqrecord.seq
 
         # Write the contig fasta and add it as a dataset to the contig object.
 
@@ -480,9 +485,11 @@ def assemble_with_velvet(assembly_dir, velvet_opts, sv_indicants_bam,
                 filesystem_location=dataset_path)
 
         contig.save()
+
+        # NOTE: Disabled for now. Severe performance issues.
         # Make a bam track on the reference for each contig that shows only the
         # reads that assembled the contig and their mates
-        make_contig_reads_to_ref_alignments(contig.uid)
+        # make_contig_reads_to_ref_alignments(contig.uid)
 
         # append the uid to the contig_uid_list
         contig_uid_list.append(contig.uid)

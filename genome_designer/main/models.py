@@ -853,6 +853,7 @@ class Contig(UniqueUidModelMixin, JSONDataSubfieldsMixin):
         bam_dataset = get_dataset_with_type(
                 self,
                 Dataset.TYPE.BWA_SV_INDICANTS)
+        assert bam_dataset is not None
         return str(bam_dataset.internal_string(self))
 
     @property

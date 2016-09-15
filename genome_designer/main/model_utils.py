@@ -77,7 +77,7 @@ class JSONDataSubfieldsMixin(object):
         try:
             return data_attribute[name]
         except:
-            raise AttributeError
+            raise AttributeError(name)
 
 
 ###############################################################################
