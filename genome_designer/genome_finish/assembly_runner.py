@@ -162,11 +162,15 @@ def cov_detect_deletion_make_vcf_async(sample_alignment):
 
 
 @task(ignore_result=False)
-@report_failure_stats(FAILURE_REPORT__PARSE_VARIANTS)
 def parse_variants_for_sa_list_async(sample_alignment_list):
     """
     Async wrapper for generation of vcf variants from SV calls.
     """
     for sample_alignment in sorted(sample_alignment_list,
             key=lambda x: x.experiment_sample.label):
-        parse_variants_from_vcf(sample_alignment)
+        parse_variants_for_single_sa(sample_alignment)
+
+
+@report_failure_stats(FAILURE_REPORT__PARSE_VARIANTS)
+def parse_variants_for_single_sa(sample_alignment):
+    parse_variants_from_vcf(sample_alignment)

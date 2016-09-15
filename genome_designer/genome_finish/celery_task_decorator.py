@@ -37,18 +37,17 @@ def report_failure_stats(file_name):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            # Asserts that should fail at beginning of run that should be
+            # caught at development/test time.
+            assert len(args) >= 1
+            sample_alignment_args = [arg for arg in args if
+                    isinstance(arg, ExperimentSampleToAlignment)]
+            assert len(sample_alignment_args) == 1
+            sample_alignment = sample_alignment_args[0]
+
             try:
                 return func(*args, **kwargs)
             except Exception as exc:
-
-                sample_alignment_args = []
-                for arg in args:
-                    if isinstance(arg, ExperimentSampleToAlignment):
-                        sample_alignment_args.append(arg)
-
-                assert len(sample_alignment_args) == 1
-                sample_alignment = sample_alignment_args[0]
-
                 # Set assembly status to FAILED
                 set_assembly_status(
                         sample_alignment,

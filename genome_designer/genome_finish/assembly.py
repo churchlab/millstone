@@ -588,8 +588,8 @@ def parse_variants_from_vcf(sample_alignment,
             ExperimentSampleToAlignment.ASSEMBLY_STATUS.FAILED):
         print ('WARNING: SV assembly failed for Sample Alignment ' +
                 '{label} ({uid}) so variant parsing was skipped.').format(
-                        label=ExperimentSampleToAlignment.label,
-                        uid=ExperimentSampleToAlignment.uid)
+                        label=sample_alignment.label,
+                        uid=sample_alignment.uid)
         return
 
     set_assembly_status(sample_alignment,
