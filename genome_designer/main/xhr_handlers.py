@@ -50,7 +50,6 @@ from main.models import VariantSet
 from main.models import S3File
 from main.model_utils import get_long_alt_path
 from genome_finish.assembly_runner import run_de_novo_assembly_pipeline
-from genome_finish.insertion_placement_read_trkg import get_insertion_placement_positions
 from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
 from utils import generate_safe_filename_prefix_from_label
 from utils.combine_reference_genomes import combine_list_allformats
@@ -1329,33 +1328,6 @@ def contigs_has_insertion_location(request):
             break
 
     result = {'has_insertion_location': has_insertion_location}
-    return HttpResponse(json.dumps(result), content_type='application/json')
-
-
-@login_required
-@require_POST
-def contigs_find_insertion_location(request):
-    """Attempts to find the placement parameters for the contigs
-    in the passed contig uid list.  If unable to place a contig,
-    the specific error message is included in the format (label, error_string)
-    in a list under the key 'error' in the response dict
-    """
-    request_data = json.loads(request.body)
-    contig_uid_list = request_data.get('contigUidList', [])
-
-    result = {}
-    for contig in Contig.objects.filter(uid__in=contig_uid_list):
-
-        insertion_placement_positions = get_insertion_placement_positions(
-                contig)
-
-        if 'error_string' in insertion_placement_positions:
-            if 'error' not in result:
-                result['error'] = []
-            result['error'].append((
-                    contig.label,
-                    insertion_placement_positions['error_string']))
-
     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
