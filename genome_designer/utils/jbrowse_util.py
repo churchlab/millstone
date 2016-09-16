@@ -232,7 +232,7 @@ def add_genbank_file_track(reference_genome, **kwargs):
         'style': {
             'label': 'name,CDS,gene',
             'description': 'note,function,gene_synonym',
-            'color': '#43a110'
+            'color': '#5fbcdd'
         }
     }
 
@@ -463,7 +463,15 @@ def add_bam_file_track(reference_genome, sample_alignment, alignment_type):
             'style' : {
                 'className': 'alignment',
                 'arrowheadClass': 'arrowhead',
-                'labelScale': 100
+                'labelScale': 100,
+                "color_fwd_missing_mate": "#863e1d",
+                "color_fwd_strand": "#006738",
+                "color_fwd_strand_not_proper": "#26639b",
+                "color_nostrand": "#999999",
+                "color_rev_diff_chr": "#969696",
+                "color_rev_missing_mate": "#f47e1f",
+                "color_rev_strand": "#6ca73f",
+                "color_rev_strand_not_proper": "#5fbcdd"
             }
         }
     ]}
