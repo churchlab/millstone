@@ -131,6 +131,9 @@ def rmdup(input_bam_file, output_bam_file):
 
     make_bam(output_sam, output_bam_file)
 
+    # delete SAM intermediate file.
+    os.remove(output_sam)
+
 
 def filter_bam_file_by_row(input_bam_path, filter_fn, output_bam_path):
     """Filters rows out of a bam file that don't pass a given filter function.
