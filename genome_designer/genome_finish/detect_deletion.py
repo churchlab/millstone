@@ -4,6 +4,8 @@ from Bio import SeqIO
 import numpy as np
 import pysam
 
+from django.conf import settings
+
 from genome_finish.celery_task_decorator import set_assembly_status
 from genome_finish.constants import CUSTOM_SV_METHOD__COVERAGE
 from genome_finish.graph_contig_placement import get_fasta
@@ -95,7 +97,9 @@ def make_var_dict_list(chrom_regions, ref_fasta):
     return var_dict_list
 
 
-def get_deleted_regions(sample_alignment, cov_cutoff=5):
+def get_deleted_regions(
+        sample_alignment,
+        cov_cutoff=settings.COVDEL_CUTOFF):
 
     chrom_to_cov_list = per_base_cov_stats_opt(sample_alignment)
 
@@ -105,11 +109,27 @@ def get_deleted_regions(sample_alignment, cov_cutoff=5):
         altaligns = cov_dict['altaligns']
         unique = depths - altaligns
 
+        # Use COVDEL_CUTOFF_PCT of mean unique coverage, or COVDEL_CUTOFF,
+        # whichever is lower.
+        cov_cutoff = min(
+                settings.COVDEL_CUTOFF,
+                max(1, int(settings.COVDEL_CUTOFF_PCT * np.mean(unique))))
+
+        # identify regions with coverage lower than cov_cutoff
         low_cov_regions = get_low_cov_regions(
                 depths, cov_cutoff)
 
+        # throw away regions that contain no bases with 0 coverage
+        low_cov_regions = [(i,j) for i,j in low_cov_regions if
+                min(depths[i:j]) == 0]
+
+        # smooth adjacent deletion regions using an expoential decay
         smoothed_regions = smoothed_deletions(
                 unique, low_cov_regions)
+
+        # throw away regions below size cutoff
+        [(i,j) for i,j in smoothed_regions if
+                j-i < settings.COVDEL_SMOOTHED_SIZE_CUTOFF]
 
         chrom_regions[chrom] = smoothed_regions
 
@@ -133,11 +153,6 @@ def get_low_cov_regions(cov_arr, min_cov):
 
 def smoothed_deletions(unique_arr, low_cov_regions):
 
-    SMOOTHING_COV_CUTOFF = 3
-    EXP_COV_DECAY_HALF_LIFE = 500
-    LARGE_DEL_MAX_SMOOTH_DIST = 1000
-    LARGE_DEL_MIN_DEL_LEN = 2000
-
     cov_mean = np.mean(unique_arr)
 
     def is_smoothable(curr_region, next_region):
@@ -151,13 +166,20 @@ def smoothed_deletions(unique_arr, low_cov_regions):
         dist = int(dist)
 
         # Allow smoothing Between large deleted regions
-        if (dist < LARGE_DEL_MAX_SMOOTH_DIST and
-                min(curr_len, next_len) > LARGE_DEL_MIN_DEL_LEN):
+        # Automatically join if both regions are large (>LARGE_DEL_MIN_DEL_LEN)
+        # and
+        # distance between is small (<LARGE_DEL_MAX_SMOOTH_DIST)
+        if (dist < settings.COVDEL_LARGE_DEL_MAX_SMOOTH_DIST and
+                min(curr_len, next_len) >
+                        settings.COVDEL_LARGE_DEL_MIN_DEL_LEN):
             return True
 
+        # coverage smoothing decay rate: join if coverage between regions is
+        # less than distance based on exponential decay
         return del_cov < max(
-                cov_mean * 2 ** (-dist / EXP_COV_DECAY_HALF_LIFE),
-                SMOOTHING_COV_CUTOFF)
+                cov_mean * 2 **
+                        (-dist / settings.COVDEL_EXP_COV_DECAY_HALF_LIFE),
+                settings.COVDEL_SMOOTHING_COV_CUTOFF)
 
     regions = low_cov_regions[:]
     is_same = False

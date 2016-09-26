@@ -420,6 +420,32 @@ CL__MAX_LOWMAP_FRAC = 0.5
 CL__MERGE_DIST = 25
 
 ###############################################################################
+# Coverage-based Deletion Detection
+###############################################################################
+
+COVDEL_CUTOFF = 5
+COVDEL_CUTOFF_PCT = 0.1
+
+# Region Smoothing:
+
+# no region smoothing if the coverage between regions is greater than this
+COVDEL_SMOOTHING_COV_CUTOFF = 3
+
+# coverage smoothing decay rate: join if coverage between regions is less than:
+# mean genome coverage * 2 ^ (-dist_between_deletions / decay_half_life)
+# (or less than SMOOTHING_COV_CUTOFF)
+COVDEL_EXP_COV_DECAY_HALF_LIFE = 500
+
+# Automatically join if both regions are large (>LARGE_DEL_MIN_DEL_LEN) and
+# distance between is small (<LARGE_DEL_MAX_SMOOTH_DIST)
+COVDEL_LARGE_DEL_MAX_SMOOTH_DIST = 1000
+COVDEL_LARGE_DEL_MIN_DEL_LEN = 2000
+
+# Throw away coverage-based deletions below this size cutoff
+# (they should be found by SNV tools like Freebayes instead)
+COVDEL_SMOOTHED_SIZE_CUTOFF = 15
+
+###############################################################################
 # Feature Flags
 ###############################################################################
 
