@@ -116,17 +116,19 @@ gd.AlignmentView = Backbone.View.extend({
     $('#gd-ag-go-to-variants-btn').addClass('disabled');
 
     // Post to this same view for now.
-    var postUrl = window.location.pathname;
+    var postUrl = '/_/alignmentgroups/rerun';
 
     // Nothing to send as this is the only post request this page expects.
-    var postData = {};
+    var postData = {
+      alignmentGroupUid: this.model.get('alignment_group').uid
+    };
 
     var onSuccess = function(data) {
       window.location.reload();
     };
 
-    // // Execute the post. Should return a redirect response.
-    $.post(postUrl, JSON.stringify(postData), onSuccess, 'json');
+    // Execute the post. Should return a redirect response.
+    $.post(postUrl, postData, onSuccess);
   },
 
     /** Puts UI in the loading state. */

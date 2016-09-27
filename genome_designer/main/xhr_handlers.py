@@ -49,6 +49,7 @@ from main.models import VariantEvidence
 from main.models import VariantSet
 from main.models import S3File
 from main.model_utils import get_long_alt_path
+from pipeline.pipeline_runner import run_pipeline
 from genome_finish.assembly_runner import run_de_novo_assembly_pipeline
 from genome_finish.jbrowse_genome_finish import maybe_create_reads_to_contig_bam
 from utils import generate_safe_filename_prefix_from_label
@@ -296,6 +297,20 @@ def ref_genomes_download(request):
     response['Content-Length'] = os.path.getsize(file_path)
 
     return response
+
+
+@login_required
+@require_POST
+def rerun_alignment(request):
+    """Re-runs existing alignment.
+    """
+    alignment_group_uid = request.POST.get('alignmentGroupUid')
+    alignment_group = get_object_or_404(
+            AlignmentGroup, uid=alignment_group_uid,
+            reference_genome__project__owner=request.user.get_profile())
+    run_pipeline(alignment_group.label, alignment_group.reference_genome,
+            alignment_group.get_samples())
+    return HttpResponse(json.dumps({}), content_type='application/json')
 
 
 @login_required

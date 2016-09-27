@@ -325,9 +325,6 @@ def alignment_view(request, project_uid, alignment_group_uid):
     alignment_group = get_object_or_404(AlignmentGroup,
             reference_genome__project=project, uid=alignment_group_uid)
 
-    if request.POST:
-        return _rerun_alignment(alignment_group)
-
     # Initial javascript data.
     init_js_data = json.dumps({
         'project': adapt_model_instance_to_frontend(project),
@@ -364,14 +361,6 @@ def alignment_error_log(request, project_uid, alignment_group_uid):
         'raw_data': raw_data
     }
     return render(request, 'alignment_error_log.html', context)
-
-
-def _rerun_alignment(alignment_group):
-    """Re-runs existing alignment.
-    """
-    run_pipeline(alignment_group.label, alignment_group.reference_genome,
-            alignment_group.get_samples())
-    return HttpResponse(json.dumps({}), content_type='application/json')
 
 
 @login_required
