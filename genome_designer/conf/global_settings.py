@@ -28,7 +28,7 @@ DEMO_MODE = False
 
 DEMO_MODE__USERNAME = 'gmcdev'
 
-DEMO_MODE__PASSWORD = 'genedez'
+DEMO_MODE__PASSWORD = 'g3n3d3z'
 
 # A boolean that turns on/off template debug mode.
 # https://docs.djangoproject.com/en/dev/ref/settings/#template-debug
