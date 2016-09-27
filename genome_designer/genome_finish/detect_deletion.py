@@ -128,8 +128,8 @@ def get_deleted_regions(
                 unique, low_cov_regions)
 
         # throw away regions below size cutoff
-        [(i,j) for i,j in smoothed_regions if
-                j-i < settings.COVDEL_SMOOTHED_SIZE_CUTOFF]
+        smoothed_regions = [(i,j) for i,j in smoothed_regions if
+                (j-i) > settings.COVDEL_SMOOTHED_SIZE_CUTOFF]
 
         chrom_regions[chrom] = smoothed_regions
 
