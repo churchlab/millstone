@@ -29,7 +29,7 @@ gd.AlignmentViewControlsComponent = gd.DataTableControlsComponent.extend({
     // Call SVs using contig assembly.
     if (FLAG_GENOME_FINISHING_ENABLED) {
       var assembleOptionHtml =
-          '<a href="#" class="gd-id-assemble">Call SVs by de novo Assembly</a>';
+          '<a href="#" class="gd-id-assemble">Call Structural Variants</a>';
       this.addDropdownOption(assembleOptionHtml);
       $('.gd-id-assemble').click(_.bind(this.handleAssembleContigs, this));
     }
