@@ -123,6 +123,16 @@ def get_deleted_regions(
         low_cov_regions = [(i,j) for i,j in low_cov_regions if
                 min(depths[i:j]) == 0]
 
+        # throw away unsmoothed low coverage regions below an
+        # empirically determinted size cutoff, based on the clones
+        # in Mandell et al. The relationship between mean coverage
+        # and minimum coverage-based-deletion size measureable is
+        # approximately:
+        # 5 ** ( 5 - (mean_coverage / 3) ** 0.5)
+        cov_size_cutoff = 5 ** ( 5 - (np.mean(depths) / 3) ** 0.5)
+        low_cov_regions = [(i,j) for i,j in low_cov_regions if
+                (j-i) > cov_size_cutoff]
+
         # smooth adjacent deletion regions using an expoential decay
         smoothed_regions = smoothed_deletions(
                 unique, low_cov_regions)
@@ -130,6 +140,7 @@ def get_deleted_regions(
         # throw away regions below size cutoff
         smoothed_regions = [(i,j) for i,j in smoothed_regions if
                 (j-i) > settings.COVDEL_SMOOTHED_SIZE_CUTOFF]
+
 
         chrom_regions[chrom] = smoothed_regions
 
