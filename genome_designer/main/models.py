@@ -1347,7 +1347,7 @@ class ExperimentSampleToAlignment(UniqueUidModelMixin, JSONDataSubfieldsMixin):
         if settings.FLAG__GENOME_FINISHING_ENABLED:
             fields.append({
                 'field': 'assembly_status',
-                'verbose': 'Contig Assembly Status'
+                'verbose': 'SV Calling Status'
             })
 
         return fields
