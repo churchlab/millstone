@@ -261,7 +261,6 @@ class TestGraphWalk(TestCase):
                     Dataset.TYPE.REFERENCE_GENOME_FASTA,
                     filesystem_location=ref_fasta)
 
-
         ref_genbank = os.path.join(test_dir, 'ref.gb')
         if os.path.exists(ref_genbank):
             add_dataset_to_entity(
@@ -269,6 +268,7 @@ class TestGraphWalk(TestCase):
                 Dataset.TYPE.REFERENCE_GENOME_GENBANK,
                 Dataset.TYPE.REFERENCE_GENOME_GENBANK,
                 ref_genbank)
+        reference_genome.ensure_mobile_element_multifasta()
 
         # Make data_dir directory to house genome_finishing files
         assembly_dir = os.path.join(
