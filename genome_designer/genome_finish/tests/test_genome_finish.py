@@ -268,7 +268,7 @@ class TestGraphWalk(TestCase):
                 Dataset.TYPE.REFERENCE_GENOME_GENBANK,
                 Dataset.TYPE.REFERENCE_GENOME_GENBANK,
                 ref_genbank)
-        reference_genome.ensure_mobile_element_multifasta()
+            reference_genome.ensure_mobile_element_multifasta()
 
         # Make data_dir directory to house genome_finishing files
         assembly_dir = os.path.join(
