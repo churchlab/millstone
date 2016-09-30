@@ -59,6 +59,11 @@ def run_de_novo_assembly_pipeline(sample_alignment_list,
     ensure_bwa_index(ref_genome_fasta)
     prepare_jbrowse_ref_sequence(ref_genome)
 
+    # We also make sure a fasta with all the mobile elements from the ref genome
+    # is created before running the async tasks.
+    if ref_genome.is_annotated():
+        ref_genome.ensure_mobile_element_multifasta()
+
     # Finally we assemble the async tasks that be parallelized.
     async_result = get_sv_caller_async_result(
             sample_alignment_list)

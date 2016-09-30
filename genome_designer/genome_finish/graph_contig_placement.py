@@ -157,7 +157,6 @@ def graph_contig_placement(contig_uid_list, skip_extracted_read_alignment,
 
     # Get extracted mobile elements in addition to contigs
     if ref_genome.is_annotated():
-        ref_genome.ensure_mobile_element_multifasta()
         me_fa_dataset = get_dataset_with_type(
                 ref_genome,
                 Dataset.TYPE.MOBILE_ELEMENT_FASTA)

@@ -680,17 +680,18 @@ class ReferenceGenome(UniqueUidModelMixin):
                 self.get_snpeff_genbank_parent_dir(),
                 'mobile_elements.fa')
 
+        # If fasta already exists, nothing to do.
+        # Also delete any Datasets that don't have associated fasta.
+        # TODO: Not sure how this would happen. Clean up.
         me_dataset = self.dataset_set.filter(
                 type=Dataset.TYPE.MOBILE_ELEMENT_FASTA)
-        me_dataset_exists = me_dataset.exists()
-        me_fasta_exists = me_dataset_exists and os.path.exists(
-                me_dataset[0].get_absolute_location())
-
-        if me_dataset_exists and me_fasta_exists:
-            return
-
-        if me_dataset_exists and not me_fasta_exists:
-            [d.delete() for d in me_dataset]
+        if me_dataset.exists():
+            me_fasta_exists = os.path.exists(
+                    me_dataset[0].get_absolute_location())
+            if me_fasta_exists:
+                return
+            else:
+                [d.delete() for d in me_dataset]
 
         generate_genbank_mobile_element_multifasta(
                 self.get_snpeff_genbank_file_path(),
@@ -698,10 +699,8 @@ class ReferenceGenome(UniqueUidModelMixin):
 
         me_fa_dataset = Dataset.objects.create(
                 label=Dataset.TYPE.MOBILE_ELEMENT_FASTA,
-                type=Dataset.TYPE.MOBILE_ELEMENT_FASTA)
-
-        me_fa_dataset.filesystem_location = me_fa_path
-        me_fa_dataset.save()
+                type=Dataset.TYPE.MOBILE_ELEMENT_FASTA,
+                filesystem_location=me_fa_path)
 
         self.dataset_set.add(me_fa_dataset)
         self.save()
