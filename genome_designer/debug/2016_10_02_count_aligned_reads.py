@@ -31,6 +31,7 @@ def count_alignment_group_reads(ag_uid):
         'num_samples': len(esta_reads),
         'mean_reads': np.mean(esta_reads),
         'stdev_reads': np.std(esta_reads),
+        'median_reads': np.median(esta_reads),
     }
 
 
