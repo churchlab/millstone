@@ -1,4 +1,10 @@
-REF_GENOME_UID = '92c717c3'
+"""Script that generates Postgres commands to create indeces on materialized view.
+
+TODO(gleb): Automate this functionality.
+"""
+
+import sys
+
 
 cols = [
     'id',
@@ -21,6 +27,7 @@ cols = [
     've_data',
     'es_data',
 ]
+
 
 json_keys = {
         'va_data': [
@@ -61,16 +68,27 @@ json_keys = {
         ],
 }
 
+
+if len(sys.argv) < 2:
+    print 'Usage: python 2016_10_06_test_create_postgresql_indeces.py <ref_genome_uid>'
+    sys.exit(0)
+else:
+    ref_genome_uid_list = sys.argv[1:]
+    print 'Preparing for ref genome uids %s' % ref_genome_uid_list
+
 with open('millstone_create_indeces_cmd.txt', 'w') as fh:
-     for c in cols:
-         fh.write(
-             'CREATE INDEX mmv_{ref_uid}_{col} on materialized_melted_variant_{ref_uid} ({col});\n'.format(
-                 ref_uid=REF_GENOME_UID,
-                 col=c))
-     for data_key, subkey_list in json_keys.iteritems():
-         for subkey in subkey_list:
-            fh.write(
-                'CREATE INDEX mmv_{ref_uid}_{data_key}_{subkey} on materialized_melted_variant_{ref_uid}(({data_key}->>\'{subkey}\'));\n'.format(
-                    ref_uid=REF_GENOME_UID,
-                    data_key=data_key,
-                    subkey=subkey))
+    for ref_genome_uid in ref_genome_uid_list:
+         for c in cols:
+             fh.write(
+                 'CREATE INDEX mmv_{ref_uid}_{col} on materialized_melted_variant_{ref_uid} ({col});\n'.format(
+                     ref_uid=ref_genome_uid,
+                     col=c))
+         for data_key, subkey_list in json_keys.iteritems():
+             for subkey in subkey_list:
+                fh.write(
+                    'CREATE INDEX mmv_{ref_uid}_{data_key}_{subkey} on materialized_melted_variant_{ref_uid}(({data_key}->>\'{subkey}\'));\n'.format(
+                        ref_uid=ref_genome_uid,
+                        data_key=data_key,
+                        subkey=subkey))
+
+print 'Done.'
