@@ -72,5 +72,6 @@ def aws_settings(request):
 
 def demo_settings(request):
     return {
-        'is_demo': settings.DEMO_MODE
+        'is_demo': settings.DEMO_MODE,
+        'demo_splash_page': settings.DEMO_SPLASH
     }

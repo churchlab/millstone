@@ -30,6 +30,9 @@ DEMO_MODE__USERNAME = 'gmcdev'
 
 DEMO_MODE__PASSWORD = 'g3n3d3z'
 
+# Default URL of demo splash page to include.
+DEMO_SPLASH = 'demo_splash.html'
+
 # A boolean that turns on/off template debug mode.
 # https://docs.djangoproject.com/en/dev/ref/settings/#template-debug
 TEMPLATE_DEBUG = DEBUG

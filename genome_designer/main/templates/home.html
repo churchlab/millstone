@@ -5,7 +5,7 @@
 {% if user.is_authenticated%}
   {% include "project_list.html" %}
 {% elif is_demo %}
-  {% include "demo_splash.html" %}
+  {% include demo_splash_page %}
 {% else %}
   {% include "splash.html" %}
 {% endif %}
