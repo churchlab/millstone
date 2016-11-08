@@ -271,6 +271,10 @@ table.dataTable > tbody > tr > td {
   padding-right: 5px;
 }
 
+.gd-datatable-overflow-x-scroll {
+  overflow-x: scroll;
+}
+
 .dataTables_length > label {
   margin-bottom: 0px;
 }

@@ -310,7 +310,7 @@ gd.AbstractDataTableComponent = Backbone.View.extend({
         // i is the row info 
         // p is pagination
         // gd-dt-cb is our master checkbox
-        "<'panel panel-default'" +         // start panel containing table
+        "<'panel panel-default gd-datatable-overflow-x-scroll'" + // start panel containing table
         "<'panel-body'" +                  // start panel containing table
         "<'gd-datatable-controlbox'" +     // first make the top container
         //"l" +                              // records per row (skipping)
