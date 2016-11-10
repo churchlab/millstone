@@ -1,7 +1,8 @@
 # [Millstone](https://churchlab.github.io/millstone) [![Build Status](https://travis-ci.org/churchlab/millstone.svg?branch=master)](https://travis-ci.org/churchlab/millstone)
 
-
 Millstone is a distributed bioinformatics software platform designed to facilitate genome engineering for synthetic biology. Automate iterative design, analysis, and debugging for projects involving hundreds of microbial genomes.
+
+Docs, demo and installation information for most users: <http://churchlab.github.io/millstone/index.html>
 
 ## Dependencies
 
