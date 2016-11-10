@@ -457,7 +457,7 @@ COVDEL_SMOOTHED_SIZE_CUTOFF = 15
 ###############################################################################
 
 
-__PRINT_MAGE_OLIGOS_ENABLED = True
+FLAG__PRINT_MAGE_OLIGOS_ENABLED = True
 
 FLAG__GENERATE_NEW_REFERENCE_GENOME_ENABLED = True
 
