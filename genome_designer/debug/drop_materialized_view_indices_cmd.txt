@@ -1,0 +1,47 @@
+DO
+$$BEGIN
+   EXECUTE (
+   SELECT 'DROP INDEX ' || string_agg(indexrelid::regclass::text, ', ')
+   FROM   pg_index  i
+   LEFT   JOIN pg_depend d ON d.objid = i.indexrelid
+                          AND d.deptype = 'i'
+   WHERE  i.indrelid = 'materialized_melted_variant_0e77483d'::regclass  -- possibly schema-qualified
+   AND    d.objid IS NULL                                -- no internal dependency
+   );
+END$$;
+
+DO
+$$BEGIN
+   EXECUTE (
+   SELECT 'DROP INDEX ' || string_agg(indexrelid::regclass::text, ', ')
+   FROM   pg_index  i
+   LEFT   JOIN pg_depend d ON d.objid = i.indexrelid
+                          AND d.deptype = 'i'
+   WHERE  i.indrelid = 'materialized_melted_variant_92c717c3'::regclass  -- possibly schema-qualified
+   AND    d.objid IS NULL                                -- no internal dependency
+   );
+END$$;
+
+DO
+$$BEGIN
+   EXECUTE (
+   SELECT 'DROP INDEX ' || string_agg(indexrelid::regclass::text, ', ')
+   FROM   pg_index  i
+   LEFT   JOIN pg_depend d ON d.objid = i.indexrelid
+                          AND d.deptype = 'i'
+   WHERE  i.indrelid = 'materialized_melted_variant_c9d86e09'::regclass  -- possibly schema-qualified
+   AND    d.objid IS NULL                                -- no internal dependency
+   );
+END$$;
+
+DO
+$$BEGIN
+   EXECUTE (
+   SELECT 'DROP INDEX ' || string_agg(indexrelid::regclass::text, ', ')
+   FROM   pg_index  i
+   LEFT   JOIN pg_depend d ON d.objid = i.indexrelid
+                          AND d.deptype = 'i'
+   WHERE  i.indrelid = 'materialized_melted_variant_d04d4e8c'::regclass  -- possibly schema-qualified
+   AND    d.objid IS NULL                                -- no internal dependency
+   );
+END$$;
