@@ -1,9 +1,7 @@
 Django==1.5.1
-PyVCF==0.6.4
 South==0.8.4
 amqp==1.4.9
 anyjson==0.3.3
-argparse==1.2.1
 bcbio-gff==0.4
 billiard==3.3.0.19
 biopython==1.63
@@ -26,6 +24,9 @@ pyinter==0.1.6
 pysam==0.8.3
 python-dateutil==2.1
 pytz==2014.10
-six==1.3.0
+six==1.10.0
 sympy==0.7.3
-wsgiref==0.1.2
+
+# Custom branch of PyVCF at version 0.6.7, but with distribute
+# requirement removed to work with latest pip.
+git+git://github.com/churchlab/PyVCF.git@9e3026ac588b6b06c313cd27eeb0d03f106a34ff

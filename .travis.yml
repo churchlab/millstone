@@ -14,6 +14,12 @@ git:
   submodules: false
 
 before_install:
+  # Native travis-ci.org install has an older version of pip and this causes
+  # errors in some libraries so better to use the latest pip. If an upgraded
+  # pip starts causing Millstone install to fail, it will be good to know,
+  # since we definitely want Millstone install to work withthe latest pip.
+  - pip install --upgrade pip
+
   # For submodules, use sed to replace the SSH URL with the public URL,
   # then initialize submodules here.
   - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
@@ -47,9 +53,3 @@ script:
 notifications:
   slack:
     secure: gVG59sdcs5Ph1u4/2fM92ofzpXbQ5I4199eQ7S0QKbCfihM0vjzFHNh6cUKmAdTe0mfVdIgl22lSpZltOubXVXvTKcv0QkrkzTjhRILkguC8hGlbHy+lsKprJOEFE5DSJqKrWbCGEFqrSNCCkjAZU4dWsYAsy8KzxtCwnXIRoA34t2jEojBizpwftNmwDH8C1Qc/YBtiSwXsT9mu2iURBxZNBIObFC51gAFwa0VimlpdlBVhlIWznC1qnRbqwJyPR8gYtTI1IBDj3dxSTuOE6ZxNsUeDcPW60s0gwyEla3C3Vz+uBqt/yxGyaOFImxgFbWC2JX7MXEC5hVue7KqmjrdCPkjiYu9OR0F9WV5jUuZKwWEfRmmC3G2MDY+72JLKpYOGZfXr603VrMPqJkVQpixTNTWxoISC3HWpxrm2NAvw5ZmkjnLOxR3EMgo20YBHb8BYjCptGwwjpr/W7Eaz44SJF2JVvHRVJa1PhscKZ/owzPtMMLsrd80FmuDn/HRY1V19oyGDZT0B0jbegdmw4z6OWKFPTk+dx04W9WuGG/l0C/HQmKjJdnzbzrIRcb/JQeeA1jG9HQY3PoHJWg2HoWPUN58Oa3XaF4MyGD0uZvmDWcJV1W6Q7sg7i1CsUv5nSeFL4LG1i2Md3cDP5AiZxdSr3MR7zHGa5MDFsSbQmQE=
-
-
-# Temporary fix to get travis-ci builds to work following their upgrade:
-# https://blog.travis-ci.com/2017-05-04-precise-image-updates
-# Although this apparently won't work anymore after June 5, 2017.
-group: deprecated-2017Q1
