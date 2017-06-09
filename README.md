@@ -2,7 +2,9 @@
 
 Millstone is a distributed bioinformatics software platform designed to facilitate genome engineering for synthetic biology. Automate iterative design, analysis, and debugging for projects involving hundreds of microbial genomes.
 
-Docs, demo and installation information for most users: <http://churchlab.github.io/millstone/index.html>
+Docs, demo and installation information for most users: <http://churchlab.github.io/millstone/index.html>. Developer instructions are below.
+
+Please cite [Goodman, Daniel B., Kuznetsov, G. et al. "Millstone: software for multiplex microbial genome analysis and engineering." Genome Biology 18.1 (2017): 101.](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-017-1223-1)
 
 ## Dependencies
 
