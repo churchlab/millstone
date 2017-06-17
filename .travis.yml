@@ -20,9 +20,7 @@ before_install:
   # since we definitely want Millstone install to work withthe latest pip.
   - pip install --upgrade pip
 
-  # For submodules, use sed to replace the SSH URL with the public URL,
-  # then initialize submodules here.
-  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
+  # Make sure to get submodules of submodules.
   - git submodule update --init --recursive
 
   # Perl lib installationa required for JBrowse perl.
