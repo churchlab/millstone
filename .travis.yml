@@ -14,6 +14,12 @@ git:
   submodules: false
 
 before_install:
+
+  # Hack to fix error `ImportError: No module named google_compute_engine`
+  # during boto install.
+  # https://github.com/travis-ci/travis-ci/issues/7940
+  - sudo rm -f /etc/boto.cfg
+
   # Native travis-ci.org install has an older version of pip and this causes
   # errors in some libraries so better to use the latest pip. If an upgraded
   # pip starts causing Millstone install to fail, it will be good to know,
