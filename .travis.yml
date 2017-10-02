@@ -32,8 +32,11 @@ before_install:
   # Perl lib installationa required for JBrowse perl.
   # First configure cpan.
   - (echo y;echo o conf prerequisites_policy follow;echo o conf commit)|cpan
-  # Now install dependency.
+  # Now install dependencies. The Travis build seems to break from time to time
+  # because one of these deps can no longer be found automatically and needs to
+  # be explicitly installed here.
   - sudo cpan install local::lib
+  - sudo cpan install List::MoreUtils
 
 install:
   - pip install -r requirements/deploy.txt
