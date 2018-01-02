@@ -404,3 +404,7 @@ Make sure this directory exists before proceeding.
 3. Use the `debug/inspect_profiler_data.py` convenience script to parse the data, e.g.:
 
         python inspect_profiler_data.py /path/to/log/mylog
+
+# Support
+
+Millstone development is generously supported by [AWS Cloud Credits for Research](https://aws.amazon.com/research-credits/).
