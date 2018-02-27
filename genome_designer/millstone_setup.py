@@ -23,11 +23,10 @@ from django.conf import settings
 # Retry download at least X times if disconnected.
 MAX_DL_RETRY = 3
 
-
 TOOLS_URLS = {
     'bwa' : {
-        'Darwin': ['https://www.dropbox.com/s/w6gs82gn0rmc60w/bwa'],
-        'Linux': ['https://www.dropbox.com/s/eq3533wx8ay41sx/bwa'],
+        'Darwin': ['https://www.dropbox.com/s/13a3dm5yfi7dpb5/bwa'],
+        'Linux': ['https://www.dropbox.com/s/ai55jpxgepx0j3u/bwa'],
     },
     'freebayes' : {
         # we use the following tools in the freebayes git repo (+submodules):
@@ -36,19 +35,17 @@ TOOLS_URLS = {
         # * vcfstreamsort (from vcflib)
         # * vcfuniq (from vcflib)
         'Darwin' : [
-            'https://www.dropbox.com/s/gjpqfr8n2601mfh/bamleftalign',
-            'https://www.dropbox.com/s/jx2zdan4ci0mx6w/freebayes',
-            #'https://www.dropbox.com/s/f7twxy2r0h5ox20/bamtools', broken w/o dylibs
-            'https://www.dropbox.com/s/kvhkji81l16ukm5/vcfstreamsort',
-            'https://www.dropbox.com/s/kaozc20jovxuzmk/vcfuniq'
+            'https://www.dropbox.com/s/gf2a9346ht9mf9w/bamleftalign',
+            'https://www.dropbox.com/s/4zxizm39sadkrbh/freebayes',
+            'https://www.dropbox.com/s/q2wcgnvg6f74jmf/vcfstreamsort',
+            'https://www.dropbox.com/s/dgck2iz7mmikrwq/vcfuniq'
 
         ],
         'Linux' : [
-            'https://www.dropbox.com/s/3qszohowh1gj1u0/bamleftalign',
-            'https://www.dropbox.com/s/n2we6c6bmlbyi6f/freebayes',
-            #'https://www.dropbox.com/s/5qrdi5prcjbz6js/bamtools', broken w/o dylibs
-            'https://www.dropbox.com/s/o0lpdbns3l94wy5/vcfstreamsort',
-            'https://www.dropbox.com/s/j9y8ul4k71f4kx5/vcfuniq'
+            'https://www.dropbox.com/s/g5b3uuyu38esvfy/bamleftalign',
+            'https://www.dropbox.com/s/4h6ijp2rrnyckc5/freebayes',
+            'https://www.dropbox.com/s/6pxdpgjyop2n7vx/vcfstreamsort',
+            'https://www.dropbox.com/s/kf5uxydrpbqbkg9/vcfuniq'
         ],
     },
     'snpEff': [
@@ -56,54 +53,46 @@ TOOLS_URLS = {
     ],
     'samtools' : {
         'Darwin' : [
-            'https://www.dropbox.com/s/wvd9iumzq1qi24h/samtools-0.1.20-darwin.zip'
+            'https://www.dropbox.com/s/yhx7ijj0goi9as4/samtools-0.1.20-darwin.zip'
         ],
         'Linux' : [
-            'https://www.dropbox.com/s/n3q9lpjgx224eix/samtools-0.1.20-linux.zip'
+            'https://www.dropbox.com/s/bihunqakuxv2nld/samtools-0.1.20-linux.zip'
         ]
     },
     'tabix' : {
         'Darwin' : [
-            'https://www.dropbox.com/s/3mr5x3di2p513ma/tabix-0.2.4-darwin.zip'
+            'https://www.dropbox.com/s/tqfvpgy73cgdbir/tabix-0.2.4-darwin.zip'
         ],
         'Linux': [
-            'https://www.dropbox.com/s/38y3p2e7za4conk/tabix-0.2.4-linux.zip'
+            'https://www.dropbox.com/s/e2cwt9n0ixbuff0/tabix-0.2.4-linux.zip'
         ]
     },
     'pindel' : {
         'Darwin' : [
-            'https://www.dropbox.com/s/8wuh47i2hao3vlr/pindel-darwin.zip'
+            'https://www.dropbox.com/s/gfvyc52rgl9e9c4/pindel-darwin.zip'
         ],
         'Linux' : [
-            'https://www.dropbox.com/s/wyfve2dfgqbt94d/pindel-linux.zip'
+            'https://www.dropbox.com/s/tkwfzlfgx7qhqek/pindel-linux.zip'
         ]
     },
-    'delly' : {
+    'vcf-concat': {
         'Darwin' : [
-            'https://www.dropbox.com/s/l3qs0mbm2vapqf8/delly-darwin.zip'
+            'https://www.dropbox.com/s/uacjkfgnpgd5123/vcf-concat-darwin.zip'
         ],
         'Linux' : [
-            'https://www.dropbox.com/s/k1gaxm1wb0odubc/delly-linux.zip'
-        ]
-    },
-    'vcf-concat' : {
-        'Darwin' : [
-            'https://www.dropbox.com/s/ehowcdaic4tln0n/vcf-concat-darwin.zip'
-        ],
-        'Linux' : [
-            'https://www.dropbox.com/s/buf80h0qfwjqaqp/vcf-concat-linux.zip'
+            'https://www.dropbox.com/s/chrc988wwz8dp2c/lumpy-0.2.11-darwin.zip'
         ]
     },
     'lumpy' : {
         'Darwin' : [
-            'https://www.dropbox.com/s/u068igb7phoijpk/lumpy-0.2.11-darwin.zip'
+            'https://www.dropbox.com/s/chrc988wwz8dp2c/lumpy-0.2.11-darwin.zip'
         ],
         'Linux' : [
             'https://www.dropbox.com/s/dbgjw59xcum1jru/lumpy-0.2.11-linux.zip'
         ]
     },
     'fastqc' : [
-            'https://www.dropbox.com/s/6d46rqjxyqi9k31/fastqc_v0.11.2.zip'
+        'https://www.dropbox.com/s/oqkh460vri7zuh1/fastqc_v0.11.2.zip'
     ],
     'samblaster': {
         'Darwin': [
@@ -222,10 +211,9 @@ def _try_urlretrieve(tool_url, dest_path=None, retry=0):
     """Allow retrying urllib.urlretrieve in case connection drops."""
     try:
         if dest_path is None:
-            result = urllib.urlretrieve(tool_url)
+            download_path, http_msg = urllib.urlretrieve(tool_url)
         else:
-            result = urllib.urlretrieve(tool_url, dest_path)
-        return result
+            download_path, http_msg = urllib.urlretrieve(tool_url, dest_path)
 
     except IOError as e:
         # attempt retry
@@ -235,6 +223,14 @@ def _try_urlretrieve(tool_url, dest_path=None, retry=0):
                     tool_url, dest_path=dest_path, retry=retry + 1)
         else:
             raise e
+
+    # Check that the result is not an HTML error page
+    HTML_DOC_STR = '<!DOCTYPE html>'
+    with open(download_path) as fh:
+        if fh.readline()[:len(HTML_DOC_STR)] == HTML_DOC_STR:
+            raise ValueError('Binary %s missing from Dropbox.' % tool_url)
+
+    return download_path, http_msg
 
 
 def _get_or_create_tool_destination_dir(tool, tools_dir):
