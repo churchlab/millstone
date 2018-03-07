@@ -2,9 +2,15 @@
 
 Millstone is a distributed bioinformatics software platform designed to facilitate genome engineering for synthetic biology. Automate iterative design, analysis, and debugging for projects involving hundreds of microbial genomes.
 
-Docs, demo and installation information for most users: <http://churchlab.github.io/millstone/index.html>. Developer instructions are below.
+The easiest way to use Millstone is directly on Amazon Web Services (AWS) using our pre-built AMI. Instructions [here](http://millstone.readthedocs.io/en/latest/user_guide/installation.html#using-millstone-on-amazon-aws).
+
+Docs, demo and installation information is available here: <http://churchlab.github.io/millstone/index.html>. Developer instructions are below.
 
 Please cite [Goodman, Daniel B., Kuznetsov, G. et al. "Millstone: software for multiplex microbial genome analysis and engineering." Genome Biology 18.1 (2017): 101.](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-017-1223-1)
+
+# Developer Documentations
+
+The following is intended for developers. Most users will want to use Millstone directly on AWS as described [here](http://millstone.readthedocs.io/en/latest/user_guide/installation.html#using-millstone-on-amazon-aws).
 
 ## Dependencies
 
