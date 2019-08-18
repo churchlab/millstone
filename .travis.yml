@@ -38,7 +38,7 @@ before_install:
   # be explicitly installed here.
   - sudo cpan install local::lib
   - sudo cpan install List::MoreUtils
-  - sudo cpan install Digest::Crc32
+  - sudo cpan install inc::latest
   - (echo n)|sudo cpan install Bio::Perl
 
 install:
