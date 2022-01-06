@@ -6,7 +6,7 @@ bcbio-gff==0.4
 billiard==3.3.0.19
 biopython==1.63
 boto==2.15.0
-celery==3.1.17
+celery==5.2.2
 decorator==4.0.6
 django-celery==3.1.16
 django-extensions==1.5.7
